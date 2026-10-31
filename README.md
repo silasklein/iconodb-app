@@ -26,7 +26,8 @@ O app é publicado em `https://silasklein.github.io/iconodb-app/`. O `base` do V
 
 - `src/app/`: `App.tsx` (roteador) e `routes.tsx` (as telas).
 - `src/ui/`: elementos de interface compartilhados.
-  - `tokens.css`: cores, fontes e medidas. Telas de consulta têm fundo claro; item e imagem usam a classe `tema-item`.
+  - `tokens.css`: cores, fontes e medidas. Telas de consulta têm fundo claro (padrão); item e imagem usam o tema escuro.
+  - `useTema.ts`: `useTema("item")` vai no componente de cada tela de item e de imagem. Ele põe a classe `tema-item` em `<html>` enquanto a tela está montada, para o fundo escuro cobrir o `<body>` e a rolagem elástica do iOS. Telas de consulta não chamam nada. Para pintar só um contêiner, use a classe `tema-item` nele (ela define fundo e texto).
   - `Logo.tsx`: logo SKC na grade 19 × 11, só em escalas inteiras (1 a 4).
   - `Icon.tsx`: todos os glifos do design, um por conceito.
   - `IconButton.tsx`: botão de ícone, sem rótulo visível, com `aria-label`, dica ao passar o mouse e ao receber foco (`data-tip`) e `aria-keyshortcuts`.

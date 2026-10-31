@@ -11,9 +11,11 @@ permissions:
   pages: write
   id-token: write
 
+# Um grupo por ref: uma execução de PR nunca cancela a publicação da main.
+# Só se cancela a execução anterior de refs que não são a main.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   construir:
