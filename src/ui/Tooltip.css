@@ -1,0 +1,40 @@
+/*
+ * Dica de ícone (decisão 7: ícones sem rótulo visível).
+ * Mesma regra das telas do design: atributo data-tip, não title.
+ * Aparece ao passar o mouse (só em aparelhos com hover) e ao receber foco visível.
+ */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border: 1px solid var(--tip-borda);
+  border-radius: 4px;
+  background: var(--tip-fundo);
+  color: var(--tip-texto);
+  font: 400 12px/1.4 var(--fonte-texto);
+  pointer-events: none;
+  z-index: 10;
+}
+[data-tip].tip-start::after {
+  right: auto;
+  left: 0;
+}
+[data-tip].tip-up::after {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+@media (hover: hover) {
+  [data-tip]:hover::after {
+    display: block;
+  }
+}
+[data-tip]:focus-visible::after {
+  display: block;
+}

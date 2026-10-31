@@ -1,0 +1,23 @@
+/* Alvo de 44 px no toque; 40 px com mouse (nunca menos de 36). */
+.icon-button {
+  box-sizing: border-box;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+}

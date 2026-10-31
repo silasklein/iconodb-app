@@ -1,0 +1,119 @@
+/*
+ * Tokens visuais (preto e branco, sem cor de destaque).
+ * Telas de consulta: fundo claro. Telas de item e imagem: fundo escuro (.tema-item).
+ */
+:root {
+  /* Consulta */
+  --fundo-consulta: #ffffff;
+  --texto-consulta: #111111;
+  --secundario-consulta: #5e5e5e;
+  --filete-consulta: #d4d4d4;
+
+  /* Item e imagem */
+  --fundo-item: #161616;
+  --texto-item: #ededed;
+  --secundario-item: #a3a3a3;
+  --filete-item: #3a3a3a;
+  --painel-imagem: #000000;
+
+  /* Comuns às duas */
+  --controle: #8a8a8a; /* borda de campos e botões */
+  --superficie: #f3f3f3; /* áreas de apoio nas telas claras */
+
+  /* Dica (a mesma nos dois temas) */
+  --tip-fundo: #111111;
+  --tip-texto: #ededed;
+  --tip-borda: #5e5e5e;
+
+  /* Tema ativo: o das telas de consulta, trocado por .tema-item */
+  --fundo: var(--fundo-consulta);
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+
+  /* Tipografia */
+  --fonte-titulo: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --fonte-texto: 'Geist Sans', 'Geist', system-ui, sans-serif;
+  --fonte-codigo: 'Geist Mono', ui-monospace, monospace;
+
+  /* Medidas */
+  --barra-superior: 48px;
+  --alvo-toque: 44px;
+  --alvo-mouse: 36px;
+}
+
+.tema-item {
+  --fundo: var(--fundo-item);
+  --texto: var(--texto-item);
+  --secundario: var(--secundario-item);
+  --filete: var(--filete-item);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte-texto);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+}
+
+code,
+kbd,
+.codigo {
+  font-family: var(--fonte-codigo);
+}
+
+a {
+  color: inherit;
+}
+
+/* Foco sempre visível (auditoria UX 31/10) */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+div:has(> input:focus-visible) {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Amplia o alvo de toque sem mexer no desenho */
+.hit {
+  position: relative;
+}
+.hit::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
