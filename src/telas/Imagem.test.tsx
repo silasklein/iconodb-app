@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { imagem as buscarImagem, regioes as buscarRegioes } from '../banco/consultas'
 import type { Imagem as ImagemDoBanco, Regiao } from '../banco/tipos'
+import { lerImagemAberta } from '../imagem/estado'
+import { transformDoGiro } from '../item/imagemComum'
 import { ImagemItem } from '../item/ImagemItem'
 import { urlImagem } from '../pacote/imagens'
 import { instalarMatchMedia } from '../test/larguraDeTela'
@@ -46,6 +48,7 @@ beforeEach(() => {
     const palco = this.classList.contains('vis-palco')
     return { x: 0, y: 0, left: 0, top: 0, right: palco ? 800 : 0, bottom: palco ? 600 : 0, width: palco ? 800 : 0, height: palco ? 600 : 0, toJSON() {} }
   })
+  imagemDoItem = IMG
   vi.mocked(buscarImagem).mockResolvedValue(IMG)
   vi.mocked(buscarRegioes).mockResolvedValue([])
   vi.mocked(urlImagem).mockImplementation(async (c: string) => `blob:${c}`)
@@ -56,20 +59,25 @@ afterEach(() => {
   document.body.querySelectorAll('[data-teste]').forEach((e) => e.remove())
 })
 
-/** O item de mentira: a imagem do item de verdade, que leva ao visualizador. */
+/** O item de mentira: a imagem do item de verdade, que leva ao visualizador (o mesmo caminho do Item, em ponto pequeno). */
+let imagemDoItem: ImagemComNumero = IMG
 function ItemFalso() {
   const navegar = useNavigate()
+  const { state } = useLocation()
   return (
     <main>
       <h1>Item CA00001</h1>
+      <output data-testid="estado">{JSON.stringify(state ?? null)}</output>
       <ImagemItem
         numero="CA00001"
-        imagens={[IMG]}
+        imagens={[imagemDoItem]}
+        inicial={lerImagemAberta(state)}
         aoAmpliar={(id, original) => navegar(`/imagem/${id}`, { state: { ampliada: true, original } })}
       />
     </main>
   )
 }
+const estadoDoItem = () => JSON.parse(screen.getByTestId('estado').textContent!)
 
 function abrir(entradas: Parameters<typeof MemoryRouter>[0]['initialEntries'] = [{ pathname: '/imagem/IMG-T-1' }], indice?: number) {
   return render(
@@ -77,6 +85,7 @@ function abrir(entradas: Parameters<typeof MemoryRouter>[0]['initialEntries'] = 
       <Routes>
         <Route path="/imagem/:id" element={<Imagem />} />
         <Route path="/item/:numero" element={<ItemFalso />} />
+        <Route path="/colecoes" element={<h1>Coleções</h1>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -304,6 +313,7 @@ describe('Imagem: o visualizador', () => {
       await waitFor(() => expect(figura().querySelector('svg')).not.toBeNull())
       expect(figura().contains(figura().querySelector('img'))).toBe(true)
       expect(transformada()).toMatch(/scale\(1\) rotate\(90deg\)$/)
+      expect(transformada().endsWith(transformDoGiro(90))).toBe(true)
       await userEvent.keyboard('+')
       expect(transformada()).toMatch(/scale\(1\.5\) rotate\(90deg\)$/)
       // girada 90°, a figura de 900 × 1200 ocupa 1200 × 900 e cabe em 800 × 600: fica de 600 × 800
@@ -395,6 +405,209 @@ describe('Imagem: o visualizador', () => {
       await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
       await imagemNaTela()
       expect(screen.getByRole('button', { name: 'Mostrar o original sem inversão' })).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
+
+  describe('rotacao igual no item e no visualizador', () => {
+    it('o item e o visualizador giram a imagem e as regiões com o mesmo transform', async () => {
+      imagemDoItem = { ...IMG, rotacao: 90 }
+      vi.mocked(buscarImagem).mockResolvedValue(imagemDoItem)
+      vi.mocked(buscarRegioes).mockResolvedValue([REGIAO(1, 'asa')])
+      abrir([{ pathname: '/item/CA00001' }])
+      await waitFor(() => expect(document.querySelector('.imagem-item-giro img')).not.toBeNull())
+      const doItem = document.querySelector<HTMLElement>('.imagem-item-giro')!.style.transform
+      await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
+      await imagemNaTela()
+      const giroDoItem = /rotate\([^)]*\)/.exec(doItem)![0]
+      const giroDoVisualizador = /rotate\([^)]*\)/.exec(transformada())![0]
+      expect(giroDoItem).toBe(transformDoGiro(90))
+      expect(giroDoVisualizador).toBe(giroDoItem)
+      await waitFor(() => expect(figura().querySelector('svg')).not.toBeNull())
+    })
+  })
+
+  describe('ponteiros e gestos', () => {
+    it('pointercancel desfaz a pinça e não conta como toque', async () => {
+      abrir()
+      await imagemNaTela()
+      ponteiro('pointerDown', 1, 350, 300)
+      ponteiro('pointerDown', 2, 450, 300)
+      ponteiro('pointerMove', 1, 300, 300)
+      ponteiro('pointerMove', 2, 500, 300)
+      expect(escala()).toBe('200 %')
+      fireEvent.pointerCancel(palco(), { pointerId: 1, clientX: 300, clientY: 300, pointerType: 'touch' })
+      fireEvent.pointerCancel(palco(), { pointerId: 2, clientX: 500, clientY: 300, pointerType: 'touch' })
+      // com os dois cancelados, mexer num ponteiro que não está mais lá não faz nada
+      ponteiro('pointerMove', 1, 100, 300)
+      expect(escala()).toBe('200 %')
+      // dois "toques" cancelados em seguida não são um toque duplo
+      for (let i = 0; i < 2; i++) {
+        ponteiro('pointerDown', 1, 420, 320)
+        fireEvent.pointerCancel(palco(), { pointerId: 1, clientX: 420, clientY: 320, pointerType: 'touch' })
+      }
+      expect(escala()).toBe('200 %')
+      // e um dedo só volta a arrastar normalmente
+      ponteiro('pointerDown', 1, 400, 300)
+      ponteiro('pointerMove', 1, 400, 340)
+      expect(transformada()).toMatch(/^translate\([-\d.]+px, 40px\) scale\(2\)/)
+    })
+
+    it('um terceiro dedo não pinça, mas as posições continuam sendo acompanhadas', async () => {
+      abrir()
+      await imagemNaTela()
+      ponteiro('pointerDown', 1, 350, 300)
+      ponteiro('pointerDown', 2, 450, 300)
+      ponteiro('pointerDown', 3, 400, 100)
+      ponteiro('pointerMove', 1, 300, 300) // com três dedos não pinça…
+      ponteiro('pointerMove', 3, 420, 120)
+      expect(escala()).toBe('100 %')
+      ponteiro('pointerUp', 3, 420, 120)
+      // …mas o dedo 1 já está em 300: ao mexer o 2, a distância é de (300, 500) = 200 contra (300, 450) = 150
+      ponteiro('pointerMove', 2, 500, 300)
+      expect(escala()).toBe('133 %')
+    })
+
+    it('perder a captura do ponteiro o tira da conta', async () => {
+      abrir()
+      await imagemNaTela()
+      await userEvent.keyboard('+') // 150 %
+      ponteiro('pointerDown', 1, 400, 300)
+      ponteiro('pointerDown', 2, 500, 300)
+      fireEvent.lostPointerCapture(palco(), { pointerId: 2 })
+      ponteiro('pointerMove', 1, 400, 350)
+      expect(escala()).toBe('150 %')
+      expect(transformada()).toMatch(/^translate\(0px, 50px\) scale\(1\.5\)/)
+    })
+
+    it('a janela perder o foco (blur) limpa os ponteiros', async () => {
+      abrir()
+      await imagemNaTela()
+      await userEvent.keyboard('+')
+      ponteiro('pointerDown', 1, 400, 300)
+      ponteiro('pointerDown', 2, 500, 300)
+      fireEvent.blur(window)
+      ponteiro('pointerMove', 1, 400, 330)
+      expect(escala()).toBe('150 %') // sem pinça: nenhum dos dois estava registrado
+      expect(transformada()).toMatch(/^translate\(0px, 0px\) scale\(1\.5\)/)
+    })
+
+    it('a roda com ctrl (pinça do trackpad) pesa mais que a roda comum', async () => {
+      abrir()
+      await imagemNaTela()
+      fireEvent.wheel(palco(), { deltaY: -10, clientX: 400, clientY: 300 })
+      expect(escala()).toBe('102 %')
+      await userEvent.keyboard('0')
+      fireEvent.wheel(palco(), { deltaY: -10, ctrlKey: true, clientX: 400, clientY: 300 })
+      expect(escala()).toBe('111 %')
+    })
+
+    const gesto = (tipo: string, extra: Record<string, number> = {}) => {
+      const e = Object.assign(new Event(tipo, { bubbles: true, cancelable: true }), extra)
+      act(() => {
+        palco().dispatchEvent(e)
+      })
+      return e
+    }
+
+    it('a pinça do trackpad do Safari (gesturestart/gesturechange) amplia, cancelando o gesto da página', async () => {
+      abrir()
+      await imagemNaTela()
+      expect(gesto('gesturestart').defaultPrevented).toBe(true)
+      const mudou = gesto('gesturechange', { scale: 2, clientX: 400, clientY: 300 })
+      expect(mudou.defaultPrevented).toBe(true)
+      expect(escala()).toBe('200 %')
+      gesto('gesturechange', { scale: 3, clientX: 400, clientY: 300 })
+      expect(escala()).toBe('300 %') // sempre a partir da escala do começo do gesto
+      gesto('gesturestart') // um novo gesto parte dos 300 %
+      gesto('gesturechange', { scale: 0.5, clientX: 400, clientY: 300 })
+      expect(escala()).toBe('150 %')
+    })
+
+    it('com dois dedos na tela, o gesto do Safari é ignorado (a pinça já vem dos ponteiros)', async () => {
+      abrir()
+      await imagemNaTela()
+      ponteiro('pointerDown', 1, 350, 300)
+      ponteiro('pointerDown', 2, 450, 300)
+      gesto('gesturestart')
+      gesto('gesturechange', { scale: 3, clientX: 400, clientY: 300 })
+      expect(escala()).toBe('100 %')
+    })
+  })
+
+  describe('a janela muda de tamanho', () => {
+    it('ampliada e encostada na borda, ao girar o aparelho a vista é refeita para a figura não sair do palco', async () => {
+      abrir()
+      await imagemNaTela()
+      for (let i = 0; i < 3; i++) await userEvent.keyboard('+') // 337,5 %
+      ponteiro('pointerDown', 1, 400, 300, 'mouse')
+      ponteiro('pointerMove', 1, 400, 3000, 'mouse')
+      ponteiro('pointerUp', 1, 400, 3000, 'mouse')
+      // palco 800 × 600, figura 450 × 600 a 3,375×: altura 2025 → pode andar até (2025 − 600) / 2
+      expect(transformada()).toMatch(/^translate\(0px, 712\.5px\) scale\(3\.375\)/)
+      // o palco passa a 400 × 300 (a figura vira 225 × 300; altura 1012,5 → limite 356,25)
+      vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(function (this: HTMLElement) {
+        const palco = this.classList.contains('vis-palco')
+        return { x: 0, y: 0, left: 0, top: 0, right: palco ? 400 : 0, bottom: palco ? 300 : 0, width: palco ? 400 : 0, height: palco ? 300 : 0, toJSON() {} }
+      })
+      fireEvent(window, new Event('resize'))
+      await waitFor(() => expect(transformada()).toMatch(/^translate\(0px, 356\.25px\) scale\(3\.375\)/))
+    })
+  })
+
+  describe('fechar sem a imagem carregada', () => {
+    it('carregando: há o botão Fechar e Esc fecha', async () => {
+      vi.mocked(buscarImagem).mockReturnValue(new Promise(() => {}))
+      abrir([{ pathname: '/imagem/IMG-T-1' }])
+      expect(screen.getByRole('button', { name: 'Fechar o visualizador' })).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(await screen.findByRole('heading', { name: 'Coleções' })).toBeInTheDocument()
+    })
+
+    it('carregando, vindo do item: Fechar volta no histórico', async () => {
+      vi.mocked(buscarImagem).mockReturnValue(new Promise(() => {}))
+      vindoDoItem()
+      await userEvent.click(screen.getByRole('button', { name: 'Fechar o visualizador' }))
+      expect(await screen.findByRole('heading', { name: 'Item CA00001' })).toBeInTheDocument()
+    })
+
+    it('erro: o aviso, o botão Fechar e Esc', async () => {
+      vi.mocked(buscarImagem).mockRejectedValue(new Error('banco fora do ar'))
+      abrir()
+      expect(await screen.findByRole('alert')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Fechar o visualizador' })).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(await screen.findByRole('heading', { name: 'Coleções' })).toBeInTheDocument()
+    })
+
+    it('não encontrada: o botão Fechar e Esc', async () => {
+      vi.mocked(buscarImagem).mockResolvedValue(null)
+      abrir()
+      await screen.findByRole('heading', { level: 1, name: 'Imagem não encontrada' })
+      await userEvent.click(screen.getByRole('button', { name: 'Fechar o visualizador' }))
+      expect(await screen.findByRole('heading', { name: 'Coleções' })).toBeInTheDocument()
+    })
+
+    it('Esc é ignorado com um diálogo modal aberto', async () => {
+      vi.mocked(buscarImagem).mockReturnValue(new Promise(() => {}))
+      abrir()
+      const modal = document.createElement('div')
+      modal.dataset.teste = '1'
+      modal.setAttribute('aria-modal', 'true')
+      document.body.append(modal)
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('heading', { name: 'Coleções' })).toBeNull()
+    })
+  })
+
+  describe('ao fechar, o item reabre como estava', () => {
+    it('aberto direto, Esc leva o item a abrir na imagem e no original que o visualizador mostrava', async () => {
+      abrir()
+      await imagemNaTela()
+      await userEvent.keyboard('i') // original
+      await userEvent.keyboard('{Escape}')
+      await screen.findByRole('heading', { name: 'Item CA00001' })
+      expect(estadoDoItem().imagemAberta).toEqual({ imagemId: 'IMG-T-1', original: true })
+      expect(await screen.findByRole('button', { name: 'Mostrar o original' })).toHaveAttribute('aria-pressed', 'true')
     })
   })
 

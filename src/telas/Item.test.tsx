@@ -7,6 +7,7 @@ import { executar, usarMotor } from '../banco/cliente'
 import { grupo } from '../banco/consultas'
 import type { EstadoVindoDaBusca } from '../busca/url'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { Imagem } from './Imagem'
 import { Item } from './Item'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -21,6 +22,7 @@ function abrir(caminho: string, state?: unknown) {
     <MemoryRouter initialEntries={[{ pathname: caminho.split('?')[0]!, search: caminho.includes('?') ? `?${caminho.split('?')[1]}` : '', state }]}>
       <Routes>
         <Route path="/item/:numero" element={<Item />} />
+        <Route path="/imagem/:id" element={<Imagem />} />
         <Route path="*" element={<Destino />} />
       </Routes>
       <Local />
@@ -74,6 +76,50 @@ describe('Item', () => {
       await waitFor(() => expect(document.querySelector('.imagem-item-figura img')).toHaveStyle({ filter: 'invert(1)' }))
       await userEvent.click(screen.getByRole('button', { name: 'Mostrar o original' }))
       expect(document.querySelector<HTMLImageElement>('.imagem-item-figura img')!.style.filter).toBe('')
+    })
+
+    describe('ampliar a imagem e voltar', () => {
+      it('volta na imagem que estava à vista (a segunda do objeto)', async () => {
+        abrir('/item/CA00001')
+        await titulo()
+        await userEvent.click(screen.getByRole('button', { name: 'Imagem seguinte' }))
+        expect(screen.getByText('2 / 2')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
+        await waitFor(() => expect(document.querySelector('.vis-figura img')).toHaveAttribute('src', 'blob:imagens/TESTE/TESTE-0001/screen-2.webp'))
+        await userEvent.keyboard('{Escape}')
+        await titulo()
+        expect(await screen.findByText('2 / 2')).toBeInTheDocument()
+        await waitFor(() => expect(document.querySelector('.imagem-item-figura img')).toHaveAttribute('src', 'blob:imagens/TESTE/TESTE-0001/screen-2.webp'))
+        await waitFor(() => expect(screen.getByRole('link', { name: 'Ampliar a imagem' })).toHaveFocus())
+      })
+
+      it('volta com o original ligado, se estava ligado', async () => {
+        abrir('/item/CA00001')
+        await titulo()
+        await userEvent.click(await screen.findByRole('button', { name: 'Mostrar o original' }))
+        await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
+        await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+        expect(screen.getByRole('button', { name: 'Mostrar o original sem inversão' })).toHaveAttribute('aria-pressed', 'true')
+        await userEvent.keyboard('{Escape}')
+        await titulo()
+        expect(await screen.findByRole('button', { name: 'Mostrar o original' })).toHaveAttribute('aria-pressed', 'true')
+      })
+
+      it('o contexto da busca continua; ir ao item seguinte não leva a imagem junto', async () => {
+        const estado: EstadoVindoDaBusca = { contexto: { tipo: 'lista', ids: ['CA00001', 'CA00002'] }, origem: { rotulo: 'Busca', caminho: '/busca' }, inicio: 0, total: 2 } as EstadoVindoDaBusca
+        abrir('/item/CA00001', estado)
+        await titulo()
+        await userEvent.click(screen.getByRole('button', { name: 'Imagem seguinte' }))
+        await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
+        await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+        await userEvent.keyboard('{Escape}')
+        await titulo()
+        expect(await screen.findByText('2 / 2')).toBeInTheDocument()
+        expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toMatchObject({ contexto: estado.contexto, origem: estado.origem })
+        await userEvent.keyboard('{ArrowRight}')
+        await waitFor(() => expect(local()).toBe('/item/CA00002'))
+        expect(JSON.parse(screen.getByTestId('local').dataset.state!)).not.toHaveProperty('imagemAberta')
+      })
     })
 
     it('os links de termo levam ao verbete', async () => {

@@ -108,3 +108,34 @@
     min-height: 56px;
   }
 }
+
+/*
+ * Imagem com rotacao (giro do livro): a caixa tem o tamanho da figura já girada (a 90° troca largura e
+ * altura; `--razao` = largura/altura da caixa) e a figura, com as regiões por cima, gira dentro dela.
+ */
+.imagem-item-girada {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--altura-max-imagem) * var(--razao));
+  aspect-ratio: var(--razao);
+  line-height: 0;
+}
+.imagem-item-alternar .imagem-item-girada {
+  max-width: none;
+}
+.imagem-item-giro {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  transform-origin: center;
+}
+.imagem-item-giro img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}

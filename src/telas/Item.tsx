@@ -5,7 +5,7 @@ import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
 import { item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
 import { NIVEIS } from '../banco/tipos'
-import type { EstadoDoVisualizador } from '../imagem/estado'
+import { comImagemAberta, lerImagemAberta, semImagemAberta, type EstadoDoVisualizador } from '../imagem/estado'
 import { ImagemItem } from '../item/ImagemItem'
 import { Leitura, type Idioma } from '../item/Leitura'
 import { acharLinks } from '../item/links'
@@ -26,8 +26,9 @@ import './Item.css'
 function lerEstado(state: unknown): EstadoDeOrigem | null {
   const e = state as Partial<EstadoDeOrigem> | null
   if (!e || typeof e !== 'object' || !e.contexto || !e.origem) return null
-  if (e.contexto.tipo === 'grupo' && typeof e.contexto.id === 'string') return e as EstadoDeOrigem
-  if (e.contexto.tipo === 'lista' && Array.isArray(e.contexto.ids)) return e as EstadoDeOrigem
+  // Sem `imagemAberta` (a imagem do visualizador não vai junto para outro item).
+  if (e.contexto.tipo === 'grupo' && typeof e.contexto.id === 'string') return semImagemAberta(e) as EstadoDeOrigem
+  if (e.contexto.tipo === 'lista' && Array.isArray(e.contexto.ids)) return semImagemAberta(e) as EstadoDeOrigem
   return null
 }
 
@@ -250,10 +251,16 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     </>
   )
 
-  // Ampliar: o visualizador recebe o original ligado; ao fechar, o histórico volta a esta tela e o foco, ao botão.
+  // Ampliar: o visualizador recebe o original ligado. Antes de ir, o item guarda no estado da própria
+  // entrada do histórico a imagem à vista e o original; ao fechar (voltar no histórico) ele monta de
+  // novo, lê isso e reabre na mesma imagem. O contexto (Busca ou Grupo) e `?hipotese=` seguem como estavam.
+  const imagemAberta = lerImagemAberta(location.state)
   const ampliarImagem = useCallback(
-    (imagemId: string, original: boolean) => navegar(`/imagem/${encodeURIComponent(imagemId)}`, { state: { ampliada: true, original } satisfies EstadoDoVisualizador }),
-    [navegar],
+    (imagemId: string, original: boolean) => {
+      navegar({ pathname: location.pathname, search: location.search }, { replace: true, state: comImagemAberta(location.state, { imagemId, original }) })
+      navegar(`/imagem/${encodeURIComponent(imagemId)}`, { state: { ampliada: true, original } satisfies EstadoDoVisualizador })
+    },
+    [navegar, location.pathname, location.search, location.state],
   )
   const imagem = (
     <ImagemItem
@@ -263,6 +270,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
       elementoAceso={elementoAceso}
       comDica={computador}
       aoAmpliar={ampliarImagem}
+      inicial={imagemAberta}
     />
   )
   const nav = posicao && <NavDePosicao posicao={posicao} estado={adiante} />

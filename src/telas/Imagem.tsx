@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
 import { imagem as buscarImagem, regioes as buscarRegioes } from '../banco/consultas'
 import type { Imagem as ImagemDoBanco, Regiao } from '../banco/tipos'
-import { lerEstadoDoVisualizador, pedirFocoNoAmpliar, type EstadoDoVisualizador } from '../imagem/estado'
+import { comImagemAberta, lerEstadoDoVisualizador, pedirFocoNoAmpliar, type EstadoDoVisualizador } from '../imagem/estado'
 import {
   ajustar,
   alternarZoom,
   caixaGirada,
   emPorcento,
   fatorDaRoda,
+  limitarVista,
   mover,
   passo,
   pinca,
@@ -19,7 +20,7 @@ import {
   type Tamanho,
   type Vista,
 } from '../imagem/zoom'
-import { estiloDeInversao, pontosDoPoligono, useUrlDaImagem } from '../item/imagemComum'
+import { estiloDeInversao, giroDaImagem, pontosDoPoligono, transformDoGiro, useUrlDaImagem } from '../item/imagemComum'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { IconButton } from '../ui/IconButton'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
@@ -48,28 +49,64 @@ export function Imagem() {
   useTema('item')
   const { id = '' } = useParams()
   const { state } = useLocation()
+  const origem = lerEstadoDoVisualizador(state)
   const carga = useCarregar(() => buscarImagem(id), id)
   const cargaDasRegioes = useCarregar(() => buscarRegioes(id), id)
 
-  if (carga.fase === 'carregando') return <div className="visualizador" aria-busy="true" />
+  if (carga.fase === 'carregando') return <Casca origem={origem} ocupada />
   if (carga.fase === 'erro') {
     return (
-      <div className="visualizador visualizador-aviso">
+      <Casca origem={origem}>
         <AvisoDeErro erro={carga.erro} />
-      </div>
+      </Casca>
     )
   }
   if (carga.dados === null) {
     return (
-      <main className="visualizador visualizador-aviso">
+      <Casca origem={origem}>
         <h1>Imagem não encontrada</h1>
         <p>
           <Link to="/colecoes">Ver as coleções</Link> · <Link to="/busca">Buscar</Link>
         </p>
-      </main>
+      </Casca>
     )
   }
-  return <Visualizador key={carga.dados.id} img={carga.dados} regioes={cargaDasRegioes.fase === 'ok' ? cargaDasRegioes.dados : []} origem={lerEstadoDoVisualizador(state)} />
+  return <Visualizador key={carga.dados.id} img={carga.dados} regioes={cargaDasRegioes.fase === 'ok' ? cargaDasRegioes.dados : []} origem={origem} />
+}
+
+/**
+ * A casca do visualizador enquanto não há imagem (carregando, erro, não encontrada): o botão Fechar
+ * visível e `Esc` fecham, para nunca prender a pessoa nesta tela. Sem saber o objeto, vindo do item
+ * volta no histórico; aberto direto, vai às coleções.
+ */
+function Casca({ origem, ocupada = false, children }: { origem: EstadoDoVisualizador | null; ocupada?: boolean; children?: ReactNode }) {
+  const navegar = useNavigate()
+  const topo = useRef<HTMLDivElement>(null)
+  const fechar = useCallback(() => {
+    pedirFocoNoAmpliar()
+    if (origem) navegar(-1)
+    else navegar('/colecoes', { replace: true })
+  }, [origem, navegar])
+  const aoFechar = useRef(fechar)
+  aoFechar.current = fechar
+  useEffect(() => {
+    topo.current?.querySelector<HTMLElement>('button')?.focus()
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
+      if (document.querySelector('[aria-modal="true"]')) return
+      aoFechar.current()
+    }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [])
+  return (
+    <div className="visualizador visualizador-aviso" aria-busy={ocupada || undefined}>
+      <div className="vis-topo-solto" ref={topo}>
+        <IconButton icon="fechar" label="Fechar o visualizador" shortcut="Escape" shortcutLabel="Esc" tipPosition="start" onClick={fechar} />
+      </div>
+      {children}
+    </div>
+  )
 }
 
 /** O tamanho do palco, medido ao montar e a cada mudança. */
@@ -118,7 +155,7 @@ function Visualizador({ img, regioes, origem }: Props) {
   const { url, falhou, aoFalhar } = useUrlDaImagem(caminho)
   const traco = img.display_mode === 'traco'
   const invertida = traco && !original
-  const giro = Math.abs(img.rotacao ?? 0) >= 0.5 ? img.rotacao! : 0
+  const giro = giroDaImagem(img.rotacao)
   const dimensoes = natural ?? (img.largura && img.altura ? { w: img.largura, h: img.altura } : { w: 0, h: 0 })
   const figura = ajustar(palco, dimensoes, giro)
   const caixa = caixaGirada(figura, giro)
@@ -139,8 +176,8 @@ function Visualizador({ img, regioes, origem }: Props) {
   const fechar = useCallback(() => {
     pedirFocoNoAmpliar()
     if (origem) navegar(-1)
-    else navegar(`/item/${encodeURIComponent(img.numero)}`, { replace: true })
-  }, [origem, navegar, img.numero])
+    else navegar(`/item/${encodeURIComponent(img.numero)}`, { replace: true, state: comImagemAberta(null, { imagemId: img.id, original }) })
+  }, [origem, navegar, img.numero, img.id, original])
 
   // O foco começa no Fechar: Esc e Tab agem a partir dele.
   useEffect(() => {
@@ -242,16 +279,22 @@ function Visualizador({ img, regioes, origem }: Props) {
     const antes = ponteiros.current.get(e.pointerId)
     if (!antes) return
     const agora = relativo(e.clientX, e.clientY)
-    if (ponteiros.current.size === 2) {
+    const n = ponteiros.current.size
+    if (n === 2) {
       const de = [...ponteiros.current.values()] as [Ponto, Ponto]
       const para = [...ponteiros.current.entries()].map(([id, p]) => (id === e.pointerId ? agora : p)) as [Ponto, Ponto]
-      ponteiros.current.set(e.pointerId, agora)
       alterarVista((v, p, c) => pinca(v, de, para, p, c))
-    } else if (ponteiros.current.size === 1) {
+    } else if (n === 1) {
       if (toque.current && distancia(agora, toque.current) > TOQUE_MAX_MOVIMENTO) toque.current.movido = true
-      ponteiros.current.set(e.pointerId, agora)
       alterarVista((v, p, c) => (v.escala > 1 ? mover(v, agora.x - antes.x, agora.y - antes.y, p, c) : v))
     }
+    // Com três ou mais dedos não há gesto, mas a posição de cada um continua sendo acompanhada: ao
+    // sobrar dois, a pinça parte de onde eles estão e não de onde estavam.
+    ponteiros.current.set(e.pointerId, agora)
+  }
+  const aoPerderACaptura = (e: React.PointerEvent<HTMLDivElement>) => {
+    ponteiros.current.delete(e.pointerId)
+    toque.current = null
   }
   const aoSoltar = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!ponteiros.current.delete(e.pointerId)) return
@@ -267,6 +310,25 @@ function Visualizador({ img, regioes, origem }: Props) {
     }
   }
 
+  // A janela perdeu o foco no meio de um gesto (alt-tab, chamada no iPhone): sem ponteiros pendurados.
+  useEffect(() => {
+    const limpar = () => {
+      ponteiros.current.clear()
+      toque.current = null
+    }
+    window.addEventListener('blur', limpar)
+    return () => window.removeEventListener('blur', limpar)
+  }, [])
+
+  // O palco ou a figura mudou de tamanho (girar o aparelho, redimensionar a janela) com a vista ampliada:
+  // refaz o limite, para a figura não ficar fora do palco.
+  useEffect(() => {
+    setVista((v) => {
+      const n = limitarVista(v, palco, caixa)
+      return n.escala === v.escala && n.x === v.x && n.y === v.y ? v : n
+    })
+  }, [palco.w, palco.h, caixa.w, caixa.h])
+
   // ---- regiões ----
   const visiveis = mostrarRegioes && url ? regioes.filter((r) => !ocultas.has(r.id)) : []
   const alternarRegiao = (id: number) =>
@@ -276,7 +338,7 @@ function Visualizador({ img, regioes, origem }: Props) {
       return n
     })
 
-  const transformada = `translate(${arred(vista.x)}px, ${arred(vista.y)}px) scale(${Number(vista.escala.toFixed(4))}) rotate(${giro}deg)`
+  const transformada = `translate(${arred(vista.x)}px, ${arred(vista.y)}px) scale(${Number(vista.escala.toFixed(4))}) ${transformDoGiro(giro)}`
   const inverter = traco && url && (
     <IconButton icon="inverter" label="Mostrar o original sem inversão" shortcut="I" pressionado={original} tipAbove={computador} onClick={alternarOriginal} />
   )
@@ -304,6 +366,7 @@ function Visualizador({ img, regioes, origem }: Props) {
           onPointerMove={aoMover}
           onPointerUp={aoSoltar}
           onPointerCancel={aoSoltar}
+          onLostPointerCapture={aoPerderACaptura}
         >
           {url ? (
             <div

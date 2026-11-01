@@ -27,6 +27,11 @@
 .visualizador-aviso a {
   color: var(--texto-item);
 }
+.vis-topo-solto {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: 12px;
+}
 .vis-coluna {
   flex: 1 1 0;
   min-width: 0;

@@ -4,6 +4,7 @@ import type { Imagem, Regiao } from '../banco/tipos'
 import { urlImagem } from '../pacote/imagens'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
 import { pedirFocoNoAmpliar } from '../imagem/estado'
+import { transformDoGiro } from './imagemComum'
 import { ImagemItem } from './ImagemItem'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -142,6 +143,80 @@ describe('ImagemItem', () => {
     render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco'), img(2, 'tons')]} regioes={{ 'IMG-T-2': [REGIAO] }} elementoAceso="EL-1" />)
     await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument())
     expect(document.querySelector('.imagem-item-regioes polygon')).not.toBeNull()
+  })
+
+  describe('rotacao (a mesma regra do visualizador)', () => {
+    const girada = (graus: number | null): Imagem => ({ ...img(1, 'traco'), rotacao: graus })
+
+    it('com 90°, a imagem e as regiões giram juntas e a caixa troca largura e altura', async () => {
+      render(<ImagemItem numero="CA00003" imagens={[girada(90)]} regioes={{ 'IMG-T-1': [REGIAO] }} elementoAceso="EL-1" />)
+      const imagem = await imagemNaTela()
+      const giro = imagem.closest<HTMLElement>('.imagem-item-giro')!
+      expect(giro).not.toBeNull()
+      expect(giro.style.transform).toContain(transformDoGiro(90))
+      // a região fica dentro do mesmo elemento girado que a imagem
+      expect(giro.contains(document.querySelector('.imagem-item-regioes'))).toBe(true)
+      // 900 × 1200 girada 90° ocupa 1200 × 900: a caixa é mais larga que alta; a figura cabe nela em 75 % × 133,3333 %
+      expect(giro.style.width).toBe('75%')
+      expect(giro.style.height).toBe('133.3333%')
+      const caixa = giro.parentElement!.closest<HTMLElement>('.imagem-item-girada')!
+      expect(Number(caixa.style.getPropertyValue('--razao'))).toBeCloseTo(1200 / 900, 3)
+    })
+
+    it('rotação pequena (< 0,5°) ou ausente: nada muda no desenho', async () => {
+      for (const graus of [null, 0, 0.3]) {
+        const { unmount } = render(<ImagemItem numero="CA00001" imagens={[girada(graus)]} />)
+        await imagemNaTela()
+        expect(document.querySelector('.imagem-item-giro')).toBeNull()
+        expect(document.querySelector('.imagem-item-girada')).toBeNull()
+        unmount()
+      }
+    })
+
+    it('o botão do original envolve a caixa girada, e o filtro continua na imagem', async () => {
+      render(<ImagemItem numero="CA00001" imagens={[girada(90)]} />)
+      const imagem = await imagemNaTela()
+      const botao = screen.getByRole('button', { name: 'Mostrar o original' })
+      expect(botao).toHaveClass('imagem-item-girada')
+      expect(botao.contains(imagem)).toBe(true)
+      expect(imagem).toHaveStyle({ filter: 'invert(1)' })
+    })
+
+    it('sem largura e altura no banco, usa o tamanho que a imagem tem ao carregar', async () => {
+      render(<ImagemItem numero="CA00001" imagens={[{ ...girada(90), largura: null, altura: null }]} />)
+      const imagem = await imagemNaTela()
+      expect(document.querySelector('.imagem-item-giro')).toBeNull()
+      Object.defineProperty(imagem, 'naturalWidth', { value: 600 })
+      Object.defineProperty(imagem, 'naturalHeight', { value: 300 })
+      fireEvent.load(imagem)
+      await waitFor(() => expect(document.querySelector<HTMLElement>('.imagem-item-giro')).not.toBeNull())
+      expect(document.querySelector<HTMLElement>('.imagem-item-giro')!.style.width).toBe('200%')
+      expect(document.querySelector<HTMLElement>('.imagem-item-giro')!.style.height).toBe('50%')
+    })
+  })
+
+  describe('volta do visualizador (inicial)', () => {
+    it('abre na imagem e no original em que o visualizador foi aberto', async () => {
+      render(<ImagemItem numero="CA00001" imagens={[img(1, 'tons'), img(2, 'traco')]} inicial={{ imagemId: 'IMG-T-2', original: true }} />)
+      await waitFor(() => expect(document.querySelector('.imagem-item-figura img')).toHaveAttribute('src', 'blob:imagens/T/T-1/screen-2.webp'))
+      expect(screen.getByText('2 / 2')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mostrar o original' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('uma imagem que não é deste objeto é ignorada', async () => {
+      render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco'), img(2, 'tons')]} inicial={{ imagemId: 'OUTRA', original: true }} />)
+      await imagemNaTela()
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mostrar o original' })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('outro objeto: volta à primeira imagem, invertida (o inicial vale só para o objeto de origem)', async () => {
+      const { rerender } = render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco'), img(2, 'tons')]} inicial={{ imagemId: 'IMG-T-2', original: false }} />)
+      await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument())
+      const outro = (n: number): Imagem => ({ ...img(n, 'traco'), id: `IMG-U-${n}`, tela: `imagens/U/U-1/screen-${n}.webp` })
+      rerender(<ImagemItem numero="CA00002" imagens={[outro(1), outro(2)]} inicial={{ imagemId: 'IMG-T-2', original: false }} />)
+      await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument())
+    })
   })
 
   it('sem imagem: "Sem imagem"', () => {

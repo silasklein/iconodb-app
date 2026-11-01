@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { Imagem, Regiao } from '../banco/tipos'
 import { consumirPedidoDeFoco } from '../imagem/estado'
 import { IconButton } from '../ui/IconButton'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
-import { estiloDeInversao, pontosDoPoligono, useUrlDaImagem } from './imagemComum'
+import { estiloDeInversao, geometriaGirada, giroDaImagem, pontosDoPoligono, transformDoGiro, useUrlDaImagem } from './imagemComum'
 import './ImagemItem.css'
 
 interface Props {
@@ -21,6 +21,15 @@ interface Props {
    * ligado, para fechar voltando ao item). Sem isto, o botão é um link comum (`#/imagem/<id>`).
    */
   aoAmpliar?: (imagemId: string, original: boolean) => void
+  /**
+   * De volta do visualizador: a imagem que estava à vista e se o original estava ligado. Vale só
+   * para este objeto (se a imagem não é dele, é ignorada) e só ao montar ou ao trocar de objeto.
+   */
+  inicial?: { imagemId: string; original: boolean } | null
+}
+
+function indiceInicial(imagens: readonly Imagem[], inicial: Props['inicial']): number {
+  return inicial ? imagens.findIndex((i) => i.id === inicial.imagemId) : -1
 }
 
 /**
@@ -30,18 +39,23 @@ interface Props {
  * cima, com as coordenadas de 0 a 1 do banco (viewBox 0 0 1 1 sobre a caixa exata da imagem).
  * "Ampliar a imagem" leva ao visualizador (`#/imagem/<id>`, Tarefa 9).
  */
-export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false, aoAmpliar }: Props) {
+export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false, aoAmpliar, inicial = null }: Props) {
   const ampliar = useRef<HTMLDivElement>(null)
-  const [indice, setIndice] = useState(0)
-  const [original, setOriginal] = useState(false)
+  const [indice, setIndice] = useState(() => Math.max(indiceInicial(imagens, inicial), 0))
+  const [original, setOriginal] = useState(() => (indiceInicial(imagens, inicial) >= 0 ? (inicial?.original ?? false) : false))
+  const [natural, setNatural] = useState<{ caminho: string; w: number; h: number } | null>(null)
   const atual = imagens[Math.min(indice, imagens.length - 1)]
   const caminho = atual?.tela ?? atual?.miniatura ?? null
 
-  // Outro objeto: volta à primeira imagem, invertida.
+  // Outro objeto: volta à primeira imagem, invertida. (Ao montar, vale o `inicial`, que veio do visualizador.)
   const chaveDoObjeto = imagens.map((i) => i.id).join(' ')
+  const objetoAnterior = useRef(chaveDoObjeto)
   useEffect(() => {
-    setIndice(0)
-    setOriginal(false)
+    if (objetoAnterior.current === chaveDoObjeto) return
+    objetoAnterior.current = chaveDoObjeto
+    const i = indiceInicial(imagens, inicial)
+    setIndice(Math.max(i, 0))
+    setOriginal(i >= 0 ? (inicial?.original ?? false) : false)
   }, [chaveDoObjeto])
 
   // A hipótese aberta fala de um elemento marcado só em outra imagem: mostra essa.
@@ -75,15 +89,48 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
   const acesas = elementoAceso ? (regioes[atual.id] ?? []).filter((r) => r.elementoId === elementoAceso) : []
   const alt = `Imagem ${atual.ordinal} de ${numero}${invertida ? ', invertida' : ''}`
 
-  const figura = url ? (
-    <span className="imagem-item-figura">
-      <img src={url} alt={alt} decoding="async" style={estiloDeInversao(atual.display_mode, original)} onError={aoFalhar} />
+  // O giro com que o livro imprime a figura: a imagem e as regiões giram juntas, dentro de uma caixa
+  // que tem o tamanho da figura girada (a 90° troca largura e altura).
+  const giro = giroDaImagem(atual.rotacao)
+  const dimensoes = natural?.caminho === caminho ? { w: natural.w, h: natural.h } : atual.largura && atual.altura ? { w: atual.largura, h: atual.altura } : null
+  const geometria = giro !== 0 && dimensoes ? geometriaGirada(dimensoes, giro) : null
+  const pct = (fracao: number) => `${Number((fracao * 100).toFixed(4))}%`
+
+  const miolo = (
+    <>
+      <img
+        src={url ?? undefined}
+        alt={alt}
+        decoding="async"
+        style={estiloDeInversao(atual.display_mode, original)}
+        onError={aoFalhar}
+        onLoad={(e) => {
+          const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+          if (w > 0 && h > 0 && caminho) setNatural({ caminho, w, h })
+        }}
+      />
       {acesas.length > 0 && (
         <svg className="imagem-item-regioes" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
           {acesas.map((r) => (
             <polygon key={r.id} points={pontosDoPoligono(r.pontos)} vectorEffect="non-scaling-stroke" />
           ))}
         </svg>
+      )}
+    </>
+  )
+  const estiloDaCaixa = geometria ? ({ '--razao': geometria.razao } as CSSProperties) : undefined
+  const comBotao = traco && !!url
+  const figura = url ? (
+    <span className={`imagem-item-figura${geometria ? ' imagem-item-girada' : ''}`} style={estiloDaCaixa}>
+      {geometria ? (
+        <span
+          className="imagem-item-giro"
+          style={{ width: pct(geometria.fracao.w), height: pct(geometria.fracao.h), transform: `translate(-50%, -50%) ${transformDoGiro(giro)}` }}
+        >
+          {miolo}
+        </span>
+      ) : (
+        miolo
       )}
     </span>
   ) : (
@@ -95,8 +142,8 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
   return (
     <div className="imagem-item">
       <div className="imagem-item-painel">
-        {traco && url ? (
-          <button type="button" className="imagem-item-alternar" aria-pressed={original} aria-label="Mostrar o original" onClick={() => setOriginal((v) => !v)}>
+        {comBotao ? (
+          <button type="button" className={`imagem-item-alternar${geometria ? ' imagem-item-girada' : ''}`} style={estiloDaCaixa} aria-pressed={original} aria-label="Mostrar o original" onClick={() => setOriginal((v) => !v)}>
             {figura}
           </button>
         ) : (
