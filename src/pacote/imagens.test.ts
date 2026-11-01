@@ -36,6 +36,15 @@ function contando(base: Fonte) {
   return { fonte, baixados }
 }
 
+describe('CacheImagens.tem', () => {
+  it('diz se a imagem está guardada, sem ler o conteúdo', async () => {
+    expect(await cache.tem(MINIATURA)).toBe(true)
+    expect(await cache.tem(TELA)).toBe(false)
+    await cache.remover(MINIATURA)
+    expect(await cache.tem(MINIATURA)).toBe(false)
+  })
+})
+
 describe('urlImagem', () => {
   it('a miniatura da primeira sincronização abre sem rede', async () => {
     const fonte = vi.fn(async () => {

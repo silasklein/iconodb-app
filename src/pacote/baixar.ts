@@ -15,19 +15,30 @@
 import { armazemPadrao, type Armazem } from './armazem'
 import { cacheImagensPadrao, esquecerUrl, tipoDaImagem, type CacheImagens } from './imagens'
 import {
-  ARQUIVO_ESTADO,
   ARQUIVO_PERSISTENCIA,
   ARQUIVO_PROGRESSO,
   caminhoDoBlob,
   ehDoNucleo,
   ehMiniatura,
+  gravarEstado,
   gravarJson,
   lerEstado,
   lerJson,
   lerPersistencia,
   PASTA_BLOBS,
 } from './local'
-import { ErroDeIntegridade, lerManifesto, sha256, type ArquivoDoPacote, type Fonte, type Manifesto } from './manifesto'
+import {
+  ErroDeIntegridade,
+  ErroDeSincronizacaoEmAndamento,
+  lerManifesto,
+  sha256,
+  type ArquivoDoPacote,
+  type Fonte,
+  type Manifesto,
+} from './manifesto'
+
+/** Nome da trava entre janelas (Web Locks): só uma sincronização por vez. */
+export const TRAVA_DE_SINCRONIZACAO = 'iconodb-sync'
 
 export { lerArquivoDoPacote, lerEstado, lerPersistencia } from './local'
 export { sha256 } from './manifesto'
@@ -67,8 +78,10 @@ class Registro {
     return this.salvar()
   }
 
-  podar(manter: Set<string>): Promise<void> {
-    for (const c of Object.keys(this.dados)) if (!manter.has(c)) delete this.dados[c]
+  /** Deixa só os caminhos de `manter`, cada um com o sha256 do conjunto novo. */
+  alinhar(manter: Record<string, string>): Promise<void> {
+    for (const c of Object.keys(this.dados)) if (!(c in manter)) delete this.dados[c]
+    Object.assign(this.dados, manter)
     return this.salvar()
   }
 
@@ -146,18 +159,43 @@ async function limpar(armazem: Armazem, cache: CacheImagens, antes: Manifesto | 
       esquecerUrl(c)
     }
   }
-  await registro.podar(new Set(Object.keys(novo.arquivos).filter((c) => ehDoNucleo(c) || ehMiniatura(c))))
+  await registro.alinhar(
+    Object.fromEntries(
+      Object.entries(novo.arquivos)
+        .filter(([c]) => ehDoNucleo(c) || ehMiniatura(c))
+        .map(([c, a]) => [c, a.sha256]),
+    ),
+  )
 }
 
 /**
- * Deixa o aparelho com o pacote da Fonte. "igual" quando não havia nada a baixar nem a trocar.
- * Lança ErroDeSchema, ErroDeIntegridade ou o erro da Fonte (rede, login); em todos os casos
- * o que já estava no aparelho continua como estava.
+ * Deixa o aparelho com o pacote da Fonte. Só uma sincronização por vez entre as janelas
+ * do app (Web Locks): se outra janela está sincronizando, lança ErroDeSincronizacaoEmAndamento
+ * sem tocar em nada, porque a limpeza de uma apagaria os arquivos novos da outra.
+ * Sem Web Locks no navegador, não há trava.
  */
 export async function sincronizarPacote(
   fonte: Fonte,
   aoProgredir: AoProgredir,
   opcoes: OpcoesDeSincronizacao = {},
+): Promise<'atualizado' | 'igual'> {
+  const travas = typeof navigator === 'undefined' ? undefined : navigator.locks
+  if (typeof travas?.request !== 'function') return sincronizar(fonte, aoProgredir, opcoes)
+  return travas.request(TRAVA_DE_SINCRONIZACAO, { ifAvailable: true }, async (trava) => {
+    if (!trava) throw new ErroDeSincronizacaoEmAndamento()
+    return sincronizar(fonte, aoProgredir, opcoes)
+  })
+}
+
+/**
+ * A sincronização em si, já com a trava. "igual" quando não havia nada a baixar nem a trocar.
+ * Lança ErroDeSchema, ErroDeIntegridade ou o erro da Fonte (rede, login); em todos os casos
+ * o que já estava no aparelho continua como estava.
+ */
+async function sincronizar(
+  fonte: Fonte,
+  aoProgredir: AoProgredir,
+  opcoes: OpcoesDeSincronizacao,
 ): Promise<'atualizado' | 'igual'> {
   const armazem = opcoes.armazem ?? armazemPadrao()
   const cache = opcoes.cache ?? cacheImagensPadrao()
@@ -180,7 +218,9 @@ export async function sincronizarPacote(
     let feito = 0
     for (const e of lista) {
       const [c, a] = e
-      const pronto = jaTem(c, a) && (!ehDoNucleo(c) || (await armazem.existe(caminhoDoBlob(a.sha256))))
+      // O núcleo precisa do blob no disco; a miniatura, da cópia no cache (o sistema pode ter esvaziado o cache).
+      const pronto =
+        jaTem(c, a) && (ehDoNucleo(c) ? await armazem.existe(caminhoDoBlob(a.sha256)) : await cache.tem(c))
       if (pronto) feito += a.bytes
       else pendentes.push(e)
     }
@@ -213,7 +253,7 @@ export async function sincronizarPacote(
 
   // Todos conferidos: a troca é este arquivo, escrito por último.
   const mudou = baixouAlgo || estado === null || assinatura(estado) !== assinatura(novo)
-  await gravarJson(armazem, ARQUIVO_ESTADO, novo)
+  await gravarEstado(armazem, novo)
   await limpar(armazem, cache, estado, novo, registro).catch(() => undefined)
   await pedirPersistencia(armazem)
   return mudou ? 'atualizado' : 'igual'

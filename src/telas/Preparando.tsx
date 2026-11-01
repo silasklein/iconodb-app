@@ -5,7 +5,14 @@ import { armazemPadrao, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type Etapa } from '../pacote/baixar'
 import type { CacheImagens } from '../pacote/imagens'
 import { gravarPreferencias, lerEstado, lerPreferencias } from '../pacote/local'
-import { ErroDeIntegridade, ErroDeLogin, ErroDeSchema, MSG_SCHEMA, type Fonte } from '../pacote/manifesto'
+import {
+  ErroDeIntegridade,
+  ErroDeLogin,
+  ErroDeSchema,
+  ErroDeSincronizacaoEmAndamento,
+  MSG_SCHEMA,
+  type Fonte,
+} from '../pacote/manifesto'
 import './Preparando.css'
 
 const ETAPAS: Etapa[] = ['Banco de dados', 'Imagens de tela']
@@ -14,10 +21,11 @@ export const MSG_SEM_CONEXAO = 'Sem conexão: o app abre com o que já está no 
 const MSG_SEM_CONEXAO_PRIMEIRA = 'Sem conexão: o primeiro download precisa de internet'
 const MSG_SEM_CONEXAO_NO_MEIO = 'Sem conexão. O que já foi baixado fica guardado e o download continua de onde parou.'
 const MSG_INTEGRIDADE = 'Um arquivo não passou na conferência e foi descartado; o que já estava no aparelho foi mantido.'
+export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em outra janela do app. Espere terminar e tente de novo.'
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
 
 type Fase = 'baixando' | 'pronto' | 'erro'
-type Erro = 'sem-conexao' | 'schema' | 'integridade' | 'geral'
+type Erro = 'sem-conexao' | 'schema' | 'integridade' | 'em-andamento' | 'geral'
 type Andamento = Partial<Record<Etapa, { feito: number; total: number }>>
 
 /** Tamanho em unidades decimais (como o Dropbox e o macOS), na unidade do total. */
@@ -35,6 +43,13 @@ function textoDaEtapa(a: Andamento[Etapa]): { texto: string; pct: number; pronta
   if (!a) return { texto: 'aguardando', pct: 0, pronta: false }
   if (a.total === 0 || a.feito >= a.total) return { texto: 'pronto', pct: 100, pronta: true }
   return { texto: formatarProgresso(a.feito, a.total), pct: Math.round((a.feito / a.total) * 100), pronta: false }
+}
+
+function classificar(e: unknown): Erro {
+  if (e instanceof ErroDeSchema) return 'schema'
+  if (e instanceof ErroDeIntegridade) return 'integridade'
+  if (e instanceof ErroDeSincronizacaoEmAndamento) return 'em-andamento'
+  return eErroDeRede(e) ? 'sem-conexao' : 'geral'
 }
 
 /** Mostra `app-export` (entre crases na mensagem) como código. */
@@ -93,15 +108,7 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
       const tem = await lerEstado(guardado()).then((m) => m !== null, () => false)
       if (!ativa()) return
       setTemPacote(tem)
-      setErro(
-        e instanceof ErroDeSchema
-          ? 'schema'
-          : e instanceof ErroDeIntegridade
-            ? 'integridade'
-            : eErroDeRede(e)
-              ? 'sem-conexao'
-              : 'geral',
-      )
+      setErro(classificar(e))
       setFase('erro')
     }
 
@@ -177,6 +184,8 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
       comCodigo(MSG_SCHEMA)
     ) : erro === 'integridade' ? (
       MSG_INTEGRIDADE
+    ) : erro === 'em-andamento' ? (
+      MSG_EM_ANDAMENTO
     ) : erro === 'sem-conexao' ? (
       temPacote ? MSG_SEM_CONEXAO : primeiraVez && Object.keys(andamento).length === 0 ? MSG_SEM_CONEXAO_PRIMEIRA : MSG_SEM_CONEXAO_NO_MEIO
     ) : (

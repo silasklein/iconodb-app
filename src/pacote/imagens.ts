@@ -11,6 +11,8 @@ import { sha256, type Fonte } from './manifesto'
 export const NOME_DO_CACHE = 'iconodb-imagens'
 
 export interface CacheImagens {
+  /** A imagem está guardada? (Mais barato que obter: não lê o conteúdo.) */
+  tem(caminho: string): Promise<boolean>
   obter(caminho: string): Promise<Blob | null>
   guardar(caminho: string, bytes: Uint8Array, tipo: string): Promise<void>
   remover(caminho: string): Promise<void>
@@ -19,6 +21,9 @@ export interface CacheImagens {
 export function cacheMemoria(): CacheImagens {
   const itens = new Map<string, { bytes: Uint8Array; tipo: string }>()
   return {
+    async tem(caminho) {
+      return itens.has(caminho)
+    },
     async obter(caminho) {
       const i = itens.get(caminho)
       return i ? new Blob([i.bytes.slice()], { type: i.tipo }) : null
@@ -36,6 +41,9 @@ export function cacheStorage(nome: string = NOME_DO_CACHE): CacheImagens {
   const chave = (caminho: string) => new Request(`${location.origin}/__imagens/${encodeURI(caminho)}`)
   const abrir = () => caches.open(nome)
   return {
+    async tem(caminho) {
+      return (await (await abrir()).match(chave(caminho))) !== undefined
+    },
     async obter(caminho) {
       const r = await (await abrir()).match(chave(caminho))
       return r ? r.blob() : null

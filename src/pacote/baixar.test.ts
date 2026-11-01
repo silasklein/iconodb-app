@@ -5,6 +5,7 @@ import { armazemMemoria, type Armazem } from './armazem'
 import {
   ErroDeIntegridade,
   ErroDeSchema,
+  ErroDeSincronizacaoEmAndamento,
   lerManifesto,
   MSG_SCHEMA,
   type Fonte,
@@ -16,6 +17,7 @@ import {
   lerPersistencia,
   sha256,
   sincronizarPacote,
+  TRAVA_DE_SINCRONIZACAO,
   type Etapa,
 } from './baixar'
 import { cacheMemoria, type CacheImagens } from './imagens'
@@ -296,6 +298,151 @@ describe('sincronizarPacote', () => {
     expect(await cache.obter(mudou)).toBeNull()
     expect(await cache.obter(saiu)).toBeNull()
     expect(await cache.obter(ficou)).not.toBeNull()
+  })
+
+  it('miniatura que o sistema tirou do cache volta na sincronização seguinte, em vez de "igual"', async () => {
+    const { cache, opcoes } = ambiente()
+    await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+    const manifesto = await lerManifesto(fonteDeTeste())
+    const miniaturas = Object.keys(manifesto.arquivos).filter((c) => /\/thumb-[^/]+$/.test(c))
+
+    // O iOS esvazia o cache de imagens.
+    for (const c of miniaturas) await cache.remover(c)
+    await cache.guardar('imagens/TESTE/TESTE-0001/screen-1.webp', doDisco('imagens/TESTE/TESTE-0001/screen-1.webp'), 'image/webp')
+
+    const segunda = observar(fonteDeTeste())
+    expect(await sincronizarPacote(segunda.fonte, semProgresso, opcoes)).toBe('atualizado')
+    expect([...segunda.baixados].sort()).toEqual([...miniaturas].sort())
+    for (const c of miniaturas) expect(await cache.tem(c)).toBe(true)
+
+    expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('igual')
+  })
+
+  it('o registro de progresso fica igual ao conjunto novo depois da troca', async () => {
+    const { armazem, opcoes } = ambiente()
+    await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+    const manifesto = await lerManifesto(fonteDeTeste())
+    // Registro velho, com sha desatualizado e caminho que já não existe.
+    await armazem.gravar('progresso.json', codificar(JSON.stringify({ 'nucleo/comum.sqlite': 'x'.repeat(64), 'nucleo/velho.sqlite': 'y'.repeat(64) })))
+    // Nada a baixar: continua "igual", mas o registro é realinhado.
+    expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('igual')
+    const registro = JSON.parse(new TextDecoder().decode((await armazem.ler('progresso.json'))!)) as Record<string, string>
+    const esperado = Object.fromEntries(
+      Object.entries(manifesto.arquivos).filter(([c]) => eBaixado(c)).map(([c, a]) => [c, a.sha256]),
+    )
+    expect(registro).toEqual(esperado)
+  })
+
+  describe('trava entre janelas', () => {
+    /** Web Locks mínimo: `ifAvailable` chama o callback com null se a trava está ocupada. */
+    function simularTravas() {
+      const ocupadas = new Set<string>()
+      const request = vi.fn(async (nome: string, _opcoes: unknown, fazer: (trava: unknown) => Promise<unknown>) => {
+        if (ocupadas.has(nome)) return fazer(null)
+        ocupadas.add(nome)
+        try {
+          return await fazer({ name: nome })
+        } finally {
+          ocupadas.delete(nome)
+        }
+      })
+      vi.stubGlobal('navigator', { ...navigator, locks: { request } })
+      return request
+    }
+
+    it('com outra janela sincronizando, a segunda recusa sem baixar nem gravar nada', async () => {
+      const request = simularTravas()
+      const { armazem, opcoes } = ambiente()
+      const base = fonteDeTeste()
+      let liberar!: () => void
+      let chegou!: () => void
+      const naPorta = new Promise<void>((ok) => (chegou = ok))
+      const portao = new Promise<void>((ok) => (liberar = ok))
+      const lenta: Fonte = {
+        listar: (p) => base.listar(p),
+        async baixar(c) {
+          if (c === 'nucleo/comum.sqlite') {
+            chegou()
+            await portao
+          }
+          return base.baixar(c)
+        },
+      }
+
+      const primeira = sincronizarPacote(lenta, semProgresso, opcoes)
+      await naPorta
+      const gravadoAntes = [...(await armazem.listar(''))].sort()
+
+      const { fonte: segundaFonte, baixados } = observar(fonteDeTeste())
+      await expect(sincronizarPacote(segundaFonte, semProgresso, opcoes)).rejects.toBeInstanceOf(ErroDeSincronizacaoEmAndamento)
+      expect(baixados).toEqual([])
+      expect([...(await armazem.listar(''))].sort()).toEqual(gravadoAntes)
+      expect(request).toHaveBeenCalledWith(TRAVA_DE_SINCRONIZACAO, { ifAvailable: true }, expect.any(Function))
+
+      liberar()
+      expect(await primeira).toBe('atualizado')
+      // A trava foi solta: a próxima sincronização roda.
+      expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('igual')
+    })
+
+    it('solta a trava também quando a sincronização falha', async () => {
+      simularTravas()
+      const { opcoes } = ambiente()
+      await expect(sincronizarPacote(observar(fonteDeTeste(), { falharNoDownload: 1 }).fonte, semProgresso, opcoes)).rejects.toThrow(
+        'conexão interrompida',
+      )
+      expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('atualizado')
+    })
+
+    it('sem Web Locks no navegador, sincroniza sem trava', async () => {
+      vi.stubGlobal('navigator', { ...navigator, locks: undefined })
+      const { opcoes } = ambiente()
+      expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('atualizado')
+    })
+  })
+
+  describe('leitura do estado', () => {
+    it('estado.json cortado: vale o estado.tmp, gravado antes', async () => {
+      const { armazem, opcoes } = ambiente()
+      await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+      const manifesto = await lerManifesto(fonteDeTeste())
+      const inteiro = (await armazem.ler('estado.json'))!
+      await armazem.gravar('estado.json', inteiro.slice(0, 40)) // gravação cortada
+      expect(await lerEstado(armazem)).toEqual(manifesto)
+      expect(await igual(lerArquivoDoPacote('nucleo/comum.sqlite', armazem), doDisco('nucleo/comum.sqlite'))).toBe(true)
+    })
+
+    it('blob com tamanho diferente do manifesto não é entregue', async () => {
+      const { armazem, opcoes } = ambiente()
+      await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+      const manifesto = await lerManifesto(fonteDeTeste())
+      const sha = manifesto.arquivos['nucleo/comum.sqlite']!.sha256
+      await armazem.gravar(`blobs/${sha}`, doDisco('nucleo/comum.sqlite').slice(0, 100))
+      expect(await lerArquivoDoPacote('nucleo/comum.sqlite', armazem)).toBeNull()
+      // Os outros seguem normais.
+      expect(await igual(lerArquivoDoPacote('nucleo/fold.json', armazem), doDisco('nucleo/fold.json'))).toBe(true)
+    })
+
+    it('troca de conjunto no meio da leitura: relê o estado uma vez e acha o blob novo', async () => {
+      const { armazem, opcoes } = ambiente()
+      await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+      const novo = codificar('busca nova')
+      await sincronizarPacote(comArquivosTrocados(fonteDeTeste(), { 'nucleo/busca.sqlite': novo }), semProgresso, opcoes)
+      const novoEstado = await lerEstado(armazem)
+      const velho = await lerManifesto(fonteDeTeste())
+
+      // Simula a corrida: a 1ª leitura do estado devolve o conjunto antigo, cujo blob já foi limpo.
+      let leituras = 0
+      const corrida: Armazem = {
+        ...armazem,
+        async ler(c) {
+          if (c === 'estado.json' && leituras++ === 0) return codificar(JSON.stringify(velho))
+          return armazem.ler(c)
+        },
+      }
+      expect(await igual(lerArquivoDoPacote('nucleo/busca.sqlite', corrida), novo)).toBe(true)
+      expect(novoEstado?.arquivos['nucleo/busca.sqlite']?.sha256).not.toBe(velho.arquivos['nucleo/busca.sqlite']?.sha256)
+    })
   })
 
   describe('armazenamento persistente', () => {

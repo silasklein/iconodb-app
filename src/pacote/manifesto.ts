@@ -67,6 +67,14 @@ export class ErroDeRede extends Error {
   }
 }
 
+/** Outra janela do app está sincronizando: esta não começa uma segunda (as duas se atropelariam). */
+export class ErroDeSincronizacaoEmAndamento extends Error {
+  constructor() {
+    super('Já há uma sincronização em andamento em outra janela do app.')
+    this.name = 'ErroDeSincronizacaoEmAndamento'
+  }
+}
+
 /** Sem login ou login expirado: é preciso entrar de novo. Nenhum dado local é apagado. */
 export class ErroDeLogin extends Error {
   constructor() {

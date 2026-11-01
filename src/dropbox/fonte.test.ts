@@ -26,6 +26,7 @@ function usarCliente(c: ReturnType<typeof falso> | null) {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   vi.resetAllMocks()
   vi.mocked(eErroDeAutenticacao).mockReturnValue(false)
 })
@@ -62,6 +63,40 @@ describe('fonteDropbox', () => {
     expect(new TextDecoder().decode(await fonte.baixar('x'))).toBe('ok')
     expect(download).toHaveBeenCalledTimes(3)
     expect(esperas).toEqual([3000, 2000])
+  })
+
+  it('limita a espera pedida pelo Dropbox no 429', async () => {
+    const download = vi
+      .fn()
+      .mockRejectedValueOnce({ status: 429, error: { error: { retry_after: 600 } } })
+      .mockResolvedValue({ result: { fileBlob: new Blob(['ok']) } })
+    usarCliente(falso({ filesDownload: download }))
+    const esperas: number[] = []
+    const fonte = (await fonteDropbox({ esperar: async (ms) => void esperas.push(ms) }))!
+    await fonte.baixar('x')
+    expect(esperas).toEqual([30_000])
+  })
+
+  it('com o navegador sem rede (onLine false), vai direto a ErroDeRede, sem tentar nem esperar', async () => {
+    const download = vi.fn()
+    usarCliente(falso({ filesDownload: download }))
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    vi.stubGlobal('navigator', { ...navigator, onLine: false })
+    await expect(fonte.baixar('x')).rejects.toBeInstanceOf(ErroDeRede)
+    expect(download).not.toHaveBeenCalled()
+  })
+
+  it('se a rede cai durante as tentativas, não espera as demais', async () => {
+    const download = vi.fn().mockImplementation(async () => {
+      vi.stubGlobal('navigator', { ...navigator, onLine: false })
+      throw new TypeError('Failed to fetch')
+    })
+    usarCliente(falso({ filesDownload: download }))
+    const esperas: number[] = []
+    const fonte = (await fonteDropbox({ esperar: async (ms) => void esperas.push(ms) }))!
+    await expect(fonte.baixar('x')).rejects.toBeInstanceOf(ErroDeRede)
+    expect(download).toHaveBeenCalledTimes(1)
+    expect(esperas).toEqual([])
   })
 
   it('desiste da rede depois de 4 tentativas com ErroDeRede', async () => {

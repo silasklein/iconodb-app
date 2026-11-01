@@ -6,7 +6,15 @@ import { armazemMemoria, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type AoProgredir } from '../pacote/baixar'
 import { cacheMemoria } from '../pacote/imagens'
 import { gravarJson } from '../pacote/local'
-import { ErroDeIntegridade, ErroDeLogin, ErroDeRede, ErroDeSchema, MSG_SCHEMA, type Fonte } from '../pacote/manifesto'
+import {
+  ErroDeIntegridade,
+  ErroDeLogin,
+  ErroDeRede,
+  ErroDeSchema,
+  ErroDeSincronizacaoEmAndamento,
+  MSG_SCHEMA,
+  type Fonte,
+} from '../pacote/manifesto'
 import { Preparando } from './Preparando'
 
 vi.mock('../pacote/baixar', async (original) => ({
@@ -204,6 +212,15 @@ describe('Preparando', () => {
     await s.falhar(new ErroDeIntegridade('nucleo/comum.sqlite'))
     expect(screen.getByRole('alert')).toHaveTextContent('não passou na conferência')
     expect(screen.getByRole('alert')).toHaveTextContent('o que já estava no aparelho foi mantido')
+  })
+
+  it('outra janela sincronizando: avisa e deixa tentar de novo', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar(new ErroDeSincronizacaoEmAndamento())
+    expect(screen.getByRole('alert')).toHaveTextContent('Já há uma sincronização em andamento em outra janela do app')
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
   })
 
   it('outro erro: mensagem geral e tentar de novo', async () => {

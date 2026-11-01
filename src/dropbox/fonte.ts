@@ -9,6 +9,8 @@ import { ErroDeLogin, ErroDeRede, type Fonte } from '../pacote/manifesto'
 import { cliente, eErroDeAutenticacao, marcarExpirado } from './auth'
 
 const TENTATIVAS = 4
+/** O Dropbox pode pedir esperas longas no 429; esperar mais que isto trava a tela de progresso. */
+const ESPERA_MAXIMA_S = 30
 
 export interface OpcoesDaFonte {
   /** Espera entre tentativas (para os testes). */
@@ -29,11 +31,15 @@ export function eErroDeRede(erro: unknown): boolean {
 /** Segundos que o Dropbox pede para esperar no 429. */
 function esperaPedida(erro: unknown): number | null {
   const interno = (erro as { error?: { error?: { retry_after?: unknown } } } | null)?.error?.error?.retry_after
-  return typeof interno === 'number' ? interno : null
+  return typeof interno === 'number' && interno >= 0 ? Math.min(interno, ESPERA_MAXIMA_S) : null
 }
+
+const semInternet = () => typeof navigator !== 'undefined' && navigator.onLine === false
 
 async function comTentativas<T>(fazer: () => Promise<T>, esperar: (ms: number) => Promise<void>): Promise<T> {
   for (let tentativa = 1; ; tentativa++) {
+    // O navegador já sabe que está sem rede: não adianta tentar nem esperar.
+    if (semInternet()) throw new ErroDeRede()
     try {
       return await fazer()
     } catch (erro) {
@@ -42,7 +48,7 @@ async function comTentativas<T>(fazer: () => Promise<T>, esperar: (ms: number) =
         throw new ErroDeLogin()
       }
       if (!eErroDeRede(erro)) throw erro
-      if (tentativa >= TENTATIVAS) throw new ErroDeRede(erro)
+      if (tentativa >= TENTATIVAS || semInternet()) throw new ErroDeRede(erro)
       await esperar((esperaPedida(erro) ?? 2 ** (tentativa - 1)) * 1000)
     }
   }

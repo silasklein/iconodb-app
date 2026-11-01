@@ -14,6 +14,8 @@ import { armazemPadrao, type Armazem } from './armazem'
 import { validarManifesto, type Manifesto } from './manifesto'
 
 export const ARQUIVO_ESTADO = 'estado.json'
+/** Cópia completa do estado, gravada antes do estado.json (que, no worker, não é atômico). */
+export const ARQUIVO_ESTADO_TMP = 'estado.tmp'
 export const ARQUIVO_PROGRESSO = 'progresso.json'
 export const ARQUIVO_PERSISTENCIA = 'persistencia.json'
 export const ARQUIVO_PREFERENCIAS = 'preferencias.json'
@@ -38,9 +40,8 @@ export function gravarJson(armazem: Armazem, caminho: string, dados: unknown): P
   return armazem.gravar(caminho, new TextEncoder().encode(JSON.stringify(dados)))
 }
 
-/** O manifesto do último conjunto completo; null se ainda não houve sincronização completa. */
-export async function lerEstado(armazem: Armazem = armazemPadrao()): Promise<Manifesto | null> {
-  const dados = await lerJson<unknown>(armazem, ARQUIVO_ESTADO)
+async function estadoDe(armazem: Armazem, caminho: string): Promise<Manifesto | null> {
+  const dados = await lerJson<unknown>(armazem, caminho)
   if (dados === null) return null
   try {
     return validarManifesto(dados)
@@ -50,14 +51,33 @@ export async function lerEstado(armazem: Armazem = armazemPadrao()): Promise<Man
 }
 
 /**
+ * O manifesto do último conjunto completo; null se ainda não houve sincronização completa.
+ * Se o estado.json está ilegível (gravação cortada), vale a cópia estado.tmp, que era gravada antes.
+ */
+export async function lerEstado(armazem: Armazem = armazemPadrao()): Promise<Manifesto | null> {
+  return (await estadoDe(armazem, ARQUIVO_ESTADO)) ?? (await estadoDe(armazem, ARQUIVO_ESTADO_TMP))
+}
+
+/** Grava o estado: primeiro a cópia, depois o estado.json (o ponto de troca). */
+export async function gravarEstado(armazem: Armazem, manifesto: Manifesto): Promise<void> {
+  await gravarJson(armazem, ARQUIVO_ESTADO_TMP, manifesto)
+  await gravarJson(armazem, ARQUIVO_ESTADO, manifesto)
+}
+
+/**
  * Os bytes de um arquivo do núcleo (ex.: "nucleo/comum.sqlite") na versão do
- * último conjunto completo. null sem estado (o banco não abre pela metade).
+ * último conjunto completo. null sem estado (o banco não abre pela metade) ou se o
+ * blob falta ou tem tamanho diferente do manifesto. Se isso acontece, o estado é lido
+ * de novo uma vez: outra janela pode ter trocado o conjunto entre as duas leituras.
  */
 export async function lerArquivoDoPacote(caminho: string, armazem: Armazem = armazemPadrao()): Promise<Uint8Array | null> {
-  const estado = await lerEstado(armazem)
-  const entrada = estado?.arquivos[caminho]
-  if (!entrada) return null
-  return armazem.ler(caminhoDoBlob(entrada.sha256))
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    const entrada = (await lerEstado(armazem))?.arquivos[caminho]
+    if (!entrada) return null
+    const bytes = await armazem.ler(caminhoDoBlob(entrada.sha256))
+    if (bytes && bytes.byteLength === entrada.bytes) return bytes
+  }
+  return null
 }
 
 export interface Persistencia {
