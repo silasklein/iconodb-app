@@ -1,0 +1,236 @@
+/*
+ * Primeira sincronização. Cores do design (Sincronizando.dc.html e PC-Preparando.dc.html):
+ * fundo #111111, texto #EDEDED, secundário #A3A3A3, filete #3A3A3A, trilho #333333,
+ * borda dos botões #8A8A8A.
+ */
+html.tema-preparando {
+  --fundo: #111111;
+  --texto: #ededed;
+  --secundario: #a3a3a3;
+  --filete: #3a3a3a;
+  color-scheme: dark;
+}
+
+.preparando {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: 0 24px;
+  background: #111111;
+  color: #ededed;
+  font-family: var(--fonte-texto);
+}
+
+/* Foco: anel branco explícito, como na tela de entrada. */
+.preparando :focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.preparando-marca {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 28px;
+}
+
+.preparando-sigla {
+  font: 400 12px/1 var(--fonte-codigo);
+  letter-spacing: 0.12em;
+  color: #a3a3a3;
+}
+
+.preparando-nome {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* No celular o bloco desce para o pé da tela; no computador fica centrado. */
+.preparando-principal {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: max(36px, env(safe-area-inset-bottom));
+}
+
+.preparando-titulo {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.preparando-intro {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #a3a3a3;
+}
+
+.preparando-etapas {
+  display: flex;
+  flex-direction: column;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.preparando-etapa {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid #3a3a3a;
+}
+
+.preparando-etapa-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.preparando-estado {
+  font: 400 12px/1.4 var(--fonte-codigo);
+  color: #a3a3a3;
+  text-align: right;
+}
+
+.preparando-barra {
+  height: 2px;
+  background: #333333;
+}
+
+.preparando-barra-cheia {
+  height: 2px;
+  background: #ededed;
+}
+
+.preparando-preferencia {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.preparando-preferencia input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #ededed;
+}
+
+.preparando-aviso {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #a3a3a3;
+}
+
+.preparando-erro {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #ededed;
+}
+
+.preparando-erro::before {
+  content: '! ';
+  font-family: var(--fonte-codigo);
+}
+
+.preparando-erro code {
+  font-family: var(--fonte-codigo);
+}
+
+.preparando-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.preparando-botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #8a8a8a;
+  border-radius: 8px;
+  background: transparent;
+  color: #ededed;
+  font: 500 15px/1 var(--fonte-texto);
+  cursor: pointer;
+}
+
+.preparando-botao:hover {
+  border-color: #ededed;
+}
+
+/* "Abrir assim que terminar" ligado. */
+.preparando-botao[aria-pressed='true'] {
+  border-color: #ededed;
+  background: #ededed;
+  color: #111111;
+}
+
+.preparando-botao[aria-pressed='true']:focus-visible {
+  outline-color: #ffffff;
+  box-shadow: 0 0 0 4px #111111;
+}
+
+/* Computador (PC-Preparando.dc.html): coluna de 440 px no centro da tela. */
+@media (min-width: 768px) {
+  .preparando {
+    padding: 0;
+  }
+
+  .preparando-marca {
+    padding: 28px 48px 0;
+  }
+
+  .preparando-principal {
+    flex: 1 1 auto;
+    justify-content: center;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0 0 72px;
+  }
+
+  .preparando-titulo {
+    font-size: 36px;
+  }
+
+  .preparando-intro {
+    font-size: 16px;
+  }
+
+  .preparando-etapas {
+    margin-top: 36px;
+  }
+
+  .preparando-preferencia {
+    min-height: 48px;
+  }
+
+  .preparando-acoes {
+    margin-top: 20px;
+  }
+
+  .preparando-botao {
+    height: 48px;
+  }
+}
