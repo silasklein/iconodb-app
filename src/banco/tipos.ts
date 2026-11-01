@@ -23,6 +23,13 @@ export interface Contagens {
   verbetes: number
 }
 
+/** A fila de revisão do pacote, somada em todas as bases (comum e publicações). */
+export interface Pendencias {
+  total: number
+  /** Do tipo com mais casos para o com menos; `tipo` é o motivo gravado no pipeline (review_queue.reason). */
+  porTipo: { tipo: string; rotulo: string; quantidade: number }[]
+}
+
 /** Ocorrência de um verbete do glossário no texto português. */
 export interface Termo {
   glId: string

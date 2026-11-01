@@ -1,0 +1,117 @@
+/*
+ * Menu (Menu.dc.html no celular: folha de baixo; no computador: popover preso à barra superior).
+ * Fica num portal: as cores são as das telas de consulta, também sobre as telas escuras.
+ */
+.menu-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  color: var(--texto-consulta);
+}
+.menu-fundo {
+  position: absolute;
+  inset: 0;
+}
+.menu-folha-camada .menu-fundo {
+  background: rgba(17, 17, 17, 0.6);
+}
+.menu {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+}
+.menu-folha {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 100dvh;
+  overflow-y: auto;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 24px max(28px, env(safe-area-inset-bottom));
+  gap: 6px;
+}
+.menu-alca {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+}
+.menu-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.menu-folha .menu-topo .icon-button {
+  margin-right: -12px;
+}
+.menu-titulo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.menu-lista {
+  display: flex;
+  flex-direction: column;
+}
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--filete-consulta);
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  color: var(--texto-consulta);
+  cursor: pointer;
+}
+.menu-item:disabled {
+  cursor: default;
+}
+.menu-item-nome {
+  font-size: 16px;
+}
+.menu-item-forte .menu-item-nome {
+  font-weight: 600;
+}
+.menu-item-meta {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+  text-align: right;
+}
+.menu-secao {
+  margin-top: 8px;
+  border-bottom: 1px solid var(--filete-consulta);
+}
+
+/* Computador: popover sob o ícone Menu, à direita da barra. */
+.menu-popover-camada .menu-fundo {
+  background: transparent;
+}
+.menu-popover {
+  top: calc(var(--barra-superior) - 4px);
+  right: 24px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--barra-superior) - 16px);
+  overflow-y: auto;
+  padding: 8px 16px 12px;
+  border: 1px solid var(--texto-consulta);
+  border-radius: 8px;
+}
+.menu-popover .menu-topo .icon-button {
+  margin-right: -8px;
+}
+.menu-item:disabled .menu-item-nome {
+  color: var(--secundario-consulta);
+}

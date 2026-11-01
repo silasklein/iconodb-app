@@ -1,0 +1,46 @@
+/* Barra superior das telas de computador (PC-*): 48 px, na cor do fundo da tela. */
+.barra-superior {
+  height: var(--barra-superior);
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(160px, 520px) minmax(max-content, 1fr);
+  align-items: center;
+  column-gap: 24px;
+  padding: 0 24px;
+  background: var(--fundo);
+  color: var(--texto);
+}
+@media (min-width: 1200px) {
+  .barra-superior {
+    padding: 0 36px 0 44px;
+  }
+}
+.barra-esquerda {
+  justify-self: start;
+}
+.barra-centro {
+  min-width: 0;
+}
+.barra-direita {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+}
+.barra-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--alvo-mouse);
+  height: var(--alvo-mouse);
+  color: inherit;
+  text-decoration: none;
+}
+.barra-superior .campo-busca {
+  width: 100%;
+}
+@media (pointer: coarse) {
+  .barra-logo {
+    width: var(--alvo-toque);
+    height: var(--alvo-toque);
+  }
+}

@@ -1,0 +1,5 @@
+/* Capa decorativa sobre o fundo branco das telas de consulta (multiply, como nas miniaturas). */
+.imagem-capa {
+  display: block;
+  mix-blend-mode: multiply;
+}

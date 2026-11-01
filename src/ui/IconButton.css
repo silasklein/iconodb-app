@@ -21,3 +21,19 @@
     height: var(--alvo-mouse);
   }
 }
+
+.icon-button {
+  position: relative;
+}
+.icon-button-atual {
+  box-shadow: inset 0 -2px 0 currentColor;
+}
+.icon-button-ponto {
+  position: absolute;
+  top: 8px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: currentColor;
+}

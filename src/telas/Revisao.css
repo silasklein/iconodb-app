@@ -1,0 +1,25 @@
+.revisao-tipos {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 2px solid var(--texto);
+}
+.revisao-tipos li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--filete);
+  font-size: 15px;
+}
+.revisao-tipos .codigo {
+  font-size: 13px;
+  color: var(--secundario);
+  font-variant-numeric: tabular-nums;
+}
+.revisao-nota {
+  margin-top: 16px;
+}

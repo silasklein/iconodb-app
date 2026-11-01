@@ -1,0 +1,177 @@
+/*
+ * Início (Main.dc.html no celular, PC-Inicio.dc.html no computador).
+ * Fundo claro das telas de consulta; tokens em ui/tokens.css.
+ */
+.inicio {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+/* A capa do primeiro grupo, cortada no canto superior direito. */
+.inicio-capa {
+  position: absolute;
+  top: 56px;
+  right: -40px;
+  width: 300px;
+  height: 220px;
+  overflow: hidden;
+}
+.inicio-capa .imagem-capa {
+  width: 300px;
+  height: 220px;
+  object-fit: cover;
+  object-position: 60% 55%;
+}
+
+.inicio-topo {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px 0 24px;
+}
+.inicio-topo-icones {
+  display: flex;
+}
+
+.inicio-principal {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 22px;
+  padding: 24px 24px max(28px, env(safe-area-inset-bottom));
+}
+.inicio-titulo {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.inicio-titulo h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.inicio-filete {
+  flex-shrink: 0;
+  width: 48px;
+  height: 1px;
+  margin-bottom: 14px;
+  background: var(--texto);
+}
+
+.inicio-contagens {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.inicio-contagens div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inicio-contagens dt {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.inicio-contagens dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.inicio-resumo {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+
+.inicio-entradas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+.inicio-entradas a {
+  align-self: flex-start;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 2px solid var(--texto);
+  padding-bottom: 3px;
+}
+
+/* Computador: texto à esquerda, a capa inteira à direita; o topo é a barra superior. */
+@media (min-width: 768px) {
+  .inicio {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 48px;
+    padding: 0 48px;
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .inicio-principal {
+    order: 1;
+    justify-content: flex-end;
+    gap: 28px;
+    max-width: 600px;
+    padding: 24px 0 64px;
+  }
+  .inicio-capa {
+    order: 2;
+    position: static;
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 0 48px;
+    min-height: 0;
+  }
+  .inicio-capa .imagem-capa {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 840px;
+    object-fit: contain;
+    object-position: center;
+  }
+  .inicio-titulo h1 {
+    font-size: clamp(40px, 4.4vw, 56px);
+    line-height: 1.12;
+  }
+  .inicio-filete {
+    display: none;
+  }
+  .inicio-contagens {
+    gap: 16px;
+    max-width: 440px;
+  }
+  .inicio-contagens dd {
+    font-size: 22px;
+  }
+  .inicio-resumo {
+    font-size: 17px;
+    max-width: 34em;
+  }
+  .inicio-entradas {
+    flex-direction: row;
+    flex-wrap: wrap;
+    column-gap: 28px;
+    row-gap: 16px;
+  }
+  .inicio-entradas a {
+    font-size: 17px;
+  }
+}

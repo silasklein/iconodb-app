@@ -1,0 +1,274 @@
+/*
+ * Grupo (Grupo.dc.html no celular, PC-Grupo.dc.html no computador).
+ * Fundo claro das telas de consulta; a capa é decorativa e o título é o primeiro plano.
+ */
+.grupo {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.grupo-aviso {
+  padding: 24px;
+}
+.grupo-aviso p {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.grupo-alto {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+}
+.grupo-capa {
+  position: absolute;
+  top: 72px;
+  right: -70px;
+  width: 400px;
+  height: 300px;
+  overflow: hidden;
+}
+.grupo-capa .imagem-capa {
+  width: 400px;
+  height: 300px;
+  object-fit: contain;
+  object-position: right center;
+}
+
+.grupo-apresentacao {
+  position: relative;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 24px max(28px, env(safe-area-inset-bottom));
+}
+.grupo-etiqueta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.grupo-titulo {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.grupo-titulo h1 {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.grupo-filete {
+  flex-shrink: 0;
+  width: 48px;
+  height: 1px;
+  margin-bottom: 14px;
+  background: var(--texto);
+}
+.grupo-contagens {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.grupo-contagens div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.grupo-contagens dt {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.grupo-contagens dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.grupo-resumo,
+.grupo-introducao p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.grupo-resumo {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.grupo-introducao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.grupo-introducao .grupo-introducao-aviso {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.grupo-ler {
+  align-self: flex-start;
+  margin-top: -8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.grupo-descer {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--alvo-toque);
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--corpo-consulta);
+  cursor: pointer;
+}
+
+.grupo-objetos {
+  margin: 0 24px;
+  padding: 16px 0 48px;
+  border-top: 2px solid var(--texto);
+}
+.grupo-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 14px;
+  row-gap: 22px;
+}
+.grupo-grade .cartao-imagem {
+  height: 168px;
+  padding: 12px;
+}
+
+/* Computador: texto à esquerda, capa à direita, grade larga. A trilha substitui o Voltar. */
+@media (min-width: 768px) {
+  .grupo {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .grupo-alto {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'trilha trilha'
+      'texto capa';
+    column-gap: 64px;
+    align-items: end;
+    padding: 0 48px;
+  }
+  .grupo-trilha {
+    grid-area: trilha;
+    padding: 20px 0 0;
+    font-size: 13px;
+    color: var(--secundario);
+  }
+  .grupo-trilha a {
+    color: var(--corpo-consulta);
+    text-decoration-color: var(--controle);
+    text-underline-offset: 3px;
+  }
+  .grupo-apresentacao {
+    grid-area: texto;
+    max-width: 600px;
+    margin-top: 0;
+    gap: 22px;
+    padding: 24px 0 48px;
+  }
+  .grupo-capa {
+    grid-area: capa;
+    position: static;
+    width: auto;
+    height: 440px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+  .grupo-capa .imagem-capa {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 440px;
+    object-position: center;
+  }
+  .grupo-titulo h1 {
+    font-size: clamp(40px, 4vw, 52px);
+    line-height: 1.12;
+  }
+  .grupo-filete {
+    display: none;
+  }
+  .grupo-contagens {
+    gap: 16px;
+    max-width: 400px;
+  }
+  .grupo-contagens dd {
+    font-size: 20px;
+  }
+  .grupo-resumo,
+  .grupo-introducao p {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .grupo-ler,
+  .grupo-descer {
+    font-size: 15px;
+  }
+  .grupo-objetos {
+    margin: 0 48px;
+    padding: 0 0 64px;
+  }
+  .grupo-objetos-topo {
+    display: flex;
+    align-items: center;
+    border-top: 2px solid var(--texto);
+    padding: 12px 0 14px;
+  }
+  .grupo-objetos-topo h2 {
+    margin: 0;
+    font-family: var(--fonte-texto);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .grupo-objetos-topo .codigo {
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--secundario);
+  }
+  .grupo-objetos {
+    border-top: 0;
+  }
+  .grupo-grade {
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    column-gap: 20px;
+    row-gap: 28px;
+  }
+  .grupo-grade .cartao-imagem {
+    height: 200px;
+    padding: 14px;
+  }
+}

@@ -170,7 +170,8 @@ export function Busca() {
     if (computador) setFolha(false)
   }, [computador])
 
-  const campo = <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} atalho />
+  // No computador o campo é o da barra superior (BarraSuperior); aqui só o do celular.
+  const campo = computador ? null : <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} atalho />
 
   const abas = (
     <div className="busca-escopos" role="group" aria-label="Escopo da busca">

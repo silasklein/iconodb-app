@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { vi } from 'vitest'
 import type { ObjetoResumo, Verbete } from '../banco/tipos'
 import { buscar, type ResultadoDaBusca } from '../busca/consulta'
+import { BarraSuperior } from '../ui/BarraSuperior'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Busca } from './Busca'
 import css from './Busca.css?raw'
@@ -13,6 +14,8 @@ import css from './Busca.css?raw'
  * busca/consulta.test.ts sobre o pacote sintético; aqui `buscar` é simulada para
  * olhar só a tela: verbete em destaque, abas, etiquetas, sem resultado, filtros, estado do roteador.
  */
+// A barra superior lê a fila de revisão: aqui, vazia.
+vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(async () => ({ total: 0, porTipo: [] })), sitios: vi.fn(async () => []) }))
 vi.mock('../busca/consulta', async (original) => ({ ...(await original<typeof import('../busca/consulta')>()), buscar: vi.fn() }))
 
 describe('tela Busca: resultados', () => {
@@ -60,6 +63,17 @@ describe('tela Busca: resultados', () => {
         <Routes>
           <Route path="/busca" element={<Busca />} />
           <Route path="/item/:id" element={<ItemDeProva />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+  /** No computador o campo de busca é o da barra superior: a tela e a barra juntas. */
+  function abrirComBarra(url: string) {
+    return render(
+      <MemoryRouter initialEntries={[url]}>
+        <BarraSuperior />
+        <Routes>
+          <Route path="/busca" element={<Busca />} />
         </Routes>
       </MemoryRouter>,
     )
@@ -190,8 +204,9 @@ describe('tela Busca: resultados', () => {
   it('tocar num filtro logo depois de digitar mantém o filtro', async () => {
     instalarMatchMedia(1280)
     mock.mockResolvedValue(resultado())
-    abrirComRota('/busca?q=leao')
+    abrirComBarra('/busca?q=leao')
     const facetas = await screen.findByRole('complementary', { name: 'Filtros' })
+    expect(screen.getAllByRole('searchbox', { name: 'Buscar' })).toHaveLength(1) // só o da barra
     await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 's')
     await userEvent.click(within(facetas).getByRole('checkbox', { name: /iconográfico/ }))
     await waitFor(() => expect(mock).toHaveBeenLastCalledWith('leaos', expect.objectContaining({ filtros: { nivel: ['iconographic'] } })))

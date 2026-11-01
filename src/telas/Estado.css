@@ -1,0 +1,56 @@
+/* Base das telas de consulta simples (Minhas notas, Revisão): título, apoio, corpo. */
+.pagina-consulta {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+@media (min-width: 768px) {
+  .pagina-consulta {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+}
+.pagina-consulta-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 24px 48px;
+  max-width: 760px;
+}
+.pagina-consulta-corpo h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+.pagina-consulta-apoio {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.pagina-consulta-vazio {
+  margin: 16px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+.aviso-de-erro {
+  margin: 24px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.aviso-de-erro p {
+  margin: 0 0 8px;
+}
+@media (min-width: 768px) {
+  .pagina-consulta-corpo {
+    padding: 40px 48px 64px;
+    gap: 12px;
+  }
+  .pagina-consulta-corpo h1 {
+    font-size: 44px;
+    line-height: 1.12;
+  }
+  .pagina-consulta-apoio {
+    font-size: 14px;
+  }
+}

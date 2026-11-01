@@ -28,6 +28,7 @@ import {
   type ModoDeExibicao,
   type Numero,
   type ObjetoResumo,
+  type Pendencias,
   type Obra,
   type ObraResumo,
   type Paralelo,
@@ -270,6 +271,52 @@ export async function contagens(): Promise<Contagens> {
            ${soma ? `(SELECT coalesce(sum(n), 0) FROM (${soma}))` : '0'} AS hipoteses,
            (SELECT count(*) FROM main.glossary_entry) AS verbetes`)
   return { objetos: n(l!.objetos) ?? 0, hipoteses: n(l!.hipoteses) ?? 0, verbetes: n(l!.verbetes) ?? 0 }
+}
+
+/** Os motivos da fila de revisão com nome próprio; os outros aparecem pelo motivo, legível. */
+const ROTULO_DA_PENDENCIA: Record<string, string> = {
+  citacao_nao_resolvida: 'Citações não resolvidas',
+  traducao_termo_alterado: 'Traduções com termo alterado',
+  traducao_desatualizada: 'Traduções desatualizadas',
+  medidas_nao_normalizadas: 'Medidas não organizadas',
+  datacao_nao_normalizada: 'Datações não organizadas',
+  sitio_nao_normalizado: 'Sítios não resolvidos',
+  remissao_ilegivel: 'Remissões ilegíveis',
+  anotacao_invalida: 'Anotações inválidas',
+  decisao_sem_verbete: 'Decisões sem verbete',
+  correspondencia_invalida: 'Correspondências inválidas',
+  mencao_de_figura_ambigua: 'Menções de figura ambíguas',
+  credito_do_desenho_ausente: 'Créditos de desenho ausentes',
+  credito_de_figura_ilegivel: 'Créditos de figura ilegíveis',
+  aparato_menos_de_5_campos: 'Aparato do catálogo a conferir',
+  aparato_divisao_ambigua: 'Aparato do catálogo a conferir',
+  aparato_divisao_por_recurso: 'Aparato do catálogo a conferir',
+  aparato_campo_suspeito: 'Aparato do catálogo a conferir',
+}
+
+function rotuloDaPendencia(motivo: string): string {
+  const conhecido = ROTULO_DA_PENDENCIA[motivo]
+  if (conhecido) return conhecido
+  const legivel = motivo.replace(/_/g, ' ').trim()
+  return legivel.charAt(0).toUpperCase() + legivel.slice(1)
+}
+
+/** Quantos casos a fila de revisão tem (comum e todas as publicações), por tipo. Só contagens: a Revisão da 2A não age. */
+export async function pendencias(): Promise<Pendencias> {
+  const pubs = await publicacoesAbertas()
+  const uniao = ['SELECT reason FROM main.review_queue', ...pubs.map((p) => `SELECT reason FROM ${p.esquema}.review_queue`)].join(' UNION ALL ')
+  const linhas = await executar<L>(`SELECT reason, count(*) AS n FROM (${uniao}) GROUP BY reason`)
+  // Motivos diferentes podem ter o mesmo nome (os do aparato do catálogo): somam num tipo só, o do primeiro.
+  const porRotulo = new Map<string, { tipo: string; rotulo: string; quantidade: number }>()
+  for (const l of linhas) {
+    const tipo = s(l.reason)!
+    const rotulo = rotuloDaPendencia(tipo)
+    const atual = porRotulo.get(rotulo)
+    if (atual) atual.quantidade += n(l.n) ?? 0
+    else porRotulo.set(rotulo, { tipo, rotulo, quantidade: n(l.n) ?? 0 })
+  }
+  const porTipo = [...porRotulo.values()].sort((x, y) => y.quantidade - x.quantidade || x.rotulo.localeCompare(y.rotulo, 'pt'))
+  return { total: porTipo.reduce((soma, t) => soma + t.quantidade, 0), porTipo }
 }
 
 const SQL_GRUPO = (esq: string, onde: string) => `

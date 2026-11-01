@@ -11,6 +11,12 @@ interface Props {
   /** A tecla "/" (fora de campos de texto) leva o foco a este campo. */
   atalho?: boolean
   placeholder?: string
+  /**
+   * "pagina" (padrão): o campo das telas de busca e do Início no celular.
+   * "inicio": o campo grande do Início no computador, com o rótulo visível e a dica "/".
+   * "barra": o campo da barra superior, com o rótulo "Buscar" dentro da caixa e a dica "/".
+   */
+  variante?: 'pagina' | 'inicio' | 'barra'
 }
 
 /**
@@ -18,7 +24,7 @@ interface Props {
  * É controlado; quem usa decide o que fazer ao digitar (a Busca atualiza o resultado) e ao
  * enviar (o Início vai para a Busca, com useIrParaBusca).
  */
-export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, placeholder }: Props) {
+export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, placeholder, variante = 'pagina' }: Props) {
   const campo = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -40,20 +46,31 @@ export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, pla
     campo.current?.focus()
   }
 
+  const noBotao = variante === 'barra'
+  const dicaDoAtalho = variante !== 'pagina' && atalho && valor === ''
   return (
     <form
-      className="campo-busca"
+      className={`campo-busca${variante === 'pagina' ? '' : ` campo-busca-${variante}`}`}
       role="search"
       onSubmit={(e: FormEvent) => {
         e.preventDefault()
         aoEnviar(valor)
       }}
     >
-      <label className="campo-busca-rotulo" htmlFor={id}>
-        Buscar
-      </label>
+      {!noBotao && (
+        <label className="campo-busca-rotulo" htmlFor={id}>
+          Buscar
+        </label>
+      )}
       <div className="campo-busca-caixa">
-        <Icon name="buscar" size={20} />
+        {noBotao ? (
+          <label className="campo-busca-rotulo" htmlFor={id}>
+            <Icon name="buscar" size={18} />
+            Buscar
+          </label>
+        ) : (
+          <Icon name="buscar" size={20} />
+        )}
         <input
           id={id}
           ref={campo}
@@ -74,6 +91,11 @@ export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, pla
             }
           }}
         />
+        {dicaDoAtalho && (
+          <kbd className="campo-busca-tecla" aria-hidden="true">
+            /
+          </kbd>
+        )}
         {valor !== '' && (
           <IconButton icon="fechar" label="Limpar a busca" shortcut="Escape" shortcutLabel="Esc" size={18} onClick={limpar} />
         )}

@@ -56,4 +56,9 @@ describe('Logo', () => {
     const svg = screen.getByRole('img', { name: 'Logo SKC' })
     expect(svg.getAttribute('style') ?? '').not.toMatch(/auto/)
   })
+
+  it('tone="atual" segue a cor do tema da tela (barra superior, clara ou escura)', () => {
+    render(<Logo scale={2} tone="atual" />)
+    expect(screen.getByRole('img', { name: 'Logo SKC' })).toHaveStyle({ color: 'var(--texto)' })
+  })
 })

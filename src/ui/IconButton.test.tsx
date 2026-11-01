@@ -91,4 +91,24 @@ describe('Tooltip.css', () => {
   it('nunca desce abaixo de 12 px de fonte', () => {
     for (const m of css.matchAll(/font:\s*\d+\s+(\d+)px/g)) expect(Number(m[1])).toBeGreaterThanOrEqual(12)
   })
+
+  it('atual marca o link da tela em que se está (aria-current e traço embaixo)', () => {
+    render(<IconButton icon="colecoes" label="Coleções" href="#/colecoes" atual />)
+    const link = screen.getByRole('link', { name: 'Coleções' })
+    expect(link).toHaveAttribute('aria-current', 'page')
+    expect(link).toHaveClass('icon-button-atual')
+  })
+
+  it('sem atual não declara aria-current', () => {
+    render(<IconButton icon="colecoes" label="Coleções" href="#/colecoes" />)
+    expect(screen.getByRole('link', { name: 'Coleções' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('ponto desenha o ponto (decorativo) ao lado do glifo', () => {
+    render(<IconButton icon="revisao" label="Revisão, 4.248 pendências" href="#/revisao" ponto />)
+    const link = screen.getByRole('link', { name: 'Revisão, 4.248 pendências' })
+    const ponto = link.querySelector('.icon-button-ponto')
+    expect(ponto).toHaveAttribute('aria-hidden', 'true')
+    expect(link).toHaveTextContent('')
+  })
 })

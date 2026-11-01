@@ -16,6 +16,7 @@ import {
   item,
   obra,
   obras,
+  pendencias,
   regioes,
   sitio,
   sitios,
@@ -48,6 +49,20 @@ describe('consultas sobre o pacote sintético', () => {
 
   it('o banco é só de leitura', async () => {
     await expect(executar("UPDATE main.object SET period_code = 'X'")).rejects.toThrow(/readonly/i)
+  })
+
+  it('pendencias() soma a fila de revisão de todas as bases, por tipo', async () => {
+    const p = await pendencias()
+    const [c] = await executar<{ n: number }>('SELECT count(*) AS n FROM main.review_queue')
+    const [q] = await executar<{ n: number }>('SELECT count(*) AS n FROM pub_TESTE.review_queue')
+    expect(p.total).toBe(c!.n + q!.n)
+    expect(p.total).toBe(2)
+    expect(p.porTipo.map((t) => [t.tipo, t.quantidade])).toEqual([
+      ['citacao_nao_resolvida', 1],
+      ['traducao_termo_alterado', 1],
+    ])
+    expect(p.porTipo[0]!.rotulo).toBe('Citações não resolvidas')
+    expect(p.porTipo.reduce((s, t) => s + t.quantidade, 0)).toBe(p.total)
   })
 
   it('item() do item com 𓀀 traz termos e âncoras em code points', async () => {

@@ -120,3 +120,17 @@ a {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Alvo de toque de 44 px sem aumentar o desenho. */
+.hit {
+  position: relative;
+}
+.hit::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}

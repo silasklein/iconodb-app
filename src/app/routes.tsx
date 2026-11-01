@@ -1,8 +1,16 @@
 import type { ReactElement } from 'react'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Busca } from '../telas/Busca'
+import { Colecoes } from '../telas/Colecoes'
 import { Entrar } from '../telas/Entrar'
+import { Grupo } from '../telas/Grupo'
+import { Inicio } from '../telas/Inicio'
+import { MinhasNotas } from '../telas/MinhasNotas'
 import { Preparando } from '../telas/Preparando'
+import { Revisao } from '../telas/Revisao'
+import { BarraSuperior } from '../ui/BarraSuperior'
+import { useBreakpoint } from '../ui/useBreakpoint'
+import { RotaInicial } from './RotaInicial'
 
 /** Tela provisória: cada tarefa seguinte troca a sua pela tela real. */
 function Provisoria({ titulo }: { titulo: string }) {
@@ -20,12 +28,19 @@ export interface Rota {
 }
 
 export const ROTAS: Rota[] = [
-  { path: '/', elemento: <Provisoria titulo="Início" /> },
+  {
+    path: '/',
+    elemento: (
+      <RotaInicial>
+        <Inicio />
+      </RotaInicial>
+    ),
+  },
   { path: '/entrar', elemento: <Entrar /> },
   { path: '/preparando', elemento: <Preparando /> },
   { path: '/busca', elemento: <Busca /> },
-  { path: '/colecoes', elemento: <Provisoria titulo="Coleções" /> },
-  { path: '/grupo/:id', elemento: <Provisoria titulo="Grupo" /> },
+  { path: '/colecoes', elemento: <Colecoes /> },
+  { path: '/grupo/:id', elemento: <Grupo /> },
   { path: '/item/:id', elemento: <Provisoria titulo="Item" /> },
   { path: '/imagem/:id', elemento: <Provisoria titulo="Imagem" /> },
   { path: '/glossario', elemento: <Provisoria titulo="Glossário" /> },
@@ -34,17 +49,35 @@ export const ROTAS: Rota[] = [
   { path: '/obra/:id', elemento: <Provisoria titulo="Obra" /> },
   { path: '/sitios', elemento: <Provisoria titulo="Sítios" /> },
   { path: '/sitio/:id', elemento: <Provisoria titulo="Sítio" /> },
-  { path: '/revisao', elemento: <Provisoria titulo="Revisão" /> },
+  { path: '/revisao', elemento: <Revisao /> },
   { path: '/atalhos', elemento: <Provisoria titulo="Atalhos" /> },
+  { path: '/notas', elemento: <MinhasNotas /> },
 ]
+
+/** Telas sem a barra superior: a entrada e o primeiro download (antes de haver o que consultar). */
+export const SEM_BARRA_SUPERIOR = ['/entrar', '/preparando']
+
+/**
+ * A barra superior das telas de computador (a partir de 768 px) fica fora das rotas, para
+ * não remontar a cada tela. No Início o campo de busca é o da própria tela.
+ */
+function BarraDasTelasLargas() {
+  const { pathname } = useLocation()
+  const computador = useBreakpoint() === 'computador'
+  if (!computador || SEM_BARRA_SUPERIOR.includes(pathname)) return null
+  return <BarraSuperior busca={pathname !== '/'} />
+}
 
 export function AppRoutes() {
   return (
-    <Routes>
-      {ROTAS.map((r) => (
-        <Route key={r.path} path={r.path} element={r.elemento} />
-      ))}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <BarraDasTelasLargas />
+      <Routes>
+        {ROTAS.map((r) => (
+          <Route key={r.path} path={r.path} element={r.elemento} />
+        ))}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   )
 }

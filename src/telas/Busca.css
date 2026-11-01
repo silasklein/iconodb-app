@@ -8,20 +8,6 @@
   color: var(--texto);
 }
 
-/* Alvo de toque de 44 px sem aumentar o desenho. */
-.hit {
-  position: relative;
-}
-.hit::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: max(100%, 44px);
-  height: max(100%, 44px);
-  transform: translate(-50%, -50%);
-}
-
 .busca-cabecalho {
   display: flex;
   justify-content: space-between;
@@ -354,6 +340,9 @@
 
 /* Computador: facetas à esquerda */
 @media (min-width: 768px) {
+  .busca-pagina {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
   .busca-computador {
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);

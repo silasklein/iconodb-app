@@ -4,11 +4,11 @@
  * nunca width:auto nem escala fracionária.
  */
 export type LogoScale = 1 | 2 | 3 | 4
-export type LogoTone = 'light' | 'dark'
+export type LogoTone = 'light' | 'dark' | 'atual'
 
 interface LogoProps {
   scale: LogoScale
-  /** "light": logo escuro sobre fundo claro. "dark": logo claro sobre fundo escuro. */
+  /** "light": logo escuro sobre fundo claro. "dark": logo claro sobre fundo escuro. "atual": a cor do tema da tela (barra superior). */
   tone: LogoTone
 }
 
@@ -29,7 +29,7 @@ export function Logo({ scale, tone }: LogoProps) {
       style={{
         display: 'block',
         flexShrink: 0,
-        color: tone === 'light' ? 'var(--texto-consulta)' : 'var(--texto-item)',
+        color: tone === 'light' ? 'var(--texto-consulta)' : tone === 'dark' ? 'var(--texto-item)' : 'var(--texto)',
       }}
     >
       <rect x="0" y="0" width="7" height="3" />
