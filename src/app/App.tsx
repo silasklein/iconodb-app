@@ -1,4 +1,5 @@
 import { HashRouter } from 'react-router'
+import { AvisoDeAtualizacao } from '../pwa/AvisoDeAtualizacao'
 import { RetornoDoLogin } from './RetornoDoLogin'
 import { AppRoutes } from './routes'
 
@@ -9,6 +10,7 @@ export function App() {
     <HashRouter>
       <RetornoDoLogin />
       <AppRoutes />
+      <AvisoDeAtualizacao />
     </HashRouter>
   )
 }

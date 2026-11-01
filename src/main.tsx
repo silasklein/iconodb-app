@@ -10,9 +10,12 @@ import './ui/tokens.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
+import { registrarServiceWorker } from './pwa/atualizacao'
 
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
+
+void registrarServiceWorker()
