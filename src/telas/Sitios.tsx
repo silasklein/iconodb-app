@@ -124,7 +124,7 @@ export function Sitios() {
       <div className="lista-ferramentas">
         <CampoDeFiltro rotulo="Buscar sítio" placeholder="nome antigo ou moderno…" valor={texto} aoMudar={setTexto} />
       </div>
-      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
       {dados && visiveis.length === 0 && <p className="lista-vazia">Nenhum sítio encontrado.</p>}
       {dados && visiveis.length > 0 && (
         <div className="lista-letras">

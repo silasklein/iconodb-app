@@ -76,7 +76,7 @@ function LinhaDeHipotese({ h, aoAbrir, outro = false }: { h: Hipotese; aoAbrir?:
   const sobre = outro ? [h.alvo.numero ?? h.alvo.id, h.alvo.rotulo].filter(Boolean).join(', ') : sobreDaHipotese(h)
   return (
     <Link
-      className="hipotese-linha"
+      className="item-hipotese-linha"
       to={{ pathname, search: `?hipotese=${encodeURIComponent(h.id)}` }}
       state={state}
       replace
@@ -84,14 +84,14 @@ function LinhaDeHipotese({ h, aoAbrir, outro = false }: { h: Hipotese; aoAbrir?:
       data-hipotese-linha={h.id}
       onClick={(e: MouseEvent<HTMLAnchorElement>) => aoAbrir?.(h.id, e.currentTarget)}
     >
-      <span className="hipotese-linha-texto">
-        <span className="hipotese-linha-nome">{nomeDaHipotese(h)}</span>
-        <span className="hipotese-linha-sobre">
+      <span className="item-hipotese-linha-texto">
+        <span className="item-hipotese-linha-nome">{nomeDaHipotese(h)}</span>
+        <span className="item-hipotese-linha-sobre">
           {` · ${sobre}`}
           {!temAncora(h) && ' · sem trecho no texto PT'}
         </span>
       </span>
-      <span className="hipotese-linha-modalidade codigo">{ROTULO_DA_MODALIDADE[h.modalidade]}</span>
+      <span className="item-hipotese-linha-modalidade codigo">{ROTULO_DA_MODALIDADE[h.modalidade]}</span>
     </Link>
   )
 }
@@ -216,7 +216,8 @@ export function Bibliografia({ referencias }: { referencias: ItemDetalhe['biblio
 }
 
 const ENTIDADES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ' }
-const decodificar = (s: string) => s.replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (_, e: string) => ENTIDADES[e]!)
+/** As entidades HTML que a forma Chicago usa, em texto. */
+export const decodificar = (s: string) => s.replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (_, e: string) => ENTIDADES[e]!)
 
 /** O HTML da forma Chicago só usa <i>: desenha o itálico e descarta qualquer outra marcação (sem innerHTML). */
 export function htmlComItalico(html: string): ReactNode[] {

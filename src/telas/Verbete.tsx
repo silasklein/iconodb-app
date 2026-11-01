@@ -35,7 +35,7 @@ export function Verbete({ id, pagina, voltarPara, computador }: Props) {
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar ao glossário' }
 
   if (carga.fase === 'carregando') return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
-  if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} />
+  if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
   const v = carga.dados
   if (v === null) {
     return <NaoEncontrado pagina={pagina} voltar={voltar} titulo="Verbete não encontrado" destino="/glossario" rotuloDoDestino="Ver o glossário" />

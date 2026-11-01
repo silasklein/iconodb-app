@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { ErroSemPacote } from '../banco/cliente'
 import type { Verbete } from '../banco/tipos'
 import {
   CHAVES_DE_FILTRO,
@@ -14,6 +13,7 @@ import {
   type ResultadoDaBusca,
 } from '../busca/consulta'
 import { MAXIMO_DA_LISTA, estadoDoResultado, type EstadoVindoDaBusca, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
+import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { IconButton } from '../ui/IconButton'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -26,7 +26,6 @@ const ESPERA_AO_DIGITAR_MS = 250
 
 export const MSG_VAZIA = 'Digite um termo, um sítio ou o número de um objeto (por exemplo CA00001).'
 export const MSG_CURTA = 'Digite ao menos 2 letras.'
-export const MSG_SEM_PACOTE = 'O banco ainda não está no aparelho.'
 const MSG_ERRO = 'Não foi possível buscar agora. Tente de novo.'
 
 type Estado =
@@ -34,7 +33,7 @@ type Estado =
   | { fase: 'curta' }
   | { fase: 'buscando' }
   | { fase: 'ok'; resultado: ResultadoDaBusca; ocupado: boolean }
-  | { fase: 'erro'; semPacote: boolean }
+  | { fase: 'erro'; erro: unknown; tentarDeNovo: () => void }
 
 const objetos = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'objeto' : 'objetos'}`
 
@@ -43,7 +42,9 @@ const TIPO_DO_VERBETE: Record<Verbete['tipo'], string> = { concept: 'conceito', 
 /** O resultado da busca de `q`; refaz quando a consulta, o escopo, os filtros ou o limite mudam. */
 function useBusca(q: string, escopo: Escopo, filtros: Filtros, limite: number): Estado {
   const [estado, setEstado] = useState<Estado>({ fase: q.trim() === '' ? 'vazia' : 'buscando' })
-  const chave = JSON.stringify([q, escopo, filtros, limite])
+  const [tentativa, setTentativa] = useState(0)
+  const tentarDeNovo = useCallback(() => setTentativa((t) => t + 1), [])
+  const chave = JSON.stringify([q, escopo, filtros, limite, tentativa])
   useEffect(() => {
     if (q.trim() === '') {
       setEstado({ fase: 'vazia' })
@@ -53,12 +54,12 @@ function useBusca(q: string, escopo: Escopo, filtros: Filtros, limite: number): 
     setEstado((e) => (e.fase === 'ok' ? { ...e, ocupado: true } : { fase: 'buscando' }))
     buscar(q, { escopo, filtros, limite }).then(
       (resultado) => vivo && setEstado(resultado.curta ? { fase: 'curta' } : resultado.vazia ? { fase: 'vazia' } : { fase: 'ok', resultado, ocupado: false }),
-      (erro: unknown) => vivo && setEstado({ fase: 'erro', semPacote: erro instanceof ErroSemPacote }),
+      (erro: unknown) => vivo && setEstado({ fase: 'erro', erro, tentarDeNovo }),
     )
     return () => {
       vivo = false
     }
-    // `chave` resume q, escopo, filtros e limite
+    // `chave` resume q, escopo, filtros, limite e as tentativas ("Tentar de novo")
   }, [chave])
   return estado
 }
@@ -254,6 +255,14 @@ export function Busca() {
             {campo}
             {abas}
 
+            {/* Sempre no DOM (região viva que aparece junto com o texto não é lida): anuncia a contagem. */}
+            <p className="so-leitor" role="status" data-contagem="">
+              {resultado && resultado.total > 0
+                ? objetos(resultado.total) +
+                  (temFiltros(filtros) ? `, ${resultado.totalSemFiltros.toLocaleString('pt-BR')} sem filtros` : '')
+                : ''}
+            </p>
+
             {estado.fase === 'vazia' && (
               <div className="busca-aviso" role="status">
                 <p>{MSG_VAZIA}</p>
@@ -274,13 +283,8 @@ export function Busca() {
             )}
 
             {estado.fase === 'erro' && (
-              <div className="busca-aviso" role="alert">
-                <p>{estado.semPacote ? MSG_SEM_PACOTE : MSG_ERRO}</p>
-                {estado.semPacote && (
-                  <p>
-                    <Link to="/preparando">Preparar o banco</Link>
-                  </p>
-                )}
+              <div className="busca-aviso">
+                <AvisoDeErro erro={estado.erro} aoTentar={estado.tentarDeNovo} mensagem={MSG_ERRO} />
               </div>
             )}
 

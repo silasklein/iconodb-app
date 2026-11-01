@@ -15,6 +15,7 @@ import { Logo } from '../ui/Logo'
 import './Entrar.css'
 
 const MSG_NAO_ABRIU = 'Não foi possível abrir o Dropbox; tente de novo'
+const MSG_CODIGO_VAZIO = 'Cole o código do Dropbox para continuar.'
 const MSG_NAO_ENTROU = 'Não foi possível entrar; tente de novo'
 const MSG_NAO_CHEGOU = 'A volta do Dropbox não chegou a este app. Entre com o código do Dropbox.'
 const MSG_EXPIROU = 'O acesso ao Dropbox expirou. Entre de novo; os dados do aparelho continuam aqui.'
@@ -55,6 +56,7 @@ export function Entrar() {
   const [ocupado, setOcupado] = useState(false)
   const [erroPrincipal, setErroPrincipal] = useState<string | null>(null)
   const [erroCodigo, setErroCodigo] = useState<string | null>(null)
+  const campoDoCodigo = useRef<HTMLInputElement>(null)
   const [expirado, setExpirado] = useState(false)
   const preparouRetorno = useRef(false)
 
@@ -132,7 +134,12 @@ export function Entrar() {
 
   async function enviarCodigo(e: FormEvent) {
     e.preventDefault()
-    if (!codigo.trim() || ocupado) return
+    if (ocupado) return
+    if (!codigo.trim()) {
+      setErroCodigo(MSG_CODIGO_VAZIO)
+      campoDoCodigo.current?.focus()
+      return
+    }
     setErroCodigo(null)
     setOcupado(true)
     try {
@@ -217,27 +224,33 @@ export function Entrar() {
                 Código do Dropbox
               </label>
               <input
+                ref={campoDoCodigo}
                 id="codigo-dropbox"
                 className="entrar-campo"
                 type="text"
                 value={codigo}
-                onChange={(ev) => setCodigo(ev.target.value)}
+                onChange={(ev) => {
+                  setCodigo(ev.target.value)
+                  if (erroCodigo === MSG_CODIGO_VAZIO) setErroCodigo(null)
+                }}
+                aria-describedby={erroCodigo ? 'codigo-dropbox-erro' : undefined}
+                aria-invalid={erroCodigo === MSG_CODIGO_VAZIO || erroCodigo === MSG_CODIGO_INVALIDO ? true : undefined}
                 autoComplete="off"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
               />
               {erroCodigo && (
-                <p role="alert" className="entrar-erro">
+                <p role="alert" id="codigo-dropbox-erro" className="entrar-erro">
                   {erroCodigo}
                 </p>
               )}
-              {erroCodigo && !urlDoDropbox && (
+              {erroCodigo && erroCodigo !== MSG_CODIGO_VAZIO && !urlDoDropbox && (
                 <button type="button" className="entrar-botao entrar-botao-secundario" onClick={() => void prepararCodigo(false)}>
                   Tentar de novo
                 </button>
               )}
-              <button type="submit" className="entrar-botao entrar-botao-secundario" disabled={ocupado || !codigo.trim()}>
+              <button type="submit" className="entrar-botao entrar-botao-secundario" disabled={ocupado}>
                 Entrar
               </button>
             </form>

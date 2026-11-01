@@ -61,7 +61,7 @@
   text-transform: uppercase;
   color: #d4d4d4;
 }
-.hipotese-linha {
+.item-hipotese-linha {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 12px;
@@ -72,25 +72,25 @@
   color: var(--texto);
   text-decoration: none;
 }
-.hipotese-linha-texto {
+.item-hipotese-linha-texto {
   font-size: 15px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.hipotese-linha-nome {
+.item-hipotese-linha-nome {
   text-decoration: underline dotted;
   text-decoration-color: var(--controle);
   text-underline-offset: 4px;
 }
-.hipotese-linha-sobre {
+.item-hipotese-linha-sobre {
   color: var(--secundario);
 }
-.hipotese-linha-modalidade {
+.item-hipotese-linha-modalidade {
   font-size: 12px;
   color: var(--secundario);
 }
 @media (hover: hover) {
-  .hipotese-linha:hover .hipotese-linha-nome {
+  .item-hipotese-linha:hover .item-hipotese-linha-nome {
     text-decoration-color: currentColor;
   }
 }

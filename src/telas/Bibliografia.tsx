@@ -2,7 +2,7 @@ import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { obra, obras, type ObraResumo } from '../banco/consultas'
 import { tabelaDoPacote } from '../busca/fold'
-import { htmlComItalico } from '../item/Secoes'
+import { decodificar, htmlComItalico } from '../item/Secoes'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Contagem } from '../ui/Contagem'
 import { CampoDeFiltro } from '../ui/CampoDeFiltro'
@@ -108,7 +108,7 @@ export function Bibliografia() {
         <CampoDeFiltro rotulo="Buscar na bibliografia" placeholder="autor, ano ou título…" valor={texto} aoMudar={setTexto} />
         {computador && botaoDeOrdem}
       </div>
-      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
       {dados && visiveis.length === 0 && <p className="lista-vazia">Nenhuma obra encontrada.</p>}
       {dados && visiveis.length > 0 && (
         <div className="lista-letras">
@@ -148,9 +148,10 @@ export function Bibliografia() {
 }
 
 /** O texto da referência para copiar: o Chicago em texto puro (sem a marcação do itálico). */
-function chicagoEmTexto(o: { chicago: string | null; chicagoHtml: string | null; titulo: string | null; curta: string | null }): string {
+/** A referência em texto puro (o que "Copiar referência" copia): sem marcação e com as entidades decodificadas. */
+export function chicagoEmTexto(o: { chicago: string | null; chicagoHtml: string | null; titulo: string | null; curta: string | null }): string {
   if (o.chicago) return o.chicago
-  if (o.chicagoHtml) return o.chicagoHtml.replace(/<[^>]*>/g, '')
+  if (o.chicagoHtml) return decodificar(o.chicagoHtml.replace(/<[^>]*>/g, ''))
   return o.titulo ?? o.curta ?? ''
 }
 
@@ -169,7 +170,7 @@ export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar à bibliografia' }
 
   if (carga.fase === 'carregando') return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
-  if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} />
+  if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
   const o = carga.dados
   if (o === null) {
     return <NaoEncontrado pagina={pagina} voltar={voltar} titulo="Obra não encontrada" destino="/bibliografia" rotuloDoDestino="Ver a bibliografia" />

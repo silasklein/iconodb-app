@@ -51,7 +51,7 @@ export function Item() {
       <div className="item">
         <TopoDoCelular voltar={{ href: '#/colecoes', rotulo: 'Voltar às coleções' }} />
         <div className="item-aviso">
-          <AvisoDeErro erro={carga.erro} />
+          <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />
         </div>
       </div>
     )

@@ -48,6 +48,15 @@
   flex-shrink: 0;
   color: var(--texto);
 }
+/* Toque: o link "Voltar ao grupo / à busca" ocupa a altura toda da faixa (44 px), não só a linha do texto.
+   inline-block (e não flex) para manter as reticências do texto longo. */
+@media (pointer: coarse) {
+  .item-posicao-rotulo {
+    display: inline-block;
+    line-height: var(--alvo-toque);
+    min-height: var(--alvo-toque);
+  }
+}
 .item-posicao-setas {
   display: flex;
   flex-shrink: 0;
@@ -245,10 +254,14 @@
     padding-bottom: 55dvh;
   }
 }
-/* 1160 ou mais: o painel é a terceira coluna da grade; a imagem encolhe primeiro. */
+/*
+ * 1160 ou mais: o painel é a terceira coluna da grade; a imagem encolhe primeiro. Os mínimos somam
+ * 1080 px (e não 1160): com a barra de rolagem sempre visível (Mac com mouse, 15 px) a janela de
+ * 1160–1175 px não rola de lado; a leitura continua acima de 45 caracteres por linha.
+ */
 @media (min-width: 1160px) {
   .item-pc-com-painel {
-    grid-template-columns: minmax(280px, 1fr) minmax(500px, 688px) 380px;
+    grid-template-columns: minmax(240px, 1fr) minmax(460px, 688px) 380px;
   }
   .item-pc-com-painel .painel-hipotese-lateral {
     grid-column: 3;

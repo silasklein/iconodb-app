@@ -99,6 +99,21 @@ describe('tela Busca: resultados', () => {
     expect(mock).toHaveBeenCalledWith('leao', expect.objectContaining({ escopo: 'tudo', filtros: {} }))
   })
 
+  it('a contagem é anunciada numa região viva (role="status") que já existe antes do resultado', async () => {
+    let entregar!: (r: ResultadoDaBusca) => void
+    mock.mockImplementation(() => new Promise((ok) => (entregar = ok)))
+    abrirComRota('/busca?q=leao')
+    const vivas = () => screen.getAllByRole('status').filter((el) => el.hasAttribute('data-contagem'))
+    await waitFor(() => expect(vivas()).toHaveLength(1))
+    const viva = vivas()[0]!
+    expect(viva).toHaveTextContent(/^$/)
+    entregar(resultado())
+    await waitFor(() => expect(viva).toHaveTextContent(/^3 objetos$/))
+    expect(vivas()[0]).toBe(viva)
+    // O beforeEach devolve o mock, que o Vitest chama ao fim: que ele não fique esperando para sempre.
+    mock.mockResolvedValue(resultado())
+  })
+
   it('abrir um resultado leva ao item com a lista ordenada dos números no estado do roteador', async () => {
     mock.mockResolvedValue(resultado())
     abrirComRota('/busca?q=leao&escopo=termo')

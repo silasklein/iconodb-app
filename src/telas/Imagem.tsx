@@ -57,7 +57,7 @@ export function Imagem() {
   if (carga.fase === 'erro') {
     return (
       <Casca origem={origem}>
-        <AvisoDeErro erro={carga.erro} />
+        <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />
       </Casca>
     )
   }
@@ -94,12 +94,12 @@ function Casca({ origem, ocupada = false, children }: { origem: EstadoDoVisualiz
   }, [])
   useAtalhos({ Escape: () => aoFechar.current() }, 'visualizador')
   return (
-    <div className="visualizador visualizador-aviso" aria-busy={ocupada || undefined}>
+    <main className="visualizador visualizador-aviso" aria-busy={ocupada || undefined}>
       <div className="vis-topo-solto" ref={topo}>
         <IconButton icon="fechar" label="Fechar o visualizador" shortcut="Escape" shortcutLabel="Esc" tipPosition="start" onClick={fechar} />
       </div>
       {children}
-    </div>
+    </main>
   )
 }
 
@@ -332,8 +332,8 @@ function Visualizador({ img, regioes, origem }: Props) {
 
   return (
     <div className="visualizador">
-      <h1 className="so-leitor">{`Visualizador de imagem ${img.numero}`}</h1>
-      <div className="vis-coluna">
+      <main className="vis-coluna">
+        <h1 className="so-leitor">{`Visualizador de imagem ${img.numero}`}</h1>
         <header className="vis-topo">
           <div ref={topoRef}>
             <IconButton icon="fechar" label="Fechar o visualizador" shortcut="Escape" shortcutLabel="Esc" tipPosition="start" onClick={fechar} />
@@ -422,7 +422,7 @@ function Visualizador({ img, regioes, origem }: Props) {
             </div>
           </div>
         )}
-      </div>
+      </main>
 
       {temRegioes && (
         <ListaDeRegioes regioes={regioes} ocultas={ocultas} aoAlternar={alternarRegiao} comPainel={computador} />

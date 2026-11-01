@@ -121,11 +121,24 @@ describe('Entrar', () => {
     expect(tentarLoginComCodigo).toHaveBeenCalledWith('abc')
   })
 
-  it('"Entrar" fica desabilitado enquanto o campo está vazio', async () => {
+  it('"Entrar" com o campo vazio não chama o Dropbox: avisa no campo e devolve o foco a ele', async () => {
     montar()
     await userEvent.click(screen.getByRole('button', { name: 'Entrar com código' }))
-    await screen.findByLabelText('Código do Dropbox')
-    expect(screen.getByRole('button', { name: 'Entrar' })).toBeDisabled()
+    const campo = await screen.findByLabelText('Código do Dropbox')
+    const entrar = screen.getByRole('button', { name: 'Entrar' })
+    expect(entrar).toBeEnabled()
+    await userEvent.type(campo, '   ')
+    await userEvent.click(entrar)
+    expect(tentarLoginComCodigo).not.toHaveBeenCalled()
+    const alerta = await screen.findByRole('alert')
+    expect(alerta).toHaveTextContent('Cole o código do Dropbox para continuar.')
+    expect(campo).toHaveFocus()
+    expect(campo).toHaveAttribute('aria-describedby', alerta.id)
+    expect(campo).toHaveAttribute('aria-invalid', 'true')
+    // Digitar tira o aviso.
+    await userEvent.type(campo, 'abc')
+    expect(screen.queryByText('Cole o código do Dropbox para continuar.')).not.toBeInTheDocument()
+    expect(campo).not.toHaveAttribute('aria-invalid')
   })
 
   it('código com a rede fora do ar mostra "Sem conexão", não "Código não aceito"', async () => {

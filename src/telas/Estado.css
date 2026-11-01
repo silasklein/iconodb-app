@@ -41,6 +41,26 @@
 .aviso-de-erro p {
   margin: 0 0 8px;
 }
+/* "Tentar de novo": um link-botão, como "Limpar filtros" na Busca; 44 px no toque, 40 no mouse. */
+.aviso-de-erro-tentar {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .aviso-de-erro-tentar {
+    min-height: var(--alvo-mouse);
+  }
+}
 @media (min-width: 768px) {
   .pagina-consulta-corpo {
     padding: 40px 48px 64px;

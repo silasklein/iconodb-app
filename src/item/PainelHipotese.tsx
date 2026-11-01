@@ -145,7 +145,7 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
         </div>
       )}
       <div className="painel-hipotese-corpo">
-        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
         {carga.fase === 'ok' && h === null && <p>Hipótese não encontrada.</p>}
         {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} verbetes={verbetes} />}
       </div>

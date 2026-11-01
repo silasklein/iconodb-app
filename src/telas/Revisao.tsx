@@ -17,7 +17,7 @@ export function Revisao() {
       <TopoDoCelular voltar={{ href: '#/' }} />
       <main className="pagina-consulta-corpo">
         <h1>Revisão</h1>
-        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
         {carga.fase === 'ok' && (
           <>
             <p className="pagina-consulta-apoio">

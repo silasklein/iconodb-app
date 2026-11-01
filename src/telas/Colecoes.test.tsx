@@ -56,6 +56,13 @@ describe('Coleções', () => {
     expect(screen.getByText('Crie coleções na próxima versão')).toBeInTheDocument()
   })
 
+  it('uma só região principal (<main>) com o título da tela', async () => {
+    abrir()
+    const principal = screen.getByRole('main')
+    expect(within(principal).getByRole('heading', { level: 1, name: 'Coleções' })).toBeInTheDocument()
+    expect(within(principal).getByRole('navigation', { name: 'Obras' })).toBeInTheDocument()
+  })
+
   it('uma obra que não está no pacote cai na aba SKC', async () => {
     abrir('/colecoes?obra=NAO-HA')
     await screen.findByRole('link', { name: 'TESTE I' })

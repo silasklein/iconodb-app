@@ -61,74 +61,76 @@ export function Colecoes() {
     <div className="colecoes">
       <TopoDoCelular voltar={{ href: '#/' }} />
 
-      <div className="colecoes-cabecalho">
-        <h1>Coleções</h1>
-        <span className="colecoes-apoio">
-          {computador ? 'As suas coleções e os grupos de cada obra, na ordem da autora' : aba ? 'Por obra, com os grupos da autora na ordem dela' : 'Por obra; em SKC, as minhas coleções'}
-        </span>
-      </div>
+      <main>
+        <div className="colecoes-cabecalho">
+          <h1>Coleções</h1>
+          <span className="colecoes-apoio">
+            {computador ? 'As suas coleções e os grupos de cada obra, na ordem da autora' : aba ? 'Por obra, com os grupos da autora na ordem dela' : 'Por obra; em SKC, as minhas coleções'}
+          </span>
+        </div>
 
-      <nav aria-label="Obras" className="colecoes-abas">
-        <Link className="hit" to="/colecoes" replace aria-current={aba === null && !esperandoObra ? 'page' : undefined}>
-          SKC
-        </Link>
-        {obras.map((o) => (
-          <Link key={o.chave} className="hit" to={`/colecoes?obra=${encodeURIComponent(o.chave)}`} replace aria-current={aba?.chave === o.chave ? 'page' : undefined}>
-            {o.rotulo}
+        <nav aria-label="Obras" className="colecoes-abas">
+          <Link className="hit" to="/colecoes" replace aria-current={aba === null && !esperandoObra ? 'page' : undefined}>
+            SKC
           </Link>
-        ))}
-      </nav>
+          {obras.map((o) => (
+            <Link key={o.chave} className="hit" to={`/colecoes?obra=${encodeURIComponent(o.chave)}`} replace aria-current={aba?.chave === o.chave ? 'page' : undefined}>
+              {o.rotulo}
+            </Link>
+          ))}
+        </nav>
 
-      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
 
-      {aba === null ? (
-        carga.fase !== 'erro' &&
-        !esperandoObra && (
-          <section className="colecoes-corpo" aria-label="Minhas coleções">
-            <div className="colecoes-secao-titulo">
-              <h2>Minhas coleções</h2>
-              <span className="codigo">SKC</span>
+        {aba === null ? (
+          carga.fase !== 'erro' &&
+          !esperandoObra && (
+            <section className="colecoes-corpo" aria-label="Minhas coleções">
+              <div className="colecoes-secao-titulo">
+                <h2>Minhas coleções</h2>
+                <span className="codigo">SKC</span>
+              </div>
+              <p className="colecoes-vazio">{MSG_SKC_VAZIA}</p>
+            </section>
+          )
+        ) : (
+          <section className="colecoes-corpo" aria-label={`Grupos de ${aba.rotulo}`}>
+            {computador && (
+              <div className="colecoes-resumo">
+                <span>{aba.rotulo} · Grupos da autora</span>
+                <span className="codigo">
+                  {plural(aba.grupos.length, 'grupo', 'grupos')} · {plural(aba.grupos.reduce((s, g) => s + g.objetos, 0), 'objeto', 'objetos')}
+                </span>
+              </div>
+            )}
+            <div className="colecoes-periodos">
+              {porPeriodo(aba.grupos).map((p) => (
+                <section key={p.periodo} className="colecoes-periodo">
+                  <div className="colecoes-secao-titulo">
+                    <h2>{p.periodo}</h2>
+                  </div>
+                  {p.grupos.map((g) => (
+                    <Link key={g.id} className="colecoes-grupo" to={`/grupo/${encodeURIComponent(g.id)}`}>
+                      {computador && (
+                        <span className="colecoes-miniatura">
+                          <Miniatura caminho={g.capa?.miniatura ?? null} alt="" />
+                        </span>
+                      )}
+                      <span className="colecoes-grupo-texto">
+                        <span className="colecoes-grupo-nome">{g.titulo}</span>
+                        <span className="colecoes-grupo-n codigo">
+                          {numeroPtBr(g.objetos)}
+                          {computador && <span className="colecoes-unidade"> {g.objetos === 1 ? 'objeto' : 'objetos'}</span>}
+                        </span>
+                      </span>
+                    </Link>
+                  ))}
+                </section>
+              ))}
             </div>
-            <p className="colecoes-vazio">{MSG_SKC_VAZIA}</p>
           </section>
-        )
-      ) : (
-        <section className="colecoes-corpo" aria-label={`Grupos de ${aba.rotulo}`}>
-          {computador && (
-            <div className="colecoes-resumo">
-              <span>{aba.rotulo} · Grupos da autora</span>
-              <span className="codigo">
-                {plural(aba.grupos.length, 'grupo', 'grupos')} · {plural(aba.grupos.reduce((s, g) => s + g.objetos, 0), 'objeto', 'objetos')}
-              </span>
-            </div>
-          )}
-          <div className="colecoes-periodos">
-            {porPeriodo(aba.grupos).map((p) => (
-              <section key={p.periodo} className="colecoes-periodo">
-                <div className="colecoes-secao-titulo">
-                  <h2>{p.periodo}</h2>
-                </div>
-                {p.grupos.map((g) => (
-                  <Link key={g.id} className="colecoes-grupo" to={`/grupo/${encodeURIComponent(g.id)}`}>
-                    {computador && (
-                      <span className="colecoes-miniatura">
-                        <Miniatura caminho={g.capa?.miniatura ?? null} alt="" />
-                      </span>
-                    )}
-                    <span className="colecoes-grupo-texto">
-                      <span className="colecoes-grupo-nome">{g.titulo}</span>
-                      <span className="colecoes-grupo-n codigo">
-                        {numeroPtBr(g.objetos)}
-                        {computador && <span className="colecoes-unidade"> {g.objetos === 1 ? 'objeto' : 'objetos'}</span>}
-                      </span>
-                    </span>
-                  </Link>
-                ))}
-              </section>
-            ))}
-          </div>
-        </section>
-      )}
+        )}
+      </main>
     </div>
   )
 }

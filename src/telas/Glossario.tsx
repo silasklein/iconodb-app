@@ -183,7 +183,7 @@ export function Glossario() {
         </div>
       )}
 
-      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
+      {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
       {dados && visiveis.length === 0 && <p className="lista-vazia">Nenhum verbete encontrado.</p>}
       {dados && visiveis.length > 0 && (
         <div className="lista-letras">

@@ -34,7 +34,7 @@ export function Grupo() {
       <div className="grupo">
         <TopoDoCelular voltar={{ href: '#/colecoes', rotulo: 'Voltar às coleções' }} />
         <div className="grupo-aviso">
-          <AvisoDeErro erro={carga.erro} />
+          <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />
         </div>
       </div>
     )

@@ -2,6 +2,9 @@
 .lista-detalhe {
   display: grid;
   grid-template-columns: 400px minmax(0, 1fr);
+  /* Uma linha da altura do contêiner: sem isto a linha é "auto", cresce com o conteúdo e a página
+     inteira rola além dos painéis. Só os painéis rolam. */
+  grid-template-rows: minmax(0, 1fr);
   height: calc(100dvh - var(--barra-superior));
   border-top: 1px solid var(--filete);
   background: var(--fundo);
@@ -15,6 +18,9 @@
   border-right: 1px solid var(--filete);
 }
 .lista-rolagem {
+  /* Contêiner dos textos escondidos (.so-leitor, position: absolute) das linhas: sem isto eles saem da
+     rolagem do painel e esticam a página (o Glossário rolava 205 px além dos painéis). */
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -22,6 +28,7 @@
   overscroll-behavior: contain;
 }
 .lista-principal {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;

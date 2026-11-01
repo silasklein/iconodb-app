@@ -102,11 +102,11 @@ export function NaoEncontrado({ pagina, voltar, titulo, destino, rotuloDoDestino
 }
 
 /** Erro de leitura do banco dentro do detalhe. */
-export function ErroNoDetalhe({ pagina, voltar, erro }: { pagina: boolean; voltar: { href: string; rotulo: string }; erro: unknown }) {
+export function ErroNoDetalhe({ pagina, voltar, erro, aoTentar }: { pagina: boolean; voltar: { href: string; rotulo: string }; erro: unknown; aoTentar?: () => void }) {
   return (
     <MolduraDoDetalhe pagina={pagina} voltar={voltar}>
       <div className="detalhe-aviso">
-        <AvisoDeErro erro={erro} />
+        <AvisoDeErro erro={erro} aoTentar={aoTentar} />
       </div>
     </MolduraDoDetalhe>
   )

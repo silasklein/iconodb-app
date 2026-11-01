@@ -117,6 +117,14 @@ describe('Imagem: o visualizador', () => {
     expect(escala()).toBe('100 %')
   })
 
+  it('uma só região principal (<main>) com o palco e as ferramentas; o painel de regiões fica fora', async () => {
+    abrir()
+    await imagemNaTela()
+    const principal = screen.getByRole('main')
+    expect(principal).toContainElement(palco())
+    expect(within(principal).getByRole('heading', { level: 1, name: /CA00001/ })).toBeInTheDocument()
+  })
+
   it('os aria-keyshortcuts do visualizador são teclas declaradas no catálogo de atalhos', async () => {
     abrir()
     await imagemNaTela()
@@ -582,6 +590,7 @@ describe('Imagem: o visualizador', () => {
       vi.mocked(buscarImagem).mockRejectedValue(new Error('banco fora do ar'))
       abrir()
       expect(await screen.findByRole('alert')).toBeInTheDocument()
+      expect(screen.getByRole('main')).toContainElement(screen.getByRole('alert'))
       expect(screen.getByRole('button', { name: 'Fechar o visualizador' })).toBeInTheDocument()
       await userEvent.keyboard('{Escape}')
       expect(await screen.findByRole('heading', { name: 'Coleções' })).toBeInTheDocument()

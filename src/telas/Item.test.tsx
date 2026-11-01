@@ -318,6 +318,18 @@ describe('Item', () => {
       expect(within(secao).getByRole('heading', { name: 'Iconológico · 1' })).toBeInTheDocument()
     })
 
+    it('a linha da hipótese no item tem estilo próprio: o .hipotese-linha das listas (Verbete) não a desmonta', async () => {
+      // As duas folhas de estilo juntas, como no app depois de visitar um verbete.
+      await import('./Lista.css')
+      abrir('/item/CA00002')
+      await titulo()
+      await userEvent.click(screen.getByRole('button', { name: /Hipóteses por nível/ }))
+      const linha = within(screen.getByRole('region', { name: 'Hipóteses por nível' })).getByRole('link', { name: /estrela de prova/ })
+      expect(linha).not.toHaveClass('hipotese-linha')
+      // O choque era a grade de 76 px + texto do .hipotese-linha de Lista.css por cima da do item.
+      expect(getComputedStyle(linha).gridTemplateColumns).toBe('minmax(0, 1fr) auto')
+    })
+
     it('H mostra e esconde todas as hipóteses por nível (e rola até a seção, num efeito)', async () => {
       abrir('/item/CA00002')
       await titulo()

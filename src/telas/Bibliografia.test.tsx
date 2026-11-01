@@ -4,6 +4,7 @@ import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
 import { irPara, renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { chicagoEmTexto } from './Bibliografia'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
 
@@ -206,5 +207,16 @@ describe('Bibliografia: filtro no endereço, contagens e seleção', () => {
     solta()
     expect(await screen.findByRole('heading', { level: 2, name: 'Autora 2004' })).toBeInTheDocument()
     usarMotor(await bancoDeTeste())
+  })
+})
+
+describe('chicagoEmTexto (o texto que "Copiar referência" copia)', () => {
+  it('sem Chicago em texto, tira a marcação do HTML e decodifica as entidades', () => {
+    expect(chicagoEmTexto({ chicago: null, chicagoHtml: 'Autora &amp; Autor. <i>Título d&#39;Teste</i>. Lugar: Ed.&nbsp;Teste.', titulo: null, curta: null })).toBe(
+      "Autora & Autor. Título d'Teste. Lugar: Ed.\u00a0Teste.",
+    )
+  })
+  it('o Chicago em texto, quando há, vale como está', () => {
+    expect(chicagoEmTexto({ chicago: 'A &amp; B', chicagoHtml: '<i>x</i>', titulo: null, curta: null })).toBe('A &amp; B')
   })
 })

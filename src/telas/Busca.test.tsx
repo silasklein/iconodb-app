@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
 import { usarMotor } from '../banco/cliente'
 import { lerTabelaDeFold, usarTabelaDeFold } from '../busca/fold'
-import { Busca, MSG_CURTA, MSG_SEM_PACOTE } from './Busca'
+import { MSG_SEM_PACOTE } from '../ui/AvisoDeErro'
+import { Busca, MSG_CURTA } from './Busca'
 
 // A tabela de dobra do pacote sintético: com ela a tela sabe que `"` e `*` não deixam nada para buscar.
 beforeAll(() => usarTabelaDeFold(lerTabelaDeFold(JSON.parse(readFileSync(join(RAIZ_DO_PACOTE_SINTETICO, 'nucleo/fold.json'), 'utf8')))))
@@ -59,5 +61,20 @@ describe('tela Busca: sem o banco no aparelho', () => {
     abrir('/busca?q=leao')
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_SEM_PACOTE)
     expect(screen.getByRole('link', { name: 'Preparar o banco' })).toHaveAttribute('href', '/preparando')
+  })
+
+  it('"Tentar de novo" refaz a busca: o pacote que chegou entretanto aparece', async () => {
+    let comPacote = false
+    const real = await bancoDeTeste()
+    usarMotor({
+      abrir: async () => (comPacote ? real.abrir() : { estado: 'sem-pacote' }),
+      reabrir: async () => real.reabrir(),
+      executar: (sql, p) => real.executar(sql, p),
+    })
+    abrir('/busca?q=mahras')
+    expect(await screen.findByRole('alert')).toHaveTextContent(MSG_SEM_PACOTE)
+    comPacote = true
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+    expect(await screen.findByRole('region', { name: 'Resultados' })).toBeInTheDocument()
   })
 })
