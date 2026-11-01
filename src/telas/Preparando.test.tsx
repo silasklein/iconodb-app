@@ -18,7 +18,14 @@ import {
   type Fonte,
 } from '../pacote/manifesto'
 import { reabrirBanco } from '../banco/cliente'
-import { Preparando } from './Preparando'
+import { ErroDePacoteAusente, ErroDePermissao } from '../dropbox/fonte'
+import { sair } from '../dropbox/auth'
+import { MSG_SEM_PACOTE_NO_DROPBOX, MSG_SEM_PERMISSAO, Preparando } from './Preparando'
+
+vi.mock('../dropbox/auth', async (original) => ({
+  ...(await original<typeof import('../dropbox/auth')>()),
+  sair: vi.fn(async () => undefined),
+}))
 
 vi.mock('../banco/cliente', async (original) => ({
   ...(await original<typeof import('../banco/cliente')>()),
@@ -282,6 +289,42 @@ describe('Preparando', () => {
     await s.falhar(new Error('quota'))
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível baixar o pacote; tente de novo')
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+  })
+
+  it('pacote ausente na pasta do app: diz onde pôr as pastas e deixa tentar de novo', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar(new ErroDePacoteAusente('nucleo/manifest.json'))
+    expect(screen.getByRole('alert')).toHaveTextContent(MSG_SEM_PACOTE_NO_DROPBOX)
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
+  })
+
+  it('sem a permissão files.content.read: explica e oferece entrar de novo (sai e vai à entrada)', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar(new ErroDePermissao('files.content.read'))
+    expect(screen.getByRole('alert')).toHaveTextContent(MSG_SEM_PERMISSAO)
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar de novo' }))
+    expect(sair).toHaveBeenCalled()
+    expect(await screen.findByText('Tela de entrada')).toBeInTheDocument()
+  })
+
+  it('erro geral com resumo do Dropbox: mostra o detalhe para diagnóstico', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar({ status: 400, error: { error_summary: 'algo/estranho/..' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('Detalhe: algo/estranho/..')
+  })
+
+  it('mostra o logo SKC no topo', () => {
+    sincronizacaoManual()
+    montar()
+    const logo = screen.getByRole('img', { name: 'Logo SKC' })
+    expect(logo).toHaveAttribute('width', '38')
   })
 
   it('guarda a preferência de alta resolução e a lê de volta', async () => {

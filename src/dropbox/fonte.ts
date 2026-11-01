@@ -22,6 +22,42 @@ export interface OpcoesDaFonte {
 
 const dormir = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms))
 
+/** O arquivo pedido não existe na pasta do app (Dropbox 409 path/not_found): o pacote não foi posto lá. */
+export class ErroDePacoteAusente extends Error {
+  constructor(readonly caminho: string) {
+    super(`O arquivo ${caminho} não está na pasta do app no Dropbox`)
+    this.name = 'ErroDePacoteAusente'
+  }
+}
+
+/** O token não tem a permissão pedida (Dropbox 401 missing_scope): falta marcá-la no App Console. */
+export class ErroDePermissao extends Error {
+  constructor(readonly escopo: string | null) {
+    super(`Falta a permissão ${escopo ?? ''} no App Console do Dropbox`.replace('  ', ' '))
+    this.name = 'ErroDePermissao'
+  }
+}
+
+/** O resumo do erro que o Dropbox devolve (ex.: "path/not_found/.."), ou null. */
+export function resumoDoErro(erro: unknown): string | null {
+  const corpo = (erro as { error?: unknown } | null)?.error
+  if (typeof corpo === 'string') return corpo.slice(0, 200)
+  const resumo = (corpo as { error_summary?: unknown } | null)?.error_summary
+  return typeof resumo === 'string' ? resumo.slice(0, 200) : null
+}
+
+function escopoQueFalta(erro: unknown): string | null | undefined {
+  if ((erro as { status?: unknown } | null)?.status !== 401) return undefined
+  const corpo = (erro as { error?: { error?: { '.tag'?: unknown; required_scope?: unknown } } }).error
+  const resumo = resumoDoErro(erro) ?? ''
+  if (corpo?.error?.['.tag'] !== 'missing_scope' && !resumo.startsWith('missing_scope')) return undefined
+  return typeof corpo?.error?.required_scope === 'string' ? corpo.error.required_scope : null
+}
+
+function naoEncontrado(erro: unknown): boolean {
+  return (erro as { status?: unknown } | null)?.status === 409 && /not_found/.test(resumoDoErro(erro) ?? '')
+}
+
 export { eErroDeRede }
 
 /** Segundos que o Dropbox pede para esperar no 429. */
@@ -32,13 +68,17 @@ function esperaPedida(erro: unknown): number | null {
 
 const semInternet = () => typeof navigator !== 'undefined' && navigator.onLine === false
 
-async function comTentativas<T>(fazer: () => Promise<T>, esperar: (ms: number) => Promise<void>): Promise<T> {
+async function comTentativas<T>(fazer: () => Promise<T>, esperar: (ms: number) => Promise<void>, caminho = ''): Promise<T> {
   for (let tentativa = 1; ; tentativa++) {
     // O navegador já sabe que está sem rede: não adianta tentar nem esperar.
     if (semInternet()) throw new ErroDeRede()
     try {
       return await fazer()
     } catch (erro) {
+      // Antes do 401 genérico: missing_scope não é login expirado (entrar de novo sem a permissão não resolve).
+      const escopo = escopoQueFalta(erro)
+      if (escopo !== undefined) throw new ErroDePermissao(escopo)
+      if (naoEncontrado(erro)) throw new ErroDePacoteAusente(caminho)
       if (eErroDeAutenticacao(erro)) {
         await marcarExpirado().catch(() => undefined)
         throw new ErroDeLogin()
@@ -87,7 +127,7 @@ export async function fonteDropbox(opcoes: OpcoesDaFonte = {}): Promise<Fonte | 
         const r = await c.filesDownload({ path: `/${caminho}` })
         const blob = (r.result as unknown as { fileBlob: Blob }).fileBlob
         return blob.arrayBuffer()
-      }, esperar)
+      }, esperar, caminho)
     },
   }
 }

@@ -29,20 +29,15 @@ html.tema-preparando {
 
 .preparando-marca {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
   padding-top: 28px;
 }
 
-.preparando-sigla {
-  font: 400 12px/1 var(--fonte-codigo);
-  letter-spacing: 0.12em;
+.preparando-detalhe {
+  margin-top: 6px;
+  font: 400 12px/1.4 var(--fonte-codigo);
   color: #a3a3a3;
-}
-
-.preparando-nome {
-  font-size: 15px;
-  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 /* No celular o bloco desce para o pé da tela; no computador fica centrado. */
@@ -144,7 +139,11 @@ html.tema-preparando {
   color: #ededed;
 }
 
-.preparando-erro::before {
+.preparando-erro p {
+  margin: 0;
+}
+
+.preparando-erro > p:first-child::before {
   content: '! ';
   font-family: var(--fonte-codigo);
 }

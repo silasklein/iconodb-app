@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { reabrirBanco } from '../banco/cliente'
-import { eErroDeRede, fonteDropbox } from '../dropbox/fonte'
+import { sair } from '../dropbox/auth'
+import { eErroDeRede, ErroDePacoteAusente, ErroDePermissao, fonteDropbox, resumoDoErro } from '../dropbox/fonte'
+import { Logo } from '../ui/Logo'
 import { armazemPadrao, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type Etapa } from '../pacote/baixar'
 import type { CacheImagens } from '../pacote/imagens'
@@ -28,9 +30,13 @@ const MSG_PACOTE =
 const MSG_INTEGRIDADE = 'Um arquivo não passou na conferência e foi descartado; o que já estava no aparelho foi mantido.'
 export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em outra janela do app. Espere terminar e tente de novo.'
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
+export const MSG_SEM_PACOTE_NO_DROPBOX =
+  'O pacote não está na pasta do app no Dropbox. Ponha as pastas nucleo e imagens em Dropbox → Aplicativos → IconoDB-Silas, espere o Dropbox terminar de enviar e tente de novo.'
+export const MSG_SEM_PERMISSAO =
+  'O app não tem permissão para ler os arquivos. No App Console do Dropbox, aba Permissions, marque files.content.read e clique em Submit; depois toque em "Entrar de novo".'
 
 type Fase = 'baixando' | 'pronto' | 'erro'
-type Erro = 'sem-conexao' | 'schema' | 'pacote' | 'integridade' | 'em-andamento' | 'geral'
+type Erro = 'sem-conexao' | 'schema' | 'pacote' | 'integridade' | 'em-andamento' | 'sem-pacote-no-dropbox' | 'sem-permissao' | 'geral'
 type Andamento = Partial<Record<Etapa, { feito: number; total: number }>>
 
 /** Tamanho em unidades decimais (como o Dropbox e o macOS), na unidade do total. */
@@ -55,6 +61,8 @@ function classificar(e: unknown): Erro {
   if (e instanceof ErroDePacote || e instanceof ErroDeManifesto) return 'pacote'
   if (e instanceof ErroDeIntegridade) return 'integridade'
   if (e instanceof ErroDeSincronizacaoEmAndamento) return 'em-andamento'
+  if (e instanceof ErroDePacoteAusente) return 'sem-pacote-no-dropbox'
+  if (e instanceof ErroDePermissao) return 'sem-permissao'
   return eErroDeRede(e) ? 'sem-conexao' : 'geral'
 }
 
@@ -84,6 +92,7 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
   const navegar = useNavigate()
   const [fase, setFase] = useState<Fase>('baixando')
   const [erro, setErro] = useState<Erro | null>(null)
+  const [detalhe, setDetalhe] = useState<string | null>(null)
   const [andamento, setAndamento] = useState<Andamento>({})
   const [temPacote, setTemPacote] = useState(false)
   const [primeiraVez, setPrimeiraVez] = useState(true)
@@ -115,6 +124,7 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
       if (!ativa()) return
       setTemPacote(tem)
       setErro(classificar(e))
+      setDetalhe(resumoDoErro(e) ?? (e instanceof Error && e.name !== 'Error' ? e.name : null))
       setFase('erro')
     }
 
@@ -205,6 +215,10 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
       MSG_INTEGRIDADE
     ) : erro === 'em-andamento' ? (
       MSG_EM_ANDAMENTO
+    ) : erro === 'sem-pacote-no-dropbox' ? (
+      MSG_SEM_PACOTE_NO_DROPBOX
+    ) : erro === 'sem-permissao' ? (
+      MSG_SEM_PERMISSAO
     ) : erro === 'sem-conexao' ? (
       temPacote ? MSG_SEM_CONEXAO : primeiraVez && Object.keys(andamento).length === 0 ? MSG_SEM_CONEXAO_PRIMEIRA : MSG_SEM_CONEXAO_NO_MEIO
     ) : (
@@ -214,8 +228,7 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
   return (
     <div className="preparando">
       <header className="preparando-marca">
-        <span className="preparando-sigla">SKC</span>
-        <span className="preparando-nome">IconoDB</span>
+        <Logo scale={2} tone="dark" />
       </header>
 
       <main className="preparando-principal">
@@ -256,9 +269,10 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
         {fase === 'baixando' && <p className="preparando-aviso">Mantenha o app aberto até terminar</p>}
 
         {fase === 'erro' && (
-          <p role="alert" className="preparando-erro">
-            {mensagemDeErro}
-          </p>
+          <div role="alert" className="preparando-erro">
+            <p>{mensagemDeErro}</p>
+            {erro === 'geral' && detalhe && <p className="preparando-detalhe">Detalhe: {detalhe}</p>}
+          </div>
         )}
 
         <div className="preparando-acoes">
@@ -272,7 +286,16 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
               Abrir assim que terminar
             </button>
           )}
-          {fase === 'erro' && (
+          {fase === 'erro' && erro === 'sem-permissao' && (
+            <button
+              type="button"
+              className="preparando-botao"
+              onClick={() => void sair().finally(() => navegar('/entrar', { replace: true }))}
+            >
+              Entrar de novo
+            </button>
+          )}
+          {fase === 'erro' && erro !== 'sem-permissao' && (
             <button type="button" className="preparando-botao" onClick={() => void sincronizar()}>
               Tentar de novo
             </button>

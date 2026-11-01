@@ -1,6 +1,6 @@
 import { ErroDeLogin, ErroDeRede } from '../pacote/manifesto'
 import { cliente, eErroDeAutenticacao, marcarExpirado } from './auth'
-import { fonteDropbox } from './fonte'
+import { ErroDePacoteAusente, ErroDePermissao, fonteDropbox, resumoDoErro } from './fonte'
 
 vi.mock('./auth', () => ({
   cliente: vi.fn(),
@@ -138,12 +138,41 @@ describe('fonteDropbox', () => {
     expect(download).toHaveBeenCalledTimes(1)
   })
 
-  it('um erro que não é de rede (arquivo inexistente) sobe como está, sem repetir', async () => {
+  it('arquivo inexistente na pasta do app (409 path/not_found) vira ErroDePacoteAusente, sem repetir', async () => {
     const download = vi.fn().mockRejectedValue({ status: 409, error: { error_summary: 'path/not_found/' } })
+    usarCliente(falso({ filesDownload: download }))
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    const erro = await fonte.baixar('nucleo/manifest.json').catch((e: unknown) => e)
+    expect(erro).toBeInstanceOf(ErroDePacoteAusente)
+    expect((erro as ErroDePacoteAusente).caminho).toBe('nucleo/manifest.json')
+    expect(download).toHaveBeenCalledTimes(1)
+  })
+
+  it('outro erro que não é de rede sobe como está, sem repetir', async () => {
+    const download = vi.fn().mockRejectedValue({ status: 409, error: { error_summary: 'path/restricted_content/' } })
     usarCliente(falso({ filesDownload: download }))
     const fonte = (await fonteDropbox({ esperar: sem_espera }))!
     await expect(fonte.baixar('x')).rejects.toMatchObject({ status: 409 })
     expect(download).toHaveBeenCalledTimes(1)
+  })
+
+  it('401 missing_scope vira ErroDePermissao e não marca o login como expirado', async () => {
+    vi.mocked(marcarExpirado).mockClear()
+    const download = vi.fn().mockRejectedValue({
+      status: 401,
+      error: { error_summary: 'missing_scope/..', error: { '.tag': 'missing_scope', required_scope: 'files.content.read' } },
+    })
+    usarCliente(falso({ filesDownload: download }))
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    const erro = await fonte.baixar('nucleo/manifest.json').catch((e: unknown) => e)
+    expect(erro).toBeInstanceOf(ErroDePermissao)
+    expect((erro as ErroDePermissao).escopo).toBe('files.content.read')
+    expect(marcarExpirado).not.toHaveBeenCalled()
+  })
+
+  it('resumoDoErro lê o error_summary do Dropbox', () => {
+    expect(resumoDoErro({ status: 409, error: { error_summary: 'path/not_found/..' } })).toBe('path/not_found/..')
+    expect(resumoDoErro(new Error('x'))).toBeNull()
   })
 
   it('o login que some no meio do caminho lança ErroDeLogin', async () => {
