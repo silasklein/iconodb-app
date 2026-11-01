@@ -1,0 +1,216 @@
+/*
+ * Entrada do app. Cores do design (Login.dc.html e PC-Entrar.dc.html):
+ * fundo #111111, texto #EDEDED, secundário #A3A3A3, lema #D4D4D4, botão #FFFFFF sobre #111111.
+ */
+html.tema-entrar {
+  --fundo: #111111;
+  --texto: #ededed;
+  --secundario: #a3a3a3;
+  --filete: #3a3a3a;
+  color-scheme: dark;
+}
+
+.entrar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: #111111;
+  color: #ededed;
+  font-family: var(--fonte-texto);
+}
+
+.entrar-faixa {
+  flex: 0 0 auto;
+  height: clamp(140px, 40dvh, 360px);
+  background: #000000;
+}
+
+.entrar-principal {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.entrar-identidade {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 32px 24px;
+  text-align: center;
+}
+
+.entrar-identidade > svg {
+  margin-bottom: 8px;
+}
+
+.entrar-sigla {
+  font-family: var(--fonte-codigo);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #a3a3a3;
+}
+
+.entrar-titulo {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.entrar-lema {
+  margin: 6px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #d4d4d4;
+}
+
+.entrar-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 0 24px max(36px, env(safe-area-inset-bottom));
+}
+
+.entrar-botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 54px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  font: 500 16px/1 var(--fonte-texto);
+  cursor: pointer;
+}
+
+.entrar-botao:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.entrar-botao-secundario {
+  height: 48px;
+  border: 1px solid #ededed;
+  background: transparent;
+  color: #ededed;
+}
+
+.entrar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--alvo-toque);
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: #a3a3a3;
+  font: 400 14px/1.4 var(--fonte-texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.entrar-link:hover {
+  color: #ffffff;
+}
+
+.entrar-codigo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.entrar-passos,
+.entrar-aviso {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  text-align: center;
+}
+
+.entrar-aviso {
+  padding: 12px 14px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+}
+
+.entrar-rotulo {
+  font-size: 14px;
+  color: #a3a3a3;
+}
+
+.entrar-campo {
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: #ededed;
+  /* 16 px: o iOS não dá zoom ao focar o campo. */
+  font: 400 16px/1 var(--fonte-codigo);
+}
+
+.entrar-erro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #ededed;
+  text-align: center;
+}
+
+.entrar-erro::before {
+  content: '! ';
+  font-family: var(--fonte-codigo);
+}
+
+/* Computador (PC-Entrar.dc.html) */
+@media (min-width: 768px) {
+  .entrar-faixa {
+    height: clamp(200px, 40dvh, 440px);
+  }
+
+  .entrar-principal {
+    align-items: center;
+    padding: 0 24px 48px;
+  }
+
+  .entrar-identidade {
+    flex: 0 0 auto;
+    gap: 0;
+    padding: 72px 0 0;
+  }
+
+  .entrar-identidade > svg {
+    margin-bottom: 20px;
+  }
+
+  .entrar-titulo {
+    margin-top: 10px;
+    font-size: 64px;
+  }
+
+  .entrar-lema {
+    margin-top: 14px;
+    font-size: 18px;
+  }
+
+  .entrar-quebra {
+    display: none;
+  }
+
+  .entrar-acoes {
+    width: 360px;
+    max-width: 100%;
+    margin-top: 40px;
+    padding: 0;
+  }
+}

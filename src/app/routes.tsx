@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
+import { Entrar } from '../telas/Entrar'
 
 /** Tela provisória: cada tarefa seguinte troca a sua pela tela real. */
 function Provisoria({ titulo }: { titulo: string }) {
@@ -18,7 +19,7 @@ export interface Rota {
 
 export const ROTAS: Rota[] = [
   { path: '/', elemento: <Provisoria titulo="Início" /> },
-  { path: '/entrar', elemento: <Provisoria titulo="Entrar" /> },
+  { path: '/entrar', elemento: <Entrar /> },
   { path: '/preparando', elemento: <Provisoria titulo="Preparando o banco" /> },
   { path: '/busca', elemento: <Provisoria titulo="Busca" /> },
   { path: '/colecoes', elemento: <Provisoria titulo="Coleções" /> },
