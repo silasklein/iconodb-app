@@ -31,7 +31,7 @@ const MSG_INTEGRIDADE = 'Um arquivo não passou na conferência e foi descartado
 export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em outra janela do app. Espere terminar e tente de novo.'
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
 export const MSG_SEM_PACOTE_NO_DROPBOX =
-  'O pacote não está na pasta do app no Dropbox. Ponha as pastas nucleo e imagens em Dropbox → Aplicativos → IconoDB-Silas, espere o Dropbox terminar de enviar e tente de novo.'
+  'O pacote não está na pasta do app no Dropbox. Ponha as pastas nucleo e imagens na pasta deste app, dentro de Dropbox → Aplicativos (o nome pode ter um número, como "(1)"), espere o Dropbox terminar de enviar e tente de novo.'
 export const MSG_SEM_PERMISSAO =
   'O app não tem permissão para ler os arquivos. No App Console do Dropbox, aba Permissions, marque files.content.read e clique em Submit; depois toque em "Entrar de novo".'
 
