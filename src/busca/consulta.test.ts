@@ -36,7 +36,7 @@ describe('montarConsulta()', () => {
   })
 
   it('números e letras de outros alfabetos ficam', () => {
-    expect(montarConsulta('CA00023', tabela)).toBe('"ca00023"*')
+    expect(montarConsulta('CA00001', tabela)).toBe('"ca00001"*')
     expect(montarConsulta('Ἀθηνᾶ 3', tabela)).toBe('"αθηνα" "3"*')
   })
 })

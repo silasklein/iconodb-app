@@ -32,6 +32,7 @@ import {
   ErroDeSincronizacaoEmAndamento,
   lerManifesto,
   sha256,
+  validarPacote,
   type ArquivoDoPacote,
   type Fonte,
   type Manifesto,
@@ -202,6 +203,8 @@ async function sincronizar(
   const concorrencia = opcoes.concorrencia ?? 4
 
   const novo = await lerManifesto(fonte)
+  // Um pacote com defeito não baixa nada nem troca o que já está no aparelho.
+  validarPacote(novo)
   const estado = await lerEstado(armazem)
   const registro = await Registro.abrir(armazem)
 

@@ -9,6 +9,8 @@ import { gravarJson } from '../pacote/local'
 import {
   ErroDeIntegridade,
   ErroDeLogin,
+  ErroDeManifesto,
+  ErroDePacote,
   ErroDeRede,
   ErroDeSchema,
   ErroDeSincronizacaoEmAndamento,
@@ -248,6 +250,20 @@ describe('Preparando', () => {
     await s.falhar(new ErroDeIntegridade('nucleo/comum.sqlite'))
     expect(screen.getByRole('alert')).toHaveTextContent('não passou na conferência')
     expect(screen.getByRole('alert')).toHaveTextContent('o que já estava no aparelho foi mantido')
+  })
+
+  it.each([
+    ['ErroDePacote', new ErroDePacote('falta nucleo/busca.sqlite')],
+    ['ErroDeManifesto', new ErroDeManifesto()],
+  ])('pacote com defeito (%s): avisa que foi recusado, que o anterior ficou e como gerar de novo', async (_n, e) => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar(e)
+    const alerta = screen.getByRole('alert')
+    expect(alerta).toHaveTextContent('O pacote no Dropbox está com defeito e foi recusado')
+    expect(alerta).toHaveTextContent('o que já estava no aparelho foi mantido')
+    expect(alerta.querySelector('code')).toHaveTextContent('app-export')
   })
 
   it('outra janela sincronizando: avisa e deixa tentar de novo', async () => {

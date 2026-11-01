@@ -2,7 +2,8 @@
  * O Dropbox simulado dos testes e2e. Nada sai para a internet:
  * - a página de autorização (dropbox.com/oauth2/authorize) redireciona direto de volta ao app,
  *   com `?code=…&state=…` (o state vem da própria URL de autorização);
- * - o endpoint de token (api.dropboxapi.com/oauth2/token) devolve um token de teste;
+ * - o endpoint de token (api.dropboxapi.com/oauth2/token) devolve um token de teste, se o código e o
+ *   code_verifier vierem no corpo (form-urlencoded) e a URL não tiver query;
  * - o download (content.dropboxapi.com/2/files/download) serve os arquivos do pacote sintético
  *   (tests/fixtures/pacote), com o cabeçalho `Dropbox-API-Result`.
  * Qualquer outro pedido a um servidor que não seja o local derruba o teste.
@@ -68,6 +69,13 @@ async function responder(route: Route, estado: DropboxSimulado): Promise<void> {
   }
 
   if (url.hostname === 'api.dropboxapi.com' && url.pathname === '/oauth2/token') {
+    // Os segredos (code, code_verifier, refresh_token) vão no corpo form-urlencoded, nunca na URL.
+    const corpo = new URLSearchParams(pedido.postData() ?? '')
+    const tipo = pedido.headers()['content-type'] ?? ''
+    if (url.search !== '' || !tipo.startsWith('application/x-www-form-urlencoded') || corpo.get('code') !== CODIGO || !corpo.get('code_verifier')) {
+      estado.proibidos.push(`token pedido fora do formato (query ${JSON.stringify(url.search)}, tipo ${tipo})`)
+      return route.fulfill({ status: 400, headers: { ...CORS, 'content-type': 'application/json' }, body: JSON.stringify({ error: 'invalid_request' }) })
+    }
     return route.fulfill({
       status: 200,
       headers: { ...CORS, 'content-type': 'application/json' },

@@ -4,6 +4,7 @@ import { fonteDeTeste, RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/font
 import { armazemMemoria, type Armazem } from './armazem'
 import {
   ErroDeIntegridade,
+  ErroDePacote,
   ErroDeSchema,
   ErroDeSincronizacaoEmAndamento,
   lerManifesto,
@@ -120,6 +121,56 @@ describe('lerManifesto', () => {
       'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.',
     )
     expect(MSG_SCHEMA).toBe('Este pacote é de outra versão do banco; gere-o de novo com `app-export`.')
+  })
+})
+
+describe('pacote com defeito: conferido antes de baixar e da troca', () => {
+  const bytesQuaisquer = codificar('x')
+  const comManifesto = (alterar: (m: Manifesto) => void | Promise<void>): Fonte => {
+    const base = fonteDeTeste()
+    return { listar: (p) => base.listar(p), baixar: (c) => (c === MANIFESTO ? manifestoAlterado(base, alterar) : base.baixar(c)) }
+  }
+  const anuncia = (caminho: string) => async (m: Manifesto) => {
+    m.arquivos[caminho] = { sha256: await sha256(bytesQuaisquer), bytes: 1 }
+  }
+  const defeitos: Array<[string, (m: Manifesto) => void | Promise<void>]> = [
+    ['caminho que sobe de pasta', anuncia('imagens/TESTE/../../../fora/thumb-1.webp')],
+    ['pasta de item ".."', anuncia('imagens/TESTE/../thumb-1.webp')],
+    ['arquivo fora de nucleo/ e imagens/', anuncia('outra/coisa.txt')],
+    ['imagem com nome desconhecido', anuncia('imagens/TESTE/TESTE-0001/script-1.js')],
+    ['caminho absoluto', anuncia('/nucleo/comum.sqlite')],
+    ['bytes negativos', (m) => void (m.arquivos['nucleo/fold.json']!.bytes = -1)],
+    ['bytes fracionários', (m) => void (m.arquivos['nucleo/fold.json']!.bytes = 1.5)],
+    ['sigla inválida', (m) => void (m.publicacoes = [{ sigla: "TESTE'; --" }])],
+    ['sigla repetida', (m) => void (m.publicacoes = [{ sigla: 'TESTE' }, { sigla: 'teste' }])],
+    ['publicação sem o seu pub-<SIGLA>.sqlite', (m) => void m.publicacoes.push({ sigla: 'OUTRA' })],
+    ['sem comum.sqlite', (m) => void delete m.arquivos['nucleo/comum.sqlite']],
+    ['sem busca.sqlite', (m) => void delete m.arquivos['nucleo/busca.sqlite']],
+    ['sem fold.json', (m) => void delete m.arquivos['nucleo/fold.json']],
+    ['sem publicações', (m) => void (m.publicacoes = [])],
+  ]
+
+  it('o pacote sintético e o caminho de item com ponto (TESTE-I.A001) passam', async () => {
+    const { opcoes } = ambiente()
+    expect(await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)).toBe('atualizado')
+    const comPonto = comManifesto(anuncia('imagens/TESTE/TESTE-I.A001/screen-1.webp'))
+    await expect(lerManifesto(comPonto)).resolves.toBeTruthy()
+    await expect(sincronizarPacote(comPonto, semProgresso, ambiente().opcoes)).resolves.toBe('atualizado')
+  })
+
+  it.each(defeitos)('%s: recusado com ErroDePacote, sem baixar nada; o pacote que estava no aparelho fica', async (_nome, alterar) => {
+    const { armazem, opcoes } = ambiente()
+    await sincronizarPacote(fonteDeTeste(), semProgresso, opcoes)
+    const estadoAntes = await lerEstado(armazem)
+    const blobsAntes = await armazem.listar('blobs')
+
+    const { fonte, baixados } = observar(comManifesto(alterar))
+    const erro = await sincronizarPacote(fonte, semProgresso, opcoes).catch((e: unknown) => e)
+    expect(erro).toBeInstanceOf(ErroDePacote)
+    expect(baixados).toEqual([])
+    expect(await lerEstado(armazem)).toEqual(estadoAntes)
+    expect(await armazem.listar('blobs')).toEqual(blobsAntes)
+    expect(await igual(lerArquivoDoPacote('nucleo/comum.sqlite', armazem), doDisco('nucleo/comum.sqlite'))).toBe(true)
   })
 })
 

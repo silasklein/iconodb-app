@@ -25,7 +25,7 @@ const recorte = (texto: string, l: { inicio: number; fim: number }) => texto.sli
 describe('numeroDoCatalogo', () => {
   it('é o número depois da última vírgula da origem', () => {
     expect(numeroDoCatalogo('TESTE I, 2')).toBe('2')
-    expect(numeroDoCatalogo('IPIAO I, 58a')).toBe('58a')
+    expect(numeroDoCatalogo('TESTE I, 58a')).toBe('58a')
     expect(numeroDoCatalogo('TESTE I, Abb. 1')).toBeNull()
     expect(numeroDoCatalogo(null)).toBeNull()
   })
@@ -120,15 +120,15 @@ describe('acharLinks', () => {
 })
 
 describe('acharLinks: correções do matcher (correção 2)', () => {
-  it('a forma bibliográfica casa só em fronteira de palavra: "Keel 1995" não casa dentro de "Keel 1995a: 12"', () => {
-    const texto = 'Ver Keel 1995a: 12 e depois Keel 1995: 30.'
-    const links = acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Keel 1995: 30x', curta: 'Keel 1995' })], remissoes: [] })
-    expect(links.map((l) => [l.inicio, recorte(texto, l)])).toEqual([[texto.indexOf('Keel 1995:'), 'Keel 1995']])
+  it('a forma bibliográfica casa só em fronteira de palavra: "Autor 1995" não casa dentro de "Autor 1995a: 12"', () => {
+    const texto = 'Ver Autor 1995a: 12 e depois Autor 1995: 30.'
+    const links = acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Autor 1995: 30x', curta: 'Autor 1995' })], remissoes: [] })
+    expect(links.map((l) => [l.inicio, recorte(texto, l)])).toEqual([[texto.indexOf('Autor 1995:'), 'Autor 1995']])
   })
 
-  it('nada antes nem depois colado: "XKeel 1995" e "Keel 19950" não casam', () => {
-    const texto = 'XKeel 1995 e Keel 19950.'
-    expect(acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Keel 1995', curta: null })], remissoes: [] })).toEqual([])
+  it('nada antes nem depois colado: "XAutor 1995" e "Autor 19950" não casam', () => {
+    const texto = 'XAutor 1995 e Autor 19950.'
+    expect(acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Autor 1995', curta: null })], remissoes: [] })).toEqual([])
   })
 
   it('";" só continua uma lista de remissões aberta como remissão: "(Abb. 3; 4)" e "(Taf. 12; 5)" não ligam nada', () => {

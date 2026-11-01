@@ -2,6 +2,7 @@
  * O manifesto do pacote (nucleo/manifest.json) e o que se pode dizer dele sem
  * mexer no aparelho: formato, Fonte (de onde os arquivos vêm), erros e sha256.
  */
+import { arquivosDoBanco } from '../banco/arquivos'
 
 export const SCHEMA_ESPERADO = 5
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
@@ -46,6 +47,14 @@ export class ErroDeManifesto extends Error {
   constructor() {
     super('O manifesto do pacote está incompleto ou ilegível.')
     this.name = 'ErroDeManifesto'
+  }
+}
+
+/** O pacote tem o formato certo mas o conteúdo não fecha (caminho estranho, arquivo do banco faltando…). */
+export class ErroDePacote extends Error {
+  constructor(motivo: string) {
+    super(`O pacote no Dropbox está com defeito (${motivo}).`)
+    this.name = 'ErroDePacote'
   }
 }
 
@@ -97,6 +106,44 @@ export function validarManifesto(dados: unknown): Manifesto {
     }
   }
   return dados as unknown as Manifesto
+}
+
+/**
+ * Os caminhos que um pacote pode ter (src/pacote, iconodb/package.py): os arquivos do núcleo e, em
+ * imagens/<SIGLA>/<item>/, screen-N, thumb-N e original-N. Nenhum segmento começa com ponto (nada de
+ * "." nem ".."); o item pode ter ponto no meio (TESTE-I.A001).
+ */
+const SEGMENTO = '[A-Za-z0-9_-][A-Za-z0-9_.-]*'
+export const CAMINHO_VALIDO = new RegExp(
+  `^(nucleo/${SEGMENTO}|imagens/[A-Za-z0-9_-]+/${SEGMENTO}/(screen|thumb|original)-\\d+\\.(webp|png|jpe?g))$`,
+)
+const SIGLA_VALIDA = /^[A-Za-z0-9_]+$/
+
+/**
+ * Confere o conteúdo do manifesto ANTES de baixar e de trocar o pacote: caminhos conhecidos,
+ * tamanhos inteiros não negativos, siglas válidas e sem repetição, e o banco inteiro presente
+ * (comum.sqlite, um pub-<SIGLA>.sqlite por publicação, busca.sqlite e fold.json). Lança ErroDePacote.
+ */
+export function validarPacote(m: Manifesto): void {
+  for (const [caminho, a] of Object.entries(m.arquivos)) {
+    if (!CAMINHO_VALIDO.test(caminho)) throw new ErroDePacote(`caminho desconhecido: ${JSON.stringify(caminho.slice(0, 120))}`)
+    if (!Number.isSafeInteger(a.bytes) || a.bytes < 0) throw new ErroDePacote(`tamanho inválido em ${caminho}`)
+  }
+  if (m.publicacoes.length === 0) throw new ErroDePacote('nenhuma publicação')
+  const vistas = new Set<string>()
+  for (const p of m.publicacoes) {
+    const sigla = (p as { sigla?: unknown } | null)?.sigla
+    if (typeof sigla !== 'string' || !SIGLA_VALIDA.test(sigla)) throw new ErroDePacote('sigla de publicação inválida')
+    if (vistas.has(sigla.toLowerCase())) throw new ErroDePacote(`publicação repetida: ${sigla}`)
+    vistas.add(sigla.toLowerCase())
+    if (!m.arquivos[`nucleo/pub-${sigla}.sqlite`]) throw new ErroDePacote(`falta nucleo/pub-${sigla}.sqlite`)
+  }
+  for (const c of ['nucleo/comum.sqlite', 'nucleo/busca.sqlite', 'nucleo/fold.json']) {
+    if (!m.arquivos[c]) throw new ErroDePacote(`falta ${c}`)
+  }
+  // O mesmo cálculo que o banco fará ao abrir: tudo o que ele anexa tem de estar aqui.
+  const { publicacoes } = arquivosDoBanco(m)
+  if (publicacoes.length !== m.publicacoes.length) throw new ErroDePacote('arquivos do banco incompletos')
 }
 
 export async function lerManifesto(fonte: Fonte): Promise<Manifesto> {

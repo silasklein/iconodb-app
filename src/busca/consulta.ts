@@ -259,7 +259,7 @@ async function itensDosGrupos(pubs: readonly PublicacaoAberta[], palavras: reado
   return itens
 }
 
-/** Números de objeto escritos na busca ("CA00023") que existem. */
+/** Números de objeto escritos na busca ("CA00001") que existem. */
 async function objetosCitados(digitado: string): Promise<string[]> {
   const candidatos = unicos((digitado.match(/\b[A-Za-z]{2}\d{5}\b/g) ?? []).map((x) => x.toUpperCase()))
   if (candidatos.length === 0) return []

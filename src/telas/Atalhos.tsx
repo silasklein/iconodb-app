@@ -68,7 +68,7 @@ function Convencoes() {
         <div>
           <dt>Número do objeto</dt>
           <dd>
-            O número principal é o do banco (por exemplo <span className="codigo">CA00023</span>). A referência do livro, como <span className="codigo">IPIAO I, 60</span>, aparece só como origem.
+            O número principal é o do banco (por exemplo <span className="codigo">CA00001</span>). A referência do livro, como <span className="codigo">IPIAO I, 60</span>, aparece só como origem.
           </dd>
         </div>
         <div>

@@ -97,7 +97,7 @@ function prioridadeDaRemissao(texto: string, inicio: number, fim: number): numbe
  * Os links do texto que o banco não grava como trechos (R14), achados na hora de desenhar:
  *
  * - cada referência bibliográfica resolvida do item (`bruto`, senão `curta`) → `/obra/<obraId>`,
- *   na primeira ocorrência livre em fronteira de palavra ("Keel 1995" não casa em "Keel 1995a");
+ *   na primeira ocorrência livre em fronteira de palavra ("Autor 1995" não casa em "Autor 1995a");
  * - cada remissão com número no pacote → `/item/<número>`, onde o número do catálogo dela aparece
  *   como remissão na mesma obra (veja `prioridadeDaRemissao`), preferindo "cf." ou ")" a ";".
  *

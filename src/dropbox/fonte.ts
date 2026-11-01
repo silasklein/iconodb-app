@@ -4,9 +4,12 @@
  *
  * O cliente é pedido a cada download (cliente() renova o token quando precisa),
  * porque a primeira sincronização pode durar mais que a vida de um access token.
+ * Cada chamada tem prazo (prazo.ts): uma conexão pendurada vira "sem conexão", não uma tela parada.
  */
 import { ErroDeLogin, ErroDeRede, type Fonte } from '../pacote/manifesto'
 import { cliente, eErroDeAutenticacao, marcarExpirado } from './auth'
+import { PRAZO_ARQUIVO_MS, PRAZO_CURTO_MS } from './prazo'
+import { eErroDeRede } from './rede'
 
 const TENTATIVAS = 4
 /** O Dropbox pode pedir esperas longas no 429; esperar mais que isto trava a tela de progresso. */
@@ -19,14 +22,7 @@ export interface OpcoesDaFonte {
 
 const dormir = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms))
 
-/** Falha de conexão (fetch), tempo esgotado, 429 (muitos pedidos) ou 5xx: vale tentar de novo. */
-export function eErroDeRede(erro: unknown): boolean {
-  if (erro instanceof ErroDeRede) return true
-  if (typeof erro !== 'object' || erro === null) return false
-  const { status, name } = erro as { status?: unknown; name?: unknown }
-  if (typeof status === 'number') return status === 0 || status === 429 || status >= 500
-  return erro instanceof TypeError || name === 'AbortError' || name === 'TimeoutError'
-}
+export { eErroDeRede }
 
 /** Segundos que o Dropbox pede para esperar no 429. */
 function esperaPedida(erro: unknown): number | null {
@@ -54,8 +50,9 @@ async function comTentativas<T>(fazer: () => Promise<T>, esperar: (ms: number) =
   }
 }
 
-async function clienteOuLogin() {
-  const c = await cliente()
+/** `prazoMs`: sem resposta (ou sem bytes novos) por esse tempo, a chamada falha como falha de rede. */
+async function clienteOuLogin(prazoMs: number) {
+  const c = await cliente({ prazoMs })
   if (!c) throw new ErroDeLogin()
   return c
 }
@@ -73,7 +70,7 @@ export async function fonteDropbox(opcoes: OpcoesDaFonte = {}): Promise<Fonte | 
       const caminhos: string[] = []
       await comTentativas(async () => {
         caminhos.length = 0
-        const c = await clienteOuLogin()
+        const c = await clienteOuLogin(PRAZO_CURTO_MS)
         let r = await c.filesListFolder({ path: pasta, recursive: true })
         for (;;) {
           for (const e of r.result.entries) if (e['.tag'] === 'file' && e.path_display) caminhos.push(e.path_display.slice(1))
@@ -85,7 +82,8 @@ export async function fonteDropbox(opcoes: OpcoesDaFonte = {}): Promise<Fonte | 
     },
     async baixar(caminho) {
       return comTentativas(async () => {
-        const c = await clienteOuLogin()
+        // O manifesto e o fold.json são pequenos: prazo curto. Os demais: o de arquivo.
+        const c = await clienteOuLogin(caminho.endsWith('.json') ? PRAZO_CURTO_MS : PRAZO_ARQUIVO_MS)
         const r = await c.filesDownload({ path: `/${caminho}` })
         const blob = (r.result as unknown as { fileBlob: Blob }).fileBlob
         return blob.arrayBuffer()

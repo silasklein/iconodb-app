@@ -36,7 +36,7 @@ async function carregar() {
 /** Uma linha da lista, memoizada (digitar no filtro só refaz as que entram ou saem). */
 const LinhaDaObra = memo(function LinhaDaObra({ o, atual, busca }: { o: ObraResumo; atual: boolean; busca: string }) {
   return (
-    <Link className="lista-linha obra-linha" to={{ pathname: `/obra/${o.id}`, search: busca }} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
+    <Link className="lista-linha obra-linha" to={{ pathname: `/obra/${encodeURIComponent(o.id)}`, search: busca }} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
       <span className="lista-nome">{o.curta ?? o.titulo ?? o.id}</span>
       <Contagem n={o.objetos} um="objeto" varios="objetos" />
       {o.titulo && o.curta && <span className="lista-sub">{o.titulo}</span>}

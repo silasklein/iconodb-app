@@ -49,7 +49,7 @@ const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, atual, busca }: Linha) 
   return (
     <Link
       className="lista-linha glossario-linha"
-      to={{ pathname: `/verbete/${v.id}`, search: busca }}
+      to={{ pathname: `/verbete/${encodeURIComponent(v.id)}`, search: busca }}
       aria-current={atual ? 'page' : undefined}
       data-atual={atual ? '' : undefined}
     >
@@ -161,7 +161,7 @@ export function Glossario() {
             key={t.valor}
             className="hit"
             replace
-            to={{ pathname, search: `?tipo=${t.valor}${revisar ? '&revisar=1' : ''}` }}
+            to={{ pathname, search: `?tipo=${encodeURIComponent(t.valor)}${revisar ? '&revisar=1' : ''}` }}
             aria-current={tipo === t ? 'page' : undefined}
           >
             {t.rotulo}

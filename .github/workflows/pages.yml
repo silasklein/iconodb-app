@@ -6,10 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Mínimo para todos os jobs; só o job que publica recebe pages/id-token.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Um grupo por ref: uma execução de PR nunca cancela a publicação da main.
 # Só se cancela a execução anterior de refs que não são a main.
@@ -26,21 +25,27 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Sem scripts de instalação: nenhuma dependência do build precisa deles (só o fsevents, do macOS, tem).
+      - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run build
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   publicar:
     needs: construir
-    if: github.event_name != 'pull_request'
+    # Só a main publica (nunca um PR nem um workflow_dispatch de outro ramo).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # Aqui, e não no build: consultar o site do Pages pede a permissão "pages", que só este job tem.
+      - uses: actions/configure-pages@v5
       - id: deploy
         uses: actions/deploy-pages@v4

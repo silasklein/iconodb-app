@@ -1,5 +1,5 @@
 /**
- * O endereço da busca: `#/busca?q=…&escopo=termo&publicacao=IPIAO&sitio=IPIAO-3`.
+ * O endereço da busca: `#/busca?q=…&escopo=termo&publicacao=TESTE&sitio=TESTE-3`.
  * `escopo` some quando é "tudo"; cada filtro é uma chave repetida (uma por valor).
  * O Início e a barra superior mandam para `caminhoDaBusca(texto)`.
  */

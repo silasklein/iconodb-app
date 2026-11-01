@@ -56,7 +56,7 @@ const LinhaDoSitio = memo(function LinhaDoSitio({ s, atual, computador }: { s: S
   const comCoordenada = s.lat !== null && s.lon !== null
   return (
     <div className="sitio-linha">
-      <Link className="lista-linha" to={`/sitio/${s.id}`} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
+      <Link className="lista-linha" to={`/sitio/${encodeURIComponent(s.id)}`} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
         <span className="lista-textos">
           <span className="lista-nome">{s.nome}</span>
           <span className="sitio-coord">{comCoordenada ? coordenadaEmGraus(s.lat!, s.lon!, 3) : 'sem coordenada'}</span>

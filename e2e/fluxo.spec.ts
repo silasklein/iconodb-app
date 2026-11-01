@@ -125,6 +125,8 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
 
 test('o manifesto, os ícones e as metas de instalação', async ({ page }) => {
   await page.goto('./')
+  // A Content-Security-Policy vem no próprio index.html publicado (o GitHub Pages não deixa pôr cabeçalhos).
+  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', /^default-src 'none'; script-src 'self' 'wasm-unsafe-eval';/)
   const href = await page.locator('link[rel="manifest"]').getAttribute('href')
   const manifesto = await (await page.request.get(new URL(href!, page.url()).toString())).json()
   expect(manifesto).toMatchObject({

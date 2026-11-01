@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
+import { pluginCsp } from './scripts/csp.ts'
 
 // O app é publicado em https://silasklein.github.io/iconodb-app/ (base do build e do preview).
 // No servidor de desenvolvimento (`npm run dev`) a base é "/", porque o redirect do login do
@@ -11,6 +12,7 @@ export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? BASE_PUBLICADA : '/',
   plugins: [
     react(),
+    pluginCsp(),
     VitePWA({
       // "prompt": a versão nova espera; o app só recarrega quando o usuário pede (nunca no meio de
       // uma sincronização). O aviso é src/pwa/AvisoDeAtualizacao.tsx.

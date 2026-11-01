@@ -107,6 +107,27 @@ describe('fonteDropbox', () => {
     expect(download).toHaveBeenCalledTimes(4)
   })
 
+  it('tempo esgotado (TimeoutError do prazo) é falha de rede: tenta de novo e, por fim, ErroDeRede', async () => {
+    const download = vi.fn().mockRejectedValue(new DOMException('O Dropbox não respondeu a tempo.', 'TimeoutError'))
+    usarCliente(falso({ filesDownload: download }))
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    await expect(fonte.baixar('nucleo/comum.sqlite')).rejects.toBeInstanceOf(ErroDeRede)
+    expect(download).toHaveBeenCalledTimes(4)
+  })
+
+  it('cada chamada pede o cliente com prazo: 60 s para arquivos, 20 s para JSON e listagem', async () => {
+    const c = falso({
+      filesListFolder: vi.fn(async () => ({ result: { entries: [], has_more: false, cursor: 'c' } })),
+    })
+    usarCliente(c)
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    vi.mocked(cliente).mockClear()
+    await fonte.baixar('nucleo/comum.sqlite')
+    await fonte.baixar('nucleo/manifest.json')
+    await fonte.listar('')
+    expect(vi.mocked(cliente).mock.calls).toEqual([[{ prazoMs: 60_000 }], [{ prazoMs: 20_000 }], [{ prazoMs: 20_000 }]])
+  })
+
   it('credencial recusada marca o login como expirado e lança ErroDeLogin, sem repetir', async () => {
     const download = vi.fn().mockRejectedValue({ status: 401 })
     vi.mocked(eErroDeAutenticacao).mockReturnValue(true)

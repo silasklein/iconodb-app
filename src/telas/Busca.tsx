@@ -24,7 +24,7 @@ import './Busca.css'
 const OBJETOS_POR_PAGINA = 120
 const ESPERA_AO_DIGITAR_MS = 250
 
-export const MSG_VAZIA = 'Digite um termo, um sítio ou o número de um objeto (por exemplo CA00023).'
+export const MSG_VAZIA = 'Digite um termo, um sítio ou o número de um objeto (por exemplo CA00001).'
 export const MSG_CURTA = 'Digite ao menos 2 letras.'
 export const MSG_SEM_PACOTE = 'O banco ainda não está no aparelho.'
 const MSG_ERRO = 'Não foi possível buscar agora. Tente de novo.'
@@ -293,7 +293,7 @@ export function Busca() {
                     {resultado.verbetesRelacionados.map((v, i) => (
                       <span key={v.id}>
                         {i > 0 && ', '}
-                        <Link to={`/verbete/${v.id}`}>{v.rotulo}</Link>
+                        <Link to={`/verbete/${encodeURIComponent(v.id)}`}>{v.rotulo}</Link>
                       </span>
                     ))}
                   </p>
@@ -405,7 +405,7 @@ function VerbeteEmDestaque({ verbete, computador }: { verbete: Verbete; computad
       </div>
       <div className="busca-verbete-nome">
         <h2>{nome}</h2>
-        <Link className="hit" to={`/verbete/${verbete.id}`}>
+        <Link className="hit" to={`/verbete/${encodeURIComponent(verbete.id)}`}>
           Abrir verbete
         </Link>
       </div>
@@ -430,7 +430,7 @@ function VerbeteEmDestaque({ verbete, computador }: { verbete: Verbete; computad
           <>
             <dt>Pai</dt>
             <dd>
-              <Link to={`/verbete/${verbete.pai.id}`}>{verbete.pai.pt ?? verbete.pai.id}</Link>
+              <Link to={`/verbete/${encodeURIComponent(verbete.pai.id)}`}>{verbete.pai.pt ?? verbete.pai.id}</Link>
             </dd>
           </>
         )}

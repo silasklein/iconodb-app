@@ -10,6 +10,7 @@
  */
 import { Dropbox, DropboxAuth } from 'dropbox'
 import { irPara } from './navegacao'
+import { fetchComPrazo, PRAZO_ARQUIVO_MS, PRAZO_CURTO_MS } from './prazo'
 import {
   gravarPendente,
   gravarToken,
@@ -39,17 +40,12 @@ export function redirectUri(): string {
   return import.meta.env.PROD ? REDIRECT_PRODUCAO : REDIRECT_DESENVOLVIMENTO
 }
 
-function novoAuth(extra: { codeVerifier?: string; refreshToken?: string; accessToken?: string; expiraEm?: number } = {}) {
-  const auth = new DropboxAuth({
+/** Só para montar a URL de autorização (PKCE): o SDK gera o verifier e o challenge. */
+function authParaAutorizar() {
+  return new DropboxAuth({
     clientId: APP_KEY,
-    // Resolve o fetch na hora da chamada.
     fetch: (...args: Parameters<typeof fetch>) => globalThis.fetch(...args),
-    accessToken: extra.accessToken,
-    refreshToken: extra.refreshToken,
-    accessTokenExpiresAt: extra.expiraEm === undefined ? undefined : new Date(extra.expiraEm),
   } as ConstructorParameters<typeof DropboxAuth>[0])
-  if (extra.codeVerifier) auth.setCodeVerifier(extra.codeVerifier)
-  return auth
 }
 
 function gerarState(): string {
@@ -63,12 +59,55 @@ interface RespostaDeToken {
   expires_in: number
 }
 
+const URL_DO_TOKEN = 'https://api.dropboxapi.com/oauth2/token'
+const URL_DE_REVOGAR = 'https://api.dropboxapi.com/2/auth/token/revoke'
+
+/** Uma resposta de erro do Dropbox, no formato do erro do SDK (`status`, `error`): eErroDeAutenticacao e eErroDeRede a leem. */
+class ErroDoDropbox extends Error {
+  readonly status: number
+  readonly error: unknown
+  constructor(status: number, corpo: unknown) {
+    super(`O Dropbox respondeu ${status}.`)
+    this.name = 'ErroDoDropbox'
+    this.status = status
+    this.error = corpo
+  }
+}
+
+/**
+ * POST no endpoint de token com os campos no CORPO (form-urlencoded). O SDK do Dropbox põe o
+ * code, o code_verifier e o refresh_token na query string, que fica em logs de proxy e no
+ * histórico de rede: por isso a troca e a renovação são feitas aqui, não pelo SDK.
+ */
+async function pedirToken(campos: Record<string, string>): Promise<RespostaDeToken> {
+  const res = await globalThis.fetch(URL_DO_TOKEN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(campos).toString(),
+    signal: AbortSignal.timeout(PRAZO_CURTO_MS),
+  })
+  let corpo: unknown = null
+  try {
+    corpo = await res.json()
+  } catch {
+    corpo = null
+  }
+  if (!res.ok) throw new ErroDoDropbox(res.status, corpo)
+  const r = corpo as Partial<RespostaDeToken> | null
+  if (!r || typeof r.access_token !== 'string' || typeof r.expires_in !== 'number') throw new Error('Resposta do Dropbox sem access token')
+  return r as RespostaDeToken
+}
+
 /** Troca o código (single-use) pelo token. `redirect` fica de fora no login por código. */
-async function trocarCodigo(auth: DropboxAuth, redirect: string | undefined, codigo: string): Promise<Token> {
-  // O SDK monta a query sem codificar: codificamos o código colado.
-  const res = await auth.getAccessTokenFromCode(redirect as string, encodeURIComponent(codigo))
-  const r = res.result as RespostaDeToken
-  if (!r.access_token || !r.refresh_token) throw new Error('Resposta do Dropbox sem refresh token')
+async function trocarCodigo(codeVerifier: string, redirect: string | undefined, codigo: string): Promise<Token> {
+  const r = await pedirToken({
+    grant_type: 'authorization_code',
+    code: codigo,
+    client_id: APP_KEY,
+    code_verifier: codeVerifier,
+    ...(redirect ? { redirect_uri: redirect } : {}),
+  })
+  if (!r.refresh_token) throw new Error('Resposta do Dropbox sem refresh token')
   return {
     refreshToken: r.refresh_token,
     accessToken: r.access_token,
@@ -77,9 +116,15 @@ async function trocarCodigo(auth: DropboxAuth, redirect: string | undefined, cod
   }
 }
 
+/** Renova o access token pelo refresh token (campos no corpo). */
+async function renovar(token: Token): Promise<Token> {
+  const r = await pedirToken({ grant_type: 'refresh_token', refresh_token: token.refreshToken, client_id: APP_KEY })
+  return { ...token, accessToken: r.access_token, expiraEm: Date.now() + r.expires_in * 1000 }
+}
+
 /** PKCE com redirecionamento: guarda verifier e state e vai para o Dropbox. */
 export async function iniciarLogin(): Promise<void> {
-  const auth = novoAuth()
+  const auth = authParaAutorizar()
   const state = gerarState()
   const url = await auth.getAuthenticationUrl(redirectUri(), state, 'code', 'offline', undefined, 'none', true)
   await gravarPendente({ modo: 'redirect', codeVerifier: auth.getCodeVerifier(), state })
@@ -112,7 +157,7 @@ function eFalhaDeConexao(erro: unknown): boolean {
 async function trocarDoRetorno(pendente: LoginPendente, code: string): Promise<ResultadoLogin> {
   let token: Token
   try {
-    token = await trocarCodigo(novoAuth({ codeVerifier: pendente.codeVerifier }), redirectUri(), code)
+    token = await trocarCodigo(pendente.codeVerifier, redirectUri(), code)
   } catch (erro) {
     if (eFalhaDeConexao(erro)) {
       await gravarPendente({ ...pendente, codigoRecebido: code })
@@ -142,6 +187,8 @@ export async function concluirLoginDetalhado(url: string): Promise<ResultadoLogi
 
   const erro = params.get('error')
   if (erro) {
+    // Um retorno com erro só encerra o login se o state confere; senão é ignorado (o login segue pendente).
+    if (params.get('state') !== pendente.state) return 'sem-pendente'
     await limparPendente()
     return erro === 'access_denied' ? 'acesso-negado' : 'recusado'
   }
@@ -168,7 +215,7 @@ export async function repetirTrocaPendente(): Promise<ResultadoLogin> {
 
 /** Login alternativo: devolve a URL de autorização (sem redirect_uri) para abrir em outra janela. */
 export async function iniciarLoginComCodigo(): Promise<string> {
-  const auth = novoAuth()
+  const auth = authParaAutorizar()
   const url = await auth.getAuthenticationUrl(undefined as unknown as string, undefined, 'code', 'offline', undefined, 'none', true)
   await gravarPendente({ modo: 'codigo', codeVerifier: auth.getCodeVerifier() })
   return url
@@ -186,7 +233,7 @@ export async function tentarLoginComCodigo(codigo: string): Promise<ResultadoLog
 
   let token: Token
   try {
-    token = await trocarCodigo(novoAuth({ codeVerifier: pendente.codeVerifier }), undefined, limpo)
+    token = await trocarCodigo(pendente.codeVerifier, undefined, limpo)
   } catch (erro) {
     return eFalhaDeConexao(erro) ? 'sem-conexao' : 'recusado'
   }
@@ -230,15 +277,20 @@ export async function estadoLogin(): Promise<EstadoLogin> {
  * regravado). Devolve null sem login ou com login expirado/revogado, sem apagar
  * dados locais. Se a renovação falhar por outro motivo (sem internet), o erro sobe
  * e o login continua "ativo".
+ *
+ * O SDK recebe só o access token (sem o refresh token): assim a renovação automática
+ * dele, que manda o refresh token na query string, nunca roda. Como cliente() é pedido
+ * a cada chamada e renova com 5 min de folga, o token nunca vence no meio de uma.
+ * `prazoMs`: cada chamada do SDK falha com TimeoutError depois desse tempo sem resposta
+ * ou sem bytes novos (prazo.ts).
  */
-export async function cliente(): Promise<Dropbox | null> {
-  const token = await lerToken()
+export async function cliente(opcoes: { prazoMs?: number } = {}): Promise<Dropbox | null> {
+  let token = await lerToken()
   if (!token || token.expirado) return null
 
-  const auth = novoAuth(token)
   if (token.expiraEm - MARGEM_MS <= Date.now()) {
     try {
-      await auth.refreshAccessToken()
+      token = await renovar(token)
     } catch (erro) {
       if (eErroDeAutenticacao(erro)) {
         await marcarExpirado()
@@ -246,17 +298,36 @@ export async function cliente(): Promise<Dropbox | null> {
       }
       throw erro
     }
-    await gravarToken({
-      ...token,
-      accessToken: auth.getAccessToken(),
-      expiraEm: auth.getAccessTokenExpiresAt().getTime(),
-    })
+    await gravarToken(token)
   }
+  const auth = new DropboxAuth({
+    clientId: APP_KEY,
+    accessToken: token.accessToken,
+    accessTokenExpiresAt: new Date(token.expiraEm),
+    fetch: fetchComPrazo(opcoes.prazoMs ?? PRAZO_ARQUIVO_MS),
+  } as ConstructorParameters<typeof DropboxAuth>[0])
   return new Dropbox({ auth })
 }
 
-/** Sai: limpa só o token e o login pendente. Os dados do app ficam. */
+/**
+ * Sai: revoga o token no Dropbox (melhor esforço: sem rede ou com recusa, sai do mesmo jeito)
+ * e limpa só o token e o login pendente. Os dados do app ficam.
+ */
 export async function sair(): Promise<void> {
+  try {
+    let token = await lerToken()
+    if (token && !token.expirado) {
+      // Revogar com um access token vencido não adianta: renova antes (o refresh token cai junto).
+      if (token.expiraEm - MARGEM_MS <= Date.now()) token = await renovar(token)
+      await globalThis.fetch(URL_DE_REVOGAR, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token.accessToken}` },
+        signal: AbortSignal.timeout(PRAZO_CURTO_MS),
+      })
+    }
+  } catch {
+    /* melhor esforço */
+  }
   await limparToken()
   await limparPendente()
 }

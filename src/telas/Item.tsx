@@ -104,7 +104,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   // Contexto: o do estado (Busca ou Grupo) ou, sem estado, o primeiro grupo do objeto.
   const estado = lerEstado(location.state)
   const primeiro = d.grupos[0] ?? null
-  const adiante = estado ?? (primeiro ? estadoDoGrupo(primeiro.id, primeiro.titulo, `/grupo/${primeiro.id}`) : null)
+  const adiante = estado ?? (primeiro ? estadoDoGrupo(primeiro.id, primeiro.titulo, `/grupo/${encodeURIComponent(primeiro.id)}`) : null)
   const contexto = adiante?.contexto ?? null
   const chaveDoContexto = !contexto ? '' : contexto.tipo === 'grupo' ? `g:${contexto.id}` : `l:${contexto.ids.length}:${contexto.ids[0]}:${contexto.ids.at(-1)}`
   const viz = useCarregar(() => (contexto ? vizinhos(d.numero, contexto) : Promise.resolve(null)), `${d.numero}|${chaveDoContexto}`)
@@ -171,7 +171,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   )
   const devolverFoco = useCallback((): HTMLElement | null => {
     const id = aberta
-    const seletor = (attr: string) => `[${attr}~="${(id ?? '').replace(/["\\]/g, '\\$&')}"]`
+    const seletor = (attr: string) => `[${attr}~="${CSS.escape(id ?? '')}"]`
     const naLeitura = id ? document.querySelector<HTMLElement>(`.item-leituras ${seletor('data-hipoteses')}`) : null
     if (naLeitura) return naLeitura
     if (gatilho.current?.isConnected) return gatilho.current
@@ -186,7 +186,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   // computador). No painel lateral o trecho já está à vista.
   useEffect(() => {
     if (!aberta || lateral) return
-    const seletor = `.item-leituras [data-hipoteses~="${aberta.replace(/["\\]/g, '\\$&')}"]`
+    const seletor = `.item-leituras [data-hipoteses~="${CSS.escape(aberta)}"]`
     document.querySelector<HTMLElement>(seletor)?.scrollIntoView({ block: 'start' })
   }, [aberta, lateral])
 

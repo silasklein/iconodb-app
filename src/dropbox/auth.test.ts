@@ -475,3 +475,147 @@ describe('armazenamento e segredo', () => {
     }
   })
 })
+
+describe('segredos no corpo, nunca na URL (B1)', () => {
+  /** A URL e o corpo de uma chamada, separados. */
+  function chamada(i = 0) {
+    const [url, init] = fetchMock.mock.calls[i] as [string, RequestInit | undefined]
+    const headers = new Headers(init?.headers)
+    return { url: new URL(url), metodo: init?.method, tipo: headers.get('content-type'), corpo: new URLSearchParams(String(init?.body ?? '')) }
+  }
+
+  it('troca do código do retorno: POST form-urlencoded, sem query; code, verifier e redirect no corpo', async () => {
+    await iniciarLogin()
+    const state = new URL(vi.mocked(irPara).mock.calls[0]![0]).searchParams.get('state')!
+    const verifier = (await lerPendente())!.codeVerifier
+    fetchMock.mockResolvedValueOnce(resposta(TOKEN_OK))
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=C%2B1&state=${state}`)).toBe('ok')
+    const { url, metodo, tipo, corpo } = chamada()
+    expect(url.href).toBe('https://api.dropboxapi.com/oauth2/token')
+    expect(url.search).toBe('')
+    expect(metodo).toBe('POST')
+    expect(tipo).toBe('application/x-www-form-urlencoded')
+    expect(Object.fromEntries(corpo)).toEqual({
+      grant_type: 'authorization_code',
+      code: 'C+1',
+      client_id: APP_KEY,
+      code_verifier: verifier,
+      redirect_uri: REDIRECT_DEV,
+    })
+  })
+
+  it('código colado: no corpo, sem redirect_uri, com caracteres especiais intactos', async () => {
+    await iniciarLoginComCodigo()
+    fetchMock.mockResolvedValueOnce(resposta(TOKEN_OK))
+    expect(await tentarLoginComCodigo(' a&b=c+d ')).toBe('ok')
+    const { url, corpo } = chamada()
+    expect(url.search).toBe('')
+    expect(corpo.get('code')).toBe('a&b=c+d')
+    expect(corpo.has('redirect_uri')).toBe(false)
+  })
+
+  it('renovação: refresh_token no corpo, sem query', async () => {
+    await gravarToken({ refreshToken: 'r/+=', accessToken: 'a', expiraEm: Date.now() - 1000 })
+    fetchMock.mockResolvedValueOnce(resposta({ access_token: 'novo', expires_in: 14400 }))
+    await cliente()
+    const { url, metodo, tipo, corpo } = chamada()
+    expect(url.search).toBe('')
+    expect(metodo).toBe('POST')
+    expect(tipo).toBe('application/x-www-form-urlencoded')
+    expect(Object.fromEntries(corpo)).toEqual({ grant_type: 'refresh_token', refresh_token: 'r/+=', client_id: APP_KEY })
+  })
+
+  it('o SDK não guarda o refresh token: a renovação automática dele (com query) nunca roda', async () => {
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() + 3600_000 })
+    const c = (await cliente())!
+    const auth = (c as unknown as { auth: { getRefreshToken(): string | undefined; checkAndRefreshAccessToken(): Promise<void> } }).auth
+    expect(auth.getRefreshToken()).toBeFalsy()
+    const agora = Date.now()
+    const relogio = vi.spyOn(Date, 'now').mockReturnValue(agora + 2 * 3600_000)
+    try {
+      await auth.checkAndRefreshAccessToken()
+    } finally {
+      relogio.mockRestore()
+    }
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('retorno com erro e state (B2)', () => {
+  it('error= com state diferente é ignorado: o login pendente fica', async () => {
+    await iniciarLogin()
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?error=access_denied&state=outro`)).toBe('sem-pendente')
+    expect((await lerPendente())?.modo).toBe('redirect')
+  })
+
+  it('error= sem state também é ignorado', async () => {
+    await iniciarLogin()
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?error=access_denied`)).toBe('sem-pendente')
+    expect(await lerPendente()).not.toBeNull()
+  })
+})
+
+describe('sair() revoga o token no Dropbox (B3)', () => {
+  it('POST em /2/auth/token/revoke com o access token, depois limpa', async () => {
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() + 3600_000 })
+    fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }))
+    await sair()
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://api.dropboxapi.com/2/auth/token/revoke')
+    expect(init.method).toBe('POST')
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer a')
+    expect(await lerToken()).toBeNull()
+  })
+
+  it('access token vencido: renova primeiro e revoga com o novo', async () => {
+    await gravarToken({ refreshToken: 'r', accessToken: 'velho', expiraEm: Date.now() - 1000 })
+    fetchMock.mockResolvedValueOnce(resposta({ access_token: 'novo', expires_in: 14400 }))
+    fetchMock.mockResolvedValueOnce(new Response('null', { status: 200 }))
+    await sair()
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
+    expect(url).toBe('https://api.dropboxapi.com/2/auth/token/revoke')
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer novo')
+    expect(await lerToken()).toBeNull()
+  })
+
+  it('sem rede (ou o Dropbox recusa) sai do mesmo jeito', async () => {
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() + 3600_000 })
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await sair()
+    expect(await lerToken()).toBeNull()
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() + 3600_000 })
+    fetchMock.mockResolvedValueOnce(resposta({ error: 'invalid_access_token' }, 401))
+    await sair()
+    expect(await lerToken()).toBeNull()
+  })
+
+  it('sem token, ou com login expirado, não chama a rede', async () => {
+    await sair()
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() - 1000, expirado: true })
+    await sair()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(await lerToken()).toBeNull()
+  })
+})
+
+describe('prazo nas chamadas ao Dropbox (B7)', () => {
+  it('o cliente aborta com TimeoutError quando o Dropbox não responde no prazo', async () => {
+    await gravarToken({ refreshToken: 'r', accessToken: 'a', expiraEm: Date.now() + 3600_000 })
+    fetchMock.mockImplementation(
+      (_u: string, init?: RequestInit) =>
+        new Promise((_ok, falha) => init?.signal?.addEventListener('abort', () => falha(init.signal!.reason))),
+    )
+    const c = (await cliente({ prazoMs: 30 }))!
+    const erro = await c.filesListFolder({ path: '' }).catch((e: unknown) => e)
+    expect((erro as Error).name).toBe('TimeoutError')
+  })
+
+  it('a troca de token também tem prazo (sem resposta = sem conexão)', async () => {
+    await iniciarLoginComCodigo()
+    fetchMock.mockImplementation((_u: string, init?: RequestInit) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal)
+      return Promise.reject(new DOMException('tempo esgotado', 'TimeoutError'))
+    })
+    expect(await tentarLoginComCodigo('abc')).toBe('sem-conexao')
+  })
+})

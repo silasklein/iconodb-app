@@ -6,7 +6,7 @@
  * (Tarefa 8, `codepointsParaUtf16`).
  */
 
-/** O "número" de um objeto (CA00023); um item sem objeto atribuído usa o id do item. */
+/** O "número" de um objeto (CA00001); um item sem objeto atribuído usa o id do item. */
 export type Numero = string
 
 export type Nivel = 'pre_iconographic' | 'iconographic' | 'iconological'

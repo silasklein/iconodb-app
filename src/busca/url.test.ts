@@ -3,7 +3,7 @@ import { caminhoDaBusca, estadoDoResultado, lerParametros, MAXIMO_DA_LISTA, mont
 
 describe('endereço da busca', () => {
   it('caminhoDaBusca() codifica o texto e some com o escopo "tudo"', () => {
-    expect(caminhoDaBusca('íbex & CA00023')).toBe('/busca?q=%C3%ADbex+%26+CA00023')
+    expect(caminhoDaBusca('íbex & CA00001')).toBe('/busca?q=%C3%ADbex+%26+CA00001')
     expect(caminhoDaBusca('x', { escopo: 'termo' })).toBe('/busca?q=x&escopo=termo')
   })
 

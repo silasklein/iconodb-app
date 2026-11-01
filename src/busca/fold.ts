@@ -125,7 +125,7 @@ function aplicar(passo: Passo, texto: string, t: FoldTabela): string {
   }
 }
 
-/** O texto dobrado: os passos de `tabela.ordem`, na sequência. `fold("ʿĒn el-Ǧarbā") === "en el-garba"`. */
+/** O texto dobrado: os passos de `tabela.ordem`, na sequência. `fold("ʿĒn Teste") === "en teste"`. */
 export function fold(texto: string, tabela: FoldTabela): string {
   let atual = texto
   for (const passo of tabela.ordem) atual = aplicar(passo, atual, tabela)

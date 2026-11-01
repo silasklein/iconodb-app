@@ -9,6 +9,8 @@ import { gravarPreferencias, lerEstado, lerPreferencias } from '../pacote/local'
 import {
   ErroDeIntegridade,
   ErroDeLogin,
+  ErroDeManifesto,
+  ErroDePacote,
   ErroDeSchema,
   ErroDeSincronizacaoEmAndamento,
   MSG_SCHEMA,
@@ -21,12 +23,14 @@ const ETAPAS: Etapa[] = ['Banco de dados', 'Imagens de tela']
 export const MSG_SEM_CONEXAO = 'Sem conexão: o app abre com o que já está no aparelho'
 const MSG_SEM_CONEXAO_PRIMEIRA = 'Sem conexão: o primeiro download precisa de internet'
 const MSG_SEM_CONEXAO_NO_MEIO = 'Sem conexão. O que já foi baixado fica guardado e o download continua de onde parou.'
+const MSG_PACOTE =
+  'O pacote no Dropbox está com defeito e foi recusado; o que já estava no aparelho foi mantido. Gere-o de novo com `app-export`.'
 const MSG_INTEGRIDADE = 'Um arquivo não passou na conferência e foi descartado; o que já estava no aparelho foi mantido.'
 export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em outra janela do app. Espere terminar e tente de novo.'
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
 
 type Fase = 'baixando' | 'pronto' | 'erro'
-type Erro = 'sem-conexao' | 'schema' | 'integridade' | 'em-andamento' | 'geral'
+type Erro = 'sem-conexao' | 'schema' | 'pacote' | 'integridade' | 'em-andamento' | 'geral'
 type Andamento = Partial<Record<Etapa, { feito: number; total: number }>>
 
 /** Tamanho em unidades decimais (como o Dropbox e o macOS), na unidade do total. */
@@ -48,6 +52,7 @@ function textoDaEtapa(a: Andamento[Etapa]): { texto: string; pct: number; pronta
 
 function classificar(e: unknown): Erro {
   if (e instanceof ErroDeSchema) return 'schema'
+  if (e instanceof ErroDePacote || e instanceof ErroDeManifesto) return 'pacote'
   if (e instanceof ErroDeIntegridade) return 'integridade'
   if (e instanceof ErroDeSincronizacaoEmAndamento) return 'em-andamento'
   return eErroDeRede(e) ? 'sem-conexao' : 'geral'
@@ -194,6 +199,8 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
   const mensagemDeErro =
     erro === 'schema' ? (
       comCodigo(MSG_SCHEMA)
+    ) : erro === 'pacote' ? (
+      comCodigo(MSG_PACOTE)
     ) : erro === 'integridade' ? (
       MSG_INTEGRIDADE
     ) : erro === 'em-andamento' ? (
