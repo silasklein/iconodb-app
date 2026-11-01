@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
+import { useAtalhos } from '../app/useAtalhos'
 import { imagem as buscarImagem, regioes as buscarRegioes } from '../banco/consultas'
 import type { Imagem as ImagemDoBanco, Regiao } from '../banco/tipos'
 import { comImagemAberta, lerEstadoDoVisualizador, pedirFocoNoAmpliar, type EstadoDoVisualizador } from '../imagem/estado'
@@ -91,14 +91,8 @@ function Casca({ origem, ocupada = false, children }: { origem: EstadoDoVisualiz
   aoFechar.current = fechar
   useEffect(() => {
     topo.current?.querySelector<HTMLElement>('button')?.focus()
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
-      if (document.querySelector('[aria-modal="true"]')) return
-      aoFechar.current()
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => document.removeEventListener('keydown', aoTeclar)
   }, [])
+  useAtalhos({ Escape: () => aoFechar.current() }, 'visualizador')
   return (
     <div className="visualizador visualizador-aviso" aria-busy={ocupada || undefined}>
       <div className="vis-topo-solto" ref={topo}>
@@ -186,40 +180,32 @@ function Visualizador({ img, regioes, origem }: Props) {
 
   // ---- teclado ----
   const temRegioes = regioes.length > 0 && !!url
-  const aoTeclar = useRef<(e: KeyboardEvent) => void>(() => {})
-  const gArmado = useRef(0)
-  aoTeclar.current = (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
-    // Com um diálogo modal aberto, as teclas são dele.
-    if (document.querySelector('[aria-modal="true"]')) return
-    const k = e.key
-    // "g" e uma letra de ATALHOS_DE_IR é ir a uma seção: essa letra não é do visualizador.
-    const depoisDoG = Date.now() - gArmado.current < 1500
-    gArmado.current = 0
-    if (depoisDoG && k.toLowerCase() in ATALHOS_DE_IR) return
-    const tomar = (acao: () => void) => {
-      e.preventDefault()
-      acao()
-    }
-    if (k === 'g') gArmado.current = Date.now()
-    else if (k === 'Escape') fechar()
-    else if (!url) return
-    else if (k === 'i' || k === 'I') traco && tomar(alternarOriginal)
-    else if (k === '+' || k === '=' || k === 'z' || k === 'Z') tomar(() => alterarVista((v, p, c) => passo(v, 1, p, c)))
-    else if (k === '-' || k === '_') tomar(() => alterarVista((v, p, c) => passo(v, -1, p, c)))
-    else if (k === '0') tomar(ajustarATela)
-    else if (k === 'r' || k === 'R') temRegioes && tomar(alternarRegioes)
-    else if (k.startsWith('Arrow') && vistaAtual.current.escala > 1) {
-      const dx = k === 'ArrowLeft' ? PASSO_DA_SETA : k === 'ArrowRight' ? -PASSO_DA_SETA : 0
-      const dy = k === 'ArrowUp' ? PASSO_DA_SETA : k === 'ArrowDown' ? -PASSO_DA_SETA : 0
-      tomar(() => alterarVista((v, p, c) => mover(v, dx, dy, p, c)))
-    }
+  // As teclas são do registro de atalhos (campos de texto, modificadores, diálogos modais e o "g" + letra ficam com ele).
+  // Cada ação devolve false quando não há o que fazer agora, e a tecla segue para o navegador.
+  const ampliarUm = () => (url ? alterarVista((v, p, c) => passo(v, 1, p, c)) : false)
+  const reduzirUm = () => (url ? alterarVista((v, p, c) => passo(v, -1, p, c)) : false)
+  const seta = (dx: number, dy: number) => () => {
+    if (!url || vistaAtual.current.escala <= 1) return false
+    alterarVista((v, p, c) => mover(v, dx, dy, p, c))
   }
-  useEffect(() => {
-    const ouvir = (e: KeyboardEvent) => aoTeclar.current(e)
-    document.addEventListener('keydown', ouvir)
-    return () => document.removeEventListener('keydown', ouvir)
-  }, [])
+  useAtalhos(
+    {
+      Escape: fechar,
+      i: () => (url && traco ? alternarOriginal() : false),
+      '+': ampliarUm,
+      '=': ampliarUm,
+      z: ampliarUm,
+      '-': reduzirUm,
+      _: reduzirUm,
+      '0': () => (url ? ajustarATela() : false),
+      r: () => (url && temRegioes ? alternarRegioes() : false),
+      ArrowLeft: seta(PASSO_DA_SETA, 0),
+      ArrowRight: seta(-PASSO_DA_SETA, 0),
+      ArrowUp: seta(0, PASSO_DA_SETA),
+      ArrowDown: seta(0, -PASSO_DA_SETA),
+    },
+    'visualizador',
+  )
 
   // ---- roda do mouse e pinça do trackpad do Safari (gesture*) ----
   const ponteiros = useRef(new Map<number, Ponto>())

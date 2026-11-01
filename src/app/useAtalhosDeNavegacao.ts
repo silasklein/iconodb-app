@@ -1,62 +1,62 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
+import { emCampoDeTexto, IR_PARA } from './atalhos'
+import { useAtalhos } from './useAtalhos'
 
 /**
- * Atalhos globais de ir a uma seção (auditoria UX, seção 4): `g` e depois a letra. `?` abre a
- * lista de atalhos. Não sequestram teclas do navegador (nada com modificador) e não valem
- * em campos de texto nem com um diálogo modal aberto. É um hook solto: a Tarefa 11 o generaliza no registro de atalhos.
+ * Os atalhos de ir a uma seção (auditoria UX, seção 4): `g` e depois a letra; `?` abre a lista de atalhos
+ * e convenções. Ficam no registro de atalhos (atalhos.ts), que cuida das regras comuns: nada em campos de
+ * texto, com modificadores nem com um diálogo modal aberto. Valem no app todo, com ou sem barra superior.
  */
-export const ATALHOS_DE_IR: Record<string, string> = {
-  i: '/',
-  c: '/colecoes',
-  l: '/glossario',
-  s: '/sitios',
-  b: '/bibliografia',
-  r: '/revisao',
-}
+export const ATALHOS_DE_IR: Record<string, string> = Object.fromEntries(Object.entries(IR_PARA).map(([letra, v]) => [letra, v.caminho]))
 
 export const CAMINHO_DOS_ATALHOS = '/atalhos'
-const ESPERA_DA_SEGUNDA_TECLA_MS = 1500
-
-export function emCampoDeTexto(alvo: EventTarget | null): boolean {
-  const el = alvo as HTMLElement | null
-  return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
-}
+export { emCampoDeTexto }
 
 export function useAtalhosDeNavegacao(): void {
   const navegar = useNavigate()
-  useEffect(() => {
-    let esperando = false
-    let relogio: ReturnType<typeof setTimeout> | undefined
-    const parar = () => {
-      esperando = false
-      clearTimeout(relogio)
-    }
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
-      // Com um diálogo modal aberto (o Menu, uma folha), as teclas são dele.
-      if (document.querySelector('[aria-modal="true"]')) return
-      if (esperando) {
-        const caminho = ATALHOS_DE_IR[e.key.toLowerCase()]
-        parar()
-        if (caminho) {
-          e.preventDefault()
-          navegar(caminho)
-        }
-        return
-      }
-      if (e.key === 'g') {
-        esperando = true
-        relogio = setTimeout(parar, ESPERA_DA_SEGUNDA_TECLA_MS)
-      } else if (e.key === '?') {
-        e.preventDefault()
-        navegar(CAMINHO_DOS_ATALHOS)
-      }
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => {
-      document.removeEventListener('keydown', aoTeclar)
-      parar()
-    }
-  }, [navegar])
+  const { pathname } = useLocation()
+  const mapa: Record<string, () => void | false> = {
+    '?': () => {
+      if (pathname === CAMINHO_DOS_ATALHOS) return false
+      void navegar(CAMINHO_DOS_ATALHOS)
+    },
+  }
+  for (const [letra, caminho] of Object.entries(ATALHOS_DE_IR)) mapa[`g ${letra}`] = () => void navegar(caminho)
+  useAtalhos(mapa, 'global')
+}
+
+/** As linhas que as teclas J e K (e as setas) percorrem: cartões de objeto, linhas das listas e grupos das coleções. */
+export const LINHAS_DA_LISTA = '.cartao-objeto, .lista-linha, .colecoes-grupo'
+
+/** Move o foco ao item seguinte (+1) ou anterior (-1) da lista ou da grade. Sem item para ir, não toma a tecla. */
+function mover(passo: 1 | -1, soComFoco: boolean): void | false {
+  const itens = [...document.querySelectorAll<HTMLElement>(LINHAS_DA_LISTA)].filter((el) => !el.closest('[inert], [hidden], [aria-hidden="true"]'))
+  if (itens.length === 0) return false
+  const ativo = document.activeElement
+  const i = itens.findIndex((el) => el === ativo || el.contains(ativo))
+  if (i < 0 && soComFoco) return false
+  const destino = i < 0 ? (passo > 0 ? itens[0] : itens[itens.length - 1]) : itens[i + passo]
+  if (!destino) return false
+  destino.focus()
+  destino.scrollIntoView?.({ block: 'nearest' })
+}
+
+/** J e K percorrem a lista; as setas ↑ ↓ também, mas só quando um item já está em foco (senão rolam a página). */
+export function useAtalhosDeLista(): void {
+  useAtalhos(
+    {
+      j: () => mover(1, false),
+      k: () => mover(-1, false),
+      ArrowDown: () => mover(1, true),
+      ArrowUp: () => mover(-1, true),
+    },
+    'lista',
+  )
+}
+
+/** Os atalhos que valem em qualquer tela: ir a uma seção, `?` e percorrer listas. */
+export function AtalhosGlobais(): null {
+  useAtalhosDeNavegacao()
+  useAtalhosDeLista()
+  return null
 }

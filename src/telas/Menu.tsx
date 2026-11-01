@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as TeclaDoReact, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
+import { useAtalhos } from '../app/useAtalhos'
 import { sitios } from '../banco/consultas'
 import { IconButton } from '../ui/IconButton'
 import { numeroPtBr, usePendencias } from '../ui/usePendencias'
@@ -57,15 +58,8 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
     }
   }, [gatilho])
 
-  useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      fechar.current()
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => document.removeEventListener('keydown', aoTeclar)
-  }, [])
+  // Esc fecha: o menu é um diálogo modal, e o registro de atalhos deixa só as teclas dele valerem.
+  useAtalhos({ Escape: () => fechar.current() }, 'global', { raiz: () => raiz.current })
 
   const prender = (e: TeclaDoReact) => {
     if (e.key !== 'Tab' || !raiz.current) return

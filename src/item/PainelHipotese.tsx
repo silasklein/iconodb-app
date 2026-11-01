@@ -1,7 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent as TeclaDoReact, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
-import { emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
+import { useAtalhos } from '../app/useAtalhos'
 import { hipotese } from '../banco/consultas'
 import type { Hipotese } from '../banco/tipos'
 import { caminhoDaBusca } from '../busca/url'
@@ -82,29 +82,25 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
     if (raiz.current && (!ativo || ativo === document.body || !raiz.current.contains(ativo))) raiz.current.focus()
   }, [id])
 
-  useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (e.key === 'Escape') {
-        // Esc num campo de texto fora do painel (a busca da barra) é do campo.
-        if (emCampoDeTexto(e.target) && !raiz.current?.contains(e.target as Node)) return
-        e.preventDefault()
-        atual.current.aoFechar()
-        return
-      }
-      if (emCampoDeTexto(e.target)) return
-      const { ordem: o, aoIr: ir } = atual.current
-      if (e.key === '[' && o?.anterior) {
-        e.preventDefault()
+  // Esc fecha; "[" e "]" andam pelas hipóteses do texto. Na folha (modal) as teclas são dela; no painel lateral,
+  // Esc vindo da busca da barra é do campo (o registro de atalhos só entrega Esc de campos a quem é dono dele).
+  useAtalhos(
+    {
+      Escape: () => atual.current.aoFechar(),
+      '[': () => {
+        const { ordem: o, aoIr: ir } = atual.current
+        if (!o?.anterior) return false
         ir?.(o.anterior)
-      } else if (e.key === ']' && o?.seguinte) {
-        e.preventDefault()
+      },
+      ']': () => {
+        const { ordem: o, aoIr: ir } = atual.current
+        if (!o?.seguinte) return false
         ir?.(o.seguinte)
-      }
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => document.removeEventListener('keydown', aoTeclar)
-  }, [])
+      },
+    },
+    'hipotese',
+    { raiz: () => raiz.current },
+  )
 
   const prender = (e: TeclaDoReact) => {
     if (!folha || e.key !== 'Tab' || !raiz.current) return

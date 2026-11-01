@@ -1,0 +1,119 @@
+/*
+ * Atalhos e convenções: página de consulta (fundo claro). No celular ocupa a tela toda; no computador
+ * fica centrada sob a barra superior. Sem Atalhos.dc.html no design: segue o sistema visual do Menu.
+ */
+.atalhos-corpo {
+  gap: 0;
+  padding-bottom: max(48px, env(safe-area-inset-bottom));
+}
+.atalhos-cabeca {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.atalhos-cabeca .icon-button {
+  flex-shrink: 0;
+  margin: -4px -8px 0 0;
+}
+.atalhos-secao {
+  margin-top: 28px;
+}
+.atalhos-secao h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.atalhos-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.atalhos-lista li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete-consulta);
+}
+.atalhos-lista li:last-child {
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.atalho-teclas {
+  flex: 0 0 168px;
+  font-size: 14px;
+  color: var(--secundario-consulta);
+}
+.atalho-tecla {
+  white-space: nowrap;
+}
+.atalho-ou,
+.atalho-depois {
+  font-size: 13px;
+}
+.atalho-acao {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+.atalhos-corpo kbd {
+  display: inline-block;
+  min-width: 26px;
+  padding: 1px 7px;
+  border: 1px solid var(--controle);
+  border-radius: 4px;
+  background: var(--superficie);
+  color: var(--texto-consulta);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.convencoes {
+  margin: 0;
+}
+.convencoes > div {
+  padding: 12px 0;
+  border-top: 1px solid var(--filete-consulta);
+}
+.convencoes > div:last-child {
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.convencoes dt {
+  font-size: 15px;
+  font-weight: 600;
+}
+.convencoes dd {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+/* As amostras repetem os sublinhados do texto das leituras (Leitura.css). */
+.amostra-termo {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.amostra-ancora {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 4px;
+}
+
+@media (min-width: 768px) {
+  .atalhos-corpo {
+    margin: 0 auto;
+    max-width: 720px;
+    padding-top: 32px;
+    width: 100%;
+  }
+}

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
-import { useAtalhosDeNavegacao } from '../app/useAtalhosDeNavegacao'
 import { lerParametros, montarParametros, caminhoDaBusca } from '../busca/url'
 import { CampoDeBusca } from '../telas/CampoDeBusca'
 import { Menu } from '../telas/Menu'
@@ -41,12 +40,11 @@ interface Props {
  * ao centro a busca sempre visível, à direita os ícones Coleções, Glossário, Sítios, Bibliografia,
  * Revisão (um ponto, com "<N> pendências" na dica) e Menu. Sem ícone de sincronização na 2A.
  *
- * Também liga os atalhos `g` + letra (useAtalhosDeNavegacao). Na Busca, o campo da barra é o campo
+ * Os atalhos `g` + letra valem no app todo (AtalhosGlobais). Na Busca, o campo da barra é o campo
  * da busca: digitar atualiza `q` no endereço (preservando escopo e filtros); nas outras telas,
  * Enter leva à Busca. A cor segue o tema da tela (branca nas de consulta, escura nas de item).
  */
 export function BarraSuperior({ busca = true }: Props) {
-  useAtalhosDeNavegacao()
   const { pathname } = useLocation()
   const navegar = useNavigate()
   const [params, setParams] = useSearchParams()

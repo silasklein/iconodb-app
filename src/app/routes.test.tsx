@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { usarMotor } from '../banco/cliente'
@@ -85,6 +86,62 @@ describe('rotas', () => {
       abrir(caminho)
       await screen.findByRole('heading', { level: 1 })
       expect(screen.queryByRole('navigation', { name: 'Navegação' })).not.toBeInTheDocument()
+    })
+  })
+  describe('teclado em todas as telas (inclusive no celular, sem barra superior)', () => {
+    it.each([
+      ['c', 'Coleções'],
+      ['l', 'Glossário'],
+      ['s', 'Sítios'],
+      ['b', 'Bibliografia'],
+      ['r', 'Revisão'],
+    ])('g e depois %s leva a %s', async (letra, titulo) => {
+      abrir('/notas')
+      await screen.findByRole('heading', { level: 1, name: 'Minhas notas' })
+      expect(screen.queryByRole('navigation', { name: 'Navegação' })).not.toBeInTheDocument()
+      await userEvent.keyboard(`g${letra}`)
+      expect(await screen.findByRole('heading', { level: 1, name: titulo })).toBeInTheDocument()
+    })
+
+    it('g i leva ao Início', async () => {
+      abrir('/notas')
+      await screen.findByRole('heading', { level: 1, name: 'Minhas notas' })
+      await userEvent.keyboard('gi')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeInTheDocument()
+    })
+
+    it('? abre a lista de atalhos e convenções, e Esc volta', async () => {
+      abrir('/notas')
+      await screen.findByRole('heading', { level: 1, name: 'Minhas notas' })
+      await userEvent.keyboard('?')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Atalhos e convenções' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: 'Convenções' })).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
+      expect(await screen.findByRole('heading', { level: 1, name: 'Minhas notas' })).toBeInTheDocument()
+    })
+
+    it('/ foca a busca (a da Busca no celular; a da barra no computador)', async () => {
+      abrir('/busca')
+      await screen.findByRole('searchbox', { name: 'Buscar' })
+      await userEvent.keyboard('/')
+      expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveFocus()
+    })
+
+    it('/ foca o campo da barra nas telas de consulta do computador', async () => {
+      instalarMatchMedia(1280)
+      abrir('/colecoes')
+      const campo = await screen.findByRole('searchbox', { name: 'Buscar' })
+      await userEvent.keyboard('/')
+      expect(campo).toHaveFocus()
+    })
+
+    it('nada dispara dentro de um campo de texto: "gl" digitado na busca fica no campo', async () => {
+      abrir('/busca')
+      const campo = await screen.findByRole('searchbox', { name: 'Buscar' })
+      await userEvent.click(campo)
+      await userEvent.keyboard('gl?/')
+      expect(campo).toHaveValue('gl?/')
+      expect(screen.getByRole('heading', { level: 1, name: 'Busca' })).toBeInTheDocument()
     })
   })
 })

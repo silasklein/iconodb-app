@@ -21,15 +21,23 @@ const comModificador = (e: MouseEvent) => e.button !== 0 || e.metaKey || e.ctrlK
  * Devolve o `onClick` do link.
  */
 export function useVoltar(href: string): (e: MouseEvent<HTMLAnchorElement>) => void {
-  const navegar = useNavigate()
-  const location = useLocation()
+  const voltar = useIrParaTras(href)
   return useCallback(
     (e) => {
       if (e.defaultPrevented || comModificador(e)) return
       e.preventDefault()
-      if (temEntradaAnterior(location)) void navegar(-1)
-      else void navegar(href.replace(/^#/, ''), { replace: true })
+      voltar()
     },
-    [navegar, location, href],
+    [voltar],
   )
+}
+
+/** O mesmo voltar de verdade, como ação solta (para o teclado): volta no histórico, ou, sem entrada anterior, vai ao `href` trocando a entrada. */
+export function useIrParaTras(href: string): () => void {
+  const navegar = useNavigate()
+  const location = useLocation()
+  return useCallback(() => {
+    if (temEntradaAnterior(location)) void navegar(-1)
+    else void navegar(href.replace(/^#/, ''), { replace: true })
+  }, [navegar, location, href])
 }

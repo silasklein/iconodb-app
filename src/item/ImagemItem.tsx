@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
+import { useAtalhos } from '../app/useAtalhos'
 import type { Imagem, Regiao } from '../banco/tipos'
 import { consumirPedidoDeFoco } from '../imagem/estado'
 import { IconButton } from '../ui/IconButton'
@@ -73,6 +74,9 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
   }, [])
 
   const { url, falhou, aoFalhar } = useUrlDaImagem(caminho)
+
+  // Z amplia a imagem à vista (o mesmo que "Ampliar a imagem"), com o original se estiver ligado.
+  useAtalhos({ z: () => (atual && aoAmpliar ? aoAmpliar(atual.id, original) : false) }, 'item')
 
   if (!atual) {
     return (
@@ -151,7 +155,7 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
         )}
         {acesas.length > 0 && <span className="so-leitor">{`Região acesa: ${acesas.map((r) => r.elemento).join(', ')}`}</span>}
         <div className="imagem-item-ampliar" ref={ampliar}>
-          <IconButton icon="ampliar" label="Ampliar a imagem" href={`#/imagem/${encodeURIComponent(atual.id)}`} tipAbove onClick={aoAmpliar && ((e) => clicouEmAmpliar(e, atual.id))} />
+          <IconButton icon="ampliar" label="Ampliar a imagem" shortcut="Z" href={`#/imagem/${encodeURIComponent(atual.id)}`} tipAbove onClick={aoAmpliar && ((e) => clicouEmAmpliar(e, atual.id))} />
         </div>
       </div>
       {(imagens.length > 1 || (comDica && traco)) && (

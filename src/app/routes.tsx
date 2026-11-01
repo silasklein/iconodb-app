@@ -15,18 +15,10 @@ import { Revisao } from '../telas/Revisao'
 import { Sitios } from '../telas/Sitios'
 import { BarraSuperior } from '../ui/BarraSuperior'
 import { useBreakpoint } from '../ui/useBreakpoint'
+import { Atalhos } from '../telas/Atalhos'
 import { RotaInicial } from './RotaInicial'
+import { AtalhosGlobais } from './useAtalhosDeNavegacao'
 import { useRestaurarRolagem } from './useRestaurarRolagem'
-
-/** Tela provisória: cada tarefa seguinte troca a sua pela tela real. */
-function Provisoria({ titulo }: { titulo: string }) {
-  return (
-    <main style={{ padding: '24px' }}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>{titulo}</h1>
-      <p style={{ color: 'var(--secundario)' }}>Tela em construção.</p>
-    </main>
-  )
-}
 
 export interface Rota {
   path: string
@@ -58,7 +50,7 @@ export const ROTAS: Rota[] = [
   { path: '/sitios', elemento: <Sitios /> },
   { path: '/sitio/:id', elemento: <Sitios /> },
   { path: '/revisao', elemento: <Revisao /> },
-  { path: '/atalhos', elemento: <Provisoria titulo="Atalhos" /> },
+  { path: '/atalhos', elemento: <Atalhos /> },
   { path: '/notas', elemento: <MinhasNotas /> },
 ]
 
@@ -87,6 +79,7 @@ export function AppRoutes() {
   useRestaurarRolagem()
   return (
     <>
+      <AtalhosGlobais />
       <BarraDasTelasLargas />
       <Routes>
         {ROTAS.map((r) => (

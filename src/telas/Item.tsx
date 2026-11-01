@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { estadoDoGrupo, type EstadoDeOrigem } from '../app/origem'
-import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
+import { useAtalhos } from '../app/useAtalhos'
 import { item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
 import { NIVEIS } from '../banco/tipos'
@@ -154,7 +154,11 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   )
 
   const irPara = useCallback(
-    (outro: string | null) => outro && navegar(`/item/${encodeURIComponent(outro)}`, { state: adiante ?? undefined }),
+    // R20: anterior e próximo trocam a entrada do histórico (replace), com o mesmo estado (janela da busca ou
+    // grupo): o Voltar e o botão do navegador voltam ao grupo ou à busca, não ao objeto vizinho.
+    (outro: string | null) => {
+      if (outro) void navegar(`/item/${encodeURIComponent(outro)}`, { replace: true, state: adiante ?? undefined })
+    },
     [navegar, adiante],
   )
   const abrirHipotese = useCallback(
@@ -204,39 +208,17 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   }, [porNivel])
   const alternarIdioma = useCallback(() => setIdioma((i) => (i === 'pt' ? 'de' : 'pt')), [])
 
-  // Teclas do item (L, H, ← →). Fora de campos de texto e de diálogos modais; a Tarefa 11 centraliza.
-  const teclas = useRef({ alternarIdioma, alternarPorNivel, irPara, posicao })
-  teclas.current = { alternarIdioma, alternarPorNivel, irPara, posicao }
-  useEffect(() => {
-    let gArmado = 0
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
-      if (document.querySelector('[aria-modal="true"]')) return
-      const t = teclas.current
-      const k = e.key
-      // "g" e uma letra de ATALHOS_DE_IR é ir a uma seção (useAtalhosDeNavegacao): essa letra não é
-      // do item. Qualquer outra tecla depois do "g" (setas, H…) segue normal.
-      const depoisDoG = Date.now() - gArmado < 1500
-      gArmado = 0
-      if (depoisDoG && k.toLowerCase() in ATALHOS_DE_IR) return
-      if (k === 'g') gArmado = Date.now()
-      else if (k === 'l' || k === 'L') {
-        e.preventDefault()
-        t.alternarIdioma()
-      } else if (k === 'h' || k === 'H') {
-        e.preventDefault()
-        t.alternarPorNivel()
-      } else if (k === 'ArrowLeft' && t.posicao?.anterior) {
-        e.preventDefault()
-        t.irPara(t.posicao.anterior)
-      } else if (k === 'ArrowRight' && t.posicao?.proximo) {
-        e.preventDefault()
-        t.irPara(t.posicao.proximo)
-      }
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => document.removeEventListener('keydown', aoTeclar)
-  }, [])
+  // Teclas do item (← →, H, L): o registro de atalhos cuida de campos de texto, modificadores, diálogos
+  // modais e do "g" + letra. ← e → sem objeto para onde ir não tomam a tecla.
+  useAtalhos(
+    {
+      ArrowLeft: () => (posicao?.anterior ? irPara(posicao.anterior) : false),
+      ArrowRight: () => (posicao?.proximo ? irPara(posicao.proximo) : false),
+      h: alternarPorNivel,
+      l: alternarIdioma,
+    },
+    'item',
+  )
 
   const acoes = (
     <>
@@ -491,6 +473,7 @@ function LinkIcone({
     <Link
       className={`icon-button${inicio ? ' tip-start' : ''}`}
       to={`/item/${encodeURIComponent(destino)}`}
+      replace
       state={estado ?? undefined}
       aria-label={`${rotulo}: ${destino}`}
       aria-keyshortcuts={atalho}

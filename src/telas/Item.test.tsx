@@ -6,6 +6,7 @@ import { estadoDoGrupo } from '../app/origem'
 import { executar, usarMotor } from '../banco/cliente'
 import { grupo } from '../banco/consultas'
 import type { EstadoVindoDaBusca } from '../busca/url'
+import { teclasNaoDeclaradas } from '../test/atalhosDeclarados'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Imagem } from './Imagem'
 import { Item } from './Item'
@@ -205,6 +206,67 @@ describe('Item', () => {
       expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toEqual(estado)
     })
 
+    it('← e → trocam a entrada do histórico (replace): o Voltar leva ao grupo, não ao vizinho (R20)', async () => {
+      const estado = estadoDoGrupo('GR-TESTE-I-01', 'G', '/grupo/GR-TESTE-I-01')
+      render(
+        <MemoryRouter initialEntries={['/grupo/GR-TESTE-I-01', { pathname: '/item/CA00001', state: estado }]} initialIndex={1}>
+          <Routes>
+            <Route path="/item/:numero" element={<Item />} />
+            <Route path="*" element={<Destino />} />
+          </Routes>
+          <Local />
+        </MemoryRouter>,
+      )
+      await screen.findByText('1 / 3')
+      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await waitFor(() => expect(local()).toBe('/item/CA00002'))
+      await screen.findByText('2 / 3')
+      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await waitFor(() => expect(local()).toBe('/item/CA00003'))
+      // o contexto (grupo, janela de busca) fica no estado
+      expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toEqual(estado)
+      await userEvent.click(await screen.findByRole('link', { name: 'Voltar ao grupo' }))
+      await waitFor(() => expect(local()).toBe('/grupo/GR-TESTE-I-01'))
+    })
+
+    it('os ícones Anterior e Próximo também trocam a entrada; o Voltar leva à busca com a janela', async () => {
+      const estado: EstadoVindoDaBusca = { contexto: { tipo: 'lista', ids: ['CA00003', 'CA00001', 'CA00002'] }, inicio: 10, total: 40, origem: { rotulo: 'Busca', caminho: '/busca?q=teste' } }
+      render(
+        <MemoryRouter initialEntries={['/busca?q=teste', { pathname: '/item/CA00001', state: estado }]} initialIndex={1}>
+          <Routes>
+            <Route path="/item/:numero" element={<Item />} />
+            <Route path="*" element={<Destino />} />
+          </Routes>
+          <Local />
+        </MemoryRouter>,
+      )
+      const nav = await screen.findByRole('navigation', { name: 'Posição na busca' })
+      await userEvent.click(await within(nav).findByRole('link', { name: 'Próximo: CA00002' }))
+      await waitFor(() => expect(local()).toBe('/item/CA00002'))
+      expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toEqual(estado)
+      expect(await within(await screen.findByRole('navigation', { name: 'Posição na busca' })).findByText('13 / 40')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('link', { name: 'Voltar à busca' }))
+      await waitFor(() => expect(local()).toBe('/busca?q=teste'))
+    })
+
+    it('Z abre o visualizador na imagem à vista, com o original se estava ligado', async () => {
+      abrir('/item/CA00001')
+      await titulo()
+      await userEvent.click(await screen.findByRole('button', { name: 'Mostrar o original' }))
+      fireEvent.keyDown(document.body, { key: 'z' })
+      await waitFor(() => expect(local()).toMatch(/^\/imagem\//))
+      await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+      expect(screen.getByRole('button', { name: 'Mostrar o original sem inversão' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('Z não age dentro de um campo de texto', async () => {
+      abrir('/item/CA00001')
+      await titulo()
+      const campo = document.body.appendChild(document.createElement('input'))
+      fireEvent.keyDown(campo, { key: 'z' })
+      expect(local()).toBe('/item/CA00001')
+    })
+
     it('← e → (fora de campo de texto) andam no contexto', async () => {
       abrir('/item/CA00002', estadoDoGrupo('GR-TESTE-I-01', 'G', '/grupo/GR-TESTE-I-01'))
       await screen.findByText('2 / 3')
@@ -278,6 +340,14 @@ describe('Item', () => {
       await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
       fireEvent.keyDown(document.body, { key: 'l' })
       expect(screen.queryByText(/Auf der Rückseite/)).toBeNull()
+    })
+
+    it('os aria-keyshortcuts da tela e da folha da hipótese são teclas declaradas no catálogo de atalhos', async () => {
+      abrir('/item/CA00002?hipotese=HY-900003')
+      await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
+      const achados = [...document.querySelectorAll('[aria-keyshortcuts]')].map((e) => e.getAttribute('aria-keyshortcuts'))
+      expect(achados).toEqual(expect.arrayContaining(['H', 'L', 'Z', 'Escape']))
+      expect(teclasNaoDeclaradas(document.body)).toEqual([])
     })
 
     it('a hipótese sem âncora abre pela lista por nível', async () => {

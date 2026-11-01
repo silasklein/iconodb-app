@@ -7,6 +7,7 @@ import { lerImagemAberta } from '../imagem/estado'
 import { transformDoGiro } from '../item/imagemComum'
 import { ImagemItem } from '../item/ImagemItem'
 import { urlImagem } from '../pacote/imagens'
+import { teclasNaoDeclaradas } from '../test/atalhosDeclarados'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
 import { Imagem } from './Imagem'
@@ -114,6 +115,13 @@ describe('Imagem: o visualizador', () => {
     expect(screen.getByText('CA00001 · 1/2')).toBeInTheDocument()
     expect(screen.getByText('Desenho: Teste')).toBeInTheDocument()
     expect(escala()).toBe('100 %')
+  })
+
+  it('os aria-keyshortcuts do visualizador são teclas declaradas no catálogo de atalhos', async () => {
+    abrir()
+    await imagemNaTela()
+    expect(document.querySelectorAll('[aria-keyshortcuts]').length).toBeGreaterThan(3)
+    expect(teclasNaoDeclaradas(document.body)).toEqual([])
   })
 
   it('I alterna o original e o invertido, e o botão mostra o estado', async () => {

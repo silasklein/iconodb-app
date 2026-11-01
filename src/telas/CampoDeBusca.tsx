@@ -1,4 +1,5 @@
-import { useEffect, useRef, type FormEvent } from 'react'
+import { useRef, type FormEvent } from 'react'
+import { useAtalhos } from '../app/useAtalhos'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import './CampoDeBusca.css'
@@ -27,19 +28,17 @@ interface Props {
 export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, placeholder, variante = 'pagina' }: Props) {
   const campo = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (!atalho) return
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
-      const alvo = e.target as HTMLElement | null
-      if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return
-      e.preventDefault()
-      campo.current?.focus()
-      campo.current?.select()
-    }
-    document.addEventListener('keydown', aoTeclar)
-    return () => document.removeEventListener('keydown', aoTeclar)
-  }, [atalho])
+  // "/" (fora de campos de texto) leva o foco ao campo: o registro de atalhos cuida das regras comuns.
+  useAtalhos(
+    {
+      '/': () => {
+        campo.current?.focus()
+        campo.current?.select()
+      },
+    },
+    'global',
+    { ativo: atalho },
+  )
 
   const limpar = () => {
     aoMudar('')
@@ -85,10 +84,11 @@ export function CampoDeBusca({ id, valor, aoMudar, aoEnviar, atalho = false, pla
           aria-keyshortcuts={atalho ? '/' : undefined}
           onChange={(e) => aoMudar(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape' && valor !== '') {
-              e.preventDefault()
-              aoMudar('')
-            }
+            // Esc: limpa o texto e, com o campo já vazio, sai do campo.
+            if (e.key !== 'Escape') return
+            e.preventDefault()
+            if (valor !== '') aoMudar('')
+            else e.currentTarget.blur()
           }}
         />
         {dicaDoAtalho && (

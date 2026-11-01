@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, useLocation } from 'react-router'
 import { pendencias, sitios } from '../banco/consultas'
 import { lerEstado } from '../pacote/local'
+import { AtalhosGlobais } from '../app/useAtalhosDeNavegacao'
 import { BarraSuperior } from './BarraSuperior'
 
 vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(), sitios: vi.fn() }))
@@ -16,6 +17,7 @@ function Onde() {
 function abrir(url = '/colecoes', props: React.ComponentProps<typeof BarraSuperior> = {}) {
   return render(
     <MemoryRouter initialEntries={[url]}>
+      <AtalhosGlobais />
       <BarraSuperior {...props} />
       <Onde />
     </MemoryRouter>,
