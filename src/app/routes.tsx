@@ -4,6 +4,7 @@ import { Busca } from '../telas/Busca'
 import { Colecoes } from '../telas/Colecoes'
 import { Entrar } from '../telas/Entrar'
 import { Grupo } from '../telas/Grupo'
+import { Item } from '../telas/Item'
 import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
 import { Preparando } from '../telas/Preparando'
@@ -42,7 +43,7 @@ export const ROTAS: Rota[] = [
   { path: '/busca', elemento: <Busca /> },
   { path: '/colecoes', elemento: <Colecoes /> },
   { path: '/grupo/:id', elemento: <Grupo /> },
-  { path: '/item/:id', elemento: <Provisoria titulo="Item" /> },
+  { path: '/item/:numero', elemento: <Item /> },
   { path: '/imagem/:id', elemento: <Provisoria titulo="Imagem" /> },
   { path: '/glossario', elemento: <Provisoria titulo="Glossário" /> },
   { path: '/verbete/:id', elemento: <Provisoria titulo="Verbete" /> },

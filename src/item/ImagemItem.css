@@ -1,0 +1,108 @@
+/*
+ * A imagem do item sobre o painel preto (Item.dc.html: 460 px no celular; ItemDesktop.dc.html: a
+ * coluna da esquerda inteira). O desenho de traço vem invertido (estilo na própria <img>).
+ */
+.imagem-item {
+  --altura-max-imagem: min(420px, 56dvh);
+  display: flex;
+  flex-direction: column;
+  background: var(--painel-imagem);
+  color: var(--texto-item);
+}
+.imagem-item-painel {
+  position: relative;
+  min-height: min(460px, 62dvh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+}
+.imagem-item-alternar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.imagem-item-figura {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+.imagem-item-figura img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: var(--altura-max-imagem);
+}
+.imagem-item-regioes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.imagem-item-regioes polygon {
+  fill: rgba(237, 237, 237, 0.14);
+  stroke: var(--texto-item);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+.imagem-item-aviso {
+  max-width: 240px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secundario-item);
+  text-align: center;
+}
+.imagem-item-ampliar {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+}
+.imagem-item-pe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 8px 0 24px;
+  font-size: 12px;
+  color: var(--secundario-item);
+}
+.imagem-item-paginas {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+.imagem-item-credito {
+  margin: 0;
+  padding: 0 24px 12px;
+  font-size: 12px;
+  color: var(--secundario-item);
+}
+
+@media (min-width: 768px) {
+  .imagem-item {
+    --altura-max-imagem: calc(100dvh - var(--barra-superior) - 56px - 48px - 64px);
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .imagem-item-painel {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 16px 24px;
+  }
+  .imagem-item-pe {
+    padding: 0 16px 0 24px;
+    min-height: 56px;
+  }
+}

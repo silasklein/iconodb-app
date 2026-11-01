@@ -5,3 +5,6 @@
   align-items: center;
   padding: max(16px, env(safe-area-inset-top)) 12px 0;
 }
+.topo-celular-acoes {
+  display: flex;
+}

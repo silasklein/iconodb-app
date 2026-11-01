@@ -1,0 +1,177 @@
+/* Seções recolhíveis do item (Item.dc.html, ItemDesktop.dc.html). */
+.secoes {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--filete);
+}
+.secao {
+  border-top: 1px solid var(--filete);
+}
+.secao-titulo {
+  margin: 0;
+  font: inherit;
+}
+.secao-titulo button {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.secao-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 400;
+}
+.secao-meta .codigo {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.secao-corpo {
+  padding: 4px 0 24px;
+}
+.secao-vazia {
+  margin: 0;
+  font-size: 14px;
+  color: var(--secundario);
+}
+
+.hipoteses-nivel {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+.hipoteses-nivel h3 {
+  margin: 0 0 6px;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d4d4d4;
+}
+.hipotese-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: baseline;
+  min-height: 48px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--filete);
+  color: var(--texto);
+  text-decoration: none;
+}
+.hipotese-linha-texto {
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.hipotese-linha-nome {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 4px;
+}
+.hipotese-linha-sobre {
+  color: var(--secundario);
+}
+.hipotese-linha-modalidade {
+  font-size: 12px;
+  color: var(--secundario);
+}
+@media (hover: hover) {
+  .hipotese-linha:hover .hipotese-linha-nome {
+    text-decoration-color: currentColor;
+  }
+}
+
+.catalogo {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.catalogo dt {
+  margin-top: 10px;
+  font-weight: 600;
+}
+.catalogo dt .codigo {
+  font-weight: 400;
+  color: var(--secundario);
+}
+.catalogo dd {
+  margin: 0;
+  color: #d4d4d4;
+  overflow-wrap: anywhere;
+}
+.catalogo .termo {
+  color: inherit;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+
+.relacoes-grupo + .relacoes-grupo {
+  margin-top: 16px;
+}
+.relacoes-grupo h3,
+.bibliografia-item-titulo {
+  margin: 8px 0 6px;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d4d4d4;
+}
+.relacoes-grupo ul,
+.bibliografia-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.relacoes-grupo li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-height: 44px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--filete);
+  font-size: 14px;
+}
+.relacoes-grupo a,
+.bibliografia-citacao {
+  color: var(--texto);
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.relacoes-grau,
+.relacoes-nota {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.bibliografia-item li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--filete);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bibliografia-chicago {
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}

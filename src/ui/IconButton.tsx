@@ -21,6 +21,8 @@ interface Comum {
   abre?: 'dialog' | 'menu'
   /** O link da tela em que se está: aria-current e um traço embaixo. */
   atual?: boolean
+  /** Botão de alternar (ligado/desligado): `aria-pressed`. Só para botões. */
+  pressionado?: boolean
   /** Um ponto ao lado do glifo (há algo a ver, como a fila da Revisão). Decorativo: o nome acessível diz o que é. */
   ponto?: boolean
 }
@@ -35,7 +37,7 @@ export type IconButtonProps = Comum & (AcaoBotao | AcaoLink)
 export function IconButton(props: IconButtonProps) {
   const { icon, label, shortcut, shortcutLabel, size = 20, tipPosition = 'end', tipAbove = false } = props
   const dica = shortcut ? `${label} (${shortcutLabel ?? shortcut})` : label
-  const classes = ['icon-button', props.atual ? 'icon-button-atual' : '', tipPosition === 'start' ? 'tip-start' : '', tipAbove ? 'tip-up' : '']
+  const classes = ['icon-button', props.atual ? 'icon-button-atual' : '', props.pressionado ? 'icon-button-pressionado' : '', tipPosition === 'start' ? 'tip-start' : '', tipAbove ? 'tip-up' : '']
     .filter(Boolean)
     .join(' ')
   const comum = {
@@ -45,6 +47,7 @@ export function IconButton(props: IconButtonProps) {
     'aria-expanded': props.expandido,
     'aria-haspopup': props.abre,
     'aria-current': props.atual ? ('page' as const) : undefined,
+    'aria-pressed': props.href === undefined ? props.pressionado : undefined,
     'data-tip': dica,
   }
   const glifo = (

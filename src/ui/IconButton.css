@@ -28,6 +28,9 @@
 .icon-button-atual {
   box-shadow: inset 0 -2px 0 currentColor;
 }
+.icon-button-pressionado {
+  box-shadow: inset 0 -2px 0 currentColor;
+}
 .icon-button-ponto {
   position: absolute;
   top: 8px;

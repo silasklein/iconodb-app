@@ -1,0 +1,207 @@
+/*
+ * Painel da hipótese: folha branca de baixo no celular (Hipotese.dc.html), painel branco de 380 px
+ * no computador (PC-ItemHipotese.dc.html). As cores são as das telas de consulta, sobre a tela escura.
+ */
+.painel-hipotese {
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+}
+.painel-hipotese:focus {
+  outline: none;
+}
+.painel-hipotese:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+/* Celular: folha modal */
+.painel-hipotese-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.painel-hipotese-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.painel-hipotese-folha {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 24px max(28px, env(safe-area-inset-bottom));
+  gap: 14px;
+}
+.painel-hipotese-alca {
+  align-self: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+}
+.painel-hipotese-folha .painel-hipotese-topo .icon-button {
+  margin-right: -12px;
+}
+
+/* Computador: painel lateral, preso à janela, por cima da coluna de leitura */
+.painel-hipotese-lateral {
+  position: sticky;
+  top: 0;
+  grid-area: 1 / 1;
+  justify-self: end;
+  align-self: start;
+  z-index: 6;
+  width: 380px;
+  max-width: 100%;
+  height: calc(100dvh - var(--barra-superior));
+  box-shadow: -1px 0 0 var(--filete-item);
+}
+.painel-hipotese-lateral .painel-hipotese-topo {
+  padding: 10px 12px 0 24px;
+}
+.painel-hipotese-lateral .painel-hipotese-ordem {
+  padding: 4px 12px 0 16px;
+}
+.painel-hipotese-lateral .painel-hipotese-corpo {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 24px 24px;
+}
+
+.painel-hipotese-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+.painel-hipotese-etiqueta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.painel-hipotese-ordem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.painel-hipotese-ordem .codigo {
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.painel-hipotese-ordem-vazio {
+  width: var(--alvo-toque);
+  height: var(--alvo-toque);
+}
+@media (pointer: fine) {
+  .painel-hipotese-ordem-vazio {
+    width: var(--alvo-mouse);
+    height: var(--alvo-mouse);
+  }
+}
+.painel-hipotese-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.painel-hipotese-corpo p {
+  margin: 0;
+  font-size: 14px;
+}
+.painel-hipotese-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.painel-hipotese-cabeca h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.painel-hipotese-ids {
+  font-size: 12px;
+  color: var(--secundario-consulta);
+  overflow-wrap: anywhere;
+}
+.painel-hipotese-dados {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.painel-hipotese-dados div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: 12px;
+}
+.painel-hipotese-dados dt {
+  font-weight: 600;
+}
+.painel-hipotese-dados dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.painel-hipotese-dados a {
+  color: inherit;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.painel-hipotese-acoes {
+  display: flex;
+  gap: 8px;
+}
+.painel-hipotese-principal,
+.painel-hipotese-secundaria {
+  flex: 1 1 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
+.painel-hipotese-principal {
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+}
+.painel-hipotese-secundaria {
+  border: 1px solid var(--controle);
+  color: var(--texto-consulta);
+}
+.painel-hipotese-teclas {
+  margin: 0;
+  padding: 10px 24px 14px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.painel-hipotese-teclas kbd {
+  font-family: var(--fonte-codigo);
+}
+@media (pointer: fine) {
+  .painel-hipotese-principal,
+  .painel-hipotese-secundaria {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}

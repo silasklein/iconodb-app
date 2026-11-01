@@ -1,0 +1,229 @@
+/*
+ * Item (Item.dc.html no celular; ItemDesktop.dc.html no computador). Tema escuro (useTema("item")).
+ * Celular: topo, posição, número e título, ficha, imagem de ponta a ponta, leituras, seções.
+ * Computador: a imagem à esquerda (presa ao rolar, nunca coberta) e a leitura à direita (até ~600 px).
+ */
+.item {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.item-aviso {
+  padding: 24px;
+}
+.item-aviso p {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+/* Posição no grupo / na busca */
+.item-posicao {
+  margin: 4px 12px 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--filete);
+}
+.item-posicao-origem {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--alvo-toque);
+  font-size: 13px;
+  color: var(--secundario);
+  white-space: nowrap;
+}
+.item-posicao-rotulo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--secundario);
+  text-decoration: underline;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.item-posicao-n {
+  flex-shrink: 0;
+  color: var(--texto);
+}
+.item-posicao-setas {
+  display: flex;
+  flex-shrink: 0;
+}
+.item-posicao-apagado {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Conteúdo */
+.item-conteudo {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 48px;
+}
+.item-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 24px;
+}
+.item-rotulo {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.item-numero {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--secundario);
+}
+.item-origem {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.item-cabeca h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.item-ficha {
+  margin: 22px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.item-ficha div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  column-gap: 12px;
+}
+.item-ficha dt {
+  font-weight: 600;
+}
+.item-ficha dd {
+  margin: 0;
+  color: #d4d4d4;
+  overflow-wrap: anywhere;
+}
+.item-ficha-link {
+  color: inherit;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.item-imagem {
+  margin-top: 28px;
+}
+.item-leituras {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px 24px 0;
+}
+.item-sem-leitura {
+  margin: 0;
+  font-size: 15px;
+  color: var(--secundario);
+}
+.item .secoes {
+  margin: 36px 24px 0;
+}
+/* Com a folha da hipótese aberta, sobra espaço embaixo para o trecho subir acima dela. */
+.item-com-folha {
+  padding-bottom: 70dvh;
+}
+
+/* Computador */
+@media (min-width: 768px) {
+  .item {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .item-pc {
+    display: grid;
+    grid-template-columns: clamp(320px, 40vw, 560px) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .item-coluna-imagem {
+    margin: 0;
+    background: var(--painel-imagem);
+  }
+  .item-coluna-imagem-fixa {
+    position: sticky;
+    top: 0;
+    height: calc(100dvh - var(--barra-superior));
+    display: flex;
+    flex-direction: column;
+  }
+  .item-pc .item-posicao {
+    flex-shrink: 0;
+    height: 56px;
+    margin: 0;
+    padding: 0 8px 0 24px;
+    border-bottom: 0;
+    color: var(--texto-item);
+  }
+  .item-coluna-leitura {
+    position: relative;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  .item-coluna-leitura > .item-conteudo {
+    grid-area: 1 / 1;
+    width: 100%;
+    max-width: 688px;
+    padding: 0 32px 72px 56px;
+  }
+  .item-acoes {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    height: 64px;
+    margin-right: -8px;
+  }
+  .item-cabeca {
+    gap: 12px;
+    padding: 0;
+  }
+  .item-cabeca h1 {
+    font-size: clamp(32px, 3.2vw, 44px);
+  }
+  .item-ficha {
+    margin: 22px 0 0;
+    gap: 6px;
+  }
+  .item-ficha div {
+    column-gap: 16px;
+  }
+  .item-leituras {
+    gap: 26px;
+    padding: 36px 0 0;
+  }
+  .item .secoes {
+    margin: 56px 0 0;
+  }
+}
+
+/* Computador estreito (768–1023): coluna da imagem menor e a leitura com o rótulo do celular,
+   para o texto não ficar abaixo de ~45 caracteres por linha. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .item-pc {
+    grid-template-columns: clamp(260px, 34vw, 560px) minmax(0, 1fr);
+  }
+  .item-coluna-leitura > .item-conteudo {
+    padding: 0 24px 72px 32px;
+  }
+  .item-pc .leitura {
+    grid-template-columns: 56px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+}

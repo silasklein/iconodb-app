@@ -1,0 +1,91 @@
+/*
+ * Leitura (Item.dc.html, ItemDesktop.dc.html): rótulo da fonte à esquerda, texto à direita.
+ * Termo: sublinhado fino. Trecho de hipótese: sublinhado pontilhado. Citação e número: sublinhado fino.
+ */
+.leitura {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  column-gap: 12px;
+}
+.leitura-fonte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+.leitura-sigla {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.leitura-numero {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.leitura-corpo {
+  min-width: 0;
+}
+.leitura-aviso {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.leitura-texto {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+.leitura-texto .termo,
+.leitura-texto .link-texto {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.leitura-texto .ancora {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 4px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  scroll-margin-top: 96px;
+}
+/* O termo dentro da âncora: o mesmo pontilhado, na cor do texto (mais claro que o da âncora). */
+.leitura-texto .ancora .termo-marcado {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--texto);
+  text-underline-offset: 4px;
+}
+.leitura-texto .ancora-ativa {
+  background: var(--texto);
+  color: var(--fundo);
+  text-decoration: none;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.leitura-texto .ancora-ativa .termo-marcado {
+  text-decoration: none;
+}
+@media (hover: hover) {
+  .leitura-texto a:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+@media (min-width: 768px) {
+  .leitura {
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: 16px;
+  }
+  .leitura-fonte {
+    padding-top: 3px;
+  }
+  .leitura-texto {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+}
