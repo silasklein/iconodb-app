@@ -2,8 +2,6 @@ import { IDBFactory } from 'fake-indexeddb'
 import { Dropbox } from 'dropbox'
 import {
   cliente,
-  concluirLogin,
-  concluirLoginComCodigo,
   concluirLoginDetalhado,
   estadoLogin,
   iniciarLogin,
@@ -19,6 +17,10 @@ import { gravarToken, lerPendente, lerToken } from './tokenStore'
 import { irPara } from './navegacao'
 
 vi.mock('./navegacao', () => ({ irPara: vi.fn() }))
+
+/** Só o sim ou não de cada caminho de login (os resultados detalhados têm testes próprios). */
+const concluirLogin = async (url: string) => (await concluirLoginDetalhado(url)) === 'ok'
+const concluirLoginComCodigo = async (codigo: string) => (await tentarLoginComCodigo(codigo)) === 'ok'
 
 const APP_KEY = 'erkchv20ri1l2at'
 const REDIRECT_PROD = 'https://silasklein.github.io/iconodb-app/'
@@ -120,11 +122,20 @@ describe('iniciarLogin (PKCE com redirecionamento)', () => {
     expect(p.has('client_secret')).toBe(false)
   })
 
-  it('em produção usa o redirect do GitHub Pages', async () => {
+  it('em produção usa o redirect do GitHub Pages (o endereço padrão)', async () => {
     vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_ENDERECO', '')
     await iniciarLogin()
     const url = new URL(vi.mocked(irPara).mock.calls[0]![0])
     expect(url.searchParams.get('redirect_uri')).toBe(REDIRECT_PROD)
+  })
+
+  it('em produção com VITE_ENDERECO (domínio próprio), o redirect é esse endereço', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_ENDERECO', 'https://icono.silasklein.com')
+    await iniciarLogin()
+    const url = new URL(vi.mocked(irPara).mock.calls[0]![0])
+    expect(url.searchParams.get('redirect_uri')).toBe('https://icono.silasklein.com/')
   })
 
   it('guarda o code_verifier e o state no IndexedDB (sobrevivem ao redirecionamento)', async () => {
@@ -341,12 +352,6 @@ describe('rede fora do ar x recusa do Dropbox (R6, itens 3 e 4)', () => {
     await comecar()
     expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=C&state=outro`)).toBe('sem-pendente')
     expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('concluirLogin continua devolvendo só um booleano', async () => {
-    const state = await comecar()
-    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
-    expect(await concluirLogin(`${REDIRECT_DEV}?code=COD&state=${state}`)).toBe(false)
   })
 
   it('código colado: falha de rede devolve "sem-conexao", mantém o pendente e dá para tentar de novo', async () => {

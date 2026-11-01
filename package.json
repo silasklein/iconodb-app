@@ -14,7 +14,7 @@
     "icones": "node scripts/gerar-icones.ts"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "dependencies": {
     "@fontsource/geist-mono": "5.3.0",

@@ -57,6 +57,10 @@
   --secundario: var(--secundario-item);
   --filete: var(--filete-item);
 }
+/* No documento, o tema escuro também vale para os controles nativos (barras de rolagem, campos). */
+html.tema-item {
+  color-scheme: dark;
+}
 
 *,
 *::before,

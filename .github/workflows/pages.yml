@@ -29,6 +29,11 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run build
+        env:
+          # O endereço publicado (README, "Mudar para o domínio próprio"): a variável do repositório
+          # VITE_ENDERECO, em Settings → Secrets and variables → Actions → Variables. Vazia = o padrão
+          # de src/app/endereco.ts (https://silasklein.github.io/iconodb-app/).
+          VITE_ENDERECO: ${{ vars.VITE_ENDERECO }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

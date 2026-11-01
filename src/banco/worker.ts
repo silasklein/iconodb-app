@@ -7,20 +7,13 @@
  * janela do app aberta), abre em memória.
  */
 import type { Sqlite3Static } from '@sqlite.org/sqlite-wasm'
+import { abrirAcessoSincrono } from '../pacote/acessoSincrono'
 import { armazemPadrao } from '../pacote/armazem'
 import { Banco, type Marcador, type PoolDoBanco } from './nucleo'
 import type { Pedido, Resposta } from './protocolo'
 
 const PASTA_DO_MARCADOR = 'banco'
 const ARQUIVO_DO_MARCADOR = 'importados.json'
-
-/** O que usamos do FileSystemSyncAccessHandle (a lib DOM do TypeScript não o traz). */
-interface AcessoSincrono {
-  truncate(tamanho: number): void
-  write(dados: Uint8Array, opcoes: { at: number }): number
-  flush(): void
-  close(): void
-}
 
 async function arquivoDoMarcador(): Promise<FileSystemFileHandle> {
   const raiz = await navigator.storage.getDirectory()
@@ -42,7 +35,7 @@ function marcadorOpfs(): Marcador {
     },
     async gravar(dados) {
       const h = await arquivoDoMarcador()
-      const acesso = await (h as FileSystemFileHandle & { createSyncAccessHandle(): Promise<AcessoSincrono> }).createSyncAccessHandle()
+      const acesso = await abrirAcessoSincrono(h)
       try {
         const bytes = new TextEncoder().encode(JSON.stringify(dados))
         acesso.truncate(0)

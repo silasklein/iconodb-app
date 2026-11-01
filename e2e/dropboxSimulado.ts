@@ -11,9 +11,12 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, normalize, sep } from 'node:path'
 import type { BrowserContext, Route } from '@playwright/test'
+import { enderecoPublicado } from '../src/app/endereco.ts'
 
 const RAIZ_DO_PACOTE = join(import.meta.dirname, '..', 'tests', 'fixtures', 'pacote')
 const CODIGO = 'codigo-de-teste'
+/** O redirect que o build pede ao Dropbox: o endereço publicado (VITE_ENDERECO ou o padrão). */
+const REDIRECT = enderecoPublicado(process.env.VITE_ENDERECO)
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -54,12 +57,12 @@ async function responder(route: Route, estado: DropboxSimulado): Promise<void> {
     estado.autorizacoes++
     // O app tem de pedir PKCE com o redirect registrado no Dropbox.
     const p = url.searchParams
-    const ok = p.get('client_id') === 'erkchv20ri1l2at' && p.get('code_challenge_method') === 'S256' && p.get('redirect_uri') === 'https://silasklein.github.io/iconodb-app/'
+    const ok = p.get('client_id') === 'erkchv20ri1l2at' && p.get('code_challenge_method') === 'S256' && p.get('redirect_uri') === REDIRECT
     if (!ok) {
       estado.proibidos.push(`autorização com parâmetros errados: ${url.search}`)
       return route.fulfill({ status: 400, body: 'parâmetros errados' })
     }
-    // Em vez de voltar a github.io, volta ao app servido localmente (a origem do teste).
+    // Em vez de voltar ao endereço publicado, volta ao app servido localmente (a origem do teste).
     const volta = new URL(pedido.frame().url())
     volta.search = ''
     volta.hash = ''

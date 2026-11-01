@@ -1,16 +1,18 @@
 /**
  * Login no Dropbox por OAuth 2 com PKCE: sem App secret, só a app key.
  * Dois caminhos:
- * - iniciarLogin / concluirLogin: redireciona para o Dropbox e volta ao app;
- * - iniciarLoginComCodigo / concluirLoginComCodigo: sem redirect_uri, o Dropbox
+ * - iniciarLogin / concluirLoginDetalhado: redireciona para o Dropbox e volta ao app;
+ * - iniciarLoginComCodigo / tentarLoginComCodigo: sem redirect_uri, o Dropbox
  *   mostra um código que o usuário cola no app (para o iPhone, onde o retorno
  *   pode cair no Safari, cujo armazenamento é separado do app instalado).
  *
  * Os tokens ficam no IndexedDB (tokenStore.ts), nunca no localStorage.
  */
 import { Dropbox, DropboxAuth } from 'dropbox'
+import { enderecoPublicado } from '../app/endereco'
 import { irPara } from './navegacao'
 import { fetchComPrazo, PRAZO_ARQUIVO_MS, PRAZO_CURTO_MS } from './prazo'
+import { eErroDeRede } from './rede'
 import {
   gravarPendente,
   gravarToken,
@@ -24,7 +26,6 @@ import {
 
 /** Pública por natureza no PKCE. O App secret nunca entra neste código. */
 export const APP_KEY = 'erkchv20ri1l2at'
-export const REDIRECT_PRODUCAO = 'https://silasklein.github.io/iconodb-app/'
 export const REDIRECT_DESENVOLVIMENTO = 'http://localhost:5173/'
 export const MSG_CODIGO_INVALIDO = 'Código não aceito pelo Dropbox; tente de novo'
 export const MSG_SEM_CONEXAO = 'Sem conexão com o Dropbox; tente de novo'
@@ -35,9 +36,13 @@ const MARGEM_MS = 300_000
 
 export type EstadoLogin = 'sem-login' | 'ativo' | 'expirado'
 
-/** Lido na hora da chamada (e não ao carregar o módulo) para os testes poderem trocar o ambiente. */
+/**
+ * Em produção, o endereço publicado (VITE_ENDERECO ou o padrão, src/app/endereco.ts); ele tem de estar
+ * nos Redirect URIs do app no Dropbox. Lido na hora da chamada (e não ao carregar o módulo) para os
+ * testes poderem trocar o ambiente.
+ */
 export function redirectUri(): string {
-  return import.meta.env.PROD ? REDIRECT_PRODUCAO : REDIRECT_DESENVOLVIMENTO
+  return import.meta.env.PROD ? enderecoPublicado(import.meta.env.VITE_ENDERECO) : REDIRECT_DESENVOLVIMENTO
 }
 
 /** Só para montar a URL de autorização (PKCE): o SDK gera o verifier e o challenge. */
@@ -142,24 +147,13 @@ export async function iniciarLogin(): Promise<void> {
  */
 export type ResultadoLogin = 'ok' | 'recusado' | 'sem-conexao' | 'acesso-negado' | 'sem-pendente'
 
-/**
- * A troca não chegou a ser julgada pelo Dropbox? Falha do fetch (TypeError),
- * tempo esgotado, 429 ou 5xx. Qualquer 4xx é recusa do Dropbox.
- */
-function eFalhaDeConexao(erro: unknown): boolean {
-  if (typeof erro !== 'object' || erro === null) return false
-  const { status, name } = erro as { status?: unknown; name?: unknown }
-  if (typeof status === 'number') return status === 429 || status >= 500
-  return erro instanceof TypeError || name === 'AbortError' || name === 'TimeoutError'
-}
-
 /** Troca o code do retorno; em falha de conexão guarda o code no pendente para repetir. */
 async function trocarDoRetorno(pendente: LoginPendente, code: string): Promise<ResultadoLogin> {
   let token: Token
   try {
     token = await trocarCodigo(pendente.codeVerifier, redirectUri(), code)
   } catch (erro) {
-    if (eFalhaDeConexao(erro)) {
+    if (eErroDeRede(erro)) {
       await gravarPendente({ ...pendente, codigoRecebido: code })
       return 'sem-conexao'
     }
@@ -201,11 +195,6 @@ export async function concluirLoginDetalhado(url: string): Promise<ResultadoLogi
   return trocarDoRetorno(pendente, code)
 }
 
-/** Como concluirLoginDetalhado, só com o sim ou não. */
-export async function concluirLogin(url: string): Promise<boolean> {
-  return (await concluirLoginDetalhado(url)) === 'ok'
-}
-
 /** Repete a troca guardada depois de uma falha de conexão no retorno do Dropbox. */
 export async function repetirTrocaPendente(): Promise<ResultadoLogin> {
   const pendente = await lerPendente()
@@ -235,16 +224,11 @@ export async function tentarLoginComCodigo(codigo: string): Promise<ResultadoLog
   try {
     token = await trocarCodigo(pendente.codeVerifier, undefined, limpo)
   } catch (erro) {
-    return eFalhaDeConexao(erro) ? 'sem-conexao' : 'recusado'
+    return eErroDeRede(erro) ? 'sem-conexao' : 'recusado'
   }
   await gravarToken(token)
   await limparPendente()
   return 'ok'
-}
-
-/** Como tentarLoginComCodigo, só com o sim ou não. */
-export async function concluirLoginComCodigo(codigo: string): Promise<boolean> {
-  return (await tentarLoginComCodigo(codigo)) === 'ok'
 }
 
 /** O Dropbox recusou as credenciais (refresh token revogado ou token inválido)? */

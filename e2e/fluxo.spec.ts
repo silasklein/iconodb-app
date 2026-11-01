@@ -1,5 +1,10 @@
 import type { Page } from '@playwright/test'
+import { baseDoEndereco, enderecoPublicado } from '../src/app/endereco.ts'
 import { expect, test } from './fixtures'
+
+const BASE = baseDoEndereco(enderecoPublicado(process.env.VITE_ENDERECO))
+
+const celular = (page: Page) => (page.viewportSize()?.width ?? 0) < 768
 
 /** Sem rolagem horizontal na tela em que o teste está (375 × 812 e 1280 × 800). */
 async function semRolagemHorizontal(page: Page, tela: string) {
@@ -25,6 +30,12 @@ async function voltarParaOrigem(page: Page, origem: 'busca' | 'grupo') {
 }
 
 test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page, context, dropbox }) => {
+  // Arquivos do sqlite-wasm que ficam fora do precache (vite.config.ts): o app nunca pode pedi-los.
+  const naoUsados: string[] = []
+  context.on('request', (r) => {
+    if (/sqlite3-worker1|opfs-async-proxy/.test(r.url())) naoUsados.push(r.url())
+  })
+
   // O que o app faz sem pacote: manda para a entrada.
   await page.goto('./')
   await expect(page.getByRole('heading', { name: 'IconoDB', level: 1 })).toBeVisible()
@@ -54,6 +65,11 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   await resultados.getByRole('link', { name: /CA00002/ }).click()
   await expect(page.getByTestId('item-cabeca')).toContainText('CA00002')
   await semRolagemHorizontal(page, 'Item')
+  // No toque, "Voltar à busca" da faixa de posição é um alvo de 44 px de altura (não só a linha do texto).
+  if (celular(page)) {
+    const caixa = await page.locator('.item-posicao-rotulo').boundingBox()
+    expect(caixa?.height ?? 0, 'altura do alvo "Voltar à busca"').toBeGreaterThanOrEqual(44)
+  }
 
   // Abrir uma hipótese pela âncora do texto; ela abre na folha (celular) ou no painel (computador).
   await page.locator('[data-hipotese="HY-900003"]').first().click()
@@ -88,6 +104,26 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   await voltarParaOrigem(page, 'grupo')
   await expect(page.getByRole('region', { name: 'Objetos do grupo' })).toBeVisible()
 
+  // Computador: em Glossário, Bibliografia e Sítios só os dois painéis rolam, nunca a página,
+  // mesmo com listas e detalhes bem mais longos que a tela.
+  if (!celular(page)) {
+    for (const tela of ['#/glossario', '#/bibliografia', '#/sitios']) {
+      await page.goto(tela)
+      await expect(page.locator('.lista-rolagem')).toBeVisible()
+      const medida = await page.evaluate(() => {
+        for (const seletor of ['.lista-rolagem', '.lista-principal']) {
+          const longo = document.createElement('div')
+          longo.style.height = '4000px'
+          document.querySelector(seletor)!.append(longo)
+        }
+        const rolagem = document.querySelector('.lista-rolagem')!
+        return { pagina: document.documentElement.scrollHeight, janela: window.innerHeight, lista: rolagem.scrollHeight - rolagem.clientHeight }
+      })
+      expect(medida.pagina, `a página de ${tela} rola além dos painéis`).toBeLessThanOrEqual(medida.janela)
+      expect(medida.lista, `a lista de ${tela} rola sozinha`).toBeGreaterThan(0)
+    }
+  }
+
   // Foco 2: sem internet, o app abre direto no Início, a busca funciona e a imagem já vista aparece.
   const baixadosComRede = dropbox.baixados.length
   await context.setOffline(true)
@@ -121,6 +157,8 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   expect(todos.filter((u) => /dropbox/i.test(u))).toEqual([])
   expect(todos.some((u) => u.endsWith('.wasm'))).toBe(true)
   expect(todos.some((u) => /\/assets\/worker-.*\.js$/.test(u))).toBe(true)
+  expect(todos.filter((u) => /sqlite3-worker1|opfs-async-proxy/.test(u))).toEqual([])
+  expect(naoUsados, 'arquivos do sqlite-wasm fora do precache que foram pedidos').toEqual([])
 })
 
 test('o manifesto, os ícones e as metas de instalação', async ({ page }) => {
@@ -136,8 +174,9 @@ test('o manifesto, os ícones e as metas de instalação', async ({ page }) => {
     theme_color: '#111111',
     background_color: '#FFFFFF',
     display: 'standalone',
-    start_url: '/iconodb-app/',
-    scope: '/iconodb-app/',
+    id: BASE,
+    start_url: BASE,
+    scope: BASE,
   })
   const icones = manifesto.icons as { src: string; sizes: string; purpose: string }[]
   expect(icones.map((i) => `${i.sizes} ${i.purpose}`).sort()).toEqual(['192x192 any', '512x512 any', '512x512 maskable'])
