@@ -7,6 +7,7 @@
   --fundo-consulta: #ffffff;
   --texto-consulta: #111111;
   --secundario-consulta: #5e5e5e;
+  --corpo-consulta: #3a3a3a; /* texto de apoio das telas de consulta (abas, resumos): entre o texto e o secundário */
   --filete-consulta: #d4d4d4;
 
   /* Item e imagem */

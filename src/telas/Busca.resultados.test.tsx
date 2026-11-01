@@ -6,6 +6,7 @@ import type { ObjetoResumo, Verbete } from '../banco/tipos'
 import { buscar, type ResultadoDaBusca } from '../busca/consulta'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Busca } from './Busca'
+import css from './Busca.css?raw'
 
 /**
  * A tela Busca com resultados. A busca em si (SQL, FTS5, dobra) é testada em
@@ -27,6 +28,7 @@ describe('tela Busca: resultados', () => {
   })
   const resultado = (extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca => ({
     vazia: false,
+    curta: false,
     verbetesRelacionados: [],
     objetos: [objeto('CA00001'), objeto('CA00002'), objeto('BA00001', { tipo: null, sitio: null })],
     numeros: ['CA00001', 'CA00002', 'BA00001'],
@@ -90,6 +92,8 @@ describe('tela Busca: resultados', () => {
     expect(pathname).toBe('/item/CA00002')
     expect(state).toEqual({
       contexto: { tipo: 'lista', ids: ['CA00001', 'CA00002', 'BA00001'] },
+      inicio: 0,
+      total: 3,
       origem: { rotulo: 'Busca', caminho: '/busca?q=leao&escopo=termo' },
     })
   })
@@ -169,5 +173,59 @@ describe('tela Busca: resultados', () => {
     await userEvent.click(within(facetas).getByRole('checkbox', { name: /iconográfico/ }))
     await waitFor(() => expect(mock).toHaveBeenLastCalledWith('leao', expect.objectContaining({ filtros: { nivel: ['iconographic'] } })))
     instalarMatchMedia(375)
+  })
+
+  it('tocar numa aba logo depois de digitar não desfaz o que ainda não foi enviado (e vice-versa)', async () => {
+    mock.mockResolvedValue(resultado())
+    abrirComRota('/busca')
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'ma')
+    await userEvent.click(screen.getByRole('button', { name: 'Termo' })) // antes dos 250 ms de espera
+    await waitFor(() => expect(mock).toHaveBeenLastCalledWith('ma', expect.objectContaining({ escopo: 'termo' })))
+    // e a espera vencida depois não volta ao escopo antigo
+    await new Promise((r) => setTimeout(r, 400))
+    expect(mock).toHaveBeenLastCalledWith('ma', expect.objectContaining({ escopo: 'termo' }))
+    expect(screen.getByRole('button', { name: /^Termo/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('tocar num filtro logo depois de digitar mantém o filtro', async () => {
+    instalarMatchMedia(1280)
+    mock.mockResolvedValue(resultado())
+    abrirComRota('/busca?q=leao')
+    const facetas = await screen.findByRole('complementary', { name: 'Filtros' })
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 's')
+    await userEvent.click(within(facetas).getByRole('checkbox', { name: /iconográfico/ }))
+    await waitFor(() => expect(mock).toHaveBeenLastCalledWith('leaos', expect.objectContaining({ filtros: { nivel: ['iconographic'] } })))
+    instalarMatchMedia(375)
+  })
+
+  it('enquanto o novo resultado carrega, o antigo fica inerte (não se abre um cartão que não é mais do resultado)', async () => {
+    mock.mockResolvedValueOnce(resultado())
+    abrirComRota('/busca?q=leao')
+    await screen.findByRole('link', { name: /CA00001/ })
+    let terminar: (r: ResultadoDaBusca) => void = () => {}
+    mock.mockImplementationOnce(() => new Promise<ResultadoDaBusca>((ok) => (terminar = ok)))
+    await userEvent.click(screen.getByRole('button', { name: /^Termo/ }))
+    const secao = screen.getByRole('region', { name: 'Resultados', hidden: true })
+    await waitFor(() => expect(secao).toHaveAttribute('inert'))
+    terminar(resultado({ total: 2, objetos: [objeto('CA00001'), objeto('CA00002')], numeros: ['CA00001', 'CA00002'] }))
+    await waitFor(() => expect(secao).not.toHaveAttribute('inert'))
+  })
+
+  it('o estado para o item é calculado uma vez por resultado: todos os cartões levam o mesmo objeto', async () => {
+    mock.mockResolvedValue(resultado())
+    abrirComRota('/busca?q=leao')
+    await screen.findByRole('link', { name: /CA00001/ })
+    // (o estado de cada cartão é conferido em "abrir um resultado leva ao item…"; aqui, que abrir outro dá a mesma lista)
+    await userEvent.click(screen.getByRole('link', { name: /BA00001/ }))
+    expect(JSON.parse(screen.getByTestId('item').textContent!).state.contexto.ids).toEqual(['CA00001', 'CA00002', 'BA00001'])
+  })
+
+  it('alvos de toque de 44 px: botões de texto e abas têm min-height do token, sem o ::before de .hit nas abas', async () => {
+    mock.mockResolvedValue(resultado())
+    abrirComRota('/busca?q=leao')
+    for (const aba of await screen.findAllByRole('button', { name: /objetos?$/ })) expect(aba).not.toHaveClass('hit')
+    const bloco = (seletor: string) => css.slice(css.indexOf(`${seletor} {`)).split('}')[0]
+    expect(bloco('.busca-link')).toMatch(/min-height:\s*var\(--alvo-toque\)/)
+    expect(bloco('.busca-escopos button')).toMatch(/min-height:\s*var\(--alvo-toque\)/)
   })
 })

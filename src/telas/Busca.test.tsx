@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
 import { usarMotor } from '../banco/cliente'
 import { lerTabelaDeFold, usarTabelaDeFold } from '../busca/fold'
-import { Busca, MSG_SEM_PACOTE } from './Busca'
+import { Busca, MSG_CURTA, MSG_SEM_PACOTE } from './Busca'
 
 // A tabela de dobra do pacote sintético: com ela a tela sabe que `"` e `*` não deixam nada para buscar.
 beforeAll(() => usarTabelaDeFold(lerTabelaDeFold(JSON.parse(readFileSync(join(RAIZ_DO_PACOTE_SINTETICO, 'nucleo/fold.json'), 'utf8')))))
@@ -25,6 +25,13 @@ describe('tela Busca: consulta vazia', () => {
     abrir(url)
     expect(screen.getByRole('heading', { level: 1, name: 'Busca' })).toBeInTheDocument()
     expect(await screen.findByText(/Digite um termo/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nada encontrado/)).not.toBeInTheDocument()
+  })
+
+  it('uma só letra: pede mais letras, sem erro e sem "Nada encontrado"', async () => {
+    abrir('/busca?q=a')
+    expect(await screen.findByText(MSG_CURTA)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(screen.queryByText(/Nada encontrado/)).not.toBeInTheDocument()
   })

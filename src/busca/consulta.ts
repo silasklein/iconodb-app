@@ -76,8 +76,10 @@ export interface OpcoesDaBusca {
 }
 
 export interface ResultadoDaBusca {
-  /** Não havia o que buscar (nada além de espaços, aspas, `*`…): a tela mostra o estado vazio. */
+  /** Não havia o que buscar (nada além de espaços, aspas, `*`…, ou curto demais): a tela mostra o estado vazio. */
   vazia: boolean
+  /** A consulta tem letras mas menos de MINIMO_DE_CARACTERES: a tela pede mais letras. */
+  curta: boolean
   verbeteDestaque?: Verbete
   /** Outros verbetes que casam ("ver também"), sem o destaque. */
   verbetesRelacionados: { id: string; rotulo: string }[]
@@ -95,6 +97,8 @@ export interface ResultadoDaBusca {
 }
 
 const LIMITE_PADRAO = 120
+/** Menos letras e números (já dobrados) que isto casariam com quase tudo: nem se busca. */
+export const MINIMO_DE_CARACTERES = 2
 
 // ---------------------------------------------------------------------------
 // Montar a consulta
@@ -485,9 +489,10 @@ async function escolherDestaque(refs: readonly string[], digitado: string, tabel
 // buscar
 // ---------------------------------------------------------------------------
 
-function vazio(): ResultadoDaBusca {
+function vazio(curta = false): ResultadoDaBusca {
   return {
     vazia: true,
+    curta,
     verbetesRelacionados: [],
     objetos: [],
     numeros: [],
@@ -503,6 +508,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   const palavras = palavrasDaConsulta(digitado, tabela)
   const consulta = montarConsulta(digitado, tabela)
   if (consulta === null) return vazio()
+  if (palavras.join('').length < MINIMO_DE_CARACTERES) return vazio(true)
 
   const pubs = await publicacoesAbertas()
   const docs = await documentos(consulta)
@@ -550,6 +556,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   const porNumero = new Map(filtrados.map((c) => [c.numero, c.resumo]))
   return {
     vazia: false,
+    curta: false,
     verbeteDestaque,
     verbetesRelacionados: relacionados.slice(0, 12).map((d) => ({ id: d.ref, rotulo: d.rotulo })),
     objetos: numeros.slice(0, opcoes.limite ?? LIMITE_PADRAO).map((nr) => porNumero.get(nr)!),

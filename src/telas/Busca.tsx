@@ -13,7 +13,7 @@ import {
   type Filtros,
   type ResultadoDaBusca,
 } from '../busca/consulta'
-import { estadoDoResultado, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
+import { MAXIMO_DA_LISTA, estadoDoResultado, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { IconButton } from '../ui/IconButton'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -25,11 +25,13 @@ const OBJETOS_POR_PAGINA = 120
 const ESPERA_AO_DIGITAR_MS = 250
 
 export const MSG_VAZIA = 'Digite um termo, um sítio ou o número de um objeto (por exemplo CA00023).'
+export const MSG_CURTA = 'Digite ao menos 2 letras.'
 export const MSG_SEM_PACOTE = 'O banco ainda não está no aparelho.'
 const MSG_ERRO = 'Não foi possível buscar agora. Tente de novo.'
 
 type Estado =
   | { fase: 'vazia' }
+  | { fase: 'curta' }
   | { fase: 'buscando' }
   | { fase: 'ok'; resultado: ResultadoDaBusca; ocupado: boolean }
   | { fase: 'erro'; semPacote: boolean }
@@ -50,7 +52,7 @@ function useBusca(q: string, escopo: Escopo, filtros: Filtros, limite: number): 
     let vivo = true
     setEstado((e) => (e.fase === 'ok' ? { ...e, ocupado: true } : { fase: 'buscando' }))
     buscar(q, { escopo, filtros, limite }).then(
-      (resultado) => vivo && setEstado(resultado.vazia ? { fase: 'vazia' } : { fase: 'ok', resultado, ocupado: false }),
+      (resultado) => vivo && setEstado(resultado.curta ? { fase: 'curta' } : resultado.vazia ? { fase: 'vazia' } : { fase: 'ok', resultado, ocupado: false }),
       (erro: unknown) => vivo && setEstado({ fase: 'erro', semPacote: erro instanceof ErroSemPacote }),
     )
     return () => {
@@ -85,12 +87,18 @@ export function Busca() {
   // Outra consulta, escopo ou filtro: volta à primeira página.
   useEffect(() => setLimite(OBJETOS_POR_PAGINA), [q, escopo, JSON.stringify(filtros)])
 
+  // Os parâmetros de agora, lidos na hora de agir: o temporizador de "digitar" e dois toques seguidos
+  // (aba, faceta) não podem desfazer uma mudança que ainda não foi desenhada.
+  const corrente = useRef<ParametrosDaBusca>(atual)
+  corrente.current = atual
   const ir = useCallback(
     (novo: Partial<ParametrosDaBusca>, substituir = true) => {
-      ultimoEnviado.current = novo.q ?? q
-      setParams(montarParametros({ q, escopo, filtros, ...novo }), { replace: substituir })
+      const proximo = { ...corrente.current, ...novo }
+      corrente.current = proximo
+      ultimoEnviado.current = proximo.q
+      setParams(montarParametros(proximo), { replace: substituir })
     },
-    [q, escopo, filtros, setParams],
+    [setParams],
   )
 
   // Digitar atualiza o resultado depois de uma pequena espera; Enter, na hora.
@@ -107,13 +115,21 @@ export function Busca() {
   }
 
   const alternar = (chave: ChaveDeFiltro, valor: string) => {
-    const lista = filtros[chave] ?? []
-    ir({ filtros: { ...filtros, [chave]: lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor] } })
+    const todos = corrente.current.filtros
+    const lista = todos[chave] ?? []
+    ir({ filtros: { ...todos, [chave]: lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor] } })
   }
   const limparFiltros = () => ir({ filtros: {} })
 
   const resultado = estado.fase === 'ok' ? estado.resultado : null
   const caminhoAtual = `${pathname}${search}`
+  const ocupado = estado.fase === 'ok' && estado.ocupado
+  // O estado do item é o mesmo para todos os cartões (uma vez por resultado); só passando de MAXIMO_DA_LISTA
+  // cada cartão leva uma janela em volta de si.
+  const estadoComum = useMemo(
+    () => (resultado && resultado.numeros.length <= MAXIMO_DA_LISTA ? estadoDoResultado(resultado.numeros, caminhoAtual) : null),
+    [resultado, caminhoAtual],
+  )
 
   // Etiquetas dos filtros: o rótulo vem das facetas (que sempre trazem os valores ativos).
   const etiquetas = CHAVES_DE_FILTRO.flatMap((chave) =>
@@ -142,7 +158,6 @@ export function Busca() {
         <button
           key={e}
           type="button"
-          className="hit"
           aria-pressed={e === escopo}
           aria-label={resultado ? `${ROTULO_DO_ESCOPO[e]}, ${objetos(resultado.contagens[e])}` : undefined}
           onClick={() => ir({ escopo: e })}
@@ -214,7 +229,7 @@ export function Busca() {
             </aside>
           )}
 
-          <main className="busca-principal" aria-busy={estado.fase === 'buscando' || (estado.fase === 'ok' && estado.ocupado)}>
+          <main className="busca-principal" aria-busy={estado.fase === 'buscando' || ocupado}>
             {campo}
             {abas}
 
@@ -222,6 +237,12 @@ export function Busca() {
               <div className="busca-aviso" role="status">
                 <p>{MSG_VAZIA}</p>
                 <p className="busca-aviso-menor">A busca ignora maiúsculas e acentos.</p>
+              </div>
+            )}
+
+            {estado.fase === 'curta' && (
+              <div className="busca-aviso" role="status">
+                <p>{MSG_CURTA}</p>
               </div>
             )}
 
@@ -259,7 +280,7 @@ export function Busca() {
 
                 {filtrosAtivos}
 
-                <section className="busca-resultados" aria-label="Resultados">
+                <section className="busca-resultados" aria-label="Resultados" inert={ocupado}>
                   {resultado.total > 0 && (
                     <div className="busca-contagem">
                       <h2>{objetos(resultado.total)}</h2>
@@ -279,7 +300,7 @@ export function Busca() {
                     <>
                       <div className="busca-grade">
                         {resultado.objetos.map((o) => (
-                          <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoDoResultado(resultado.numeros, caminhoAtual)} />
+                          <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoComum ?? estadoDoResultado(resultado.numeros, caminhoAtual, o.numero)} />
                         ))}
                       </div>
                       {resultado.objetos.length < resultado.total && (
@@ -322,20 +343,22 @@ function SemResultado({
     <div className="busca-aviso" role="status">
       <p className="busca-nada">Nada encontrado para «{q.trim()}»</p>
       {filtrado && (
-        <p>
-          Sem os filtros há {objetos(resultado.totalSemFiltros)}.{' '}
+        <>
+          <p>Sem os filtros há {objetos(resultado.totalSemFiltros)}.</p>
           <button type="button" className="busca-link" onClick={aoLimpar}>
             Limpar filtros
           </button>
-        </p>
+        </>
       )}
       {noutroEscopo && (
-        <p>
-          Em «{ROTULO_DO_ESCOPO.tudo}» há {objetos(resultado.contagens.tudo)}.{' '}
+        <>
+          <p>
+            Em «{ROTULO_DO_ESCOPO.tudo}» há {objetos(resultado.contagens.tudo)}.
+          </p>
           <button type="button" className="busca-link" onClick={aoTudo}>
             Buscar em Tudo
           </button>
-        </p>
+        </>
       )}
       {!filtrado && !noutroEscopo && <p className="busca-aviso-menor">Confira a grafia: a busca ignora maiúsculas e acentos.</p>}
     </div>

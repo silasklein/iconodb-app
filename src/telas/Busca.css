@@ -55,12 +55,16 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
+  /* Alvo inteiro no próprio botão (sem o ::before de .hit): a faixa rola na horizontal, e um
+     elemento maior que ela criaria rolagem vertical ou seria cortado. */
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   font: inherit;
-  color: #3a3a3a;
-  padding: 10px 0 6px;
+  color: var(--corpo-consulta);
+  padding: 12px 0 6px;
   cursor: pointer;
 }
 .busca-escopos button[aria-pressed='true'] {
@@ -103,6 +107,9 @@
   overflow-wrap: anywhere;
 }
 .busca-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
   border: 0;
   background: none;
   padding: 0;
@@ -161,7 +168,7 @@
 .busca-verbete-resumo {
   margin: 0;
   font-size: 14px;
-  color: #3a3a3a;
+  color: var(--corpo-consulta);
 }
 .busca-verbete dl {
   margin: 0;
@@ -190,7 +197,7 @@
   margin: 12px 0 0;
   font-size: 14px;
   line-height: 1.6;
-  color: #3a3a3a;
+  color: var(--corpo-consulta);
 }
 .busca-ver-tambem a {
   text-decoration-color: var(--controle);
@@ -284,6 +291,19 @@
   font: inherit;
   font-size: 14px;
   cursor: pointer;
+}
+
+/* Resultado antigo enquanto o novo carrega: não se toca */
+.busca-resultados[inert] .busca-grade {
+  opacity: 0.5;
+}
+
+/* Com mouse o alvo é de 40 px (--alvo-mouse; nunca menos de 36) */
+@media (pointer: fine) {
+  .busca-link,
+  .busca-escopos button {
+    min-height: var(--alvo-mouse);
+  }
 }
 
 /* Folha de filtros (celular) */

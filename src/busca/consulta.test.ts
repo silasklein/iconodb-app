@@ -76,6 +76,16 @@ describe('buscar() sobre o pacote sintético', () => {
     expect(r.verbeteDestaque).toBeUndefined()
   })
 
+  it.each([['a'], ['ʿa'], ['"a"'], [' Ç '], ['9']])('%j tem menos de 2 letras: não busca, mas pede mais letras', async (digitado) => {
+    const r = await buscar(digitado, opcoes)
+    expect(r).toMatchObject({ vazia: true, curta: true, total: 0, objetos: [] })
+  })
+
+  it('"ca" (duas letras) já busca', async () => {
+    expect(await buscar('ca', opcoes)).toMatchObject({ vazia: false, curta: false })
+    expect(await buscar('"', opcoes)).toMatchObject({ vazia: true, curta: false })
+  })
+
   it('aspas e * digitados no meio não quebram o FTS5', async () => {
     for (const digitado of ['"mahras', 'mahras"', 'mahras*', '*mahras', 'mahras OR', 'NEAR(', '(mahras', 'a AND', '^mahras', 'texto:mahras', '"" ""']) {
       await expect(buscar(digitado, opcoes)).resolves.toBeTruthy()
