@@ -7,7 +7,7 @@ import { IconButton } from '../ui/IconButton'
 import { useCarregar } from '../ui/useCarregar'
 import { AvisoDeCopia, useCopiar } from '../ui/useCopiar'
 import { CabecalhoDoDetalhe, ErroNoDetalhe, Linha, MolduraDoDetalhe, NaoEncontrado, SecaoDeObjetos } from './detalhe'
-import { numeroPtBr } from '../ui/usePendencias'
+import { Contagem } from '../ui/Contagem'
 import './Lista.css'
 
 export const TIPO_DO_VERBETE: Record<VerbeteCompleto['tipo'], string> = { concept: 'Conceito', name: 'Nome', technical: 'Técnico' }
@@ -29,7 +29,7 @@ interface Props {
  * hipóteses com o termo. A edição (forma, gênero, Aprovar) é da 2B: aqui os valores são texto.
  */
 export function Verbete({ id, pagina, voltarPara, computador }: Props) {
-  const carga = useCarregar(() => verbete(id), id)
+  const carga = useCarregar(() => verbete(id), id, { manter: !pagina })
   const nomeRef = useRef<HTMLHeadingElement>(null)
   const { aviso, copiar } = useCopiar(nomeRef)
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar ao glossário' }
@@ -87,10 +87,10 @@ export function Verbete({ id, pagina, voltarPara, computador }: Props) {
           <Linha rotulo="Inglês" lang="en" vazio={!v.en}>
             {v.en}
           </Linha>
-          <Linha rotulo="Árabe" lang="ar" vazio={!v.ar}>
+          <Linha rotulo="Árabe" lang="ar" dir="auto" vazio={!v.ar}>
             {v.ar}
           </Linha>
-          <Linha rotulo="Hebraico" lang="he" vazio={!v.he}>
+          <Linha rotulo="Hebraico" lang="he" dir="auto" vazio={!v.he}>
             {v.he}
           </Linha>
           <Linha rotulo="Pai" vazio={!v.pai}>
@@ -130,7 +130,7 @@ export function Verbete({ id, pagina, voltarPara, computador }: Props) {
       <section className="detalhe-secao" aria-label="Hipóteses com este termo">
         <div className="detalhe-secao-topo">
           <h2>Hipóteses</h2>
-          <span className="codigo">{numeroPtBr(v.hipoteses.length)}</span>
+          <Contagem n={v.hipoteses.length} um="hipótese" varios="hipóteses" className="codigo" />
         </div>
         {v.hipoteses.length === 0 && <p className="detalhe-vazio">Nenhuma hipótese com este termo.</p>}
         {v.hipoteses.map((h) => {

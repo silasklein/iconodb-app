@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
-import { usarMotor } from '../banco/cliente'
+import { executar, usarMotor } from '../banco/cliente'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 
@@ -127,5 +127,27 @@ describe('Verbete (computador)', () => {
     expect(screen.getByRole('button', { name: 'Copiar referência' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Voltar ao glossário' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('region', { name: 'Objetos com este termo' })).toBeInTheDocument())
+  })
+})
+
+describe('Verbete: direção do texto e unidades', () => {
+  it('as formas em árabe e hebraico levam dir="auto" (e a língua)', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar("UPDATE main.glossary_entry SET ar = 'مرد', he = 'מרדוך' WHERE id = 'GL-900004'")
+    renderizarRota('/verbete/GL-900004')
+    await screen.findByRole('heading', { level: 1, name: 'Maḥraṣ Teste' })
+    expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
+    expect(screen.getByText('מרדוך', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
+    expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('lang', 'ar')
+    expect(screen.getByText('מרדוך', { selector: 'dd' })).toHaveAttribute('lang', 'he')
+    usarMotor(await bancoDeTeste())
+  })
+
+  it('as contagens das seções dizem a unidade ("2 objetos", "2 hipóteses")', async () => {
+    renderizarRota('/verbete/GL-900001')
+    const objetos = await screen.findByRole('region', { name: 'Objetos com este termo' })
+    expect(within(objetos).getByText('2', { selector: '.codigo' })).toHaveTextContent('2 objetos')
+    const hipoteses = screen.getByRole('region', { name: 'Hipóteses com este termo' })
+    expect(within(hipoteses).getByText('2', { selector: '.codigo' })).toHaveTextContent('2 hipóteses')
   })
 })

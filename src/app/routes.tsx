@@ -16,6 +16,7 @@ import { Sitios } from '../telas/Sitios'
 import { BarraSuperior } from '../ui/BarraSuperior'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { RotaInicial } from './RotaInicial'
+import { useRestaurarRolagem } from './useRestaurarRolagem'
 
 /** Tela provisória: cada tarefa seguinte troca a sua pela tela real. */
 function Provisoria({ titulo }: { titulo: string }) {
@@ -83,6 +84,7 @@ function BarraDasTelasLargas({ noInicio = false }: { noInicio?: boolean }) {
 }
 
 export function AppRoutes() {
+  useRestaurarRolagem()
   return (
     <>
       <BarraDasTelasLargas />

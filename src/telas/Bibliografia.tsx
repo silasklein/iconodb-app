@@ -1,9 +1,10 @@
-import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { obra, obras, type ObraResumo } from '../banco/consultas'
 import { tabelaDoPacote } from '../busca/fold'
 import { htmlComItalico } from '../item/Secoes'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
+import { Contagem } from '../ui/Contagem'
 import { CampoDeFiltro } from '../ui/CampoDeFiltro'
 import { IconButton } from '../ui/IconButton'
 import { ListaEDetalhe } from '../ui/ListaEDetalhe'
@@ -14,6 +15,7 @@ import { AvisoDeCopia, useCopiar } from '../ui/useCopiar'
 import { numeroPtBr } from '../ui/usePendencias'
 import { CabecalhoDoDetalhe, ErroNoDetalhe, MolduraDoDetalhe, NaoEncontrado, SecaoDeObjetos } from './detalhe'
 import { agrupar, filtrar, indexar, inicialDe, type Entrada } from './lista'
+import { useFiltroNaUrl } from './useFiltroNaUrl'
 import './Lista.css'
 
 const ANO = /\b(1[0-9]{3}|20[0-9]{2})\b/
@@ -36,7 +38,7 @@ const LinhaDaObra = memo(function LinhaDaObra({ o, atual, busca }: { o: ObraResu
   return (
     <Link className="lista-linha obra-linha" to={{ pathname: `/obra/${o.id}`, search: busca }} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
       <span className="lista-nome">{o.curta ?? o.titulo ?? o.id}</span>
-      <span className="lista-n">{o.objetos}</span>
+      <Contagem n={o.objetos} um="objeto" varios="objetos" />
       {o.titulo && o.curta && <span className="lista-sub">{o.titulo}</span>}
     </Link>
   )
@@ -52,7 +54,7 @@ export function Bibliografia() {
   const computador = useBreakpoint() === 'computador'
   const [params, setParams] = useSearchParams()
   const porAno = params.get('ordem') === 'ano'
-  const [texto, setTexto] = useState('')
+  const [texto, setTexto] = useFiltroNaUrl()
   const consulta = useDeferredValue(texto)
   const carga = useCarregar(carregar)
   const rolagem = useRef<HTMLDivElement>(null)
@@ -65,13 +67,26 @@ export function Bibliografia() {
     // Por ano: do mais antigo ao mais novo, e pela ordem de autor dentro do ano ("Sem ano" no fim).
     return porAno ? [...achadas].sort((x, y) => anoDe(x.item).localeCompare(anoDe(y.item)) || (x.ordem < y.ordem ? -1 : x.ordem > y.ordem ? 1 : 0)) : achadas
   }, [dados, consulta, porAno])
+  const escolhida = useMemo(() => {
+    const o = id ? dados?.entradas.find((e) => e.item.id === id)?.item : undefined
+    return o ? (o.curta ?? o.titulo ?? o.id) : undefined
+  }, [dados, id])
   const grupos = useMemo(() => agrupar(visiveis, (e) => (porAno ? anoDe(e.item) : inicialDe(e.ordem))), [visiveis, porAno])
 
   useEffect(() => {
     if (computador && id) rolagem.current?.querySelector('[data-atual]')?.scrollIntoView?.({ block: 'nearest' })
   }, [computador, id, dados])
 
-  const alternarOrdem = () => setParams(porAno ? {} : { ordem: 'ano' }, { replace: true })
+  const alternarOrdem = () =>
+    setParams(
+      (atual) => {
+        const novo = new URLSearchParams(atual)
+        if (porAno) novo.delete('ordem')
+        else novo.set('ordem', 'ano')
+        return novo
+      },
+      { replace: true },
+    )
 
   if (!computador && id) return <ObraDetalhe id={id} pagina voltarPara={`/bibliografia${busca}`} computador={false} />
 
@@ -117,6 +132,8 @@ export function Bibliografia() {
     return (
       <ListaEDetalhe
         rotulo="Lista de obras"
+        chave={id}
+        anuncio={escolhida}
         lista={<div ref={rolagem}>{lista}</div>}
         detalhe={id ? <ObraDetalhe id={id} pagina={false} voltarPara="/bibliografia" computador /> : <p className="detalhe-vazio">Escolha uma obra na lista.</p>}
       />
@@ -146,7 +163,7 @@ interface Props {
 
 /** A obra: a referência Chicago completa, onde a citação aparece e os objetos que citam a obra. */
 export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
-  const carga = useCarregar(() => obra(id), id)
+  const carga = useCarregar(() => obra(id), id, { manter: !pagina })
   const chicagoRef = useRef<HTMLParagraphElement>(null)
   const { aviso, copiar } = useCopiar(chicagoRef)
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar à bibliografia' }

@@ -27,7 +27,7 @@ interface Props {
  * e os objetos achados lá. Corrigir e escolher no mapa são da 2B.
  */
 export function Sitio({ id, pagina, voltarPara, computador }: Props) {
-  const carga = useCarregar(() => sitio(id), id)
+  const carga = useCarregar(() => sitio(id), id, { manter: !pagina })
   const blocoRef = useRef<HTMLElement>(null)
   const { aviso, copiar } = useCopiar(blocoRef)
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar aos sítios' }

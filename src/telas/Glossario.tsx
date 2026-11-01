@@ -1,8 +1,9 @@
-import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { verbetes, type VerbeteDaLista } from '../banco/consultas'
 import { tabelaDoPacote } from '../busca/fold'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
+import { Contagem } from '../ui/Contagem'
 import { CampoDeFiltro } from '../ui/CampoDeFiltro'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -12,6 +13,7 @@ import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { numeroPtBr } from '../ui/usePendencias'
 import { agrupar, filtrar, indexar, inicialDe, type Entrada } from './lista'
+import { useFiltroNaUrl } from './useFiltroNaUrl'
 import { Verbete } from './Verbete'
 import './Lista.css'
 
@@ -66,7 +68,7 @@ const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, atual, busca }: Linha) 
           </span>
         )}
       </span>
-      <span className="lista-n">{v.objetos}</span>
+      <Contagem n={v.objetos} um="objeto" varios="objetos" />
     </Link>
   )
 })
@@ -84,7 +86,7 @@ export function Glossario() {
   const [params, setParams] = useSearchParams()
   const tipo = TIPOS.find((t) => t.valor === params.get('tipo')) ?? null
   const revisar = params.get('revisar') === '1'
-  const [texto, setTexto] = useState('')
+  const [texto, setTexto] = useFiltroNaUrl()
   const consulta = useDeferredValue(texto)
   const carga = useCarregar(carregar)
   const rolagem = useRef<HTMLDivElement>(null)
@@ -105,6 +107,10 @@ export function Glossario() {
       tipo || revisar ? dados.entradas.filter((e) => (!tipo || e.item.tipo === tipo.tipo) && (!revisar || e.item.status === 'proposed')) : dados.entradas
     return filtrar(dosFiltros, consulta, dados.tabela)
   }, [dados, tipo, revisar, consulta])
+  const escolhido = useMemo(() => {
+    const v = id ? dados?.entradas.find((e) => e.item.id === id)?.item : undefined
+    return v ? (v.pt ?? v.de ?? v.id) : undefined
+  }, [dados, id])
   const letras = useMemo(() => agrupar(visiveis, (e) => inicialDe(e.ordem)), [visiveis])
 
   // No computador, abrir um verbete por link direto (ou pela Busca) leva a lista até ele.
@@ -121,10 +127,7 @@ export function Glossario() {
       },
       { replace: true },
     )
-  const limpar = () => {
-    setTexto('')
-    mudar({ tipo: null, revisar: null })
-  }
+  const limpar = () => setTexto('', { tipo: null, revisar: null })
 
   if (!computador && id) return <Verbete id={id} pagina voltarPara={`/glossario${busca}`} computador={false} />
 
@@ -204,6 +207,8 @@ export function Glossario() {
     return (
       <ListaEDetalhe
         rotulo="Lista de verbetes"
+        chave={id}
+        anuncio={escolhido}
         lista={<div ref={rolagem}>{lista}</div>}
         detalhe={id ? <Verbete id={id} pagina={false} voltarPara="/glossario" computador /> : <p className="detalhe-vazio">Escolha um verbete na lista.</p>}
       />

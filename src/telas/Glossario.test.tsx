@@ -1,9 +1,9 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { usarMotor } from '../banco/cliente'
 import { verbetes } from '../banco/consultas'
-import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
+import { irPara, renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -171,5 +171,118 @@ describe('Glossário (computador): lista e detalhe na mesma tela', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Tell Probe Teste' })).toBeInTheDocument()
     expect(screen.getByTestId('endereco')).toHaveTextContent('/verbete/GL-900005?tipo=nomes')
     expect(linhas()).toHaveLength(2)
+  })
+})
+
+describe('Glossário: filtro de texto no endereço (?filtro=)', () => {
+  it('o endereço traz o texto para o campo e para a lista', async () => {
+    renderizarRota('/glossario?filtro=mahras')
+    expect(await screen.findByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('mahras')
+    await waitFor(() => expect(nomes()).toEqual(['Maḥraṣ Teste']))
+  })
+
+  it('digitar grava ?filtro= (com replace) e limpar o tira', async () => {
+    renderizarRota('/glossario?tipo=nomes')
+    const campo = await screen.findByRole('searchbox', { name: 'Buscar no glossário' })
+    await userEvent.type(campo, 'tell')
+    await waitFor(() => expect(screen.getByTestId('endereco')).toHaveTextContent('/glossario?tipo=nomes&filtro=tell'))
+    await userEvent.clear(campo)
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('/glossario?tipo=nomes'))
+  })
+
+  it('"Limpar filtros" tira o tipo, o estado e o texto do endereço de uma vez', async () => {
+    renderizarRota('/glossario?tipo=conceitos&revisar=1&filtro=prova')
+    await screen.findByRole('button', { name: 'Limpar filtros' })
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('/glossario'))
+    expect(screen.getByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('')
+  })
+
+  it('celular: abrir um verbete e voltar devolve o texto e a lista filtrada', async () => {
+    renderizarRota('/glossario')
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar no glossário' }), 'leao')
+    await waitFor(() => expect(screen.getByTestId('endereco')).toHaveTextContent('?filtro=leao'))
+    await waitFor(() => expect(linhas().length).toBeLessThan(9))
+    const antes = nomes()
+    await userEvent.click(linha('GL-900001'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'leão-de-teste' })).toBeInTheDocument()
+    act(() => irPara(-1))
+    expect(await screen.findByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('leao')
+    await waitFor(() => expect(nomes()).toEqual(antes))
+  })
+
+  it('computador: o texto fica no endereço ao escolher um verbete e volta no Voltar', async () => {
+    instalarMatchMedia(1280)
+    renderizarRota('/glossario')
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar no glossário' }), 'leao')
+    await waitFor(() => expect(linhas().length).toBeLessThan(9))
+    await userEvent.click(linha('GL-900001'))
+    await screen.findByRole('heading', { level: 2, name: 'leão-de-teste' })
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('/verbete/GL-900001?filtro=leao'))
+    act(() => irPara(-1))
+    await screen.findByText('Escolha um verbete na lista.')
+    expect(screen.getByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('leao')
+  })
+})
+
+describe('Glossário (computador): a seleção', () => {
+  beforeEach(() => instalarMatchMedia(1280))
+
+  it('o painel de detalhe volta ao topo ao escolher outro verbete', async () => {
+    renderizarRota('/verbete/GL-900001')
+    await screen.findByRole('heading', { level: 2, name: 'leão-de-teste' })
+    const painel = document.querySelector('.lista-principal') as HTMLElement
+    painel.scrollTop = 120
+    await userEvent.click(linha('GL-900009'))
+    await screen.findByRole('heading', { level: 2, name: 'selo de teste' })
+    expect(painel.scrollTop).toBe(0)
+  })
+
+  it('o título do verbete escolhido é anunciado numa região educada', async () => {
+    renderizarRota('/glossario')
+    await screen.findAllByRole('link', { name: /leão-de-teste/ })
+    const anuncio = document.querySelector('[data-anuncio]') as HTMLElement
+    expect(anuncio).toHaveAttribute('aria-live', 'polite')
+    expect(anuncio).toHaveTextContent('')
+    await userEvent.click(linha('GL-900009'))
+    await waitFor(() => expect(anuncio).toHaveTextContent('selo de teste'))
+  })
+
+  it('o detalhe anterior fica na tela até o novo chegar (sem piscar)', async () => {
+    const real = await bancoDeTeste()
+    let solta: () => void = () => {}
+    let segura = false
+    const porta = new Promise<void>((r) => (solta = r))
+    usarMotor({
+      abrir: () => real.abrir(),
+      reabrir: () => real.reabrir(),
+      executar: async (sql, p) => {
+        if (segura && sql.includes('LEFT JOIN main.glossary_entry pai')) await porta
+        return real.executar(sql, p)
+      },
+    })
+    renderizarRota('/verbete/GL-900001')
+    await screen.findByRole('heading', { level: 2, name: 'leão-de-teste' })
+    segura = true
+    await userEvent.click(linha('GL-900009'))
+    expect(linha('GL-900009')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { level: 2, name: 'leão-de-teste' })).toBeInTheDocument()
+    solta()
+    expect(await screen.findByRole('heading', { level: 2, name: 'selo de teste' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2, name: 'leão-de-teste' })).not.toBeInTheDocument()
+    usarMotor(await bancoDeTeste())
+  })
+})
+
+describe('Glossário: contagens com unidade para o leitor de tela', () => {
+  it('cada linha diz "n objetos" (o número visível fica como está)', async () => {
+    renderizarRota('/glossario')
+    await screen.findAllByRole('link', { name: /leão-de-teste/ })
+    const l = linha('GL-900001')
+    expect(l).toHaveTextContent('2 objetos')
+    expect(within(l).getByText('2')).toBeInTheDocument()
+    expect(linha('GL-900008')).toHaveTextContent('1 objeto')
+    expect(linha('GL-900008')).not.toHaveTextContent('1 objetos')
+    for (const a of linhas()) expect(a.querySelector('.lista-n .so-leitor')).not.toBeNull()
   })
 })

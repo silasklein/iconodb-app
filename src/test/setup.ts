@@ -8,6 +8,9 @@ import { instalarMatchMedia } from './larguraDeTela'
 // larga chamam instalarMatchMedia(1280).
 if (typeof window !== 'undefined' && !window.matchMedia) instalarMatchMedia(375)
 
+// jsdom não implementa window.scrollTo (só avisa no console): troca por um espião vazio.
+if (typeof window !== 'undefined') window.scrollTo = vi.fn() as unknown as typeof window.scrollTo
+
 afterEach(() => {
   cleanup()
 })

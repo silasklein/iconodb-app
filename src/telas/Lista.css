@@ -162,8 +162,7 @@
   border-bottom: 1px solid var(--filete);
   color: var(--texto);
   text-decoration: none;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 52px;
+  /* Sem content-visibility: alturas estimadas deslocam a rolagem restaurada (medido: 386 em vez de 400). */
 }
 .lista-linha[aria-current='page'] {
   background: var(--superficie);

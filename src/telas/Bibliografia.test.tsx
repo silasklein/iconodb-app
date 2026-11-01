@@ -1,8 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
-import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
+import { irPara, renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -141,5 +141,70 @@ describe('Bibliografia (computador): lista e detalhe na mesma tela', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Autora 2004' })).toBeInTheDocument()
     expect(document.querySelector('.lista-rolagem')).toBe(lista)
     expect(screen.getByRole('link', { name: /Autora 2004/ })).toHaveAttribute('aria-current', 'page')
+  })
+})
+
+describe('Bibliografia: filtro no endereço, contagens e seleção', () => {
+  it('?filtro= vai para o campo e para a lista; digitar grava; Voltar devolve', async () => {
+    renderizarRota('/bibliografia?filtro=marduk')
+    expect(await screen.findByRole('searchbox', { name: 'Buscar na bibliografia' })).toHaveValue('marduk')
+    await waitFor(() => expect(linhas()).toHaveLength(1))
+    await userEvent.click(screen.getByRole('link', { name: /Autora 2004/ }))
+    await screen.findByRole('heading', { level: 1, name: 'Autora 2004' })
+    act(() => irPara(-1))
+    expect(await screen.findByRole('searchbox', { name: 'Buscar na bibliografia' })).toHaveValue('marduk')
+    await waitFor(() => expect(linhas()).toHaveLength(1))
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Buscar na bibliografia' }))
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('/bibliografia'))
+  })
+
+  it('mudar a ordem não perde o texto do endereço', async () => {
+    renderizarRota('/bibliografia?filtro=autor')
+    await screen.findByRole('link', { name: /Autor 1999/ })
+    await userEvent.click(screen.getByRole('button', { name: 'Ordenar por ano' }))
+    await waitFor(() => expect(screen.getByTestId('endereco').textContent).toBe('/bibliografia?filtro=autor&ordem=ano'))
+  })
+
+  it('cada obra diz "n objetos" para o leitor de tela; a seção de objetos também', async () => {
+    renderizarRota('/bibliografia')
+    const primeira = await screen.findByRole('link', { name: /Autor 1999/ })
+    expect(primeira.closest('a')).toHaveTextContent('4 objetos')
+    expect(within(primeira).getByText('4')).toBeInTheDocument()
+  })
+
+  it('computador: escolher outra obra leva o painel ao topo e anuncia o título', async () => {
+    instalarMatchMedia(1280)
+    renderizarRota('/obra/BIB-900001')
+    await screen.findByRole('heading', { level: 2, name: 'Autor 1999' })
+    const painel = document.querySelector('.lista-principal') as HTMLElement
+    painel.scrollTop = 90
+    await userEvent.click(screen.getByRole('link', { name: /Autora 2004/ }))
+    await screen.findByRole('heading', { level: 2, name: 'Autora 2004' })
+    expect(painel.scrollTop).toBe(0)
+    expect(document.querySelector('[data-anuncio]')).toHaveTextContent('Autora 2004')
+  })
+
+  it('computador: a obra anterior fica até a nova chegar', async () => {
+    instalarMatchMedia(1280)
+    const real = await bancoDeTeste()
+    let solta: () => void = () => {}
+    let segura = false
+    const porta = new Promise<void>((r) => (solta = r))
+    usarMotor({
+      abrir: () => real.abrir(),
+      reabrir: () => real.reabrir(),
+      executar: async (sql, p) => {
+        if (segura && sql.includes('SELECT * FROM main.bib_entry')) await porta
+        return real.executar(sql, p)
+      },
+    })
+    renderizarRota('/obra/BIB-900001')
+    await screen.findByRole('heading', { level: 2, name: 'Autor 1999' })
+    segura = true
+    await userEvent.click(screen.getByRole('link', { name: /Autora 2004/ }))
+    expect(screen.getByRole('heading', { level: 2, name: 'Autor 1999' })).toBeInTheDocument()
+    solta()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Autora 2004' })).toBeInTheDocument()
+    usarMotor(await bancoDeTeste())
   })
 })

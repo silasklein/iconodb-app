@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 
 export type Carga<T> = { fase: 'carregando' } | { fase: 'ok'; dados: T } | { fase: 'erro'; erro: unknown }
 
-/** Roda `buscar` ao montar e quando `chave` muda; ignora a resposta de uma chave que já foi trocada. */
-export function useCarregar<T>(buscar: () => Promise<T>, chave: string = ''): Carga<T> {
+/**
+ * Roda `buscar` ao montar e quando `chave` muda; ignora a resposta de uma chave que já foi trocada.
+ * Com `manter`, trocar a chave não esvazia a tela: o resultado anterior fica até o novo chegar (o painel de
+ * detalhe do computador, que não deve piscar a cada item escolhido).
+ */
+export function useCarregar<T>(buscar: () => Promise<T>, chave: string = '', opcoes: { manter?: boolean } = {}): Carga<T> {
   const [carga, setCarga] = useState<Carga<T>>({ fase: 'carregando' })
   useEffect(() => {
     let vivo = true
-    setCarga({ fase: 'carregando' })
+    setCarga((atual) => (opcoes.manter && atual.fase === 'ok' ? atual : { fase: 'carregando' }))
     buscar().then(
       (dados) => vivo && setCarga({ fase: 'ok', dados }),
       (erro: unknown) => vivo && setCarga({ fase: 'erro', erro }),

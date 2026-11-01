@@ -4,16 +4,16 @@ import type { ObjetoResumo } from '../banco/tipos'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
-import { numeroPtBr } from '../ui/usePendencias'
+import { Contagem } from '../ui/Contagem'
 import './Lista.css'
 
 /** Uma linha de "rótulo: valor" (dl). Sem valor, não aparece. `lang="de"` desenha em itálico. */
-export function Linha({ rotulo, children, lang, vazio = false }: { rotulo: string; children: ReactNode; lang?: string; vazio?: boolean }) {
+export function Linha({ rotulo, children, lang, dir, vazio = false }: { rotulo: string; children: ReactNode; lang?: string; dir?: 'auto' | 'ltr' | 'rtl'; vazio?: boolean }) {
   if (vazio) return null
   return (
     <>
       <dt>{rotulo}</dt>
-      <dd lang={lang}>{children}</dd>
+      <dd lang={lang} dir={dir}>{children}</dd>
     </>
   )
 }
@@ -24,7 +24,7 @@ export function SecaoDeObjetos({ rotulo, titulo, objetos, computador }: { rotulo
     <section className="detalhe-secao" aria-label={rotulo}>
       <div className="detalhe-secao-topo">
         <h2>{titulo}</h2>
-        <span className="codigo">{numeroPtBr(objetos.length)}</span>
+        <Contagem n={objetos.length} um="objeto" varios="objetos" className="codigo" />
       </div>
       {objetos.length === 0 ? (
         <p className="detalhe-vazio">Nenhum objeto.</p>

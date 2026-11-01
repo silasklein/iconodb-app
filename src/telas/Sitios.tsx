@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { sitios, type SitioResumo } from '../banco/consultas'
 import { fold, tabelaDoPacote } from '../busca/fold'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
+import { Contagem } from '../ui/Contagem'
 import { CampoDeFiltro } from '../ui/CampoDeFiltro'
 import { Icon } from '../ui/Icon'
 import { ListaEDetalhe } from '../ui/ListaEDetalhe'
@@ -14,6 +15,7 @@ import '../ui/Tooltip.css'
 import { coordenadaEmGraus, enderecoDoMapa } from './coordenada'
 import { agrupar, filtrar, indexar, inicialDe, type Entrada, type Grupo } from './lista'
 import { Sitio } from './Sitio'
+import { useFiltroNaUrl } from './useFiltroNaUrl'
 import './Lista.css'
 
 const SEM_REGIAO = 'Sem região'
@@ -49,8 +51,6 @@ function gruposDa(entradas: Entradas, comRegiao: boolean, tabela: Parameters<typ
     .map(([chave, es]) => ({ chave, entradas: es, regiao: true }))
 }
 
-const quantos = (n: number) => `${numeroPtBr(n)} ${n === 1 ? 'objeto' : 'objetos'}`
-
 /** Uma linha da lista: o nome, a coordenada em graus e quantos objetos há lá; no celular, o link do mapa. */
 const LinhaDoSitio = memo(function LinhaDoSitio({ s, atual, computador }: { s: SitioResumo; atual: boolean; computador: boolean }) {
   const comCoordenada = s.lat !== null && s.lon !== null
@@ -62,9 +62,7 @@ const LinhaDoSitio = memo(function LinhaDoSitio({ s, atual, computador }: { s: S
           <span className="sitio-coord">{comCoordenada ? coordenadaEmGraus(s.lat!, s.lon!, 3) : 'sem coordenada'}</span>
         </span>
       </Link>
-      <span className="lista-n" aria-label={quantos(s.objetos)}>
-        {s.objetos}
-      </span>
+      <Contagem n={s.objetos} um="objeto" varios="objetos" />
       {!computador && comCoordenada && (
         <a
           className="icon-button sitio-mapa"
@@ -89,7 +87,7 @@ const LinhaDoSitio = memo(function LinhaDoSitio({ s, atual, computador }: { s: S
 export function Sitios() {
   const { id } = useParams()
   const computador = useBreakpoint() === 'computador'
-  const [texto, setTexto] = useState('')
+  const [texto, setTexto] = useFiltroNaUrl()
   const consulta = useDeferredValue(texto)
   const carga = useCarregar(carregar)
   const rolagem = useRef<HTMLDivElement>(null)
@@ -99,6 +97,9 @@ export function Sitios() {
   const dados = carga.fase === 'ok' ? carga.dados : null
   const visiveis = useMemo(() => (dados ? filtrar(dados.entradas, consulta, dados.tabela) : []), [dados, consulta])
   const grupos = useMemo(() => (dados ? gruposDa(visiveis, dados.comRegiao, dados.tabela) : []), [dados, visiveis])
+  // A região que vem aberta é a primeira da lista inteira (pelo nome), não a primeira que sobrou numa busca.
+  const primeiraRegiao = useMemo(() => (dados ? gruposDa(dados.entradas, dados.comRegiao, dados.tabela)[0]?.chave : undefined), [dados])
+  const escolhido = useMemo(() => (id ? dados?.entradas.find((e) => e.item.id === id)?.item.nome : undefined), [dados, id])
 
   useEffect(() => {
     if (computador && id) rolagem.current?.querySelector('[data-atual]')?.scrollIntoView?.({ block: 'nearest' })
@@ -130,7 +131,7 @@ export function Sitios() {
           {grupos.map((g, i) => {
             const linhas = g.entradas.map((e) => <LinhaDoSitio key={e.item.id} s={e.item} atual={e.item.id === id} computador={computador} />)
             if (g.regiao && !computador) {
-              const aberta = buscando || (abertas[g.chave] ?? i === 0)
+              const aberta = buscando || (abertas[g.chave] ?? g.chave === primeiraRegiao)
               return (
                 <section key={g.chave}>
                   <h2 className="sitio-regiao-titulo">
@@ -167,6 +168,8 @@ export function Sitios() {
     return (
       <ListaEDetalhe
         rotulo="Lista de sítios"
+        chave={id}
+        anuncio={escolhido}
         lista={<div ref={rolagem}>{lista}</div>}
         detalhe={id ? <Sitio id={id} pagina={false} voltarPara="/sitios" computador /> : <p className="detalhe-vazio">Escolha um sítio na lista.</p>}
       />

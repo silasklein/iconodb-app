@@ -113,3 +113,25 @@ describe('Sítio (computador): lista e detalhe', () => {
     await waitFor(() => expect(screen.getByRole('link', { name: /^Maḥraṣ Teste/ })).toHaveAttribute('aria-current', 'page'))
   })
 })
+
+describe('Sítio: coordenada 0', () => {
+  it('latitude e longitude 0 mostram os graus e o link do mapa', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar('UPDATE pub_TESTE.site SET lat = 0, lon = 0 WHERE id = 2')
+    renderizarRota('/sitio/TESTE-2')
+    await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+    expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=0&mlon=0#map=12/0/0')
+    expect(screen.getByText('0,00000 N · 0,00000 E')).toBeInTheDocument()
+    usarMotor(null)
+  })
+
+  it('só a latitude em 0 e sem longitude: sem coordenada e sem mapa', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar('UPDATE pub_TESTE.site SET lat = 0, lon = NULL WHERE id = 2')
+    renderizarRota('/sitio/TESTE-2')
+    await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+    expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument()
+    expect(screen.getByText('sem coordenada')).toBeInTheDocument()
+    usarMotor(null)
+  })
+})
