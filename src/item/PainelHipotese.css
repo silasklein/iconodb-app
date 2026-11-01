@@ -55,17 +55,25 @@
   margin-right: -12px;
 }
 
+/* Computador abaixo de 1160 px (R17): a mesma folha, até ~55% da altura, com o conteúdo centrado. */
+@media (min-width: 768px) {
+  .painel-hipotese-folha {
+    max-height: 55dvh;
+    padding-left: max(32px, calc((100% - 640px) / 2));
+    padding-right: max(32px, calc((100% - 640px) / 2));
+  }
+}
+
 /*
- * Computador: painel lateral, filho direto da grade do item (Item.css), preso à janela.
- * Abaixo de 1160 px fica por cima da coluna de leitura (coluna 2, à direita); a partir de 1160 px
- * vira a terceira coluna da grade (Item.css). Nunca fica sobre a coluna da imagem.
+ * Computador a partir de 1160 px (R17): painel lateral, filho direto da grade do item, na terceira
+ * coluna (Item.css), preso à janela. Nunca fica sobre a imagem nem sobre a leitura.
  */
 .painel-hipotese-lateral {
   position: sticky;
   top: 0;
   grid-row: 1;
-  grid-column: 2;
-  justify-self: end;
+  grid-column: 3;
+  justify-self: stretch;
   align-self: start;
   z-index: 6;
   width: 380px;

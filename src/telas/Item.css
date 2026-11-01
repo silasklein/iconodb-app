@@ -234,41 +234,15 @@
 }
 
 /*
- * Painel da hipótese aberto (computador). Requisito: a leitura nunca fica com menos de ~45
+ * Painel da hipótese aberto no computador (R17). Requisito: a leitura nunca fica com menos de ~45
  * caracteres visíveis por linha, a barra H/L continua ao alcance e a imagem nunca é coberta.
+ * Abaixo de 1160 px a hipótese abre na folha de baixo, como no celular (PainelHipotese.css), e a
+ * grade não muda; a partir de 1160 px o painel é a terceira coluna da grade.
  */
-/* 768–1159: não cabem imagem, leitura e painel lado a lado. O painel fica por cima da leitura; a
-   imagem encolhe; a coluna de leitura ganha uma margem do tamanho do painel e rola na horizontal,
-   e o trecho da hipótese é trazido para a faixa à esquerda do painel (trazerParaAFaixa). */
-@media (min-width: 768px) and (max-width: 1159px) {
-  .item-pc-com-painel {
-    grid-template-columns: clamp(240px, 26vw, 560px) minmax(0, 1fr);
-  }
-  .item-pc-com-painel .item-coluna-leitura {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    grid-template-columns: 100% 380px;
-  }
-  /* A faixa vazia, do tamanho do painel, à direita da leitura: dá o que rolar na horizontal. */
-  .item-pc-com-painel .item-coluna-leitura::after {
-    content: '';
-    grid-area: 1 / 2;
-  }
-  .item-pc-com-painel .item-coluna-leitura > .item-conteudo {
-    padding: 0 24px 72px 24px;
-  }
-  .item-pc-com-painel .leitura {
-    grid-template-columns: 56px minmax(0, 1fr);
-    column-gap: 12px;
-  }
-  /* A barra H/L vai para a esquerda e acompanha a rolagem horizontal. */
-  .item-pc-com-painel .item-acoes {
-    position: sticky;
-    left: 16px;
-    width: max-content;
-    justify-content: flex-start;
-    margin-right: 0;
-    margin-left: -8px;
+@media (min-width: 768px) {
+  /* Espaço embaixo para o trecho subir acima da folha (que cobre até ~55% da altura). */
+  .item-pc.item-com-folha {
+    padding-bottom: 55dvh;
   }
 }
 /* 1160 ou mais: o painel é a terceira coluna da grade; a imagem encolhe primeiro. */

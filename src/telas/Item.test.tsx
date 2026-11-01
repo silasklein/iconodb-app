@@ -252,7 +252,7 @@ describe('Item', () => {
       expect(painel).not.toHaveAttribute('aria-modal', 'true')
       const imagem = screen.getByRole('region', { name: 'Imagem' })
       expect(imagem.contains(painel)).toBe(false)
-      // filho direto da grade do item (terceira coluna a partir de 1160 px; por cima da leitura abaixo disso)
+      // filho direto da grade do item: a terceira coluna (a partir de 1160 px)
       const grade = document.querySelector('.item-pc')!
       expect(painel.parentElement).toBe(grade)
       expect(grade).toHaveClass('item-pc-com-painel')
@@ -265,6 +265,49 @@ describe('Item', () => {
       await userEvent.click(within(painel).getByRole('button', { name: 'Fechar o painel' }))
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
       expect(document.querySelector('.item-pc')).not.toHaveClass('item-pc-com-painel')
+    })
+
+    it.each([1159, 1160])('R17: o limite entre a folha e o painel lateral é 1160 px (%i)', async (largura) => {
+      instalarMatchMedia(largura)
+      abrir('/item/CA00002?hipotese=HY-900003')
+      const painel = await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
+      expect(painel).toHaveClass(largura >= 1160 ? 'painel-hipotese-lateral' : 'painel-hipotese-folha')
+    })
+
+    it('R17: no computador abaixo de 1160 px, a hipótese abre na folha de baixo (modal, Esc, foco volta), sem rolagem lateral', async () => {
+      instalarMatchMedia(1024)
+      abrir('/item/CA00002')
+      await titulo()
+      const ancora = within(leituras()).getByRole('link', { name: /^leão-de-teste/ })
+      vi.mocked(Element.prototype.scrollIntoView).mockClear()
+      await userEvent.click(ancora)
+      const folha = await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
+      expect(folha).toHaveClass('painel-hipotese-folha')
+      expect(folha).toHaveAttribute('aria-modal', 'true')
+      // a grade do item não muda (a imagem fica como está) e nada de faixa lateral
+      const grade = document.querySelector('.item-pc')!
+      expect(grade).not.toHaveClass('item-pc-com-painel')
+      expect(grade).toHaveClass('item-com-folha')
+      expect(screen.getByRole('region', { name: 'Imagem' }).contains(folha)).toBe(false)
+      // o trecho sobe para ficar inteiro acima da folha
+      await waitFor(() => expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts).toContain(ancora))
+      // foco preso
+      const focaveis = [...folha.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')]
+      focaveis[focaveis.length - 1]!.focus()
+      await userEvent.tab()
+      expect(folha.contains(document.activeElement)).toBe(true)
+      await userEvent.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(document.activeElement).toBe(within(leituras()).getByRole('link', { name: /^leão-de-teste/ }))
+      expect(document.querySelector('.item-pc')).not.toHaveClass('item-com-folha')
+    })
+
+    it('mudar a janela de 1280 para 1024 com a hipótese aberta troca o painel lateral pela folha', async () => {
+      const mudar = instalarMatchMedia(1280)
+      abrir('/item/CA00002?hipotese=HY-900003')
+      expect(await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })).toHaveClass('painel-hipotese-lateral')
+      act(() => mudar(1024))
+      await waitFor(() => expect(screen.getByRole('dialog', { name: 'Hipótese leão-de-teste' })).toHaveClass('painel-hipotese-folha'))
     })
 
     it('o painel oferece o verbete de cada termo marcado no trecho', async () => {

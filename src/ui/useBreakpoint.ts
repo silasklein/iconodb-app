@@ -18,3 +18,20 @@ function ler(): Breakpoint {
 export function useBreakpoint(): Breakpoint {
   return useSyncExternalStore(assinar, ler, () => 'celular')
 }
+
+/**
+ * A janela tem pelo menos `px` de largura? (Para limites além do 768, como o painel lateral do
+ * item a partir de 1160 px, R17.)
+ */
+export function useLarguraMinima(px: number): boolean {
+  const consulta = `(min-width: ${px}px)`
+  return useSyncExternalStore(
+    (aoMudar) => {
+      const m = window.matchMedia(consulta)
+      m.addEventListener('change', aoMudar)
+      return () => m.removeEventListener('change', aoMudar)
+    },
+    () => window.matchMedia(consulta).matches,
+    () => false,
+  )
+}

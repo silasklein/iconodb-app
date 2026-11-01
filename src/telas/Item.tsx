@@ -16,7 +16,7 @@ import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Icon, type IconName } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
-import { useBreakpoint } from '../ui/useBreakpoint'
+import { useBreakpoint, useLarguraMinima } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { useTema } from '../ui/useTema'
 import './Item.css'
@@ -85,11 +85,15 @@ interface Posicao {
   proximo: string | null
 }
 
+/** R17: a partir desta largura a hipótese abre no painel lateral (terceira coluna); abaixo, na folha de baixo. */
+export const LARGURA_DO_PAINEL_LATERAL = 1160
+
 function ItemCarregado({ d }: { d: ItemDetalhe }) {
   const location = useLocation()
   const navegar = useNavigate()
   const [params] = useSearchParams()
   const computador = useBreakpoint() === 'computador'
+  const lateral = useLarguraMinima(LARGURA_DO_PAINEL_LATERAL) && computador
   const [idioma, setIdioma] = useState<Idioma>('pt')
   const [secoes, setSecoes] = useState<Record<string, boolean>>({})
   const gatilho = useRef<HTMLElement | null>(null)
@@ -171,22 +175,14 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     gatilho.current = el
   }, [])
 
-  // O trecho da hipótese aberta fica à vista:
-  // - no celular, sobe para cima da folha (que cobre a metade de baixo);
-  // - no computador, com o painel por cima da leitura (abaixo de 1160 px), a coluna de leitura rola
-  //   na horizontal até o trecho ficar na faixa à esquerda do painel (e na vertical, se preciso).
+  // Com a folha de baixo (celular e computador abaixo de 1160 px, R17), o trecho da hipótese sobe
+  // para ficar inteiro acima dela (scroll-margin-top de 96 px; a folha cobre no máximo ~55% no
+  // computador). No painel lateral o trecho já está à vista.
   useEffect(() => {
-    if (!aberta) return
+    if (!aberta || lateral) return
     const seletor = `.item-leituras [data-hipoteses~="${aberta.replace(/["\\]/g, '\\$&')}"]`
-    const ancora = document.querySelector<HTMLElement>(seletor)
-    if (!ancora) return
-    if (!computador) {
-      ancora.scrollIntoView({ block: 'start' })
-      return
-    }
-    const quadro = requestAnimationFrame(() => trazerParaAFaixa(ancora))
-    return () => cancelAnimationFrame(quadro)
-  }, [aberta, computador])
+    document.querySelector<HTMLElement>(seletor)?.scrollIntoView({ block: 'start' })
+  }, [aberta, lateral])
 
   const porNivel = !!secoes.hipoteses
   const alternar = (id: string) => setSecoes((s) => ({ ...s, [id]: !s[id] }))
@@ -259,9 +255,9 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   const nav = posicao && <NavDePosicao posicao={posicao} estado={adiante} />
   const painel = aberta && (
     <PainelHipotese
-      key={computador ? 'lateral' : 'folha'}
+      key={lateral ? 'lateral' : 'folha'}
       id={aberta}
-      variante={computador ? 'lateral' : 'folha'}
+      variante={lateral ? 'lateral' : 'folha'}
       aoFechar={fecharHipotese}
       devolverFoco={devolverFoco}
       ordem={ordem}
@@ -338,7 +334,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     )
   }
   return (
-    <div className={`item item-pc${aberta ? ' item-pc-com-painel' : ''}`}>
+    <div className={`item item-pc${aberta ? (lateral ? ' item-pc-com-painel' : ' item-com-folha') : ''}`}>
       <section className="item-coluna-imagem item-imagem" aria-label="Imagem">
         <div className="item-coluna-imagem-fixa">
           {nav}
@@ -356,24 +352,6 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
       {painel}
     </div>
   )
-}
-
-/**
- * Com o painel por cima da coluna de leitura (computador abaixo de 1160 px), traz o trecho para a
- * faixa visível à esquerda do painel: rola a coluna de leitura na horizontal (ela ganha uma margem
- * do tamanho do painel enquanto ele está aberto) e a página na vertical, se o trecho estiver fora.
- * Com o painel em coluna própria (1160 px ou mais), o trecho já está na faixa e nada muda na horizontal.
- */
-function trazerParaAFaixa(ancora: HTMLElement) {
-  const painel = document.querySelector<HTMLElement>('.painel-hipotese-lateral')
-  const coluna = ancora.closest<HTMLElement>('.item-coluna-leitura')
-  if (!painel || !coluna) return
-  const r = ancora.getBoundingClientRect()
-  if (r.top < 0 || r.bottom > window.innerHeight) ancora.scrollIntoView({ block: 'center', inline: 'nearest' })
-  const limite = painel.getBoundingClientRect().left - 16
-  const esquerda = coluna.getBoundingClientRect().left + 16
-  const a = ancora.getBoundingClientRect()
-  if (a.right > limite) coluna.scrollLeft += Math.max(0, Math.min(a.right - limite, a.left - esquerda))
 }
 
 function Cabeca({ d }: { d: ItemDetalhe }) {
