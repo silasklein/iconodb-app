@@ -294,7 +294,7 @@
 }
 
 /* Resultado antigo enquanto o novo carrega: não se toca */
-.busca-resultados[inert] .busca-grade {
+.busca-grade[inert] {
   opacity: 0.5;
 }
 

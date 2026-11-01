@@ -205,10 +205,10 @@ describe('tela Busca: resultados', () => {
     let terminar: (r: ResultadoDaBusca) => void = () => {}
     mock.mockImplementationOnce(() => new Promise<ResultadoDaBusca>((ok) => (terminar = ok)))
     await userEvent.click(screen.getByRole('button', { name: /^Termo/ }))
-    const secao = screen.getByRole('region', { name: 'Resultados', hidden: true })
-    await waitFor(() => expect(secao).toHaveAttribute('inert'))
+    const grade = document.querySelector('.busca-grade')!
+    await waitFor(() => expect(grade).toHaveAttribute('inert'))
     terminar(resultado({ total: 2, objetos: [objeto('CA00001'), objeto('CA00002')], numeros: ['CA00001', 'CA00002'] }))
-    await waitFor(() => expect(secao).not.toHaveAttribute('inert'))
+    await waitFor(() => expect(document.querySelector('.busca-grade')).not.toHaveAttribute('inert'))
   })
 
   it('o estado para o item é calculado uma vez por resultado: todos os cartões levam o mesmo objeto', async () => {
@@ -227,5 +227,47 @@ describe('tela Busca: resultados', () => {
     const bloco = (seletor: string) => css.slice(css.indexOf(`${seletor} {`)).split('}')[0]
     expect(bloco('.busca-link')).toMatch(/min-height:\s*var\(--alvo-toque\)/)
     expect(bloco('.busca-escopos button')).toMatch(/min-height:\s*var\(--alvo-toque\)/)
+  })
+
+  describe('"Mostrar mais"', () => {
+    const parcial = (n: number) =>
+      resultado({
+        total: 5,
+        objetos: ['CA00001', 'CA00002', 'CA00003', 'CA00004', 'BA00001'].slice(0, n).map((x) => objeto(x)),
+        numeros: ['CA00001', 'CA00002', 'CA00003', 'CA00004', 'BA00001'],
+      })
+
+    async function abrirEFocar() {
+      mock.mockResolvedValueOnce(parcial(2))
+      abrirComRota('/busca?q=leao')
+      const botao = await screen.findByRole('button', { name: /^Mostrar mais/ })
+      botao.focus()
+      expect(botao).toHaveFocus()
+      return botao
+    }
+
+    it('só os cartões ficam inertes enquanto carrega: o botão continua com o foco', async () => {
+      const botao = await abrirEFocar()
+      let terminar: (r: ResultadoDaBusca) => void = () => {}
+      mock.mockImplementationOnce(() => new Promise<ResultadoDaBusca>((ok) => (terminar = ok)))
+      await userEvent.keyboard('{Enter}')
+      await waitFor(() => expect(document.querySelector('.busca-grade')).toHaveAttribute('inert'))
+      expect(botao).not.toHaveAttribute('inert')
+      expect(botao.closest('[inert]')).toBeNull()
+      expect(botao).toHaveFocus()
+      terminar(parcial(4))
+      await waitFor(() => expect(document.querySelector('.busca-grade')).not.toHaveAttribute('inert'))
+      expect(screen.getByRole('button', { name: /^Mostrar mais/ })).toHaveFocus()
+      expect(document.activeElement).not.toBe(document.body)
+    })
+
+    it('se o botão some (acabou a lista), o foco vai ao primeiro cartão novo, não ao body', async () => {
+      await abrirEFocar()
+      mock.mockResolvedValueOnce(parcial(5))
+      await userEvent.keyboard('{Enter}')
+      await waitFor(() => expect(screen.queryByRole('button', { name: /^Mostrar mais/ })).not.toBeInTheDocument())
+      expect(document.activeElement).not.toBe(document.body)
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: /CA00003/ }))
+    })
   })
 })

@@ -13,7 +13,7 @@ import {
   type Filtros,
   type ResultadoDaBusca,
 } from '../busca/consulta'
-import { MAXIMO_DA_LISTA, estadoDoResultado, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
+import { MAXIMO_DA_LISTA, estadoDoResultado, type EstadoVindoDaBusca, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { IconButton } from '../ui/IconButton'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -124,12 +124,32 @@ export function Busca() {
   const resultado = estado.fase === 'ok' ? estado.resultado : null
   const caminhoAtual = `${pathname}${search}`
   const ocupado = estado.fase === 'ok' && estado.ocupado
-  // O estado do item é o mesmo para todos os cartões (uma vez por resultado); só passando de MAXIMO_DA_LISTA
-  // cada cartão leva uma janela em volta de si.
-  const estadoComum = useMemo(
-    () => (resultado && resultado.numeros.length <= MAXIMO_DA_LISTA ? estadoDoResultado(resultado.numeros, caminhoAtual) : null),
-    [resultado, caminhoAtual],
-  )
+  // O estado do item: o mesmo objeto para todos os cartões quando a lista cabe no teto (uma vez por resultado); passando
+  // de MAXIMO_DA_LISTA, cada cartão leva uma janela em volta de si, calculada na primeira vez e guardada.
+  const estadoDoCartao = useMemo(() => {
+    if (!resultado) return () => undefined
+    if (resultado.numeros.length <= MAXIMO_DA_LISTA) {
+      const comum = estadoDoResultado(resultado.numeros, caminhoAtual)
+      return () => comum
+    }
+    const janelas = new Map<string, EstadoVindoDaBusca>()
+    return (numero: string) => {
+      let e = janelas.get(numero)
+      if (!e) janelas.set(numero, (e = estadoDoResultado(resultado.numeros, caminhoAtual, numero)))
+      return e
+    }
+  }, [resultado, caminhoAtual])
+
+  // "Mostrar mais": se o botão some (acabou a lista) ou o foco se perde, o foco vai ao primeiro cartão novo.
+  const focoNoCartao = useRef<number | null>(null)
+  const grade = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (focoNoCartao.current === null || ocupado || !resultado) return
+    const indice = focoNoCartao.current
+    focoNoCartao.current = null
+    const ativo = document.activeElement
+    if (!ativo || ativo === document.body) grade.current?.querySelectorAll<HTMLElement>('a')[indice]?.focus()
+  }, [resultado, ocupado])
 
   // Etiquetas dos filtros: o rótulo vem das facetas (que sempre trazem os valores ativos).
   const etiquetas = CHAVES_DE_FILTRO.flatMap((chave) =>
@@ -280,7 +300,7 @@ export function Busca() {
 
                 {filtrosAtivos}
 
-                <section className="busca-resultados" aria-label="Resultados" inert={ocupado}>
+                <section className="busca-resultados" aria-label="Resultados">
                   {resultado.total > 0 && (
                     <div className="busca-contagem">
                       <h2>{objetos(resultado.total)}</h2>
@@ -298,13 +318,21 @@ export function Busca() {
                     <SemResultado q={q} escopo={escopo} resultado={resultado} aoTudo={() => ir({ escopo: 'tudo' })} aoLimpar={limparFiltros} />
                   ) : (
                     <>
-                      <div className="busca-grade">
+                      <div className="busca-grade" ref={grade} inert={ocupado}>
                         {resultado.objetos.map((o) => (
-                          <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoComum ?? estadoDoResultado(resultado.numeros, caminhoAtual, o.numero)} />
+                          <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoDoCartao(o.numero)} />
                         ))}
                       </div>
                       {resultado.objetos.length < resultado.total && (
-                        <button type="button" className="busca-mais" onClick={() => setLimite((l) => l + OBJETOS_POR_PAGINA)}>
+                        <button
+                          type="button"
+                          className="busca-mais"
+                          onClick={() => {
+                            if (ocupado) return
+                            focoNoCartao.current = resultado.objetos.length
+                            setLimite((l) => l + OBJETOS_POR_PAGINA)
+                          }}
+                        >
                           Mostrar mais ({(resultado.total - resultado.objetos.length).toLocaleString('pt-BR')})
                         </button>
                       )}
