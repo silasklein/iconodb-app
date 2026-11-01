@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import type { Imagem, Regiao } from '../banco/tipos'
-import { urlImagem } from '../pacote/imagens'
+import { consumirPedidoDeFoco } from '../imagem/estado'
 import { IconButton } from '../ui/IconButton'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
+import { estiloDeInversao, pontosDoPoligono, useUrlDaImagem } from './imagemComum'
 import './ImagemItem.css'
 
 interface Props {
@@ -15,6 +16,11 @@ interface Props {
   elementoAceso?: string | null
   /** Computador: a dica "Clique na imagem mostra o original" no pé. */
   comDica?: boolean
+  /**
+   * "Ampliar a imagem": quem tem o roteador leva ao visualizador passando o estado (o original
+   * ligado, para fechar voltando ao item). Sem isto, o botão é um link comum (`#/imagem/<id>`).
+   */
+  aoAmpliar?: (imagemId: string, original: boolean) => void
 }
 
 /**
@@ -24,11 +30,10 @@ interface Props {
  * cima, com as coordenadas de 0 a 1 do banco (viewBox 0 0 1 1 sobre a caixa exata da imagem).
  * "Ampliar a imagem" leva ao visualizador (`#/imagem/<id>`, Tarefa 9).
  */
-export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false }: Props) {
+export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false, aoAmpliar }: Props) {
+  const ampliar = useRef<HTMLDivElement>(null)
   const [indice, setIndice] = useState(0)
   const [original, setOriginal] = useState(false)
-  const [url, setUrl] = useState<string | null>(null)
-  const [falhou, setFalhou] = useState(false)
   const atual = imagens[Math.min(indice, imagens.length - 1)]
   const caminho = atual?.tela ?? atual?.miniatura ?? null
 
@@ -48,23 +53,12 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
     if (outra >= 0) setIndice(outra)
   }, [elementoAceso, regioes])
 
+  // De volta do visualizador (Esc ou Fechar): o foco volta ao "Ampliar a imagem" desta tela nova.
   useEffect(() => {
-    setUrl(null)
-    setFalhou(false)
-    if (!caminho) return
-    let vivo = true
-    urlImagem(caminho).then(
-      (u) => {
-        if (!vivo) return
-        if (u) setUrl(u)
-        else setFalhou(true)
-      },
-      () => vivo && setFalhou(true),
-    )
-    return () => {
-      vivo = false
-    }
-  }, [caminho])
+    if (consumirPedidoDeFoco()) ampliar.current?.querySelector<HTMLElement>('a, button')?.focus()
+  }, [])
+
+  const { url, falhou, aoFalhar } = useUrlDaImagem(caminho)
 
   if (!atual) {
     return (
@@ -83,11 +77,11 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
 
   const figura = url ? (
     <span className="imagem-item-figura">
-      <img src={url} alt={alt} decoding="async" style={invertida ? { filter: 'invert(1)' } : undefined} onError={() => setFalhou(true)} />
+      <img src={url} alt={alt} decoding="async" style={estiloDeInversao(atual.display_mode, original)} onError={aoFalhar} />
       {acesas.length > 0 && (
         <svg className="imagem-item-regioes" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
           {acesas.map((r) => (
-            <polygon key={r.id} points={r.pontos.map(([x, y]) => `${x},${y}`).join(' ')} vectorEffect="non-scaling-stroke" />
+            <polygon key={r.id} points={pontosDoPoligono(r.pontos)} vectorEffect="non-scaling-stroke" />
           ))}
         </svg>
       )}
@@ -109,8 +103,8 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
           figura
         )}
         {acesas.length > 0 && <span className="so-leitor">{`Região acesa: ${acesas.map((r) => r.elemento).join(', ')}`}</span>}
-        <div className="imagem-item-ampliar">
-          <IconButton icon="ampliar" label="Ampliar a imagem" href={`#/imagem/${encodeURIComponent(atual.id)}`} tipAbove />
+        <div className="imagem-item-ampliar" ref={ampliar}>
+          <IconButton icon="ampliar" label="Ampliar a imagem" href={`#/imagem/${encodeURIComponent(atual.id)}`} tipAbove onClick={aoAmpliar && ((e) => clicouEmAmpliar(e, atual.id))} />
         </div>
       </div>
       {(imagens.length > 1 || (comDica && traco)) && (
@@ -128,6 +122,13 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
       {atual.credito && <p className="imagem-item-credito">{atual.credito}</p>}
     </div>
   )
+
+  function clicouEmAmpliar(e: MouseEvent<HTMLAnchorElement>, id: string) {
+    // Clique com modificador (abrir em outra aba…) segue o link; o comum vai pelo roteador.
+    if (!aoAmpliar || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    e.preventDefault()
+    aoAmpliar(id, original)
+  }
 
   function troca(passo: number) {
     setIndice((i) => (i + passo + imagens.length) % imagens.length)

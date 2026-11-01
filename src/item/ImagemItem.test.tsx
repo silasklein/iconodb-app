@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Imagem, Regiao } from '../banco/tipos'
 import { urlImagem } from '../pacote/imagens'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
+import { pedirFocoNoAmpliar } from '../imagem/estado'
 import { ImagemItem } from './ImagemItem'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -85,6 +86,37 @@ describe('ImagemItem', () => {
   it('"Ampliar a imagem" leva ao visualizador da imagem mostrada', async () => {
     render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco')]} />)
     expect(screen.getByRole('link', { name: 'Ampliar a imagem' })).toHaveAttribute('href', '#/imagem/IMG-T-1')
+  })
+
+  it('com aoAmpliar, o clique comum vai pelo roteador (com o original ligado); com modificador segue o link', async () => {
+    const aoAmpliar = vi.fn()
+    render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco')]} aoAmpliar={aoAmpliar} />)
+    await imagemNaTela()
+    const link = screen.getByRole('link', { name: 'Ampliar a imagem' })
+    await userEvent.click(link)
+    expect(aoAmpliar).toHaveBeenLastCalledWith('IMG-T-1', false)
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar o original' }))
+    await userEvent.click(link)
+    expect(aoAmpliar).toHaveBeenLastCalledWith('IMG-T-1', true)
+    aoAmpliar.mockClear()
+    fireEvent.click(link, { ctrlKey: true })
+    expect(aoAmpliar).not.toHaveBeenCalled()
+  })
+
+  it('de volta do visualizador, o foco vai ao "Ampliar a imagem"; sem pedido, não rouba o foco', async () => {
+    const { unmount } = render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco')]} />)
+    expect(screen.getByRole('link', { name: 'Ampliar a imagem' })).not.toHaveFocus()
+    unmount()
+    pedirFocoNoAmpliar()
+    render(<ImagemItem numero="CA00001" imagens={[img(1, 'traco')]} />)
+    expect(screen.getByRole('link', { name: 'Ampliar a imagem' })).toHaveFocus()
+  })
+
+  it('imagem que não carrega (onError): o marcador no lugar da imagem quebrada', async () => {
+    render(<ImagemItem numero="CA00001" imagens={[img(1, 'tons')]} />)
+    fireEvent.error(await imagemNaTela())
+    expect(await screen.findByText(MSG_IMAGEM_OFFLINE)).toBeInTheDocument()
+    expect(document.querySelector('.imagem-item-figura img')).toBeNull()
   })
 
   it('sem cópia no aparelho e sem rede: o marcador, não uma imagem quebrada', async () => {

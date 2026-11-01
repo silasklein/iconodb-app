@@ -111,6 +111,21 @@ async function comparadorDeFonte(): Promise<(a: L, b: L) => number> {
     (s(x.suffix) ?? '').localeCompare(s(y.suffix) ?? '')
 }
 
+function imagemDe(l: L): Imagem {
+  return {
+    id: s(l.id)!,
+    itemId: s(l.item_id)!,
+    ordinal: n(l.ordinal)!,
+    display_mode: s(l.display_mode) as ModoDeExibicao | null,
+    tela: s(l.screen_path),
+    miniatura: s(l.thumb_path),
+    largura: n(l.width_px),
+    altura: n(l.height_px),
+    credito: s(l.credit),
+    rotacao: n(l.rotation),
+  }
+}
+
 /** Item → número do objeto (o próprio id quando o item ainda não tem número). */
 async function numerosDosItens(itens: readonly string[]): Promise<Map<string, Numero>> {
   const mapa = new Map<string, Numero>(itens.map((i) => [i, i]))
@@ -630,20 +645,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     sitio,
     medidas,
     acervo: s(primeira('holding')?.value),
-    imagens: imagens.map(
-      (l): Imagem => ({
-        id: s(l.id)!,
-        itemId: s(l.item_id)!,
-        ordinal: n(l.ordinal)!,
-        display_mode: s(l.display_mode) as ModoDeExibicao | null,
-        tela: s(l.screen_path),
-        miniatura: s(l.thumb_path),
-        largura: n(l.width_px),
-        altura: n(l.height_px),
-        credito: s(l.credit),
-        rotacao: n(l.rotation),
-      }),
-    ),
+    imagens: imagens.map(imagemDe),
     leituras,
     catalogo,
     hipotesesPorNivel: porNivel(proprias),
@@ -859,4 +861,16 @@ export async function regioes(imagemId: string): Promise<Regiao[]> {
       selector: s(l.selector)!,
       pontos: pontosDoSeletor(s(l.selector)!),
     }))
+}
+
+/** Uma imagem pelo id, com o número do objeto e quantas imagens o objeto tem (o visualizador). */
+export async function imagem(id: string): Promise<(Imagem & { numero: Numero; total: number }) | null> {
+  const [linha] = await linhasPorPublicacao((esq) => `SELECT * FROM ${esq}.image WHERE id = $id`, { $id: id })
+  if (!linha) return null
+  const img = imagemDe(linha)
+  const numero = (await numerosDosItens([img.itemId])).get(img.itemId)!
+  const membros = await executar<L>('SELECT item_id FROM main.object_member WHERE object_id = $n', { $n: numero })
+  const itens = membros.length > 0 ? membros.map((m) => s(m.item_id)!) : [img.itemId]
+  const contagens = await linhasPorPublicacao((esq) => `SELECT count(*) AS n FROM ${esq}.image WHERE item_id IN ${EM_IDS}`, { $ids: ids(itens) })
+  return { ...img, numero, total: contagens.reduce((soma, c) => soma + (n(c.n) ?? 0), 0) }
 }

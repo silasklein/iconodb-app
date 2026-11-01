@@ -111,4 +111,13 @@ describe('Tooltip.css', () => {
     expect(ponto).toHaveAttribute('aria-hidden', 'true')
     expect(link).toHaveTextContent('')
   })
+
+  it('um link pode tratar o clique (o href segue valendo para quem abre em outra aba)', async () => {
+    const aoClicar = vi.fn((e: React.MouseEvent) => e.preventDefault())
+    render(<IconButton icon="ampliar" label="Ampliar a imagem" href="#/imagem/x" onClick={aoClicar} />)
+    const link = screen.getByRole('link', { name: 'Ampliar a imagem' })
+    expect(link).toHaveAttribute('href', '#/imagem/x')
+    await userEvent.click(link)
+    expect(aoClicar).toHaveBeenCalledTimes(1)
+  })
 })

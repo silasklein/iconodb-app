@@ -30,7 +30,8 @@ interface Comum {
 /** Quem abre um painel usa `e.currentTarget` para devolver o foco ao botão ao fechar (o Safari não foca botões ao clicar). */
 type AcaoBotao = { onClick: (e: MouseEvent<HTMLButtonElement>) => void; href?: never }
 /** Links usam o href do HashRouter, por exemplo "#/busca". */
-type AcaoLink = { href: string; onClick?: never }
+/** O `onClick` do link (opcional) deixa a tela tratar o clique; sem `preventDefault`, o href vale. */
+type AcaoLink = { href: string; onClick?: (e: MouseEvent<HTMLAnchorElement>) => void }
 
 export type IconButtonProps = Comum & (AcaoBotao | AcaoLink)
 
@@ -59,7 +60,7 @@ export function IconButton(props: IconButtonProps) {
 
   if (props.href !== undefined) {
     return (
-      <a {...comum} href={props.href}>
+      <a {...comum} href={props.href} onClick={props.onClick}>
         {glifo}
       </a>
     )

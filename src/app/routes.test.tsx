@@ -80,7 +80,7 @@ describe('rotas', () => {
       expect(screen.queryByRole('navigation', { name: 'Navegação' })).not.toBeInTheDocument()
     })
 
-    it.each(['/entrar', '/preparando'])('%s não tem barra superior', async (caminho) => {
+    it.each(['/entrar', '/preparando', '/imagem/IMG-TESTE-0001-1'])('%s não tem barra superior', async (caminho) => {
       instalarMatchMedia(1280)
       abrir(caminho)
       await screen.findByRole('heading', { level: 1 })

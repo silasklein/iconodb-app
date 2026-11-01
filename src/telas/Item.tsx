@@ -5,6 +5,7 @@ import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
 import { item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
 import { NIVEIS } from '../banco/tipos'
+import type { EstadoDoVisualizador } from '../imagem/estado'
 import { ImagemItem } from '../item/ImagemItem'
 import { Leitura, type Idioma } from '../item/Leitura'
 import { acharLinks } from '../item/links'
@@ -249,8 +250,20 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     </>
   )
 
+  // Ampliar: o visualizador recebe o original ligado; ao fechar, o histórico volta a esta tela e o foco, ao botão.
+  const ampliarImagem = useCallback(
+    (imagemId: string, original: boolean) => navegar(`/imagem/${encodeURIComponent(imagemId)}`, { state: { ampliada: true, original } satisfies EstadoDoVisualizador }),
+    [navegar],
+  )
   const imagem = (
-    <ImagemItem numero={d.numero} imagens={d.imagens} regioes={regioes} elementoAceso={elementoAceso} comDica={computador} />
+    <ImagemItem
+      numero={d.numero}
+      imagens={d.imagens}
+      regioes={regioes}
+      elementoAceso={elementoAceso}
+      comDica={computador}
+      aoAmpliar={ampliarImagem}
+    />
   )
   const nav = posicao && <NavDePosicao posicao={posicao} estado={adiante} />
   const painel = aberta && (

@@ -13,6 +13,7 @@ import {
   grupo,
   grupos,
   hipotese,
+  imagem,
   item,
   obra,
   obras,
@@ -252,6 +253,16 @@ describe('consultas sobre o pacote sintético', () => {
       },
     ])
     expect(await regioes('IMG-TESTE-0001-1')).toEqual([])
+  })
+
+  it('imagem(id) traz a imagem com o número do objeto e quantas imagens ele tem', async () => {
+    expect(await imagem('IMG-TESTE-0001-2')).toEqual({
+      ...(await item('CA00001'))!.imagens[1],
+      numero: 'CA00001',
+      total: 2,
+    })
+    expect(await imagem('IMG-TESTE-0001-1')).toMatchObject({ id: 'IMG-TESTE-0001-1', numero: 'CA00001', display_mode: 'traco', ordinal: 1 })
+    expect(await imagem('IMG-NAO-EXISTE')).toBeNull()
   })
 })
 

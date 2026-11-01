@@ -1,0 +1,259 @@
+/*
+ * O visualizador de imagem (Imagem.dc.html no celular; PC-Imagem.dc.html no computador): tela cheia
+ * sobre o preto do painel da imagem. Barra no alto (fechar · número · original), o palco com a
+ * imagem, e a barra de ferramentas no pé. No computador, o painel "Elementos e regiões" à direita.
+ */
+.visualizador {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background: var(--painel-imagem);
+  color: var(--texto-item);
+  font-family: var(--fonte-texto);
+  overflow: hidden;
+}
+.visualizador-aviso {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+.visualizador-aviso h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.visualizador-aviso a {
+  color: var(--texto-item);
+}
+.vis-coluna {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.vis-topo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) 8px 0 12px;
+}
+.vis-topo-acoes {
+  min-width: var(--alvo-toque);
+  display: flex;
+  justify-content: flex-end;
+}
+.vis-titulo {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--secundario-item);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vis-numero {
+  color: var(--secundario-item);
+}
+
+/* O palco: a figura fica centrada e se move com transform; os gestos são todos nossos. */
+.vis-palco {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.vis-palco-ampliado {
+  cursor: grab;
+}
+.vis-palco-ampliado:active {
+  cursor: grabbing;
+}
+.vis-figura {
+  position: absolute;
+  transform-origin: center;
+  will-change: transform;
+}
+.vis-figura img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.vis-regioes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.vis-regioes polygon {
+  fill: rgba(255, 255, 255, 0.1);
+  stroke: #ffffff;
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+/* O nome do elemento: segue o canto da região, mas não cresce nem gira com a imagem. */
+.vis-rotulo {
+  position: absolute;
+  transform-origin: 0 100%;
+  transform: scale(calc(1 / var(--escala, 1))) rotate(calc(-1 * var(--giro, 0deg)));
+  max-width: 200px;
+  padding: 2px 6px;
+  border: 1px solid var(--secundario-item);
+  background: var(--painel-imagem);
+  color: var(--texto-item);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.vis-aviso {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 24px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secundario-item);
+  text-align: center;
+}
+.vis-credito {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 4px 24px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario-item);
+  text-align: center;
+}
+
+/* A barra de ferramentas no pé. */
+.vis-rodape {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px max(24px, env(safe-area-inset-bottom));
+}
+.vis-ferramentas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--filete-item);
+  border-radius: 12px;
+  background: #111111;
+}
+.vis-escala {
+  min-width: 48px;
+  font-size: 12px;
+  color: var(--secundario-item);
+  text-align: center;
+}
+.vis-separador {
+  width: 1px;
+  height: 24px;
+  margin: 0 6px;
+  background: var(--filete-item);
+}
+.vis-ferramentas .icon-button {
+  border-radius: 6px;
+}
+.vis-ferramentas .icon-button-pressionado {
+  background: var(--texto-item);
+  color: #111111;
+  box-shadow: none;
+}
+
+/* O painel "Elementos e regiões" (computador). */
+.vis-painel {
+  width: 360px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--fundo-item);
+  border-left: 1px solid var(--filete-item);
+}
+.vis-painel h2 {
+  margin: 0;
+  padding: 20px 16px 8px;
+  font-family: var(--fonte-titulo);
+  font-size: 16px;
+  font-weight: 600;
+}
+.vis-painel ul {
+  margin: 0;
+  padding: 0 8px 16px;
+  list-style: none;
+}
+.vis-painel li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.vis-painel-nome {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.vis-painel-de {
+  font-size: 12px;
+  color: var(--secundario-item);
+}
+.vis-painel .icon-button-pressionado {
+  box-shadow: none;
+  background: var(--texto-item);
+  color: #111111;
+  border-radius: 6px;
+}
+
+@media (min-width: 768px) {
+  .vis-topo {
+    height: 64px;
+    box-sizing: border-box;
+    padding: 0 16px;
+  }
+  .vis-titulo {
+    flex: 1 1 0;
+    font-size: 14px;
+  }
+  .vis-topo-acoes {
+    display: none;
+  }
+  .vis-numero {
+    color: var(--texto-item);
+  }
+  .vis-ferramentas {
+    width: auto;
+    justify-content: center;
+  }
+  .vis-rodape {
+    padding-bottom: 24px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .vis-painel {
+    width: 280px;
+  }
+}

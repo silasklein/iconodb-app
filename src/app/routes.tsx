@@ -4,6 +4,7 @@ import { Busca } from '../telas/Busca'
 import { Colecoes } from '../telas/Colecoes'
 import { Entrar } from '../telas/Entrar'
 import { Grupo } from '../telas/Grupo'
+import { Imagem } from '../telas/Imagem'
 import { Item } from '../telas/Item'
 import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
@@ -44,7 +45,7 @@ export const ROTAS: Rota[] = [
   { path: '/colecoes', elemento: <Colecoes /> },
   { path: '/grupo/:id', elemento: <Grupo /> },
   { path: '/item/:numero', elemento: <Item /> },
-  { path: '/imagem/:id', elemento: <Provisoria titulo="Imagem" /> },
+  { path: '/imagem/:id', elemento: <Imagem /> },
   { path: '/glossario', elemento: <Provisoria titulo="Glossário" /> },
   { path: '/verbete/:id', elemento: <Provisoria titulo="Verbete" /> },
   { path: '/bibliografia', elemento: <Provisoria titulo="Bibliografia" /> },
@@ -56,8 +57,12 @@ export const ROTAS: Rota[] = [
   { path: '/notas', elemento: <MinhasNotas /> },
 ]
 
-/** Telas sem a barra superior: a entrada e o primeiro download (antes de haver o que consultar). */
-export const SEM_BARRA_SUPERIOR = ['/entrar', '/preparando']
+/**
+ * Telas sem a barra superior: a entrada e o primeiro download (antes de haver o que consultar) e o
+ * visualizador de imagem (tela cheia). Um item que termina em "/" vale para tudo sob esse caminho.
+ */
+export const SEM_BARRA_SUPERIOR = ['/entrar', '/preparando', '/imagem/']
+const semBarraSuperior = (pathname: string) => SEM_BARRA_SUPERIOR.some((p) => (p.endsWith('/') ? pathname.startsWith(p) : pathname === p))
 
 /**
  * A barra superior das telas de computador (a partir de 768 px) fica fora das rotas, para
@@ -66,7 +71,7 @@ export const SEM_BARRA_SUPERIOR = ['/entrar', '/preparando']
 function BarraDasTelasLargas({ noInicio = false }: { noInicio?: boolean }) {
   const { pathname } = useLocation()
   const computador = useBreakpoint() === 'computador'
-  if (!computador || SEM_BARRA_SUPERIOR.includes(pathname)) return null
+  if (!computador || semBarraSuperior(pathname)) return null
   // Em "/" a barra só vem com o Início, depois que a guarda decidiu (RotaInicial): antes disso, ou se
   // o destino for outro, não há o que consultar e a barra não deve nem consultar o banco.
   if (pathname === '/' && !noInicio) return null
