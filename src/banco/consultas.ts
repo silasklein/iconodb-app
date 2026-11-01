@@ -1,0 +1,809 @@
+/**
+ * As consultas do app. É o único lugar com SQL de leitura (além da busca, Tarefa 6);
+ * as telas chamam estas funções e recebem objetos de src/banco/tipos.ts.
+ *
+ * comum.sqlite é `main`; cada publicação do pacote é um esquema `pub_<SIGLA>`. As
+ * tabelas de publicação são lidas por UNION ALL sobre todos os esquemas abertos.
+ * Os deslocamentos de texto ficam em code points (ver tipos.ts).
+ */
+import { executar, publicacoesAbertas, type Parametro, type PublicacaoAberta } from './cliente'
+import {
+  NIVEIS,
+  type Ancora,
+  type CampoDoCatalogo,
+  type Certeza,
+  type Contagens,
+  type ContextoDeNavegacao,
+  type Datacao,
+  type DatacaoCssl,
+  type Grupo,
+  type GrupoDetalhe,
+  type Hipotese,
+  type HipotesesPorNivel,
+  type Imagem,
+  type ItemDaFonte,
+  type ItemDetalhe,
+  type Leitura,
+  type Medida,
+  type ModoDeExibicao,
+  type Numero,
+  type ObjetoResumo,
+  type Obra,
+  type ObraResumo,
+  type Paralelo,
+  type ReferenciaBibliografica,
+  type Regiao,
+  type Remissao,
+  type Sitio,
+  type SitioDoItem,
+  type SitioResumo,
+  type Termo,
+  type TextoDaIntroducao,
+  type Verbete,
+  type VerbeteResumo,
+  type Vizinhos,
+} from './tipos'
+
+export * from './tipos'
+
+type Params = Record<string, Parametro>
+type L = Record<string, unknown>
+
+// ---------------------------------------------------------------------------
+// Auxiliares
+// ---------------------------------------------------------------------------
+
+const s = (v: unknown): string | null => (typeof v === 'string' ? v : v == null ? null : String(v))
+const n = (v: unknown): number | null => (typeof v === 'number' ? v : typeof v === 'bigint' ? Number(v) : null)
+const b = (v: unknown): boolean => v === 1 || v === true
+const ids = (lista: readonly string[]) => JSON.stringify(lista)
+const EM_IDS = '(SELECT value FROM json_each($ids))'
+
+function json<T>(texto: unknown, padrao: T): T {
+  if (typeof texto !== 'string' || texto === '') return padrao
+  try {
+    return JSON.parse(texto) as T
+  } catch {
+    return padrao
+  }
+}
+
+/** [[gl_id, início, fim], …] de unit_pt_render.termos. */
+function termos(texto: unknown): Termo[] {
+  return json<unknown[]>(texto, [])
+    .filter((t): t is [string, number, number] => Array.isArray(t) && typeof t[0] === 'string' && typeof t[1] === 'number' && typeof t[2] === 'number')
+    .map(([glId, inicio, fim]) => ({ glId, inicio, fim }))
+}
+
+/** Uma subconsulta por publicação aberta, unidas. `null` se o pacote não tem publicação. */
+function porPublicacao(pubs: readonly PublicacaoAberta[], montar: (esq: string, sigla: string) => string): string | null {
+  if (pubs.length === 0) return null
+  return pubs.map((p) => montar(p.esquema, p.sigla)).join('\nUNION ALL\n')
+}
+
+async function linhasPorPublicacao(montar: (esq: string, sigla: string) => string, parametros: Params = {}): Promise<L[]> {
+  const sql = porPublicacao(await publicacoesAbertas(), montar)
+  return sql ? executar<L>(sql, parametros) : []
+}
+
+/** "TESTE I, 60", "TESTE I, 95a" ou "TESTE I, Abb. 1". */
+function origemDe(l: L): string {
+  const prefixo = `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim()
+  const numero = l.kind === 'intro_figure' ? `Abb. ${n(l.number)}` : `${n(l.number)}${s(l.suffix) ?? ''}`
+  return `${prefixo}, ${numero}`
+}
+
+/** Tipo curto: a primeira frase do campo 5, sem o ponto final. */
+function tipoCurto(texto: string | null): string | null {
+  if (!texto) return null
+  const primeira = texto.split(/(?<=\.)\s+/)[0] ?? texto
+  return primeira.replace(/\.$/, '').trim() || null
+}
+
+/** Ordem das fontes: publicação na ordem do manifesto, catálogo antes das figuras, número, sufixo. */
+async function comparadorDeFonte(): Promise<(a: L, b: L) => number> {
+  const ordemPub = new Map((await publicacoesAbertas()).map((p, i) => [p.sigla, i]))
+  return (x, y) =>
+    (ordemPub.get(s(x.publication) ?? '') ?? 99) - (ordemPub.get(s(y.publication) ?? '') ?? 99) ||
+    (x.kind === y.kind ? 0 : x.kind === 'catalog' ? -1 : 1) ||
+    (n(x.number) ?? 0) - (n(y.number) ?? 0) ||
+    (s(x.suffix) ?? '').localeCompare(s(y.suffix) ?? '')
+}
+
+/** Item → número do objeto (o próprio id quando o item ainda não tem número). */
+async function numerosDosItens(itens: readonly string[]): Promise<Map<string, Numero>> {
+  const mapa = new Map<string, Numero>(itens.map((i) => [i, i]))
+  if (itens.length === 0) return mapa
+  const linhas = await executar<L>(`SELECT item_id, object_id FROM main.object_member WHERE item_id IN ${EM_IDS}`, { $ids: ids(itens) })
+  for (const l of linhas) mapa.set(s(l.item_id)!, s(l.object_id)!)
+  return mapa
+}
+
+const SQL_ITEM = (esq: string) => `
+  SELECT i.id, i.publication, i.kind, i.number, i.suffix, coalesce(i.volume, p.volume) AS volume
+  FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
+  WHERE i.id IN ${EM_IDS}`
+
+const SQL_RESUMO = (esq: string) => `
+  SELECT i.id, i.publication, i.kind, i.number, i.suffix, coalesce(i.volume, p.volume) AS volume,
+    coalesce(r.texto, cf.literal) AS campo5,
+    (SELECT coalesce(g.pt, st.literal_name) FROM ${esq}.assertion a
+       JOIN ${esq}.site st ON st.id = a.site_id
+       LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
+     WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot'
+     ORDER BY a.is_primary DESC, a.id LIMIT 1) AS sitio,
+    im.thumb_path, im.display_mode
+  FROM ${esq}.item i
+  LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
+  LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = i.id || '#5'
+  LEFT JOIN ${esq}.catalog_field cf ON cf.item_id = i.id AND cf.category = 5
+  LEFT JOIN ${esq}.image im ON im.id = (SELECT id FROM ${esq}.image WHERE item_id = i.id ORDER BY ordinal LIMIT 1)
+  WHERE i.id IN ${EM_IDS}`
+
+/**
+ * Resumos dos objetos destes itens, um por objeto (o primeiro item de cada um).
+ * `ordem: 'dada'` mantém a ordem da lista; `'fonte'` ordena pela ordem das fontes.
+ */
+async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 'fonte'): Promise<ObjetoResumo[]> {
+  if (itens.length === 0) return []
+  const linhas = await linhasPorPublicacao(SQL_RESUMO, { $ids: ids(itens) })
+  if (ordem === 'dada') {
+    const posicao = new Map(itens.map((id, i) => [id, i]))
+    linhas.sort((x, y) => posicao.get(s(x.id)!)! - posicao.get(s(y.id)!)!)
+  } else {
+    linhas.sort(await comparadorDeFonte())
+  }
+  const numeros = await numerosDosItens(linhas.map((l) => s(l.id)!))
+  const vistos = new Set<string>()
+  const resumos: ObjetoResumo[] = []
+  for (const l of linhas) {
+    const numero = numeros.get(s(l.id)!)!
+    if (vistos.has(numero)) continue
+    vistos.add(numero)
+    resumos.push({
+      numero,
+      itemId: s(l.id)!,
+      origem: origemDe(l),
+      tipo: tipoCurto(s(l.campo5)),
+      sitio: s(l.sitio),
+      miniatura: s(l.thumb_path),
+      display_mode: s(l.display_mode) as ModoDeExibicao | null,
+    })
+  }
+  return resumos
+}
+
+// ---------------------------------------------------------------------------
+// Hipóteses
+// ---------------------------------------------------------------------------
+
+const ALVO_ITEM = `CASE WHEN h.target_type = 'element' THEN e.target_id WHEN h.target_type = 'item' THEN h.target_id END`
+
+const SQL_HIPOTESE = (esq: string, onde: string) => `
+  SELECT h.id, h.target_type, h.target_id, h.level, h.modality, h.publication, h.locator, h.passage_id,
+    h.quote, h.quote_start, h.quote_end, h.cited_from_item, h.verification, h.religiosity,
+    e.label AS el_label, e.label_pt AS el_label_pt, om.object_id AS alvo_numero, ${ALVO_ITEM} AS alvo_item,
+    a.unit_id, a.gl_id, a.pt_start, a.pt_end, a.metodo,
+    (SELECT json_group_array(json_array(x.glossary_id, x.pt, x.de)) FROM (
+       SELECT ht.glossary_id, coalesce(g.pt_text, g.pt) AS pt, g.de
+       FROM ${esq}.hypothesis_term ht LEFT JOIN main.glossary_entry g ON g.id = ht.glossary_id
+       WHERE ht.hypothesis_id = h.id ORDER BY ht.ordinal, ht.glossary_id) x) AS termos_json,
+    (SELECT json_group_array(json_array(y.author, y.role)) FROM (
+       SELECT author, role FROM ${esq}.hypothesis_author WHERE hypothesis_id = h.id
+       ORDER BY CASE role WHEN 'author' THEN 0 WHEN 'reported' THEN 1 ELSE 2 END, rowid) y) AS autores_json
+  FROM ${esq}.hypothesis h
+  LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id
+  LEFT JOIN ${esq}.hypothesis_anchor_pt a ON a.hypothesis_id = h.id
+  LEFT JOIN main.object_member om ON om.item_id = ${ALVO_ITEM}
+  WHERE ${onde}`
+
+function hipoteseDe(l: L): Hipotese {
+  const alvoNumero = s(l.alvo_numero) ?? s(l.alvo_item)
+  return {
+    id: s(l.id)!,
+    nivel: s(l.level) as Hipotese['nivel'],
+    modalidade: s(l.modality) as Hipotese['modalidade'],
+    publicacao: s(l.publication),
+    locator: s(l.locator),
+    passagemId: s(l.passage_id),
+    citacao: s(l.quote),
+    citacaoInicio: n(l.quote_start),
+    citacaoFim: n(l.quote_end),
+    citadaDe: s(l.cited_from_item),
+    alvo: {
+      tipo: s(l.target_type) as Hipotese['alvo']['tipo'],
+      id: s(l.target_id)!,
+      numero: alvoNumero,
+      itemId: s(l.alvo_item),
+      rotulo: l.target_type === 'element' ? (s(l.el_label_pt) ?? s(l.el_label)) : null,
+    },
+    termos: json<[string, string | null, string | null][]>(l.termos_json, []).map(([glId, pt, de]) => ({ glId, pt, de })),
+    autores: json<[string, string][]>(l.autores_json, []).map(([nome, papel]) => ({ nome, papel: papel as Hipotese['autores'][number]['papel'] })),
+    verificacao: s(l.verification) as Hipotese['verificacao'],
+    religiosidade: s(l.religiosity) as Hipotese['religiosidade'],
+    ancora: l.metodo
+      ? { unidade: s(l.unit_id)!, metodo: s(l.metodo) as 'termo', glId: s(l.gl_id), inicio: n(l.pt_start), fim: n(l.pt_end) }
+      : null,
+  }
+}
+
+/** Ordem de leitura: trecho, posição da citação, id. */
+function ordenarHipoteses(hs: Hipotese[]): Hipotese[] {
+  return hs.sort(
+    (x, y) =>
+      (x.passagemId ?? '').localeCompare(y.passagemId ?? '') ||
+      (x.citacaoInicio ?? Infinity) - (y.citacaoInicio ?? Infinity) ||
+      x.id.localeCompare(y.id),
+  )
+}
+
+async function hipotesesOnde(onde: string | ((esq: string) => string), parametros: Params): Promise<Hipotese[]> {
+  const condicao = typeof onde === 'string' ? () => onde : onde
+  return ordenarHipoteses((await linhasPorPublicacao((esq) => SQL_HIPOTESE(esq, condicao(esq)), parametros)).map(hipoteseDe))
+}
+
+function porNivel(hs: Hipotese[]): HipotesesPorNivel {
+  const r = Object.fromEntries(NIVEIS.map((nv) => [nv, [] as Hipotese[]])) as HipotesesPorNivel
+  for (const h of hs) r[h.nivel]?.push(h)
+  return r
+}
+
+export async function hipotese(id: string): Promise<Hipotese | null> {
+  return (await hipotesesOnde('h.id = $id', { $id: id }))[0] ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Contagens e grupos
+// ---------------------------------------------------------------------------
+
+export async function contagens(): Promise<Contagens> {
+  const pubs = await publicacoesAbertas()
+  const soma = porPublicacao(pubs, (esq) => `SELECT count(*) AS n FROM ${esq}.hypothesis`)
+  const [l] = await executar<L>(`
+    SELECT (SELECT count(*) FROM main.object) AS objetos,
+           ${soma ? `(SELECT coalesce(sum(n), 0) FROM (${soma}))` : '0'} AS hipoteses,
+           (SELECT count(*) FROM main.glossary_entry) AS verbetes`)
+  return { objetos: n(l!.objetos) ?? 0, hipoteses: n(l!.hipoteses) ?? 0, verbetes: n(l!.verbetes) ?? 0 }
+}
+
+const SQL_GRUPO = (esq: string, onde: string) => `
+  SELECT g.id, g.publication, g.volume, g.ordinal, g.path, g.title_de, g.title_pt, g.period_pt, g.intro_passage_id,
+    (SELECT count(DISTINCT coalesce(om.object_id, gi.item_id)) FROM ${esq}.author_group_item gi
+       LEFT JOIN main.object_member om ON om.item_id = gi.item_id WHERE gi.group_id = g.id) AS objetos,
+    (SELECT count(*) FROM ${esq}.author_group_item gi JOIN ${esq}.image im ON im.item_id = gi.item_id
+     WHERE gi.group_id = g.id) AS imagens,
+    (SELECT count(*) FROM ${esq}.hypothesis h
+       LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id
+     WHERE ${ALVO_ITEM} IN (SELECT item_id FROM ${esq}.author_group_item WHERE group_id = g.id)) AS hipoteses,
+    (SELECT json_array(im.thumb_path, im.display_mode) FROM ${esq}.author_group_item gi
+       JOIN ${esq}.image im ON im.item_id = gi.item_id
+     WHERE gi.group_id = g.id AND im.thumb_path IS NOT NULL ORDER BY gi.ordinal, im.ordinal LIMIT 1) AS capa
+  FROM ${esq}.author_group g
+  WHERE ${onde}`
+
+function grupoDe(l: L): Grupo {
+  const capa = json<[string, string | null] | null>(l.capa, null)
+  return {
+    id: s(l.id)!,
+    publicacao: s(l.publication)!,
+    volume: s(l.volume) ?? '',
+    ordinal: n(l.ordinal) ?? 0,
+    titulo: s(l.title_pt) ?? s(l.title_de)!,
+    tituloDe: s(l.title_de)!,
+    periodo: s(l.period_pt),
+    caminho: json<string[]>(l.path, []),
+    introducaoId: s(l.intro_passage_id),
+    objetos: n(l.objetos) ?? 0,
+    imagens: n(l.imagens) ?? 0,
+    hipoteses: n(l.hipoteses) ?? 0,
+    capa: capa ? { miniatura: capa[0], display_mode: capa[1] as ModoDeExibicao | null } : null,
+  }
+}
+
+/** Os grupos da obra (todos, ou só os de uma publicação), na ordem do livro. */
+export async function grupos(publicacao?: string): Promise<Grupo[]> {
+  const pubs = await publicacoesAbertas()
+  const ordemPub = new Map(pubs.map((p, i) => [p.sigla, i]))
+  const linhas = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, '($pub IS NULL OR g.publication = $pub)'), { $pub: publicacao ?? null })
+  return linhas
+    .map(grupoDe)
+    .sort(
+      (x, y) =>
+        (ordemPub.get(x.publicacao) ?? 99) - (ordemPub.get(y.publicacao) ?? 99) ||
+        x.volume.localeCompare(y.volume) ||
+        x.ordinal - y.ordinal,
+    )
+}
+
+/** Os itens do grupo, na ordem de author_group_item.ordinal. */
+async function itensDoGrupo(id: string): Promise<string[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT item_id, ordinal FROM ${esq}.author_group_item WHERE group_id = $id`,
+    { $id: id },
+  )
+  return linhas.sort((x, y) => (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0)).map((l) => s(l.item_id)!)
+}
+
+const SQL_TRECHO = (esq: string) => `
+  SELECT p.id, p.text, r.texto, r.termos FROM ${esq}.passage p
+  LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id WHERE p.id = $id`
+
+async function trecho(id: string): Promise<TextoDaIntroducao | null> {
+  const [l] = await linhasPorPublicacao(SQL_TRECHO, { $id: id })
+  return l ? { id: s(l.id)!, texto: s(l.texto), original: s(l.text) ?? '', termos: termos(l.termos) } : null
+}
+
+export async function grupo(id: string): Promise<GrupoDetalhe | null> {
+  const [l] = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, 'g.id = $id'), { $id: id })
+  if (!l) return null
+  const g = grupoDe(l)
+  return {
+    ...g,
+    introducao: g.introducaoId ? await trecho(g.introducaoId) : null,
+    itens: await resumosDosItens(await itensDoGrupo(id), 'dada'),
+  }
+}
+
+/** Os números, sem repetição, de uma lista de números ou ids de item. */
+async function numerosEmOrdem(lista: readonly string[]): Promise<Numero[]> {
+  const numeros = await numerosDosItens(lista)
+  return [...new Set(lista.map((id) => numeros.get(id) ?? id))]
+}
+
+/** Anterior, próximo e posição ("2 / 3") do objeto no grupo ou numa lista (a da busca). null se ele não está lá. */
+export async function vizinhos(numero: string, contexto: ContextoDeNavegacao): Promise<Vizinhos | null> {
+  const lista = await numerosEmOrdem(contexto.tipo === 'grupo' ? await itensDoGrupo(contexto.id) : contexto.ids)
+  const [alvo] = await numerosEmOrdem([numero])
+  const i = lista.indexOf(alvo!)
+  if (i < 0) return null
+  return { anterior: lista[i - 1] ?? null, proximo: lista[i + 1] ?? null, posicao: i + 1, total: lista.length }
+}
+
+// ---------------------------------------------------------------------------
+// Item
+// ---------------------------------------------------------------------------
+
+/** Os itens-membros do objeto (pelo número dele ou pelo id de um dos seus itens), na ordem das fontes. */
+async function membros(numeroOuItem: string): Promise<{ numero: Numero; itens: L[] } | null> {
+  const linhas = await executar<L>(
+    `SELECT object_id, item_id FROM main.object_member
+     WHERE object_id = $n OR object_id = (SELECT object_id FROM main.object_member WHERE item_id = $n)`,
+    { $n: numeroOuItem },
+  )
+  const numero = s(linhas[0]?.object_id) ?? numeroOuItem
+  const idsDosItens = linhas.length > 0 ? linhas.map((l) => s(l.item_id)!) : [numeroOuItem]
+  const itens = await linhasPorPublicacao(SQL_ITEM, { $ids: ids(idsDosItens) })
+  if (itens.length === 0) return null
+  return { numero, itens: itens.sort(await comparadorDeFonte()) }
+}
+
+export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
+  const m = await membros(numeroOuItem)
+  if (!m) return null
+  const idsDosItens = m.itens.map((l) => s(l.id)!)
+  const ordemDoItem = new Map(idsDosItens.map((id, i) => [id, i]))
+  const porItem = (x: L, y: L, campo = 'item_id') => ordemDoItem.get(s(x[campo])!)! - ordemDoItem.get(s(y[campo])!)!
+  const p = { $ids: ids(idsDosItens) }
+  const origemPorItem = new Map(m.itens.map((l) => [s(l.id)!, origemDe(l)]))
+
+  const [imagens, datacoes, afirmacoes, campos, passagens, paralelosL, bib, gruposL] = await Promise.all([
+    linhasPorPublicacao((esq) => `SELECT * FROM ${esq}.image WHERE item_id IN ${EM_IDS}`, p),
+    linhasPorPublicacao(
+      (esq) => `SELECT d.*, (SELECT json_group_array(json_array(c.cssl_code, c.relation, c.approximate))
+                  FROM (SELECT * FROM ${esq}.dating_cssl WHERE dating_id = d.id ORDER BY id) c) AS cssl
+                FROM ${esq}.dating d WHERE d.subject_type = 'item' AND d.subject_id IN ${EM_IDS}`,
+      p,
+    ),
+    linhasPorPublicacao(
+      (esq, sigla) => `SELECT a.subject_id AS item_id, a.id, a.field, a.value, a.certainty, a.is_primary, a.site_id,
+                  '${sigla}' AS sigla, st.literal_name, st.name_entry_id, st.lat, st.lon, g.pt AS gl_pt
+                FROM ${esq}.assertion a LEFT JOIN ${esq}.site st ON st.id = a.site_id
+                LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
+                WHERE a.subject_type = 'item' AND a.subject_id IN ${EM_IDS}
+                  AND a.field IN ('findspot', 'context', 'holding', 'dimensions')`,
+      p,
+    ),
+    linhasPorPublicacao(
+      (esq) => `SELECT cf.*, r.texto, r.termos FROM ${esq}.catalog_field cf
+                LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = cf.unit_id
+                WHERE cf.item_id IN ${EM_IDS} AND (cf.category BETWEEN 3 AND 8 OR cf.category = 0)`,
+      p,
+    ),
+    linhasPorPublicacao(
+      (esq) => `SELECT pi.item_id, p.id, p.publication, p.text, p.ordinal, p.translation_state, p.translation_stale,
+                  r.texto, r.termos
+                FROM ${esq}.passage_item pi JOIN ${esq}.passage p ON p.id = pi.passage_id
+                LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id
+                WHERE pi.role = 'describes' AND pi.item_id IN ${EM_IDS}`,
+      p,
+    ),
+    linhasPorPublicacao((esq) => `SELECT * FROM ${esq}.comparison WHERE from_type = 'item' AND from_id IN ${EM_IDS}`, p),
+    linhasPorPublicacao(
+      (esq) => `SELECT r.*, b.chicago, b.chicago_html FROM ${esq}.bib_ref r
+                LEFT JOIN main.bib_entry b ON b.id = r.bib_entry_id WHERE r.item_id IN ${EM_IDS}`,
+      p,
+    ),
+    linhasPorPublicacao(
+      (esq) => `SELECT gi.item_id, g.id, g.publication, g.volume, g.ordinal, coalesce(g.title_pt, g.title_de) AS titulo
+                FROM ${esq}.author_group_item gi JOIN ${esq}.author_group g ON g.id = gi.group_id
+                WHERE gi.item_id IN ${EM_IDS}`,
+      p,
+    ),
+  ])
+
+  // Hipóteses: as do objeto (sobre um item dele ou sobre um elemento de um item dele) e as que os
+  // textos dele sustentam sobre outros alvos.
+  passagens.sort((x, y) => porItem(x, y) || (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0))
+  const idsDasPassagens = passagens.map((l) => s(l.id)!)
+  const todas = await hipotesesOnde(`${ALVO_ITEM} IN ${EM_IDS} OR h.passage_id IN (SELECT value FROM json_each($passagens))`, {
+    ...p,
+    $passagens: ids(idsDasPassagens),
+  })
+  const proprias = todas.filter((h) => h.alvo.itemId !== null && idsDosItens.includes(h.alvo.itemId))
+  const outras = todas.filter((h) => !proprias.includes(h))
+
+  const leituras: Leitura[] = passagens.map((l) => {
+    const unidade = s(l.id)!
+    const ancoras: Ancora[] = todas
+      .filter((h) => h.ancora?.unidade === unidade && h.ancora.metodo === 'termo' && h.ancora.inicio !== null && h.ancora.fim !== null)
+      .map((h) => ({ hipoteseId: h.id, glId: h.ancora!.glId!, inicio: h.ancora!.inicio!, fim: h.ancora!.fim!, nivel: h.nivel, modalidade: h.modalidade }))
+      .sort((x, y) => x.inicio - y.inicio || x.fim - y.fim)
+    return {
+      fonte: origemPorItem.get(s(l.item_id)!)!,
+      publicacao: s(l.publication)!,
+      itemId: s(l.item_id)!,
+      passagemId: unidade,
+      texto: s(l.texto),
+      original: s(l.text) ?? '',
+      termos: termos(l.termos),
+      ancoras,
+      estado: s(l.translation_state) as Leitura['estado'],
+      desatualizada: b(l.translation_stale),
+    }
+  })
+
+  // Ficha: datação, sítio, acervo e medidas (do primeiro item que os tem; a afirmação principal primeiro).
+  afirmacoes.sort((x, y) => porItem(x, y) || (n(y.is_primary) ?? 0) - (n(x.is_primary) ?? 0) || (n(x.id) ?? 0) - (n(y.id) ?? 0))
+  const primeira = (campo: string) => afirmacoes.find((a) => a.field === campo)
+  const achado = primeira('findspot')
+  const sitio: SitioDoItem | null =
+    achado && n(achado.site_id) !== null
+      ? {
+          id: `${s(achado.sigla)}-${n(achado.site_id)}`,
+          nome: s(achado.gl_pt) ?? s(achado.literal_name) ?? s(achado.value)!,
+          literal: s(achado.literal_name) ?? s(achado.value)!,
+          glId: s(achado.name_entry_id),
+          lat: n(achado.lat),
+          lon: n(achado.lon),
+          certeza: s(achado.certainty) as Certeza,
+          contexto: s(afirmacoes.find((a) => a.field === 'context' && a.item_id === achado.item_id)?.value),
+        }
+      : null
+  campos.sort((x, y) => porItem(x, y) || (n(x.category) ?? 0) - (n(y.category) ?? 0))
+  const catalogo: CampoDoCatalogo[] = campos.map((l) => ({
+    itemId: s(l.item_id)!,
+    categoria: n(l.category)!,
+    unidade: s(l.unit_id)!,
+    literal: s(l.literal)!,
+    texto: s(l.texto),
+    termos: termos(l.termos),
+    estado: s(l.translation_state) as CampoDoCatalogo['estado'],
+    desatualizada: b(l.translation_stale),
+  }))
+  const campo = (cat: number) => catalogo.find((c) => c.categoria === cat)
+  const dimensoes = primeira('dimensions')
+  const medidas =
+    campo(6) || dimensoes
+      ? {
+          texto: campo(6)?.literal ?? null,
+          valores: json<{ dim?: unknown; value_cm?: unknown; qualifier?: unknown }[]>(dimensoes?.value, []).map(
+            (d): Medida => ({ dim: s(d.dim) ?? '', cm: n(d.value_cm), qualificador: s(d.qualifier) }),
+          ),
+        }
+      : null
+  const descricao = campo(5) ? (campo(5)!.texto ?? campo(5)!.literal) : null
+
+  datacoes.sort((x, y) => porItem(x, y, 'subject_id') || (n(x.id) ?? 0) - (n(y.id) ?? 0))
+  imagens.sort((x, y) => porItem(x, y) || (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0))
+  paralelosL.sort((x, y) => porItem(x, y, 'from_id') || (n(x.id) ?? 0) - (n(y.id) ?? 0))
+  bib.sort((x, y) => porItem(x, y) || (n(x.id) ?? 0) - (n(y.id) ?? 0))
+  gruposL.sort((x, y) => porItem(x, y) || (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0))
+
+  // Remissões: itens citados nos textos do objeto ("cf. 2"), fora o próprio objeto.
+  const mencionados = idsDasPassagens.length
+    ? await linhasPorPublicacao(
+        (esq) => `SELECT DISTINCT item_id FROM ${esq}.passage_item
+                  WHERE role = 'mentions' AND passage_id IN ${EM_IDS} AND item_id NOT IN (SELECT value FROM json_each($itens))`,
+        { $ids: ids(idsDasPassagens), $itens: p.$ids },
+      )
+    : []
+  const alvosDosParalelos = paralelosL.filter((l) => l.to_type === 'item' && s(l.to_id)).map((l) => s(l.to_id)!)
+  const idsMencionados = mencionados.map((l) => s(l.item_id)!)
+  const outrosItens = [...new Set([...alvosDosParalelos, ...idsMencionados])]
+  const [numerosDeOutros, existentes] = await Promise.all([
+    numerosDosItens(outrosItens),
+    outrosItens.length ? linhasPorPublicacao(SQL_ITEM, { $ids: ids(outrosItens) }) : Promise.resolve([]),
+  ])
+  const origemDeOutro = new Map(existentes.map((l) => [s(l.id)!, origemDe(l)]))
+  const ordenarFonte = await comparadorDeFonte()
+  // As que apontam para um item fora do pacote (órfãs) ficam no fim, com número e origem nulos.
+  const remissoes: Remissao[] = [
+    ...existentes.filter((l) => idsMencionados.includes(s(l.id)!)).sort(ordenarFonte),
+    ...idsMencionados.filter((id) => !origemDeOutro.has(id)).map((id): L => ({ id })),
+  ].map((l) => {
+    const id = s(l.id)!
+    return { itemId: id, numero: origemDeOutro.has(id) ? numerosDeOutros.get(id)! : null, origem: origemDeOutro.get(id) ?? null }
+  })
+  const paralelos: Paralelo[] = paralelosL.map((l) => {
+    const alvo = l.to_type === 'external' ? null : s(l.to_id)
+    return {
+      grau: s(l.degree) as Paralelo['grau'],
+      numero: alvo ? (origemDeOutro.has(alvo) ? numerosDeOutros.get(alvo)! : null) : null,
+      itemId: alvo,
+      externo: s(l.to_external),
+      semelhanca: s(l.similarity),
+      locator: s(l.locator),
+    }
+  })
+
+  const vistosGrupos = new Set<string>()
+  const gruposDoObjeto = gruposL
+    .filter((l) => !vistosGrupos.has(s(l.id)!) && vistosGrupos.add(s(l.id)!))
+    .map((l) => ({ id: s(l.id)!, titulo: s(l.titulo)! }))
+
+  return {
+    numero: m.numero,
+    itens: m.itens.map((l): ItemDaFonte => ({ id: s(l.id)!, publicacao: s(l.publication)!, tipo: s(l.kind) as ItemDaFonte['tipo'], origem: origemDe(l) })),
+    origem: origemDe(m.itens[0]!),
+    tipo: tipoCurto(descricao),
+    descricao,
+    datacoes: datacoes.map(
+      (l): Datacao => ({
+        itemId: s(l.subject_id)!,
+        esquema: s(l.scheme)!,
+        periodoDe: s(l.period_from),
+        periodoAte: s(l.period_to),
+        qualificador: s(l.qualifier),
+        anoDe: n(l.year_from),
+        anoAte: n(l.year_to),
+        aproximada: b(l.approximate),
+        certeza: s(l.certainty) as Certeza,
+        motivo: s(l.reason),
+        cssl: json<[string, string, number][]>(l.cssl, []).map(
+          ([codigo, relacao, aprox]): DatacaoCssl => ({ codigo, relacao: relacao as DatacaoCssl['relacao'], aproximada: aprox === 1 }),
+        ),
+      }),
+    ),
+    sitio,
+    medidas,
+    acervo: s(primeira('holding')?.value),
+    imagens: imagens.map(
+      (l): Imagem => ({
+        id: s(l.id)!,
+        itemId: s(l.item_id)!,
+        ordinal: n(l.ordinal)!,
+        display_mode: s(l.display_mode) as ModoDeExibicao | null,
+        tela: s(l.screen_path),
+        miniatura: s(l.thumb_path),
+        largura: n(l.width_px),
+        altura: n(l.height_px),
+        credito: s(l.credit),
+        rotacao: n(l.rotation),
+      }),
+    ),
+    leituras,
+    catalogo,
+    hipotesesPorNivel: porNivel(proprias),
+    outrasHipoteses: outras,
+    relacoes: { paralelos, remissoes },
+    bibliografia: bib.map(
+      (l): ReferenciaBibliografica => ({
+        id: n(l.id)!,
+        itemId: s(l.item_id),
+        categoria: n(l.category),
+        bruto: s(l.raw)!,
+        curta: s(l.short_cite),
+        paginas: s(l.pages),
+        obraId: s(l.bib_entry_id),
+        resolvida: l.status === 'resolved',
+        chicago: s(l.chicago),
+        chicagoHtml: s(l.chicago_html),
+        hipoteseId: s(l.hypothesis_id),
+        passagemId: s(l.passage_id),
+      }),
+    ),
+    grupos: gruposDoObjeto,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Glossário, bibliografia, sítios e regiões
+// ---------------------------------------------------------------------------
+
+function verbeteResumoDe(l: L): VerbeteResumo {
+  return {
+    id: s(l.id)!,
+    tipo: s(l.kind) as VerbeteResumo['tipo'],
+    pt: s(l.pt),
+    de: s(l.de),
+    status: s(l.status) as VerbeteResumo['status'],
+  }
+}
+
+/** Todos os verbetes, em ordem alfabética da forma em português. */
+export async function verbetes(): Promise<VerbeteResumo[]> {
+  const linhas = await executar<L>('SELECT id, kind, pt, de, status FROM main.glossary_entry')
+  return linhas.map(verbeteResumoDe).sort((x, y) => (x.pt ?? x.de ?? '').localeCompare(y.pt ?? y.de ?? '', 'pt'))
+}
+
+export async function verbete(glId: string): Promise<Verbete | null> {
+  const [l] = await executar<L>(
+    `SELECT g.*, pai.pt AS pai_pt,
+       (SELECT json_group_array(json_array(j.value, ic.pt, ic.de, ic.en)) FROM json_each(g.iconclass) j
+          LEFT JOIN main.iconclass ic ON ic.notation = j.value) AS iconclass_json,
+       (SELECT json_group_array(json_array(j.value, ss.label_en)) FROM json_each(g.sssl) j
+          LEFT JOIN main.sssl ss ON ss.code = j.value) AS sssl_json
+     FROM main.glossary_entry g LEFT JOIN main.glossary_entry pai ON pai.id = g.parent_id
+     WHERE g.id = $id`,
+    { $id: glId },
+  )
+  if (!l) return null
+  const hipoteses = await hipotesesOnde((esq) => `h.id IN (SELECT hypothesis_id FROM ${esq}.hypothesis_term WHERE glossary_id = $id)`, {
+    $id: glId,
+  })
+  const noSitio = await linhasPorPublicacao(
+    (esq) => `SELECT DISTINCT a.subject_id AS item_id FROM ${esq}.assertion a JOIN ${esq}.site st ON st.id = a.site_id
+              WHERE a.subject_type = 'item' AND a.field = 'findspot' AND st.name_entry_id = $id`,
+    { $id: glId },
+  )
+  const itens = [...hipoteses.map((h) => h.alvo.itemId), ...noSitio.map((x) => s(x.item_id))].filter((x): x is string => x !== null)
+  return {
+    ...verbeteResumoDe(l),
+    ptTexto: s(l.pt_text),
+    ptProposta: s(l.pt_proposed),
+    genero: s(l.pt_gender) as Verbete['genero'],
+    numeroGramatical: s(l.pt_number) as Verbete['numeroGramatical'],
+    en: s(l.en),
+    ar: s(l.ar),
+    he: s(l.he),
+    variantes: json<string[]>(l.variants, []),
+    definicao: s(l.definition),
+    pai: s(l.parent_id) ? { id: s(l.parent_id)!, pt: s(l.pai_pt) } : null,
+    iconclass: json<[string, string | null, string | null, string | null][]>(l.iconclass_json, []).map(([notacao, pt, de, en]) => ({ notacao, pt, de, en })),
+    sssl: json<[string, string | null][]>(l.sssl_json, []).map(([codigo, rotulo]) => ({ codigo, rotulo })),
+    hipoteses,
+    objetos: await resumosDosItens(itens, 'fonte'),
+  }
+}
+
+/** Primeira citação curta de bib_entry.short_cites ({"TESTE": ["Autor 1999"]}). */
+function citadaComoDe(texto: unknown): Record<string, string[]> {
+  const dados = json<Record<string, unknown>>(texto, {})
+  return Object.fromEntries(
+    Object.entries(dados).map(([sigla, v]) => [sigla, Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []]),
+  )
+}
+const primeiraCitacao = (c: Record<string, string[]>) => Object.values(c).flat()[0] ?? null
+const tituloDoCsl = (csl: Record<string, unknown> | null) => (csl && typeof csl.title === 'string' ? csl.title : null)
+
+const SQL_REFS = (esq: string) => `SELECT bib_entry_id, item_id FROM ${esq}.bib_ref WHERE bib_entry_id IS NOT NULL AND item_id IS NOT NULL`
+
+/** As obras da bibliografia, pela citação curta, com quantos objetos citam cada uma. */
+export async function obras(): Promise<ObraResumo[]> {
+  const refs = porPublicacao(await publicacoesAbertas(), SQL_REFS)
+  const linhas = await executar<L>(
+    `SELECT b.id, b.csl_json, b.short_cites,
+       ${refs ? `(SELECT count(DISTINCT coalesce(om.object_id, r.item_id)) FROM (${refs}) r
+                  LEFT JOIN main.object_member om ON om.item_id = r.item_id WHERE r.bib_entry_id = b.id)` : '0'} AS objetos
+     FROM main.bib_entry b`,
+  )
+  return linhas
+    .map((l): ObraResumo => {
+      const csl = json<Record<string, unknown> | null>(l.csl_json, null)
+      return { id: s(l.id)!, curta: primeiraCitacao(citadaComoDe(l.short_cites)), titulo: tituloDoCsl(csl), objetos: n(l.objetos) ?? 0 }
+    })
+    .sort((x, y) => (x.curta ?? x.id).localeCompare(y.curta ?? y.id, 'pt'))
+}
+
+export async function obra(bibId: string): Promise<Obra | null> {
+  const [l] = await executar<L>('SELECT * FROM main.bib_entry WHERE id = $id', { $id: bibId })
+  if (!l) return null
+  const csl = json<Record<string, unknown> | null>(l.csl_json, null)
+  const citadaComo = citadaComoDe(l.short_cites)
+  const refs = await linhasPorPublicacao((esq) => `SELECT item_id FROM ${esq}.bib_ref WHERE bib_entry_id = $id AND item_id IS NOT NULL`, { $id: bibId })
+  return {
+    id: s(l.id)!,
+    curta: primeiraCitacao(citadaComo),
+    titulo: tituloDoCsl(csl),
+    chicago: s(l.chicago),
+    chicagoHtml: s(l.chicago_html),
+    citadaComo,
+    origem: s(l.origin),
+    csl,
+    objetos: await resumosDosItens([...new Set(refs.map((r) => s(r.item_id)!))], 'fonte'),
+  }
+}
+
+const SQL_SITIO = (esq: string, sigla: string, onde: string) => `
+  SELECT '${sigla}' AS sigla, st.*, g.pt AS gl_pt,
+    (SELECT count(DISTINCT coalesce(om.object_id, a.subject_id)) FROM ${esq}.assertion a
+       LEFT JOIN main.object_member om ON om.item_id = a.subject_id
+     WHERE a.site_id = st.id AND a.subject_type = 'item' AND a.field = 'findspot') AS objetos
+  FROM ${esq}.site st LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
+  WHERE ${onde}`
+
+function sitioResumoDe(l: L): SitioResumo {
+  return {
+    id: `${s(l.sigla)}-${n(l.id)}`,
+    nome: s(l.gl_pt) ?? s(l.literal_name)!,
+    literal: s(l.literal_name)!,
+    glId: s(l.name_entry_id),
+    lat: n(l.lat),
+    lon: n(l.lon),
+    objetos: n(l.objetos) ?? 0,
+  }
+}
+
+/** Os sítios de todas as publicações, em ordem alfabética. O id é "<SIGLA>-<n>". */
+export async function sitios(): Promise<SitioResumo[]> {
+  const linhas = await linhasPorPublicacao((esq, sigla) => SQL_SITIO(esq, sigla, '1'))
+  return linhas.map(sitioResumoDe).sort((x, y) => x.nome.localeCompare(y.nome, 'pt'))
+}
+
+export async function sitio(id: string): Promise<Sitio | null> {
+  const partes = /^(.+)-(\d+)$/.exec(id)
+  const pub = partes && (await publicacoesAbertas()).find((p) => p.sigla === partes[1])
+  if (!partes || !pub) return null
+  const [l] = await executar<L>(SQL_SITIO(pub.esquema, pub.sigla, 'st.id = $id'), { $id: Number(partes[2]) })
+  if (!l) return null
+  const itens = await executar<L>(
+    `SELECT DISTINCT subject_id AS item_id FROM ${pub.esquema}.assertion
+     WHERE site_id = $id AND subject_type = 'item' AND field = 'findspot'`,
+    { $id: Number(partes[2]) },
+  )
+  const { id: idDoSitio, nome, literal, glId, lat, lon } = sitioResumoDe(l)
+  return {
+    id: idDoSitio,
+    nome,
+    literal,
+    glId,
+    lat,
+    lon,
+    gradeRef: s(l.grid_ref),
+    metodo: s(l.coord_method) as Sitio['metodo'],
+    fonteDaCoordenada: s(l.coord_source),
+    notaDaCoordenada: s(l.coord_note),
+    nota: s(l.note),
+    objetos: await resumosDosItens(itens.map((x) => s(x.item_id)!), 'fonte'),
+  }
+}
+
+/** `<polygon points="x,y x,y …"/>` → [[x, y], …]; vazio se o formato não é esse. */
+export function pontosDoSeletor(selector: string): [number, number][] {
+  const pontos = /points\s*=\s*"([^"]*)"/.exec(selector)?.[1]
+  if (!pontos) return []
+  const pares = pontos
+    .trim()
+    .split(/\s+/)
+    .map((par) => par.split(',').map(Number))
+  return pares.every((p) => p.length === 2 && p.every(Number.isFinite)) ? (pares as [number, number][]) : []
+}
+
+/** As regiões desenhadas na imagem, com o nome do elemento. */
+export async function regioes(imagemId: string): Promise<Regiao[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT r.id, r.element_id, r.selector, e.label, e.label_pt FROM ${esq}.element_region r
+              JOIN ${esq}.element e ON e.id = r.element_id WHERE r.image_id = $id`,
+    { $id: imagemId },
+  )
+  return linhas
+    .sort((x, y) => (n(x.id) ?? 0) - (n(y.id) ?? 0))
+    .map((l) => ({
+      id: n(l.id)!,
+      elementoId: s(l.element_id)!,
+      elemento: s(l.label_pt) ?? s(l.label)!,
+      elementoDe: s(l.label)!,
+      selector: s(l.selector)!,
+      pontos: pontosDoSeletor(s(l.selector)!),
+    }))
+}

@@ -7,6 +7,10 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig(({ command, isPreview }) => ({
   base: command === 'build' || isPreview ? '/iconodb-app/' : '/',
   plugins: [react()],
+  // O sqlite-wasm carrega o próprio .wasm por import.meta.url: não pode passar pelo pré-empacotamento.
+  optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },
+  // O worker do banco importa módulos (sqlite-wasm, pacote/): precisa sair como módulo ES.
+  worker: { format: 'es' },
   test: {
     environment: 'jsdom',
     css: true,
