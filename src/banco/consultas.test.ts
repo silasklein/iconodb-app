@@ -236,6 +236,21 @@ describe('consultas sobre o pacote sintético', () => {
     expect(await sitio('lixo')).toBeNull()
   })
 
+  it('verbetes() traz o inglês e quantos objetos cada verbete tem (hipótese no termo ou sítio de mesmo nome)', async () => {
+    const lista = await verbetes()
+    const por = new Map(lista.map((v) => [v.id, v]))
+    expect(por.get('GL-900001')).toMatchObject({ pt: 'leão-de-teste', de: 'Testlöwe', en: 'test lion', status: 'approved', objetos: 2 })
+    // o número de objetos é o de verbete(id).objetos, para todos os verbetes
+    for (const v of lista) expect(v.objetos).toBe((await verbete(v.id))!.objetos.length)
+    expect(por.get('GL-900004')!.objetos).toBe(3) // nome de sítio: os três objetos achados lá
+    expect(por.get('GL-900005')!.objetos).toBe(3)
+  })
+
+  it('sitios() e sitio() trazem a região: o verbete-pai do verbete do nome, ou null', async () => {
+    expect((await sitios()).map((x) => x.regiao)).toEqual([null, null])
+    expect((await sitio('TESTE-1'))!.regiao).toBeNull()
+  })
+
   it('regioes(imagemId) traz o selector cru, os pontos e o nome do elemento', async () => {
     expect(await regioes('IMG-TESTE-0003-1')).toEqual([
       {
@@ -381,5 +396,15 @@ describe('nomes dos esquemas e plano de importação no pool', () => {
       importar: ['/pub-TESTE.sqlite', '/busca.sqlite'],
       remover: [],
     })
+  })
+
+  it('a região do sítio é o verbete-pai do nome do sítio (glossary_entry.parent_id)', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar("UPDATE main.glossary_entry SET parent_id = 'GL-900001' WHERE id = 'GL-900004'")
+    expect((await sitios()).map((x) => [x.id, x.regiao])).toEqual([
+      ['TESTE-1', { id: 'GL-900001', nome: 'leão-de-teste' }],
+      ['TESTE-2', null],
+    ])
+    expect((await sitio('TESTE-1'))!.regiao).toEqual({ id: 'GL-900001', nome: 'leão-de-teste' })
   })
 })

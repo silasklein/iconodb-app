@@ -41,6 +41,7 @@ import {
   type Termo,
   type TextoDaIntroducao,
   type Verbete,
+  type VerbeteDaLista,
   type VerbeteResumo,
   type Vizinhos,
 } from './tipos'
@@ -685,10 +686,29 @@ function verbeteResumoDe(l: L): VerbeteResumo {
   }
 }
 
-/** Todos os verbetes, em ordem alfabética da forma em português. */
-export async function verbetes(): Promise<VerbeteResumo[]> {
-  const linhas = await executar<L>('SELECT id, kind, pt, de, status FROM main.glossary_entry')
-  return linhas.map(verbeteResumoDe).sort((x, y) => (x.pt ?? x.de ?? '').localeCompare(y.pt ?? y.de ?? '', 'pt'))
+/**
+ * Todos os verbetes, em ordem alfabética da forma em português, cada um com o inglês e a
+ * contagem de objetos (a mesma de `verbete(id).objetos`: hipótese no termo, ou achado no sítio de mesmo nome).
+ */
+export async function verbetes(): Promise<VerbeteDaLista[]> {
+  const pares = porPublicacao(
+    await publicacoesAbertas(),
+    (esq) => `SELECT ht.glossary_id AS gl, ${ALVO_ITEM} AS item_id
+              FROM ${esq}.hypothesis_term ht JOIN ${esq}.hypothesis h ON h.id = ht.hypothesis_id
+              LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id
+              UNION ALL
+              SELECT st.name_entry_id, a.subject_id FROM ${esq}.assertion a JOIN ${esq}.site st ON st.id = a.site_id
+              WHERE a.subject_type = 'item' AND a.field = 'findspot' AND st.name_entry_id IS NOT NULL`,
+  )
+  const linhas = await executar<L>(
+    `SELECT g.id, g.kind, g.pt, g.de, g.en, g.status,
+       ${pares ? `(SELECT count(DISTINCT coalesce(om.object_id, p.item_id)) FROM (${pares}) p
+                    LEFT JOIN main.object_member om ON om.item_id = p.item_id WHERE p.gl = g.id AND p.item_id IS NOT NULL)` : '0'} AS objetos
+     FROM main.glossary_entry g`,
+  )
+  return linhas
+    .map((l): VerbeteDaLista => ({ ...verbeteResumoDe(l), en: s(l.en), objetos: n(l.objetos) ?? 0 }))
+    .sort((x, y) => (x.pt ?? x.de ?? '').localeCompare(y.pt ?? y.de ?? '', 'pt'))
 }
 
 export async function verbete(glId: string): Promise<Verbete | null> {
@@ -780,11 +800,12 @@ export async function obra(bibId: string): Promise<Obra | null> {
 }
 
 const SQL_SITIO = (esq: string, sigla: string, onde: string) => `
-  SELECT '${sigla}' AS sigla, st.*, g.pt AS gl_pt,
+  SELECT '${sigla}' AS sigla, st.*, g.pt AS gl_pt, g.parent_id AS regiao_id, coalesce(pai.pt, pai.de) AS regiao_nome,
     (SELECT count(DISTINCT coalesce(om.object_id, a.subject_id)) FROM ${esq}.assertion a
        LEFT JOIN main.object_member om ON om.item_id = a.subject_id
      WHERE a.site_id = st.id AND a.subject_type = 'item' AND a.field = 'findspot') AS objetos
   FROM ${esq}.site st LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
+  LEFT JOIN main.glossary_entry pai ON pai.id = g.parent_id
   WHERE ${onde}`
 
 function sitioResumoDe(l: L): SitioResumo {
@@ -795,6 +816,7 @@ function sitioResumoDe(l: L): SitioResumo {
     glId: s(l.name_entry_id),
     lat: n(l.lat),
     lon: n(l.lon),
+    regiao: s(l.regiao_id) ? { id: s(l.regiao_id)!, nome: s(l.regiao_nome) ?? s(l.regiao_id)! } : null,
     objetos: n(l.objetos) ?? 0,
   }
 }
@@ -816,7 +838,7 @@ export async function sitio(id: string): Promise<Sitio | null> {
      WHERE site_id = $id AND subject_type = 'item' AND field = 'findspot'`,
     { $id: Number(partes[2]) },
   )
-  const { id: idDoSitio, nome, literal, glId, lat, lon } = sitioResumoDe(l)
+  const { id: idDoSitio, nome, literal, glId, lat, lon, regiao } = sitioResumoDe(l)
   return {
     id: idDoSitio,
     nome,
@@ -824,6 +846,7 @@ export async function sitio(id: string): Promise<Sitio | null> {
     glId,
     lat,
     lon,
+    regiao,
     gradeRef: s(l.grid_ref),
     metodo: s(l.coord_method) as Sitio['metodo'],
     fonteDaCoordenada: s(l.coord_source),

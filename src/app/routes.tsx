@@ -1,8 +1,10 @@
 import type { ReactElement } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Busca } from '../telas/Busca'
+import { Bibliografia } from '../telas/Bibliografia'
 import { Colecoes } from '../telas/Colecoes'
 import { Entrar } from '../telas/Entrar'
+import { Glossario } from '../telas/Glossario'
 import { Grupo } from '../telas/Grupo'
 import { Imagem } from '../telas/Imagem'
 import { Item } from '../telas/Item'
@@ -10,6 +12,7 @@ import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
 import { Preparando } from '../telas/Preparando'
 import { Revisao } from '../telas/Revisao'
+import { Sitios } from '../telas/Sitios'
 import { BarraSuperior } from '../ui/BarraSuperior'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { RotaInicial } from './RotaInicial'
@@ -46,12 +49,13 @@ export const ROTAS: Rota[] = [
   { path: '/grupo/:id', elemento: <Grupo /> },
   { path: '/item/:numero', elemento: <Item /> },
   { path: '/imagem/:id', elemento: <Imagem /> },
-  { path: '/glossario', elemento: <Provisoria titulo="Glossário" /> },
-  { path: '/verbete/:id', elemento: <Provisoria titulo="Verbete" /> },
-  { path: '/bibliografia', elemento: <Provisoria titulo="Bibliografia" /> },
-  { path: '/obra/:id', elemento: <Provisoria titulo="Obra" /> },
-  { path: '/sitios', elemento: <Provisoria titulo="Sítios" /> },
-  { path: '/sitio/:id', elemento: <Provisoria titulo="Sítio" /> },
+  // O Glossário é também a tela de /verbete/:id (lista e verbete juntos no computador): o mesmo elemento nas duas rotas.
+  { path: '/glossario', elemento: <Glossario /> },
+  { path: '/verbete/:id', elemento: <Glossario /> },
+  { path: '/bibliografia', elemento: <Bibliografia /> },
+  { path: '/obra/:id', elemento: <Bibliografia /> },
+  { path: '/sitios', elemento: <Sitios /> },
+  { path: '/sitio/:id', elemento: <Sitios /> },
   { path: '/revisao', elemento: <Revisao /> },
   { path: '/atalhos', elemento: <Provisoria titulo="Atalhos" /> },
   { path: '/notas', elemento: <MinhasNotas /> },

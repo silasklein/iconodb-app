@@ -321,6 +321,13 @@ export interface VerbeteResumo {
   status: 'proposed' | 'approved'
 }
 
+/** Um verbete na lista do Glossário: o resumo, o inglês (a busca da lista) e quantos objetos ele tem. */
+export interface VerbeteDaLista extends VerbeteResumo {
+  en: string | null
+  /** Objetos com hipótese no termo, mais os achados no sítio cujo nome é este verbete (o mesmo de `Verbete.objetos`). */
+  objetos: number
+}
+
 export interface Verbete extends VerbeteResumo {
   ptTexto: string | null
   ptProposta: string | null
@@ -364,6 +371,8 @@ export interface SitioResumo {
   glId: string | null
   lat: number | null
   lon: number | null
+  /** A região: o verbete-pai (`glossary_entry.parent_id`) do verbete que dá nome ao sítio; null quando não há (R18). */
+  regiao: { id: string; nome: string } | null
   objetos: number
 }
 
