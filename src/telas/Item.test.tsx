@@ -187,11 +187,14 @@ describe('Item', () => {
       expect(within(secao).getByRole('heading', { name: 'Iconológico · 1' })).toBeInTheDocument()
     })
 
-    it('H mostra e esconde todas as hipóteses por nível', async () => {
+    it('H mostra e esconde todas as hipóteses por nível (e rola até a seção, num efeito)', async () => {
       abrir('/item/CA00002')
       await titulo()
+      vi.mocked(Element.prototype.scrollIntoView).mockClear()
       fireEvent.keyDown(document.body, { key: 'h' })
       expect(screen.getByRole('region', { name: 'Hipóteses por nível' })).toBeInTheDocument()
+      await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled())
+      expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts.at(-1)).toBe(document.getElementById('secao-hipoteses'))
       expect(screen.getByRole('button', { name: 'Ver todas as hipóteses por nível' })).toHaveAttribute('aria-expanded', 'true')
       fireEvent.keyDown(document.body, { key: 'H' })
       expect(screen.queryByRole('region', { name: 'Hipóteses por nível' })).toBeNull()
@@ -241,7 +244,7 @@ describe('Item', () => {
       expect(within(folha).getByText(/sem trecho no texto PT/)).toBeInTheDocument()
     })
 
-    it('no computador, painel lateral de 380 px, não modal, que nunca cobre a imagem', async () => {
+    it('no computador, painel lateral de 380 px, não modal, terceira coluna da grade (nunca sobre a imagem)', async () => {
       instalarMatchMedia(1280)
       abrir('/item/CA00002?hipotese=HY-900003')
       const painel = await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
@@ -249,12 +252,25 @@ describe('Item', () => {
       expect(painel).not.toHaveAttribute('aria-modal', 'true')
       const imagem = screen.getByRole('region', { name: 'Imagem' })
       expect(imagem.contains(painel)).toBe(false)
-      expect(screen.getByTestId('item-leitura-coluna').contains(painel)).toBe(true)
+      // filho direto da grade do item (terceira coluna a partir de 1160 px; por cima da leitura abaixo disso)
+      const grade = document.querySelector('.item-pc')!
+      expect(painel.parentElement).toBe(grade)
+      expect(grade).toHaveClass('item-pc-com-painel')
+      expect(screen.getByTestId('item-leitura-coluna').contains(painel)).toBe(false)
+      // a barra H/L continua na tela
+      expect(screen.getByRole('toolbar', { name: 'Ações do item' })).toBeInTheDocument()
       // L ainda funciona com o painel lateral aberto
       fireEvent.keyDown(document.body, { key: 'l' })
       expect(within(leituras()).getByText(/Auf der Rückseite/)).toHaveAttribute('lang', 'de')
       await userEvent.click(within(painel).getByRole('button', { name: 'Fechar o painel' }))
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(document.querySelector('.item-pc')).not.toHaveClass('item-pc-com-painel')
+    })
+
+    it('o painel oferece o verbete de cada termo marcado no trecho', async () => {
+      abrir('/item/CA00002?hipotese=HY-900003')
+      const folha = await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
+      expect(within(folha).getByRole('link', { name: 'Abrir verbete' })).toHaveAttribute('href', '/verbete/GL-900001')
     })
 
     it('a região do elemento da hipótese aberta acende na imagem', async () => {
@@ -298,6 +314,17 @@ describe('Item', () => {
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'false')
       fireEvent.keyDown(document.body, { key: 'l' })
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('depois de "g", só as letras de atalho de ir são engolidas: setas e H continuam do item (correção 5)', async () => {
+      abrir('/item/CA00002', estadoDoGrupo('GR-TESTE-I-01', 'G', '/grupo/GR-TESTE-I-01'))
+      await screen.findByText('2 / 3')
+      fireEvent.keyDown(document.body, { key: 'g' })
+      fireEvent.keyDown(document.body, { key: 'h' })
+      expect(screen.getByRole('region', { name: 'Hipóteses por nível' })).toBeInTheDocument()
+      fireEvent.keyDown(document.body, { key: 'g' })
+      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await waitFor(() => expect(local()).toBe('/item/CA00003'))
     })
 
     it('L dentro de um campo de texto não troca', async () => {

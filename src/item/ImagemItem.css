@@ -79,9 +79,11 @@
 }
 .imagem-item-paginas {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 2px;
   font-size: 12px;
+  white-space: nowrap;
 }
 .imagem-item-credito {
   margin: 0;

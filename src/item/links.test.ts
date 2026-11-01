@@ -118,3 +118,43 @@ describe('acharLinks', () => {
     expect(links.map((l) => recorte(texto, l))).toEqual(['2', 'Autor 1999'])
   })
 })
+
+describe('acharLinks: correções do matcher (correção 2)', () => {
+  it('a forma bibliográfica casa só em fronteira de palavra: "Keel 1995" não casa dentro de "Keel 1995a: 12"', () => {
+    const texto = 'Ver Keel 1995a: 12 e depois Keel 1995: 30.'
+    const links = acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Keel 1995: 30x', curta: 'Keel 1995' })], remissoes: [] })
+    expect(links.map((l) => [l.inicio, recorte(texto, l)])).toEqual([[texto.indexOf('Keel 1995:'), 'Keel 1995']])
+  })
+
+  it('nada antes nem depois colado: "XKeel 1995" e "Keel 19950" não casam', () => {
+    const texto = 'XKeel 1995 e Keel 19950.'
+    expect(acharLinks(texto, [], { ...base, bibliografia: [ref({ bruto: 'Keel 1995', curta: null })], remissoes: [] })).toEqual([])
+  })
+
+  it('";" só continua uma lista de remissões aberta como remissão: "(Abb. 3; 4)" e "(Taf. 12; 5)" não ligam nada', () => {
+    const texto = 'Veja (Abb. 3; 4) e (Taf. 12; 5).'
+    const links = acharLinks(texto, [], {
+      ...base,
+      bibliografia: [],
+      remissoes: [rem('CA00003', 'TESTE I, 3'), rem('CA00004', 'TESTE I, 4'), rem('CA00012', 'TESTE I, 12'), rem('CA00005', 'TESTE I, 5')],
+    })
+    expect(links).toEqual([])
+  })
+
+  it('"(cf. 2; 5)" e "(12; 5)" continuam valendo', () => {
+    const texto = 'Um (cf. 2; 5) e outro (12; 7).'
+    const links = acharLinks(texto, [], {
+      ...base,
+      bibliografia: [],
+      remissoes: [rem('CA00002', 'TESTE I, 2'), rem('CA00005', 'TESTE I, 5'), rem('CA00012', 'TESTE I, 12'), rem('CA00007', 'TESTE I, 7')],
+    })
+    expect(links.map((l) => recorte(texto, l))).toEqual(['2', '5', '12', '7'])
+  })
+
+  it('prefere o número depois de "cf." ou fechado por ")": em "Camada (3. fase) e (cf. 3)" o link vai em "(cf. 3)"', () => {
+    const texto = 'Camada (3. fase) e (cf. 3).'
+    const [l, ...resto] = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem('CA00003', 'TESTE I, 3')] })
+    expect(resto).toEqual([])
+    expect(l!.inicio).toBe(texto.lastIndexOf('3'))
+  })
+})

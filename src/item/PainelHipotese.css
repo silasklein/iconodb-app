@@ -55,11 +55,16 @@
   margin-right: -12px;
 }
 
-/* Computador: painel lateral, preso à janela, por cima da coluna de leitura */
+/*
+ * Computador: painel lateral, filho direto da grade do item (Item.css), preso à janela.
+ * Abaixo de 1160 px fica por cima da coluna de leitura (coluna 2, à direita); a partir de 1160 px
+ * vira a terceira coluna da grade (Item.css). Nunca fica sobre a coluna da imagem.
+ */
 .painel-hipotese-lateral {
   position: sticky;
   top: 0;
-  grid-area: 1 / 1;
+  grid-row: 1;
+  grid-column: 2;
   justify-self: end;
   align-self: start;
   z-index: 6;
@@ -204,4 +209,31 @@
     min-height: 44px;
     font-size: 14px;
   }
+}
+.painel-hipotese-verbetes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.painel-hipotese-verbetes a {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 0;
+  border-top: 1px solid #e0e0e0;
+  color: var(--texto-consulta);
+  font-size: 15px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.painel-hipotese-verbetes-rotulo {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
 }

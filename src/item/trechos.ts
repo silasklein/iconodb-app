@@ -1,5 +1,5 @@
-import type { Ancora, Modalidade, Nivel, Termo } from '../banco/tipos'
-import { mapaDeCodepoints } from './offsets'
+import type { Ancora, Leitura, Modalidade, Nivel, Termo } from '../banco/tipos'
+import { mapaDeCodepoints, paraUtf16 } from './offsets'
 
 /** Um link achado no texto na hora de desenhar (citação → obra, número → item). Posições em UTF-16. */
 export interface LinkNoTexto {
@@ -52,15 +52,15 @@ interface Span<T> {
  */
 export function montarTrechos(texto: string, { termos = [], ancoras = [], links = [] }: Entrada): Peca[] {
   const mapa = mapaDeCodepoints(texto)
-  const ultimo = mapa.length - 1
-  const u16 = (cp: number) => (cp <= 0 ? 0 : cp >= ultimo ? texto.length : mapa[cp]!)
   const doBanco = <T extends { inicio: number; fim: number }>(lista: readonly T[]): Span<T>[] =>
-    lista.map((d, i) => ({ a: u16(d.inicio), b: u16(d.fim), i, dado: d })).filter((s) => s.a < s.b)
+    lista
+      .map((d, i) => ({ a: paraUtf16(mapa, d.inicio), b: paraUtf16(mapa, d.fim), i, dado: d }))
+      .filter((s): s is Span<T> => s.a !== null && s.b !== null && s.a < s.b)
   const sAncoras = doBanco(ancoras).sort((x, y) => x.a - y.a || x.i - y.i)
   const sTermos = doBanco(termos).sort((x, y) => x.a - y.a || x.i - y.i)
   const sLinks = links
     .map((d, i) => ({ a: Math.max(0, d.inicio), b: Math.min(texto.length, d.fim), i, dado: d }))
-    .filter((s) => s.a < s.b)
+    .filter((s) => Number.isFinite(s.a) && Number.isFinite(s.b) && s.a < s.b)
     .sort((x, y) => x.a - y.a || x.i - y.i)
 
   const cortes = new Set<number>([0, texto.length])
@@ -109,4 +109,40 @@ export function montarTrechos(texto: string, { termos = [], ancoras = [], links 
     chaveAnterior = chave
   }
   return pecas
+}
+
+export interface VerbeteDoTrecho {
+  glId: string
+  /** O texto marcado (a primeira vez que o verbete aparece no trecho). */
+  texto: string
+}
+
+/**
+ * Os verbetes marcados dentro do trecho (âncora) de uma hipótese, um por glId, na ordem do
+ * texto: o painel da hipótese oferece um link a cada um. Sem termo marcado dentro, vale o
+ * glId da própria âncora. Hipótese sem âncora: lista vazia.
+ */
+export function verbetesDaAncora(leituras: readonly Pick<Leitura, 'texto' | 'termos' | 'ancoras'>[], hipoteseId: string): VerbeteDoTrecho[] {
+  const vistos = new Map<string, string>()
+  for (const l of leituras) {
+    if (l.texto === null) continue
+    for (const a of l.ancoras) {
+      if (a.hipoteseId !== hipoteseId) continue
+      const pecas = montarTrechos(l.texto, { termos: l.termos, ancoras: [a] })
+      let algum = false
+      for (const p of pecas) {
+        if (p.tipo !== 'ancora') continue
+        for (const parte of p.partes) {
+          if (parte.tipo !== 'termo') continue
+          algum = true
+          if (!vistos.has(parte.glId)) vistos.set(parte.glId, parte.texto)
+        }
+      }
+      if (!algum && a.glId && !vistos.has(a.glId)) {
+        const texto = pecas.filter((p) => p.tipo === 'ancora').map((p) => (p.tipo === 'ancora' ? p.partes.map((x) => x.texto).join('') : '')).join('')
+        if (texto) vistos.set(a.glId, texto)
+      }
+    }
+  }
+  return [...vistos].map(([glId, texto]) => ({ glId, texto }))
 }

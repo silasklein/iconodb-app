@@ -17,6 +17,7 @@ import {
   ROTULO_DO_NIVEL,
   temAncora,
 } from './rotulos'
+import type { VerbeteDoTrecho } from './trechos'
 import './PainelHipotese.css'
 
 export interface OrdemNoTexto {
@@ -39,7 +40,11 @@ interface Props {
   aoIr?: (id: string) => void
   /** A região do alvo está acesa na imagem. */
   regiaoAcesa?: boolean
+  /** Os verbetes marcados no trecho da hipótese (`verbetesDaAncora`): um link para cada. */
+  verbetes?: readonly VerbeteDoTrecho[]
 }
+
+const SEM_VERBETES: readonly VerbeteDoTrecho[] = []
 
 const FOCAVEIS = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
@@ -50,7 +55,7 @@ const FOCAVEIS = 'a[href], button:not([disabled]), input, select, textarea, [tab
  * fica sobre a coluna de leitura e nunca sobre a imagem. Em ambos o foco entra no painel e volta
  * à âncora ao fechar.
  */
-export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = null, aoIr, regiaoAcesa = false }: Props) {
+export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = null, aoIr, regiaoAcesa = false, verbetes = SEM_VERBETES }: Props) {
   const carga = useCarregar(() => hipotese(id), id)
   const raiz = useRef<HTMLDivElement>(null)
   const atual = useRef({ aoFechar, aoIr, ordem, devolverFoco })
@@ -81,6 +86,8 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
       if (e.key === 'Escape') {
+        // Esc num campo de texto fora do painel (a busca da barra) é do campo.
+        if (emCampoDeTexto(e.target) && !raiz.current?.contains(e.target as Node)) return
         e.preventDefault()
         atual.current.aoFechar()
         return
@@ -144,7 +151,7 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
       <div className="painel-hipotese-corpo">
         {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
         {carga.fase === 'ok' && h === null && <p>Hipótese não encontrada.</p>}
-        {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} />}
+        {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} verbetes={verbetes} />}
       </div>
       {!folha && (
         <p className="painel-hipotese-teclas">
@@ -174,8 +181,11 @@ function BotaoDeOrdem({ icone, rotulo, atalho, destino, aoIr }: { icone: 'anteri
   return <IconButton icon={icone} label={rotulo} shortcut={atalho} tipPosition={icone === 'anterior' ? 'start' : 'end'} onClick={() => aoIr?.(destino)} />
 }
 
-function Conteudo({ h, regiaoAcesa }: { h: Hipotese; regiaoAcesa: boolean }) {
+function Conteudo({ h, regiaoAcesa, verbetes }: { h: Hipotese; regiaoAcesa: boolean; verbetes: readonly VerbeteDoTrecho[] }) {
   const termo = h.termos[0] ?? null
+  // Os verbetes do trecho e, depois, os termos da hipótese que não estão nele.
+  const lista: VerbeteDoTrecho[] = [...verbetes]
+  for (const t of h.termos) if (!lista.some((v) => v.glId === t.glId)) lista.push({ glId: t.glId, texto: t.pt ?? t.de ?? t.glId })
   const linhas: [string, ReactNode][] = []
   if (h.citacao) linhas.push(['Fonte', <span lang="de">{`»${h.citacao}«`}</span>])
   if (h.autores.length > 0) linhas.push(['Autores', autores(h.autores)])
@@ -208,12 +218,29 @@ function Conteudo({ h, regiaoAcesa }: { h: Hipotese; regiaoAcesa: boolean }) {
           </div>
         ))}
       </dl>
-      {termo && (
+      {lista.length > 1 && (
+        <ul className="painel-hipotese-verbetes" aria-label="Verbetes no trecho">
+          {lista.map((v) => (
+            <li key={v.glId}>
+              <Link to={`/verbete/${encodeURIComponent(v.glId)}`} aria-label={`Abrir verbete: ${v.texto}`}>
+                <span className="painel-hipotese-verbetes-rotulo">Abrir verbete</span> {v.texto}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {lista.length > 0 && (
         <div className="painel-hipotese-acoes">
-          <Link className="painel-hipotese-principal" to={`/verbete/${encodeURIComponent(termo.glId)}`}>
-            Abrir verbete
-          </Link>
-          <Link className="painel-hipotese-secundaria" to={caminhoDaBusca(termo.pt ?? termo.de ?? '', { escopo: 'termo' })} aria-label="Filtrar a busca por este termo">
+          {lista.length === 1 && (
+            <Link className="painel-hipotese-principal" to={`/verbete/${encodeURIComponent(lista[0]!.glId)}`}>
+              Abrir verbete
+            </Link>
+          )}
+          <Link
+            className="painel-hipotese-secundaria"
+            to={caminhoDaBusca(termo?.pt ?? termo?.de ?? lista[0]!.texto, { escopo: 'termo' })}
+            aria-label="Filtrar a busca por este termo"
+          >
             Filtrar a busca
           </Link>
         </div>

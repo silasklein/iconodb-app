@@ -1,5 +1,5 @@
 import type { Ancora, Termo } from '../banco/tipos'
-import { montarTrechos, type Peca } from './trechos'
+import { montarTrechos, verbetesDaAncora, type Peca } from './trechos'
 
 /** Posição em code points (como o pipeline grava) de `trecho` dentro de `texto`. */
 function cp(texto: string, trecho: string): { inicio: number; fim: number } {
@@ -145,5 +145,28 @@ describe('montarTrechos', () => {
       expect(pecas.map(textoDe).join('')).toBe(texto)
       for (const p of pecas) expect(textoDe(p).length).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('verbetesDaAncora (correção 3)', () => {
+  it('cada glId distinto marcado dentro da âncora, na ordem do texto, com o texto marcado', () => {
+    const texto = 'Um leão-de-teste sobre figura denteada e outro leão-de-teste.'
+    const leitura = {
+      texto,
+      termos: [termo(texto, 'leão-de-teste', 'GL-1'), termo(texto, 'figura denteada', 'GL-2'), { glId: 'GL-1', ...cp(texto, 'outro leão-de-teste') }],
+      ancoras: [ancora(texto, 'leão-de-teste sobre figura denteada e outro leão-de-teste', 'HY-1', 'GL-1'), ancora(texto, 'figura', 'HY-2', 'GL-9')],
+    }
+    expect(verbetesDaAncora([leitura], 'HY-1')).toEqual([
+      { glId: 'GL-1', texto: 'leão-de-teste' },
+      { glId: 'GL-2', texto: 'figura denteada' },
+    ])
+  })
+
+  it('sem termo marcado dentro, usa o glId da própria âncora; hipótese sem âncora dá lista vazia', () => {
+    const texto = 'Um sinal.'
+    const leitura = { texto, termos: [], ancoras: [ancora(texto, 'sinal', 'HY-1', 'GL-7')] }
+    expect(verbetesDaAncora([leitura], 'HY-1')).toEqual([{ glId: 'GL-7', texto: 'sinal' }])
+    expect(verbetesDaAncora([leitura], 'HY-X')).toEqual([])
+    expect(verbetesDaAncora([{ texto: null, termos: [], ancoras: [] }], 'HY-1')).toEqual([])
   })
 })

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { estadoDoGrupo, type EstadoDeOrigem } from '../app/origem'
-import { emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
+import { ATALHOS_DE_IR, emCampoDeTexto } from '../app/useAtalhosDeNavegacao'
 import { item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
 import { NIVEIS } from '../banco/tipos'
 import { ImagemItem } from '../item/ImagemItem'
 import { Leitura, type Idioma } from '../item/Leitura'
 import { acharLinks } from '../item/links'
-import { mapaDeCodepoints } from '../item/offsets'
+import { trechosEmUtf16 } from '../item/offsets'
 import { PainelHipotese, type OrdemNoTexto } from '../item/PainelHipotese'
 import { Bibliografia, Catalogo, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
-import type { LinkNoTexto } from '../item/trechos'
+import { verbetesDaAncora, type LinkNoTexto } from '../item/trechos'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Icon, type IconName } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -124,6 +124,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
 
   const todas = useMemo(() => [...NIVEIS.flatMap((n) => d.hipotesesPorNivel[n]), ...d.outrasHipoteses], [d])
   const hAberta: Hipotese | null = (aberta && todas.find((h) => h.id === aberta)) || null
+  const verbetes = useMemo(() => (aberta ? verbetesDaAncora(d.leituras, aberta) : []), [aberta, d])
   const elementoAceso = hAberta?.alvo.tipo === 'element' ? hAberta.alvo.id : null
   const regiaoAcesa = !!elementoAceso && Object.values(regioes).some((rs) => rs.some((r) => r.elementoId === elementoAceso))
 
@@ -140,9 +141,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     () =>
       d.leituras.map((l): LinkNoTexto[] => {
         if (l.texto === null) return []
-        const mapa = mapaDeCodepoints(l.texto)
-        const u16 = (cp: number) => mapa[Math.max(0, Math.min(cp, mapa.length - 1))]!
-        const ocupados = [...l.termos, ...l.ancoras].map((s) => ({ inicio: u16(s.inicio), fim: u16(s.fim) }))
+        const ocupados = trechosEmUtf16(l.texto, [...l.termos, ...l.ancoras])
         return acharLinks(l.texto, ocupados, { fonte: l.fonte, itemId: l.itemId, bibliografia: d.bibliografia, remissoes: d.relacoes.remissoes })
       }),
     [d],
@@ -172,22 +171,39 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     gatilho.current = el
   }, [])
 
-  // No celular a folha cobre a metade de baixo: o trecho da hipótese sobe para ficar à vista acima dela.
+  // O trecho da hipótese aberta fica à vista:
+  // - no celular, sobe para cima da folha (que cobre a metade de baixo);
+  // - no computador, com o painel por cima da leitura (abaixo de 1160 px), a coluna de leitura rola
+  //   na horizontal até o trecho ficar na faixa à esquerda do painel (e na vertical, se preciso).
   useEffect(() => {
-    if (computador || !aberta) return
+    if (!aberta) return
     const seletor = `.item-leituras [data-hipoteses~="${aberta.replace(/["\\]/g, '\\$&')}"]`
-    document.querySelector<HTMLElement>(seletor)?.scrollIntoView({ block: 'start' })
+    const ancora = document.querySelector<HTMLElement>(seletor)
+    if (!ancora) return
+    if (!computador) {
+      ancora.scrollIntoView({ block: 'start' })
+      return
+    }
+    const quadro = requestAnimationFrame(() => trazerParaAFaixa(ancora))
+    return () => cancelAnimationFrame(quadro)
   }, [aberta, computador])
 
   const porNivel = !!secoes.hipoteses
   const alternar = (id: string) => setSecoes((s) => ({ ...s, [id]: !s[id] }))
+  // H (ou o ícone) abre a seção e rola até ela; o clique no título da seção só a abre.
+  const rolarParaNivel = useRef(false)
   const alternarPorNivel = useCallback(() => {
     setSecoes((s) => {
-      const abrir = !s.hipoteses
-      if (abrir) requestAnimationFrame(() => document.getElementById('secao-hipoteses')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
-      return { ...s, hipoteses: abrir }
+      rolarParaNivel.current = !s.hipoteses
+      return { ...s, hipoteses: !s.hipoteses }
     })
   }, [])
+  useEffect(() => {
+    if (!porNivel || !rolarParaNivel.current) return
+    rolarParaNivel.current = false
+    const quadro = requestAnimationFrame(() => document.getElementById('secao-hipoteses')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    return () => cancelAnimationFrame(quadro)
+  }, [porNivel])
   const alternarIdioma = useCallback(() => setIdioma((i) => (i === 'pt' ? 'de' : 'pt')), [])
 
   // Teclas do item (L, H, ← →). Fora de campos de texto e de diálogos modais; a Tarefa 11 centraliza.
@@ -198,13 +214,13 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
       if (document.querySelector('[aria-modal="true"]')) return
-      // "g" e uma letra é atalho de ir a uma seção (useAtalhosDeNavegacao): a letra não é do item.
-      if (Date.now() - gArmado < 1500) {
-        gArmado = 0
-        return
-      }
       const t = teclas.current
       const k = e.key
+      // "g" e uma letra de ATALHOS_DE_IR é ir a uma seção (useAtalhosDeNavegacao): essa letra não é
+      // do item. Qualquer outra tecla depois do "g" (setas, H…) segue normal.
+      const depoisDoG = Date.now() - gArmado < 1500
+      gArmado = 0
+      if (depoisDoG && k.toLowerCase() in ATALHOS_DE_IR) return
       if (k === 'g') gArmado = Date.now()
       else if (k === 'l' || k === 'L') {
         e.preventDefault()
@@ -251,6 +267,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
       ordem={ordem}
       aoIr={abrirHipotese}
       regiaoAcesa={regiaoAcesa}
+      verbetes={verbetes}
     />
   )
 
@@ -321,7 +338,7 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
     )
   }
   return (
-    <div className="item item-pc">
+    <div className={`item item-pc${aberta ? ' item-pc-com-painel' : ''}`}>
       <section className="item-coluna-imagem item-imagem" aria-label="Imagem">
         <div className="item-coluna-imagem-fixa">
           {nav}
@@ -335,10 +352,28 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
           </div>
           {conteudo}
         </main>
-        {painel}
       </div>
+      {painel}
     </div>
   )
+}
+
+/**
+ * Com o painel por cima da coluna de leitura (computador abaixo de 1160 px), traz o trecho para a
+ * faixa visível à esquerda do painel: rola a coluna de leitura na horizontal (ela ganha uma margem
+ * do tamanho do painel enquanto ele está aberto) e a página na vertical, se o trecho estiver fora.
+ * Com o painel em coluna própria (1160 px ou mais), o trecho já está na faixa e nada muda na horizontal.
+ */
+function trazerParaAFaixa(ancora: HTMLElement) {
+  const painel = document.querySelector<HTMLElement>('.painel-hipotese-lateral')
+  const coluna = ancora.closest<HTMLElement>('.item-coluna-leitura')
+  if (!painel || !coluna) return
+  const r = ancora.getBoundingClientRect()
+  if (r.top < 0 || r.bottom > window.innerHeight) ancora.scrollIntoView({ block: 'center', inline: 'nearest' })
+  const limite = painel.getBoundingClientRect().left - 16
+  const esquerda = coluna.getBoundingClientRect().left + 16
+  const a = ancora.getBoundingClientRect()
+  if (a.right > limite) coluna.scrollLeft += Math.max(0, Math.min(a.right - limite, a.left - esquerda))
 }
 
 function Cabeca({ d }: { d: ItemDetalhe }) {
