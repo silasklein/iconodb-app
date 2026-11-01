@@ -67,6 +67,7 @@ export const CATALOGO: readonly Declaracao[] = [
   { contexto: 'item', teclas: ['ArrowRight'], descricao: 'Objeto seguinte, no contexto de origem (o grupo ou a busca)' },
   { contexto: 'item', teclas: ['h'], descricao: 'Ver todas as hipóteses, por nível' },
   { contexto: 'item', teclas: ['l'], descricao: 'Alternar português e alemão' },
+  { contexto: 'item', teclas: ['i'], descricao: 'Alternar o desenho invertido e o original' },
   { contexto: 'item', teclas: ['z'], descricao: 'Ampliar a imagem (abre o visualizador)' },
 
   { contexto: 'hipotese', teclas: ['['], descricao: 'Hipótese anterior no texto' },
@@ -199,10 +200,15 @@ export const tecladoAtivo = () => registros.size > 0
  * CATALOGO (`event.key`; letras em minúscula; sequências como "g l").
  */
 export function registrarAtalhos(mapa: Record<string, Acao>, contexto: Contexto, opcoes: OpcoesDoRegistro = {}): () => void {
-  for (const tecla of Object.keys(mapa)) {
-    if (!declarada(contexto, tecla)) throw new Error(`Atalho não declarado no catálogo: "${tecla}" (${contexto})`)
+  // Fora da produção (desenvolvimento e testes) uma tecla fora do catálogo é erro; em produção o app não cai:
+  // registra o problema e ignora só essa tecla.
+  const aceitas: Record<string, Acao> = {}
+  for (const [tecla, acao] of Object.entries(mapa)) {
+    if (declarada(contexto, tecla)) aceitas[tecla] = acao
+    else if (import.meta.env.MODE !== 'production') throw new Error(`Atalho não declarado no catálogo: "${tecla}" (${contexto})`)
+    else console.error(`Atalho não declarado no catálogo, ignorado: "${tecla}" (${contexto})`)
   }
-  const registro: Registro = { ordem: ++contador, contexto, mapa, raiz: opcoes.raiz }
+  const registro: Registro = { ordem: ++contador, contexto, mapa: aceitas, raiz: opcoes.raiz }
   if (registros.size === 0) document.addEventListener('keydown', aoTeclar)
   registros.add(registro)
   return () => {

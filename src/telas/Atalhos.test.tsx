@@ -65,6 +65,12 @@ describe('Atalhos e convenções', () => {
     for (const k of document.querySelectorAll('kbd')) if (/^[a-z]$/i.test(k.textContent!)) expect(k.textContent).toBe(k.textContent!.toUpperCase())
   })
 
+  it('as teclas seguem uma só grafia: uma letra ou símbolo, ou o nome "Esc" e "Enter"; e a folha não conta atalhos', () => {
+    abrir()
+    for (const k of document.querySelectorAll('kbd')) expect(k.textContent).toMatch(/^(.|Esc|Enter)$/)
+    expect(screen.queryByText(/\d+ atalhos/)).toBeNull()
+  })
+
   it('as convenções explicam os sublinhados, a imagem invertida e as siglas das fontes', () => {
     abrir()
     const conv = secao('Convenções')
@@ -77,6 +83,15 @@ describe('Atalhos e convenções', () => {
     expect(conv).toHaveTextContent(/toque|clique/i)
     expect(conv).toHaveTextContent(/original/i)
     for (const sigla of ['SKC', 'IPIAO', 'GGG']) expect(conv).toHaveTextContent(sigla)
+    expect(conv).toHaveTextContent(/IPIAO: Schroer e Keel, Die Ikonographie Palästinas\/Israels und der Alte Orient/)
+    expect(conv).toHaveTextContent(/GGG: Keel e Uehlinger, Göttinnen, Götter und Gottessymbole/)
+    expect(conv).toHaveTextContent(/SKC: as suas próprias notas e leituras/)
+    expect(conv).not.toHaveTextContent(/a sua voz/)
+    // os títulos das obras em itálico
+    expect([...conv.querySelectorAll('i')].map((i) => i.textContent)).toEqual([
+      'Die Ikonographie Palästinas/Israels und der Alte Orient',
+      'Göttinnen, Götter und Gottessymbole',
+    ])
   })
 
   it('no celular é uma página inteira com Voltar; Voltar e Esc devolvem à tela de antes', async () => {

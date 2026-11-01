@@ -62,6 +62,23 @@ describe('registro de atalhos: um só ouvinte no documento', () => {
   })
 })
 
+describe('em produção', () => {
+  afterEach(() => vi.unstubAllEnvs())
+  it('uma tecla fora do catálogo não derruba o app: registra o erro, ignora só essa tecla e mantém as outras', () => {
+    vi.stubEnv('MODE', 'production')
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const l = vi.fn()
+    const q = vi.fn()
+    registrar({ q, l }, 'item')
+    expect(erro).toHaveBeenCalledWith(expect.stringContaining('"q"'))
+    teclar('q')
+    teclar('l')
+    expect(q).not.toHaveBeenCalled()
+    expect(l).toHaveBeenCalledTimes(1)
+    erro.mockRestore()
+  })
+})
+
 describe('precedência: painel e modal > tela > global', () => {
   it('a tecla vai ao contexto mais específico', () => {
     const global = vi.fn()
@@ -261,7 +278,7 @@ describe('o catálogo declarado (fonte única da lista de atalhos)', () => {
   })
 
   it('o item tem ← → H L Z; a hipótese, [ ] ; o visualizador, I R + - 0', () => {
-    expect(declaracoesDoContexto('item').flatMap((d) => d.teclas)).toEqual(expect.arrayContaining(['ArrowLeft', 'ArrowRight', 'h', 'l', 'z']))
+    expect(declaracoesDoContexto('item').flatMap((d) => d.teclas)).toEqual(expect.arrayContaining(['ArrowLeft', 'ArrowRight', 'h', 'l', 'i', 'z']))
     expect(declaracoesDoContexto('hipotese').flatMap((d) => d.teclas)).toEqual(expect.arrayContaining(['[', ']']))
     expect(declaracoesDoContexto('visualizador').flatMap((d) => d.teclas)).toEqual(expect.arrayContaining(['i', 'r', '+', '-', '0']))
   })

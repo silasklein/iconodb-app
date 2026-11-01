@@ -76,7 +76,14 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
   const { url, falhou, aoFalhar } = useUrlDaImagem(caminho)
 
   // Z amplia a imagem à vista (o mesmo que "Ampliar a imagem"), com o original se estiver ligado.
-  useAtalhos({ z: () => (atual && aoAmpliar ? aoAmpliar(atual.id, original) : false) }, 'item')
+  // I alterna o desenho invertido e o original (só os desenhos de traço com imagem na tela, como o toque na imagem).
+  useAtalhos(
+    {
+      z: () => (atual && aoAmpliar ? aoAmpliar(atual.id, original) : false),
+      i: () => (atual?.display_mode === 'traco' && url ? setOriginal((v) => !v) : false),
+    },
+    'item',
+  )
 
   if (!atual) {
     return (
@@ -147,7 +154,7 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
     <div className="imagem-item">
       <div className="imagem-item-painel">
         {comBotao ? (
-          <button type="button" className={`imagem-item-alternar${geometria ? ' imagem-item-girada' : ''}`} style={estiloDaCaixa} aria-pressed={original} aria-label="Mostrar o original" onClick={() => setOriginal((v) => !v)}>
+          <button type="button" className={`imagem-item-alternar${geometria ? ' imagem-item-girada' : ''}`} style={estiloDaCaixa} aria-pressed={original} aria-label="Mostrar o original" aria-keyshortcuts="I" onClick={() => setOriginal((v) => !v)}>
             {figura}
           </button>
         ) : (

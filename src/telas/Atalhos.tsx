@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import { CATALOGO, CONTEXTOS, ROTULO_DO_CONTEXTO, declaracoesDoContexto, rotuloDaTecla, type Declaracao } from '../app/atalhos'
+import { CONTEXTOS, ROTULO_DO_CONTEXTO, declaracoesDoContexto, rotuloDaTecla, type Declaracao } from '../app/atalhos'
 import { useAtalhos } from '../app/useAtalhos'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
@@ -74,7 +74,8 @@ function Convencoes() {
         <div>
           <dt>Rótulos das leituras</dt>
           <dd>
-            <span className="codigo">IPIAO</span> e <span className="codigo">GGG</span> são as obras de referência: cada rótulo diz de que obra vem a leitura. <span className="codigo">SKC</span> é a sua voz: as suas notas e coleções, que chegam na próxima versão.
+            O rótulo de cada leitura diz de onde ela vem. <span className="codigo">IPIAO</span>: Schroer e Keel, <i lang="de">Die Ikonographie Palästinas/Israels und der Alte Orient</i>. <span className="codigo">GGG</span>: Keel e Uehlinger,{' '}
+            <i lang="de">Göttinnen, Götter und Gottessymbole</i>. <span className="codigo">SKC</span>: as suas próprias notas e leituras (as iniciais de quem usa o app).
           </dd>
         </div>
       </dl>
@@ -101,7 +102,7 @@ export function Atalhos() {
           {computador && <IconButton icon="fechar" label="Fechar a lista de atalhos" shortcut="Escape" shortcutLabel="Esc" tipPosition="start" onClick={voltar} />}
         </header>
         <p className="pagina-consulta-apoio">
-          As teclas não valem dentro de campos de texto, nem com Ctrl, ⌘ ou Alt (essas ficam com o navegador). {CATALOGO.length} atalhos.
+          As teclas não valem dentro de campos de texto, nem com Ctrl, ⌘ ou Alt (essas ficam com o navegador).
         </p>
         {CONTEXTOS.map((c) => (
           <section key={c} className="atalhos-secao" aria-labelledby={`atalhos-${c}`}>

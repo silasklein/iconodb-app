@@ -38,6 +38,15 @@ function Local() {
 const local = () => screen.getByTestId('local').textContent
 const leituras = () => screen.getByRole('region', { name: 'Leituras' })
 const titulo = async () => screen.findByRole('heading', { level: 1 })
+/**
+ * Sinal de que as teclas do item já estão registradas: o ícone de idioma é desenhado pelo mesmo componente
+ * que as registra (efeito passivo). Sem esperar por ele, a primeira tecla poderia correr antes do registro.
+ */
+const pronto = () => screen.findByRole('button', { name: 'Mostrar o original alemão', hidden: true })
+const tecla = async (key: string) => {
+  await pronto()
+  fireEvent.keyDown(document.body, { key })
+}
 
 describe('Item', () => {
   beforeAll(async () => {
@@ -117,6 +126,7 @@ describe('Item', () => {
         await titulo()
         expect(await screen.findByText('2 / 2')).toBeInTheDocument()
         expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toMatchObject({ contexto: estado.contexto, origem: estado.origem })
+        await pronto()
         await userEvent.keyboard('{ArrowRight}')
         await waitFor(() => expect(local()).toBe('/item/CA00002'))
         expect(JSON.parse(screen.getByTestId('local').dataset.state!)).not.toHaveProperty('imagemAberta')
@@ -218,10 +228,10 @@ describe('Item', () => {
         </MemoryRouter>,
       )
       await screen.findByText('1 / 3')
-      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await tecla('ArrowRight')
       await waitFor(() => expect(local()).toBe('/item/CA00002'))
       await screen.findByText('2 / 3')
-      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await tecla('ArrowRight')
       await waitFor(() => expect(local()).toBe('/item/CA00003'))
       // o contexto (grupo, janela de busca) fica no estado
       expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toEqual(estado)
@@ -253,16 +263,29 @@ describe('Item', () => {
       abrir('/item/CA00001')
       await titulo()
       await userEvent.click(await screen.findByRole('button', { name: 'Mostrar o original' }))
-      fireEvent.keyDown(document.body, { key: 'z' })
+      await tecla('z')
       await waitFor(() => expect(local()).toMatch(/^\/imagem\//))
       await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
       expect(screen.getByRole('button', { name: 'Mostrar o original sem inversão' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('I alterna o desenho invertido e o original na tela do item; o botão traz aria-keyshortcuts', async () => {
+      abrir('/item/CA00001')
+      await titulo()
+      const botao = await screen.findByRole('button', { name: 'Mostrar o original' })
+      expect(botao).toHaveAttribute('aria-keyshortcuts', 'I')
+      expect(botao).toHaveAttribute('aria-pressed', 'false')
+      await tecla('i')
+      expect(botao).toHaveAttribute('aria-pressed', 'true')
+      await tecla('I')
+      expect(botao).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('Z não age dentro de um campo de texto', async () => {
       abrir('/item/CA00001')
       await titulo()
       const campo = document.body.appendChild(document.createElement('input'))
+      await pronto()
       fireEvent.keyDown(campo, { key: 'z' })
       expect(local()).toBe('/item/CA00001')
     })
@@ -270,10 +293,10 @@ describe('Item', () => {
     it('← e → (fora de campo de texto) andam no contexto', async () => {
       abrir('/item/CA00002', estadoDoGrupo('GR-TESTE-I-01', 'G', '/grupo/GR-TESTE-I-01'))
       await screen.findByText('2 / 3')
-      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await tecla('ArrowRight')
       await waitFor(() => expect(local()).toBe('/item/CA00003'))
       await screen.findByText('3 / 3')
-      fireEvent.keyDown(document.body, { key: 'ArrowLeft' })
+      await tecla('ArrowLeft')
       await waitFor(() => expect(local()).toBe('/item/CA00002'))
     })
   })
@@ -299,12 +322,12 @@ describe('Item', () => {
       abrir('/item/CA00002')
       await titulo()
       vi.mocked(Element.prototype.scrollIntoView).mockClear()
-      fireEvent.keyDown(document.body, { key: 'h' })
+      await tecla('h')
       expect(screen.getByRole('region', { name: 'Hipóteses por nível' })).toBeInTheDocument()
       await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled())
       expect(vi.mocked(Element.prototype.scrollIntoView).mock.contexts.at(-1)).toBe(document.getElementById('secao-hipoteses'))
       expect(screen.getByRole('button', { name: 'Ver todas as hipóteses por nível' })).toHaveAttribute('aria-expanded', 'true')
-      fireEvent.keyDown(document.body, { key: 'H' })
+      await tecla('H')
       expect(screen.queryByRole('region', { name: 'Hipóteses por nível' })).toBeNull()
     })
 
@@ -338,7 +361,7 @@ describe('Item', () => {
     it('com a folha aberta, L e H não agem (as teclas são da folha)', async () => {
       abrir('/item/CA00002?hipotese=HY-900003')
       await screen.findByRole('dialog', { name: 'Hipótese leão-de-teste' })
-      fireEvent.keyDown(document.body, { key: 'l' })
+      await tecla('l')
       expect(screen.queryByText(/Auf der Rückseite/)).toBeNull()
     })
 
@@ -376,7 +399,7 @@ describe('Item', () => {
       // a barra H/L continua na tela
       expect(screen.getByRole('toolbar', { name: 'Ações do item' })).toBeInTheDocument()
       // L ainda funciona com o painel lateral aberto
-      fireEvent.keyDown(document.body, { key: 'l' })
+      await tecla('l')
       expect(within(leituras()).getByText(/Auf der Rückseite/)).toHaveAttribute('lang', 'de')
       await userEvent.click(within(painel).getByRole('button', { name: 'Fechar o painel' }))
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -457,7 +480,7 @@ describe('Item', () => {
       await titulo()
       const botao = screen.getByRole('button', { name: 'Mostrar o original alemão' })
       expect(botao).toHaveAttribute('aria-pressed', 'false')
-      fireEvent.keyDown(document.body, { key: 'L' })
+      await tecla('L')
       expect(within(leituras()).getByText(/Der Probeanhänger zeigt/)).toHaveAttribute('lang', 'de')
       expect(within(leituras()).queryByRole('link')).toBeNull()
       expect(botao).toHaveAttribute('aria-pressed', 'true')
@@ -468,21 +491,21 @@ describe('Item', () => {
     it('"g l" é ir ao Glossário, não trocar o idioma', async () => {
       abrir('/item/CA00001')
       await titulo()
-      fireEvent.keyDown(document.body, { key: 'g' })
-      fireEvent.keyDown(document.body, { key: 'l' })
+      await tecla('g')
+      await tecla('l')
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'false')
-      fireEvent.keyDown(document.body, { key: 'l' })
+      await tecla('l')
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'true')
     })
 
     it('depois de "g", só as letras de atalho de ir são engolidas: setas e H continuam do item (correção 5)', async () => {
       abrir('/item/CA00002', estadoDoGrupo('GR-TESTE-I-01', 'G', '/grupo/GR-TESTE-I-01'))
       await screen.findByText('2 / 3')
-      fireEvent.keyDown(document.body, { key: 'g' })
-      fireEvent.keyDown(document.body, { key: 'h' })
+      await tecla('g')
+      await tecla('h')
       expect(screen.getByRole('region', { name: 'Hipóteses por nível' })).toBeInTheDocument()
-      fireEvent.keyDown(document.body, { key: 'g' })
-      fireEvent.keyDown(document.body, { key: 'ArrowRight' })
+      await tecla('g')
+      await tecla('ArrowRight')
       await waitFor(() => expect(local()).toBe('/item/CA00003'))
     })
 
@@ -491,6 +514,7 @@ describe('Item', () => {
       await titulo()
       const campo = document.createElement('input')
       document.body.append(campo)
+      await pronto()
       fireEvent.keyDown(campo, { key: 'l' })
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'false')
       campo.remove()
