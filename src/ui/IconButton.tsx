@@ -15,6 +15,9 @@ interface Comum {
   tipPosition?: 'start' | 'end'
   /** Dica acima do botão (barras de ferramentas no pé da tela). */
   tipAbove?: boolean
+  /** Botão que abre um painel ou menu: `aria-expanded` / `aria-haspopup`. */
+  expandido?: boolean
+  abre?: 'dialog' | 'menu'
 }
 
 type AcaoBotao = { onClick: () => void; href?: never }
@@ -33,6 +36,8 @@ export function IconButton(props: IconButtonProps) {
     className: classes,
     'aria-label': label,
     'aria-keyshortcuts': shortcut,
+    'aria-expanded': props.expandido,
+    'aria-haspopup': props.abre,
     'data-tip': dica,
   }
   const glifo = <Icon name={icon} size={size} />

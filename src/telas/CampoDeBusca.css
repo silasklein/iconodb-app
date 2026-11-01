@@ -1,0 +1,65 @@
+.campo-busca {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.campo-busca-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+}
+.campo-busca-caixa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 2px 0 14px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  background: var(--fundo);
+}
+.campo-busca-caixa:has(> input:focus-visible) {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.campo-busca-caixa > svg {
+  flex-shrink: 0;
+}
+.campo-busca-caixa input {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 16px; /* 16 px: o iOS não amplia a tela ao focar */
+  background: transparent;
+  color: var(--texto);
+}
+.campo-busca-caixa input::-webkit-search-cancel-button {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .campo-busca {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .campo-busca-rotulo {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .campo-busca-caixa {
+    flex: 1 1 auto;
+    height: 40px;
+    border-color: var(--controle);
+  }
+  .campo-busca-caixa input {
+    font-size: 15px;
+  }
+}

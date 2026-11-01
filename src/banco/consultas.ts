@@ -144,7 +144,7 @@ const SQL_RESUMO = (esq: string) => `
  * Resumos dos objetos destes itens, um por objeto (o primeiro item de cada um).
  * `ordem: 'dada'` mantém a ordem da lista; `'fonte'` ordena pela ordem das fontes.
  */
-async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 'fonte'): Promise<ObjetoResumo[]> {
+export async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 'fonte'): Promise<ObjetoResumo[]> {
   if (itens.length === 0) return []
   const linhas = await linhasPorPublicacao(SQL_RESUMO, { $ids: ids(itens) })
   if (ordem === 'dada') {

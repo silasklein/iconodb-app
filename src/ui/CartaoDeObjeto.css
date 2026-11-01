@@ -1,0 +1,56 @@
+.cartao-objeto {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--texto);
+}
+.cartao-imagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 104px;
+  padding: 8px;
+  background: var(--superficie);
+}
+.cartao-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cartao-numero {
+  font-size: 12px;
+}
+.cartao-tipo,
+.cartao-sitio {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cartao-sitio {
+  color: var(--secundario);
+}
+.cartao-objeto:hover .cartao-tipo {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cartao-grande {
+  gap: 8px;
+}
+.cartao-grande .cartao-imagem {
+  height: 196px;
+  padding: 14px;
+}
+.cartao-grande .cartao-numero {
+  font-size: 13px;
+  font-weight: 500;
+}
+.cartao-grande .cartao-tipo {
+  font-size: 14px;
+  line-height: 1.5;
+}

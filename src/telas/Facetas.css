@@ -1,0 +1,63 @@
+.faceta {
+  margin: 0 0 18px;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid var(--filete);
+  min-width: 0;
+}
+.faceta legend {
+  float: left;
+  width: 100%;
+  padding: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.faceta-opcao {
+  clear: both;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.faceta-zero {
+  color: var(--secundario);
+}
+.faceta-nome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.faceta-nome input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--texto);
+}
+.faceta-n {
+  font-size: 12px;
+  color: var(--secundario);
+  font-variant-numeric: tabular-nums;
+}
+.faceta-mais {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (min-width: 768px) {
+  .faceta-opcao,
+  .faceta-mais {
+    min-height: 36px;
+  }
+}

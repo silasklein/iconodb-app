@@ -1,0 +1,15 @@
+/* Miniatura sobre a área cinza das telas de consulta (Busca.dc.html: multiply sobre #F3F3F3). */
+.miniatura-imagem {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.miniatura-aviso {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+  text-align: center;
+  overflow-wrap: anywhere;
+}

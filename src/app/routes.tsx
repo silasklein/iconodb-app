@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
+import { Busca } from '../telas/Busca'
 import { Entrar } from '../telas/Entrar'
 import { Preparando } from '../telas/Preparando'
 
@@ -22,7 +23,7 @@ export const ROTAS: Rota[] = [
   { path: '/', elemento: <Provisoria titulo="Início" /> },
   { path: '/entrar', elemento: <Entrar /> },
   { path: '/preparando', elemento: <Preparando /> },
-  { path: '/busca', elemento: <Provisoria titulo="Busca" /> },
+  { path: '/busca', elemento: <Busca /> },
   { path: '/colecoes', elemento: <Provisoria titulo="Coleções" /> },
   { path: '/grupo/:id', elemento: <Provisoria titulo="Grupo" /> },
   { path: '/item/:id', elemento: <Provisoria titulo="Item" /> },

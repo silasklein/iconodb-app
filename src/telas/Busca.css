@@ -1,0 +1,435 @@
+/*
+ * Busca (Busca.dc.html no celular, PC-Busca.dc.html no computador).
+ * Fundo claro das telas de consulta; tokens em ui/tokens.css.
+ */
+.busca-pagina {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+/* Alvo de toque de 44 px sem aumentar o desenho. */
+.hit {
+  position: relative;
+}
+.hit::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+.busca-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 12px 0;
+}
+
+.busca-celular {
+  display: flex;
+  flex-direction: column;
+}
+.busca-principal {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.busca-celular .busca-principal {
+  padding: 12px 24px 48px;
+}
+
+/* Escopos */
+.busca-escopos {
+  display: flex;
+  gap: 18px;
+  padding-top: 6px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.busca-escopos button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: #3a3a3a;
+  padding: 10px 0 6px;
+  cursor: pointer;
+}
+.busca-escopos button[aria-pressed='true'] {
+  border-bottom-color: var(--texto);
+  font-weight: 600;
+  color: var(--texto);
+}
+.busca-escopo-n {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--secundario);
+}
+/* No celular a contagem só vale para quem usa leitor de tela. */
+@media (max-width: 767.98px) {
+  .busca-escopo-n {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+/* Avisos (estado vazio, buscando, erro, nada encontrado) */
+.busca-aviso {
+  margin: 24px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.busca-aviso p {
+  margin: 0 0 8px;
+}
+.busca-aviso-menor {
+  color: var(--secundario);
+}
+.busca-nada {
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.busca-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Verbete em destaque */
+.busca-verbete {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 2px solid var(--texto);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.busca-verbete-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.busca-verbete-tipo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.busca-verbete-id {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.busca-verbete-nome {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.busca-verbete-nome h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.busca-verbete-nome a {
+  flex-shrink: 0;
+  font-size: 14px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.busca-verbete-resumo {
+  margin: 0;
+  font-size: 14px;
+  color: #3a3a3a;
+}
+.busca-verbete dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.busca-verbete dt {
+  font-weight: 600;
+}
+.busca-verbete dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.busca-verbete dd a {
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.busca-italico {
+  font-style: italic;
+}
+.busca-ver-tambem {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3a3a3a;
+}
+.busca-ver-tambem a {
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+
+/* Filtros ativos como etiquetas removíveis */
+.busca-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.busca-etiquetas-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.busca-etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--texto);
+  border-radius: 16px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.busca-etiqueta-chave {
+  color: var(--secundario);
+}
+.busca-limpar {
+  height: 32px;
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Contagem e grade */
+.busca-resultados {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.busca-contagem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 2px solid var(--texto);
+  padding: 8px 0 14px;
+}
+.busca-contagem h2 {
+  margin: 0;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.busca-contagem span {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.busca-grade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 16px;
+}
+.busca-mais {
+  align-self: center;
+  margin-top: 28px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Folha de filtros (celular) */
+.busca-folha {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.busca-folha-topo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: max(12px, env(safe-area-inset-top)) 12px 0;
+}
+.busca-folha-topo h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.busca-folha-corpo {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 24px;
+}
+.busca-folha-pe {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--filete);
+}
+.busca-botao {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--texto);
+  color: var(--fundo);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Computador: facetas à esquerda */
+@media (min-width: 768px) {
+  .busca-computador {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    column-gap: 48px;
+    padding: 24px 48px 64px;
+  }
+  .busca-facetas-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0 14px;
+  }
+  .busca-facetas-topo h2 {
+    margin: 0;
+    font-family: var(--fonte-texto);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .busca-facetas-topo span {
+    font-size: 12px;
+    color: var(--secundario);
+  }
+  .busca-computador .busca-principal {
+    padding: 0;
+  }
+  .busca-escopos {
+    gap: 24px;
+  }
+  .busca-computador .busca-escopos {
+    padding-top: 12px;
+  }
+  .busca-verbete {
+    margin-top: 20px;
+    padding-top: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    column-gap: 48px;
+    row-gap: 14px;
+  }
+  .busca-verbete-topo {
+    grid-column: 1;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .busca-verbete-nome {
+    grid-column: 1;
+  }
+  .busca-verbete-nome h2 {
+    font-size: 36px;
+    line-height: 1.12;
+  }
+  .busca-verbete-resumo {
+    grid-column: 1;
+  }
+  .busca-verbete dl {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: start;
+  }
+  .busca-etiquetas {
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 1px solid var(--filete);
+    gap: 10px;
+  }
+  .busca-etiqueta {
+    height: 36px;
+    gap: 8px;
+    padding: 0 10px 0 14px;
+    border-color: var(--controle);
+    border-radius: 18px;
+    font-size: 14px;
+  }
+  .busca-limpar {
+    height: 36px;
+    font-size: 14px;
+  }
+  .busca-contagem {
+    border-top: 0;
+    padding: 0;
+  }
+  .busca-contagem h2 {
+    font-size: 15px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .busca-contagem span {
+    font-size: 13px;
+  }
+  .busca-resultados {
+    margin-top: 22px;
+    gap: 14px;
+  }
+  .busca-grade {
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    column-gap: 20px;
+    row-gap: 28px;
+  }
+}

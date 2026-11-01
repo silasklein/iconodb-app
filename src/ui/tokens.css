@@ -108,3 +108,14 @@ a {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Só para leitores de tela (rótulos, contagens). */
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
