@@ -6,6 +6,7 @@ import { processarRetornoDoLogin } from '../dropbox/retorno'
  * Trata a volta do login do Dropbox ao abrir o app: concluído leva a
  * /preparando; sem conseguir concluir (por exemplo, o iPhone abriu o retorno no
  * Safari, sem o login pendente) leva a /entrar, que mostra o login por código.
+ * Falta de rede e acesso negado levam a /entrar com o motivo, e a tela diz o que houve.
  */
 export function RetornoDoLogin() {
   const navegar = useNavigate()
@@ -13,6 +14,7 @@ export function RetornoDoLogin() {
     void processarRetornoDoLogin().then((r) => {
       if (r === 'concluido') navegar('/preparando', { replace: true })
       else if (r === 'falhou') navegar('/entrar', { replace: true, state: { voltou: true } })
+      else if (r !== 'sem-retorno') navegar('/entrar', { replace: true, state: { voltou: true, motivo: r } })
     })
   }, [navegar])
   return null

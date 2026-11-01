@@ -1,32 +1,55 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import {
-  concluirLoginComCodigo,
   estadoLogin,
   iniciarLogin,
   iniciarLoginComCodigo,
+  MSG_ACESSO_NEGADO,
   MSG_CODIGO_INVALIDO,
+  MSG_SEM_CONEXAO,
+  repetirTrocaPendente,
+  tentarLoginComCodigo,
 } from '../dropbox/auth'
 import { Icon } from '../ui/Icon'
 import { Logo } from '../ui/Logo'
 import './Entrar.css'
 
 const MSG_NAO_ABRIU = 'Não foi possível abrir o Dropbox; tente de novo'
+const MSG_NAO_ENTROU = 'Não foi possível entrar; tente de novo'
+const MSG_NAO_CHEGOU = 'A volta do Dropbox não chegou a este app. Entre com o código do Dropbox.'
+const MSG_EXPIROU = 'O acesso ao Dropbox expirou. Entre de novo; os dados do aparelho continuam aqui.'
+
+/** O que a tela sabe sobre a volta do Dropbox. */
+type Situacao = 'normal' | 'sem-conexao' | 'acesso-negado' | 'sem-chegada'
+
+interface EstadoDaRota {
+  voltou?: boolean
+  motivo?: 'sem-conexao' | 'acesso-negado'
+}
+
+function situacaoInicial(estado: EstadoDaRota | null): Situacao {
+  if (estado?.voltou !== true) return 'normal'
+  return estado.motivo ?? 'sem-chegada'
+}
 
 /**
  * Entrada do app (Login.dc.html no celular, PC-Entrar.dc.html no computador).
- * Um só componente: o layout muda no CSS, em 768 px.
+ * Um só componente: o tamanho do texto muda no CSS, em 768 px.
  *
- * O link discreto "Entrar com código" abre o login alternativo. Quando o app é
- * aberto de volta do Dropbox sem ter conseguido concluir o login (location.state.voltou),
- * esse caminho já aparece aberto.
+ * Não há ilustração no topo: o desenho do design é conteúdo do livro e, antes do
+ * primeiro login, o app não tem pacote. O bloco fica centrado no fundo #111111.
+ *
+ * O link discreto "Entrar com código" abre o login alternativo. Ao voltar do
+ * Dropbox sem ter conseguido concluir (location.state.voltou), a tela diz o que
+ * houve: o retorno não chegou aqui (abre o login por código), faltou rede (repete a
+ * troca guardada) ou o acesso foi negado.
  */
 export function Entrar() {
   const navegar = useNavigate()
-  const { state } = useLocation() as { state: { voltou?: boolean } | null }
-  const voltou = state?.voltou === true
+  const { state } = useLocation() as { state: EstadoDaRota | null }
 
-  const [aberto, setAberto] = useState(voltou)
+  const [situacao, setSituacao] = useState<Situacao>(() => situacaoInicial(state))
+  const [aberto, setAberto] = useState(situacao === 'sem-chegada')
   const [urlDoDropbox, setUrlDoDropbox] = useState<string | null>(null)
   const [codigo, setCodigo] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -52,14 +75,24 @@ export function Entrar() {
     }
   }, [])
 
-  // Voltou do Dropbox sem concluir: prepara o login por código (sem abrir janela: não há toque do usuário).
+  async function prepararCodigo(abrirJanela: boolean) {
+    setErroCodigo(null)
+    try {
+      const url = await iniciarLoginComCodigo()
+      setUrlDoDropbox(url)
+      if (abrirJanela) window.open(url, '_blank', 'noopener')
+    } catch {
+      setErroCodigo(MSG_NAO_ABRIU)
+    }
+  }
+
+  // O retorno não chegou aqui: prepara o login por código (sem abrir janela: não há toque do usuário).
   useEffect(() => {
-    if (!voltou || preparouRetorno.current) return
+    if (situacao !== 'sem-chegada' || preparouRetorno.current) return
     preparouRetorno.current = true
-    iniciarLoginComCodigo()
-      .then(setUrlDoDropbox)
-      .catch(() => setErroCodigo(MSG_NAO_ABRIU))
-  }, [voltou])
+    setAberto(true)
+    void prepararCodigo(false)
+  }, [situacao])
 
   async function entrarComDropbox() {
     setErroPrincipal(null)
@@ -73,15 +106,28 @@ export function Entrar() {
   }
 
   async function abrirLoginPorCodigo() {
+    // Quem escolhe o código abandona a troca guardada do retorno.
+    setSituacao('normal')
+    setErroPrincipal(null)
     setAberto(true)
-    setErroCodigo(null)
+    await prepararCodigo(true)
+  }
+
+  async function repetirTroca() {
+    setErroPrincipal(null)
+    setOcupado(true)
     try {
-      const url = await iniciarLoginComCodigo()
-      setUrlDoDropbox(url)
-      window.open(url, '_blank', 'noopener')
+      const r = await repetirTrocaPendente()
+      if (r === 'ok') {
+        navegar('/preparando', { replace: true })
+        return
+      }
+      if (r === 'sem-conexao') setErroPrincipal(MSG_SEM_CONEXAO)
+      else setSituacao('sem-chegada')
     } catch {
-      setErroCodigo(MSG_NAO_ABRIU)
+      setErroPrincipal(MSG_NAO_ENTROU)
     }
+    setOcupado(false)
   }
 
   async function enviarCodigo(e: FormEvent) {
@@ -90,27 +136,33 @@ export function Entrar() {
     setErroCodigo(null)
     setOcupado(true)
     try {
-      if (await concluirLoginComCodigo(codigo)) {
+      const r = await tentarLoginComCodigo(codigo)
+      if (r === 'ok') {
         navegar('/preparando', { replace: true })
         return
       }
-      setErroCodigo(MSG_CODIGO_INVALIDO)
+      setErroCodigo(r === 'sem-conexao' ? MSG_SEM_CONEXAO : MSG_CODIGO_INVALIDO)
     } catch {
-      setErroCodigo(MSG_CODIGO_INVALIDO)
+      setErroCodigo(MSG_NAO_ENTROU)
     }
     setOcupado(false)
   }
 
-  const aviso = voltou
-    ? 'A volta do Dropbox não chegou a este app. Entre com o código do Dropbox.'
-    : expirado
-      ? 'O acesso ao Dropbox expirou. Entre de novo; os dados do aparelho continuam aqui.'
-      : null
+  const aviso =
+    situacao === 'sem-conexao'
+      ? erroPrincipal
+        ? null
+        : MSG_SEM_CONEXAO
+      : situacao === 'acesso-negado'
+        ? MSG_ACESSO_NEGADO
+        : situacao === 'sem-chegada'
+          ? MSG_NAO_CHEGOU
+          : expirado
+            ? MSG_EXPIROU
+            : null
 
   return (
     <div className="entrar">
-      {/* Faixa do topo: no design leva o desenho de um selo, que é conteúdo do livro e fica fora deste repositório público. */}
-      <div className="entrar-faixa" aria-hidden="true" />
       <main className="entrar-principal">
         <div className="entrar-identidade">
           <Logo scale={2} tone="dark" />
@@ -128,16 +180,22 @@ export function Entrar() {
               {aviso}
             </p>
           )}
-
-          <button type="button" className="entrar-botao" onClick={entrarComDropbox} disabled={ocupado}>
-            Entrar com o Dropbox
-            <Icon name="proximo" size={18} />
-          </button>
           {erroPrincipal && (
             <p role="alert" className="entrar-erro">
               {erroPrincipal}
             </p>
           )}
+
+          {situacao === 'sem-conexao' && (
+            <button type="button" className="entrar-botao entrar-botao-secundario" onClick={repetirTroca} disabled={ocupado}>
+              Tentar de novo
+            </button>
+          )}
+
+          <button type="button" className="entrar-botao" onClick={entrarComDropbox} disabled={ocupado}>
+            Entrar com o Dropbox
+            <Icon name="proximo" size={18} />
+          </button>
 
           {!aberto && (
             <button type="button" className="entrar-link" onClick={abrirLoginPorCodigo}>
@@ -173,6 +231,11 @@ export function Entrar() {
                 <p role="alert" className="entrar-erro">
                   {erroCodigo}
                 </p>
+              )}
+              {erroCodigo && !urlDoDropbox && (
+                <button type="button" className="entrar-botao entrar-botao-secundario" onClick={() => void prepararCodigo(false)}>
+                  Tentar de novo
+                </button>
               )}
               <button type="submit" className="entrar-botao entrar-botao-secundario" disabled={ocupado || !codigo.trim()}>
                 Entrar

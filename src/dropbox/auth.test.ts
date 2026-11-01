@@ -4,11 +4,16 @@ import {
   cliente,
   concluirLogin,
   concluirLoginComCodigo,
+  concluirLoginDetalhado,
   estadoLogin,
   iniciarLogin,
   iniciarLoginComCodigo,
+  MSG_ACESSO_NEGADO,
   MSG_CODIGO_INVALIDO,
+  MSG_SEM_CONEXAO,
+  repetirTrocaPendente,
   sair,
+  tentarLoginComCodigo,
 } from './auth'
 import { gravarToken, lerPendente, lerToken } from './tokenStore'
 import { irPara } from './navegacao'
@@ -259,6 +264,108 @@ describe('login alternativo por código (Foco 6)', () => {
     await iniciarLogin()
     expect(await concluirLoginComCodigo('abc')).toBe(false)
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('rede fora do ar x recusa do Dropbox (R6, itens 3 e 4)', () => {
+  const FALHA_DE_REDE = () => new TypeError('Failed to fetch')
+
+  async function comecar() {
+    await iniciarLogin()
+    return new URL(vi.mocked(irPara).mock.calls[0]![0]).searchParams.get('state')!
+  }
+
+  it('mensagens combinadas', () => {
+    expect(MSG_SEM_CONEXAO).toBe('Sem conexão com o Dropbox; tente de novo')
+    expect(MSG_ACESSO_NEGADO).toBe('Acesso não autorizado no Dropbox')
+  })
+
+  it('retorno: falha de rede na troca devolve "sem-conexao" e MANTÉM o login pendente', async () => {
+    const state = await comecar()
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=COD&state=${state}`)).toBe('sem-conexao')
+    expect(await lerPendente()).not.toBeNull()
+    expect(await estadoLogin()).toBe('sem-login')
+  })
+
+  it('retorno: erro 5xx do Dropbox também é "sem-conexao" e mantém o pendente', async () => {
+    const state = await comecar()
+    fetchMock.mockResolvedValueOnce(resposta({ error: 'server_error' }, 503))
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=COD&state=${state}`)).toBe('sem-conexao')
+    expect(await lerPendente()).not.toBeNull()
+  })
+
+  it('retorno: depois da falha de rede, repetirTrocaPendente conclui com o código guardado', async () => {
+    const state = await comecar()
+    const verifier = (await lerPendente())!.codeVerifier
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    await concluirLoginDetalhado(`${REDIRECT_DEV}?code=COD&state=${state}`)
+
+    fetchMock.mockResolvedValueOnce(resposta(TOKEN_OK))
+    expect(await repetirTrocaPendente()).toBe('ok')
+    const { params } = parametrosDaChamada(1)
+    expect(params.get('code')).toBe('COD')
+    expect(params.get('code_verifier')).toBe(verifier)
+    expect(params.get('redirect_uri')).toBe(REDIRECT_DEV)
+    expect(await estadoLogin()).toBe('ativo')
+    expect(await lerPendente()).toBeNull()
+  })
+
+  it('repetirTrocaPendente: sem rede de novo mantém o pendente; sem código guardado devolve "sem-pendente"', async () => {
+    expect(await repetirTrocaPendente()).toBe('sem-pendente')
+    const state = await comecar()
+    expect(await repetirTrocaPendente()).toBe('sem-pendente') // ainda não voltou do Dropbox
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    await concluirLoginDetalhado(`${REDIRECT_DEV}?code=COD&state=${state}`)
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    expect(await repetirTrocaPendente()).toBe('sem-conexao')
+    expect(await lerPendente()).not.toBeNull()
+  })
+
+  it('retorno: troca recusada pelo Dropbox devolve "recusado" e limpa o pendente', async () => {
+    const state = await comecar()
+    fetchMock.mockResolvedValueOnce(resposta({ error: 'invalid_grant' }, 400))
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=COD&state=${state}`)).toBe('recusado')
+    expect(await lerPendente()).toBeNull()
+  })
+
+  it('retorno com error=access_denied devolve "acesso-negado" e limpa o pendente', async () => {
+    const state = await comecar()
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?error=access_denied&state=${state}`)).toBe('acesso-negado')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(await lerPendente()).toBeNull()
+  })
+
+  it('retorno sem pendente, ou com state diferente, devolve "sem-pendente"', async () => {
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=C&state=x`)).toBe('sem-pendente')
+    await comecar()
+    expect(await concluirLoginDetalhado(`${REDIRECT_DEV}?code=C&state=outro`)).toBe('sem-pendente')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('concluirLogin continua devolvendo só um booleano', async () => {
+    const state = await comecar()
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    expect(await concluirLogin(`${REDIRECT_DEV}?code=COD&state=${state}`)).toBe(false)
+  })
+
+  it('código colado: falha de rede devolve "sem-conexao", mantém o pendente e dá para tentar de novo', async () => {
+    await iniciarLoginComCodigo()
+    fetchMock.mockRejectedValueOnce(FALHA_DE_REDE())
+    expect(await tentarLoginComCodigo('abc')).toBe('sem-conexao')
+    expect(await concluirLoginComCodigo('abc')).toBe(false)
+    expect((await lerPendente())?.modo).toBe('codigo')
+    fetchMock.mockResolvedValueOnce(resposta(TOKEN_OK))
+    expect(await tentarLoginComCodigo('abc')).toBe('ok')
+  })
+
+  it('código colado: o Dropbox recusar (400) é "recusado"; vazio é "recusado" sem rede; sem início é "sem-pendente"', async () => {
+    expect(await tentarLoginComCodigo('abc')).toBe('sem-pendente')
+    await iniciarLoginComCodigo()
+    fetchMock.mockResolvedValueOnce(resposta({ error: 'invalid_grant' }, 400))
+    expect(await tentarLoginComCodigo('errado')).toBe('recusado')
+    expect(await tentarLoginComCodigo('  ')).toBe('recusado')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 

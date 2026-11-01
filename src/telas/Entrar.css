@@ -1,6 +1,7 @@
 /*
  * Entrada do app. Cores do design (Login.dc.html e PC-Entrar.dc.html):
  * fundo #111111, texto #EDEDED, secundário #A3A3A3, lema #D4D4D4, botão #FFFFFF sobre #111111.
+ * Sem faixa de ilustração: o bloco fica centrado na vertical sobre o fundo liso.
  */
 html.tema-entrar {
   --fundo: #111111;
@@ -19,25 +20,28 @@ html.tema-entrar {
   font-family: var(--fonte-texto);
 }
 
-.entrar-faixa {
-  flex: 0 0 auto;
-  height: clamp(140px, 40dvh, 360px);
-  background: #000000;
+/* Foco: anel branco explícito. O contorno global (currentColor) some no botão
+   branco, cuja cor de texto é #111111 sobre o fundo #111111. */
+.entrar :focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .entrar-principal {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 48px 24px max(36px, env(safe-area-inset-bottom));
 }
 
 .entrar-identidade {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding: 40px 32px 24px;
   text-align: center;
 }
 
@@ -71,7 +75,8 @@ html.tema-entrar {
   flex-direction: column;
   align-items: stretch;
   gap: 14px;
-  padding: 0 24px max(36px, env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 360px;
 }
 
 .entrar-botao {
@@ -172,21 +177,10 @@ html.tema-entrar {
   font-family: var(--fonte-codigo);
 }
 
-/* Computador (PC-Entrar.dc.html) */
+/* Computador (PC-Entrar.dc.html): títulos maiores, lema numa linha só. */
 @media (min-width: 768px) {
-  .entrar-faixa {
-    height: clamp(200px, 40dvh, 440px);
-  }
-
-  .entrar-principal {
-    align-items: center;
-    padding: 0 24px 48px;
-  }
-
   .entrar-identidade {
-    flex: 0 0 auto;
     gap: 0;
-    padding: 72px 0 0;
   }
 
   .entrar-identidade > svg {
@@ -205,12 +199,5 @@ html.tema-entrar {
 
   .entrar-quebra {
     display: none;
-  }
-
-  .entrar-acoes {
-    width: 360px;
-    max-width: 100%;
-    margin-top: 40px;
-    padding: 0;
   }
 }

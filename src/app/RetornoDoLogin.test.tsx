@@ -34,6 +34,18 @@ describe('RetornoDoLogin', () => {
     expect(await screen.findByText('/entrar {"voltou":true}')).toBeInTheDocument()
   })
 
+  it('falha de rede leva a /entrar com o motivo "sem-conexao"', async () => {
+    vi.mocked(processarRetornoDoLogin).mockResolvedValue('sem-conexao')
+    montar()
+    expect(await screen.findByText('/entrar {"voltou":true,"motivo":"sem-conexao"}')).toBeInTheDocument()
+  })
+
+  it('acesso negado leva a /entrar com o motivo "acesso-negado"', async () => {
+    vi.mocked(processarRetornoDoLogin).mockResolvedValue('acesso-negado')
+    montar()
+    expect(await screen.findByText('/entrar {"voltou":true,"motivo":"acesso-negado"}')).toBeInTheDocument()
+  })
+
   it('sem retorno do Dropbox fica onde está', async () => {
     vi.mocked(processarRetornoDoLogin).mockResolvedValue('sem-retorno')
     montar()

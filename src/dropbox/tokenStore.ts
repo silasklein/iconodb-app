@@ -28,6 +28,11 @@ export interface LoginPendente {
   codeVerifier: string
   /** Só no modo "redirect". */
   state?: string
+  /**
+   * Só no modo "redirect": o code que voltou do Dropbox, guardado quando a troca
+   * falhou por falta de rede (o code só vale uma vez e a URL já foi limpa).
+   */
+  codigoRecebido?: string
 }
 
 function abrir(): Promise<IDBDatabase> {

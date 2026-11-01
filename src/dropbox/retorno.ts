@@ -1,6 +1,11 @@
-import { concluirLogin } from './auth'
+import { concluirLoginDetalhado } from './auth'
 
-export type ResultadoRetorno = 'sem-retorno' | 'concluido' | 'falhou'
+/**
+ * - falhou: sem login pendente aqui, state diferente ou troca recusada;
+ * - sem-conexao: a troca não pôde ser feita por falta de rede (o login pendente fica guardado);
+ * - acesso-negado: o usuário não autorizou o app no Dropbox.
+ */
+export type ResultadoRetorno = 'sem-retorno' | 'concluido' | 'falhou' | 'sem-conexao' | 'acesso-negado'
 
 /** Parâmetros que o Dropbox acrescenta à URL ao voltar (fica na query, não no hash do HashRouter). */
 const PARAMETROS_DO_RETORNO = ['code', 'state', 'error', 'error_description']
@@ -22,7 +27,10 @@ export async function processarRetornoDoLogin(): Promise<ResultadoRetorno> {
   window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
 
   try {
-    return (await concluirLogin(urlDeRetorno)) ? 'concluido' : 'falhou'
+    const r = await concluirLoginDetalhado(urlDeRetorno)
+    if (r === 'ok') return 'concluido'
+    if (r === 'sem-conexao' || r === 'acesso-negado') return r
+    return 'falhou'
   } catch {
     return 'falhou'
   }
