@@ -69,11 +69,13 @@ export function BarraSuperior({ busca = true }: Props) {
   // Lê os parâmetros de agora, na hora de gravar: a espera de digitação não desfaz o que outro toque mudou.
   const gravar = useRef((_q: string) => {})
   gravar.current = (q: string) => {
+    if (!naBusca) return // nunca escreve ?q= numa rota que não é a Busca (derrubaria ?obra= e afins)
     ultimoEnviado.current = q
     setParams((anterior) => montarParametros({ ...lerParametros(anterior), q }), { replace: true })
   }
   const espera = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(espera.current), [])
+  // Trocar de tela cancela a espera pendente (e o desmonte também).
+  useEffect(() => () => clearTimeout(espera.current), [pathname])
 
   const aoMudar = (novo: string) => {
     setTexto(novo)

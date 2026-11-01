@@ -16,6 +16,7 @@ import css from './Busca.css?raw'
  */
 // A barra superior lê a fila de revisão: aqui, vazia.
 vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(async () => ({ total: 0, porTipo: [] })), sitios: vi.fn(async () => []) }))
+vi.mock('../pacote/local', () => ({ lerEstado: vi.fn(async () => ({ schema: 5 })) }))
 vi.mock('../busca/consulta', async (original) => ({ ...(await original<typeof import('../busca/consulta')>()), buscar: vi.fn() }))
 
 describe('tela Busca: resultados', () => {

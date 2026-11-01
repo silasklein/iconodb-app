@@ -1,10 +1,12 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router'
+import { Link, MemoryRouter, useLocation } from 'react-router'
 import { pendencias, sitios } from '../banco/consultas'
+import { lerEstado } from '../pacote/local'
 import { BarraSuperior } from './BarraSuperior'
 
 vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(), sitios: vi.fn() }))
+vi.mock('../pacote/local', () => ({ lerEstado: vi.fn() }))
 
 function Onde() {
   const { pathname, search } = useLocation()
@@ -25,6 +27,7 @@ describe('BarraSuperior', () => {
   beforeEach(() => {
     vi.mocked(pendencias).mockResolvedValue({ total: 4248, porTipo: [] })
     vi.mocked(sitios).mockResolvedValue([])
+    vi.mocked(lerEstado).mockResolvedValue({ schema: 5, gerado_em: 'x', publicacoes: [], arquivos: {} })
   })
 
   it('à esquerda o logo SKC (38 x 22) leva ao Início, com g i', () => {
@@ -136,6 +139,37 @@ describe('BarraSuperior', () => {
     await userEvent.click(screen.getByRole('link', { name: /Minhas notas/ }))
     expect(screen.queryByRole('dialog', { name: 'Menu' })).not.toBeInTheDocument()
     expect(onde()).toBe('/notas')
+  })
+
+  it('sem pacote no aparelho a barra não consulta a fila de revisão', async () => {
+    vi.mocked(pendencias).mockClear()
+    vi.mocked(lerEstado).mockResolvedValue(null)
+    abrir('/busca')
+    expect(await screen.findByRole('link', { name: 'Revisão' })).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(pendencias).not.toHaveBeenCalled()
+  })
+
+  it('g e a letra não navegam com o Menu aberto', async () => {
+    abrir('/busca')
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    await userEvent.keyboard('gc')
+    expect(onde()).toBe('/busca')
+  })
+
+  it('a espera de digitação não escreve ?q= em outra rota depois de sair da Busca', async () => {
+    render(
+      <MemoryRouter initialEntries={['/busca?q=']}>
+        <BarraSuperior />
+        <Onde />
+        <Link to="/colecoes?obra=TESTE-I">sair</Link>
+      </MemoryRouter>,
+    )
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'a') // arma a espera de 250 ms
+    await userEvent.click(screen.getByRole('link', { name: 'sair' }))
+    expect(onde()).toBe('/colecoes?obra=TESTE-I')
+    await new Promise((r) => setTimeout(r, 400))
+    expect(onde()).toBe('/colecoes?obra=TESTE-I')
   })
 
   describe('o campo de busca', () => {

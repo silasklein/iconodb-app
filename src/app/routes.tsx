@@ -32,6 +32,7 @@ export const ROTAS: Rota[] = [
     path: '/',
     elemento: (
       <RotaInicial>
+        <BarraDasTelasLargas noInicio />
         <Inicio />
       </RotaInicial>
     ),
@@ -61,10 +62,13 @@ export const SEM_BARRA_SUPERIOR = ['/entrar', '/preparando']
  * A barra superior das telas de computador (a partir de 768 px) fica fora das rotas, para
  * não remontar a cada tela. No Início o campo de busca é o da própria tela.
  */
-function BarraDasTelasLargas() {
+function BarraDasTelasLargas({ noInicio = false }: { noInicio?: boolean }) {
   const { pathname } = useLocation()
   const computador = useBreakpoint() === 'computador'
   if (!computador || SEM_BARRA_SUPERIOR.includes(pathname)) return null
+  // Em "/" a barra só vem com o Início, depois que a guarda decidiu (RotaInicial): antes disso, ou se
+  // o destino for outro, não há o que consultar e a barra não deve nem consultar o banco.
+  if (pathname === '/' && !noInicio) return null
   return <BarraSuperior busca={pathname !== '/'} />
 }
 

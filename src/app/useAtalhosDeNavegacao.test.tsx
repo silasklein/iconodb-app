@@ -76,4 +76,18 @@ describe('atalhos "g" + letra', () => {
     await userEvent.keyboard('{Control>}g{/Control}c')
     expect(onde()).toBe('/qualquer')
   })
+
+  it('não age enquanto há um diálogo modal aberto (o Menu, por exemplo)', async () => {
+    abrir()
+    const modal = document.createElement('div')
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('aria-modal', 'true')
+    document.body.append(modal)
+    await userEvent.keyboard('gc')
+    await userEvent.keyboard('?')
+    expect(onde()).toBe('/qualquer')
+    modal.remove()
+    await userEvent.keyboard('gc')
+    expect(onde()).toBe('/colecoes')
+  })
 })

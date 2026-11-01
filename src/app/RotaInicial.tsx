@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router'
 import { estadoLogin } from '../dropbox/auth'
 import { lerEstado } from '../pacote/local'
@@ -20,7 +20,7 @@ export async function decidirDestino(): Promise<Destino> {
 }
 
 /** Guarda da rota "/": mostra o Início (os filhos) ou manda para a tela certa. Não mostra nada enquanto decide. */
-export function RotaInicial({ children }: { children: ReactElement }) {
+export function RotaInicial({ children }: { children: ReactNode }) {
   const [destino, setDestino] = useState<Destino | null>(null)
   useEffect(() => {
     let vivo = true
@@ -30,5 +30,5 @@ export function RotaInicial({ children }: { children: ReactElement }) {
     }
   }, [])
   if (destino === null) return null
-  return destino === 'inicio' ? children : <Navigate to={destino} replace />
+  return destino === 'inicio' ? <>{children}</> : <Navigate to={destino} replace />
 }

@@ -54,6 +54,8 @@ export function Colecoes() {
   const carga = useCarregar(() => grupos())
   const obras = useMemo(() => (carga.fase === 'ok' ? obrasDosGrupos(carga.dados) : []), [carga])
   const aba = obras.find((o) => o.chave === params.get('obra')) ?? null
+  // Com ?obra= ainda carregando não se sabe a aba: nem o painel SKC nem aba marcada até chegarem as obras.
+  const esperandoObra = carga.fase === 'carregando' && params.get('obra') !== null
 
   return (
     <div className="colecoes">
@@ -67,7 +69,7 @@ export function Colecoes() {
       </div>
 
       <nav aria-label="Obras" className="colecoes-abas">
-        <Link className="hit" to="/colecoes" replace aria-current={aba === null ? 'page' : undefined}>
+        <Link className="hit" to="/colecoes" replace aria-current={aba === null && !esperandoObra ? 'page' : undefined}>
           SKC
         </Link>
         {obras.map((o) => (
@@ -80,7 +82,8 @@ export function Colecoes() {
       {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} />}
 
       {aba === null ? (
-        carga.fase !== 'erro' && (
+        carga.fase !== 'erro' &&
+        !esperandoObra && (
           <section className="colecoes-corpo" aria-label="Minhas coleções">
             <div className="colecoes-secao-titulo">
               <h2>Minhas coleções</h2>

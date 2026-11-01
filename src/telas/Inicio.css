@@ -46,7 +46,11 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: 22px;
-  padding: 24px 24px max(28px, env(safe-area-inset-bottom));
+  /* O espaço da capa, que é absoluta: ela termina 276 px abaixo do topo da tela (56 + 220). O topo
+     do conteúdo começa depois do cabeçalho (>= 62 px), então 224 px de folga o deixam em >= 286 px:
+     o título nunca fica sobre a imagem. Em telas altas (>= 844 px) o conteúdo ainda desce até o pé,
+     como no desenho; nas baixas, a tela rola. */
+  padding: 224px 24px max(28px, env(safe-area-inset-bottom));
 }
 .inicio-titulo {
   display: flex;

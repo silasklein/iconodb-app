@@ -62,6 +62,29 @@ describe('Coleções', () => {
     expect(screen.getByRole('link', { name: 'SKC' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('enquanto carrega com ?obra=, não mostra o painel SKC nem marca aba nenhuma', async () => {
+    usarMotor({ abrir: () => new Promise(() => {}), reabrir: async () => ({ estado: 'sem-pacote' }), executar: async () => [] })
+    try {
+      abrir('/colecoes?obra=TESTE-I')
+      expect(screen.getByRole('link', { name: 'SKC' })).not.toHaveAttribute('aria-current')
+      expect(screen.queryByText('Crie coleções na próxima versão')).not.toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Minhas coleções' })).not.toBeInTheDocument()
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+
+  it('enquanto carrega sem ?obra=, a aba SKC já vale', async () => {
+    usarMotor({ abrir: () => new Promise(() => {}), reabrir: async () => ({ estado: 'sem-pacote' }), executar: async () => [] })
+    try {
+      abrir('/colecoes')
+      expect(screen.getByRole('link', { name: 'SKC' })).toHaveAttribute('aria-current', 'page')
+      expect(screen.getByText('Crie coleções na próxima versão')).toBeInTheDocument()
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+
   it('no celular tem Voltar e a lupa; sem miniaturas dos grupos', async () => {
     abrir('/colecoes?obra=TESTE-I')
     await screen.findByRole('link', { name: /Animais de teste/ })

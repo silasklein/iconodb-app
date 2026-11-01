@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 /**
  * Atalhos globais de ir a uma seção (auditoria UX, seção 4): `g` e depois a letra. `?` abre a
  * lista de atalhos. Não sequestram teclas do navegador (nada com modificador) e não valem
- * em campos de texto. É um hook solto: a Tarefa 11 o generaliza no registro de atalhos.
+ * em campos de texto nem com um diálogo modal aberto. É um hook solto: a Tarefa 11 o generaliza no registro de atalhos.
  */
 export const ATALHOS_DE_IR: Record<string, string> = {
   i: '/',
@@ -34,6 +34,8 @@ export function useAtalhosDeNavegacao(): void {
     }
     const aoTeclar = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || emCampoDeTexto(e.target)) return
+      // Com um diálogo modal aberto (o Menu, uma folha), as teclas são dele.
+      if (document.querySelector('[aria-modal="true"]')) return
       if (esperando) {
         const caminho = ATALHOS_DE_IR[e.key.toLowerCase()]
         parar()

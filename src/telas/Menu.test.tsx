@@ -5,6 +5,7 @@ import { pendencias, sitios } from '../banco/consultas'
 import { Menu } from './Menu'
 
 vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(), sitios: vi.fn() }))
+vi.mock('../pacote/local', () => ({ lerEstado: vi.fn(async () => ({ schema: 5 })) }))
 
 function abrir(props: Partial<React.ComponentProps<typeof Menu>> = {}) {
   const aoFechar = vi.fn()
