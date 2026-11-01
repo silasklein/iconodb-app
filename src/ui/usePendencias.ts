@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
+import { aoReabrir } from '../banco/cliente'
 import { pendencias, type Pendencias } from '../banco/consultas'
 import { lerEstado } from '../pacote/local'
 
-/** A fila de revisão do pacote (null enquanto carrega ou se não há pacote; sem pacote o banco nem é consultado). */
+/**
+ * A fila de revisão do pacote (null enquanto carrega ou se não há pacote; sem pacote o banco nem é
+ * consultado). Conta de novo quando o banco é reaberto (uma sincronização trocou o pacote).
+ */
 export function usePendencias(): Pendencias | null {
   const [valor, setValor] = useState<Pendencias | null>(null)
+  const [versao, setVersao] = useState(0)
+  useEffect(() => aoReabrir(() => setVersao((v) => v + 1)), [])
   useEffect(() => {
     let vivo = true
     lerEstado()
@@ -16,7 +22,7 @@ export function usePendencias(): Pendencias | null {
     return () => {
       vivo = false
     }
-  }, [])
+  }, [versao])
   return valor
 }
 

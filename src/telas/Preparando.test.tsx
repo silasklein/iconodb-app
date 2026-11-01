@@ -15,7 +15,13 @@ import {
   MSG_SCHEMA,
   type Fonte,
 } from '../pacote/manifesto'
+import { reabrirBanco } from '../banco/cliente'
 import { Preparando } from './Preparando'
+
+vi.mock('../banco/cliente', async (original) => ({
+  ...(await original<typeof import('../banco/cliente')>()),
+  reabrirBanco: vi.fn(),
+}))
 
 vi.mock('../pacote/baixar', async (original) => ({
   ...(await original<typeof import('../pacote/baixar')>()),
@@ -115,6 +121,36 @@ describe('Preparando', () => {
     expect(screen.queryByRole('button', { name: 'Abrir assim que terminar' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Abrir o app' }))
     expect(screen.getByText('Início do app')).toBeInTheDocument()
+  })
+
+  it('pacote atualizado: o banco é reaberto ANTES de "pronto" (as telas veem o pacote novo sem recarregar)', async () => {
+    let reabriu!: () => void
+    vi.mocked(reabrirBanco).mockImplementation(() => new Promise((ok) => (reabriu = () => ok({ estado: 'sem-pacote' }))))
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('atualizado')
+    expect(reabrirBanco).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Abrir o app' })).not.toBeInTheDocument()
+    await act(async () => reabriu())
+    expect(await screen.findByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+  })
+
+  it('pacote igual: o banco não é reaberto; uma reabertura que falha não impede abrir o app', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('igual')
+    expect(reabrirBanco).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+
+    vi.mocked(reabrirBanco).mockRejectedValue(new Error('worker morto'))
+    const s2 = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalledTimes(2))
+    await s2.terminar('atualizado')
+    expect(reabrirBanco).toHaveBeenCalledTimes(1)
+    expect(await screen.findAllByRole('button', { name: 'Abrir o app' })).toHaveLength(2)
   })
 
   it('"Abrir assim que terminar" leva ao Início quando a sincronização termina', async () => {

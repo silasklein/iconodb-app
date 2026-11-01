@@ -162,7 +162,9 @@ export class Banco implements Motor {
     this.fechar()
     for (let tentativa = 0; ; tentativa++) {
       const manifesto = await lerEstado(this.opcoes.armazem)
-      if (!manifesto) return (this.estado = { estado: 'sem-pacote' })
+      // "Sem pacote" não fica guardado: o próximo abrir() olha o estado.json de novo
+      // (o pacote pode chegar depois, pela sincronização desta ou de outra janela).
+      if (!manifesto) return { estado: 'sem-pacote' }
       try {
         return (this.estado = await this.abrirPacote(manifesto))
       } catch (erro) {

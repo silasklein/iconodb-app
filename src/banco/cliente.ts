@@ -97,12 +97,26 @@ function motor(): Motor {
   return motorAtual
 }
 
+/**
+ * Guarda a abertura em curso. Só um banco ABERTO fica guardado: "sem pacote" e falhas são
+ * esquecidos, para que a próxima chamada olhe o aparelho de novo (o pacote pode chegar depois,
+ * por exemplo se "/" abriu a busca na tela de entrar, antes da primeira sincronização).
+ */
 function guardar(promessa: Promise<EstadoBanco>): Promise<EstadoBanco> {
   aberto = promessa
-  promessa.catch(() => {
+  const esquecer = () => {
     if (aberto === promessa) aberto = null
-  })
+  }
+  promessa.then((e) => e.estado !== 'aberto' && esquecer(), esquecer)
   return promessa
+}
+
+const ouvintesDeReabertura = new Set<() => void>()
+
+/** Avisa depois de cada reabertura bem-sucedida (o pacote pode ter mudado). Devolve o cancelamento. */
+export function aoReabrir(ouvinte: () => void): () => void {
+  ouvintesDeReabertura.add(ouvinte)
+  return () => ouvintesDeReabertura.delete(ouvinte)
 }
 
 /** Abre o banco (uma vez). `{estado: 'sem-pacote'}` quando ainda não houve sincronização completa. */
@@ -110,9 +124,11 @@ export function abrirBanco(): Promise<EstadoBanco> {
   return aberto ?? guardar(motor().abrir())
 }
 
-/** Depois que uma sincronização troca o pacote: fecha e abre o novo. */
-export function reabrirBanco(): Promise<EstadoBanco> {
-  return guardar(motor().reabrir())
+/** Depois que uma sincronização troca o pacote: fecha e abre o novo, e avisa os ouvintes. */
+export async function reabrirBanco(): Promise<EstadoBanco> {
+  const estado = await guardar(motor().reabrir())
+  for (const ouvinte of [...ouvintesDeReabertura]) ouvinte()
+  return estado
 }
 
 /** As publicações abertas, na ordem do manifesto; lança ErroSemPacote sem pacote. */

@@ -1,6 +1,7 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter, useLocation } from 'react-router'
+import { reabrirBanco, usarMotor } from '../banco/cliente'
 import { pendencias, sitios } from '../banco/consultas'
 import { lerEstado } from '../pacote/local'
 import { AtalhosGlobais } from '../app/useAtalhosDeNavegacao'
@@ -150,6 +151,27 @@ describe('BarraSuperior', () => {
     expect(await screen.findByRole('link', { name: 'Revisão' })).toBeInTheDocument()
     await new Promise((r) => setTimeout(r, 20))
     expect(pendencias).not.toHaveBeenCalled()
+  })
+
+  it('o ponto da Revisão se atualiza quando o banco é reaberto (pacote novo), sem recarregar', async () => {
+    vi.mocked(lerEstado).mockResolvedValue(null)
+    abrir('/busca')
+    expect(await screen.findByRole('link', { name: 'Revisão' })).toBeInTheDocument()
+    vi.mocked(lerEstado).mockResolvedValue({ schema: 5, gerado_em: 'y', publicacoes: [], arquivos: {} })
+    vi.mocked(pendencias).mockResolvedValue({ total: 7, porTipo: [] })
+    usarMotor({
+      abrir: async () => ({ estado: 'sem-pacote' }),
+      reabrir: async () => ({ estado: 'aberto', publicacoes: [], geradoEm: 'y', modo: 'memoria' }),
+      executar: async () => [],
+    })
+    try {
+      await act(async () => {
+        await reabrirBanco()
+      })
+      expect(await screen.findByRole('link', { name: /7 pendências/ })).toBeInTheDocument()
+    } finally {
+      usarMotor(null)
+    }
   })
 
   it('g e a letra não navegam com o Menu aberto', async () => {

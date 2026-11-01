@@ -4,10 +4,10 @@
  * memória no Node. O pacote tem 6 objetos (CA00001–CA00004, BA00001–BA00002, um item
  * TESTE-000N cada), 9 hipóteses, 9 verbetes e dois grupos de 3 itens.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { armazemComPacote, bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { armazemMemoria } from '../pacote/armazem'
-import { abrirBanco, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
+import { abrirBanco, aoReabrir, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
 import {
   contagens,
   grupo,
@@ -338,6 +338,38 @@ describe('sem pacote e reabertura', () => {
     for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
     expect((await reabrirBanco()).estado).toBe('aberto')
     expect((await contagens()).objetos).toBe(6)
+  })
+
+  it('"sem pacote" nunca fica guardado: o pacote que chega depois aparece sem reabrir', async () => {
+    const armazem = armazemMemoria()
+    usarMotor(await bancoDeTeste({ armazem }))
+    // Ex.: "/" ou "g b" na tela de entrar, antes de qualquer sincronização.
+    expect(await abrirBanco()).toEqual({ estado: 'sem-pacote' })
+    await expect(contagens()).rejects.toBeInstanceOf(ErroSemPacote)
+    const cheio = await armazemComPacote()
+    for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
+    expect((await abrirBanco()).estado).toBe('aberto')
+    expect((await contagens()).objetos).toBe(6)
+  })
+
+  it('o Banco também não guarda "sem pacote" (o worker vive entre as telas)', async () => {
+    const armazem = armazemMemoria()
+    const banco = await bancoDeTeste({ armazem })
+    expect(await banco.abrir()).toEqual({ estado: 'sem-pacote' })
+    const cheio = await armazemComPacote()
+    for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
+    expect((await banco.abrir()).estado).toBe('aberto')
+  })
+
+  it('reabrirBanco() avisa quem pediu (aoReabrir) depois de trocar o pacote', async () => {
+    usarMotor(await bancoDeTeste())
+    const ouvinte = vi.fn()
+    const parar = aoReabrir(ouvinte)
+    await reabrirBanco()
+    expect(ouvinte).toHaveBeenCalledTimes(1)
+    parar()
+    await reabrirBanco()
+    expect(ouvinte).toHaveBeenCalledTimes(1)
   })
 })
 

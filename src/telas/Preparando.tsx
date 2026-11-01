@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
+import { reabrirBanco } from '../banco/cliente'
 import { eErroDeRede, fonteDropbox } from '../dropbox/fonte'
 import { armazemPadrao, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type Etapa } from '../pacote/baixar'
@@ -123,8 +124,9 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
       if (ativa()) navegar('/entrar', { replace: true })
       return
     }
+    let resultado: 'atualizado' | 'igual'
     try {
-      await sincronizarPacote(
+      resultado = await sincronizarPacote(
         fonte,
         (etapa, feito, total) => {
           if (ativa()) setAndamento((a) => ({ ...a, [etapa]: { feito, total } }))
@@ -134,6 +136,16 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
     } catch (e) {
       await falhou(e)
       return
+    }
+    if (resultado === 'atualizado') {
+      // O pacote mudou (ou chegou pela primeira vez): o banco fecha o antigo e abre o novo antes
+      // de "pronto", para nenhuma tela ver o pacote velho (ou "sem pacote") até recarregar.
+      // Falhar aqui não desfaz a sincronização: a próxima consulta abre o banco de novo.
+      try {
+        await reabrirBanco()
+      } catch {
+        /* segue */
+      }
     }
     if (!ativa()) return
     setTemPacote(true)
