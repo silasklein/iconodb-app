@@ -255,13 +255,22 @@ function ItemCarregado({ d }: { d: ItemDetalhe }) {
   // entrada do histórico a imagem à vista e o original; ao fechar (voltar no histórico) ele monta de
   // novo, lê isso e reabre na mesma imagem. O contexto (Busca ou Grupo) e `?hipotese=` seguem como estavam.
   const imagemAberta = lerImagemAberta(location.state)
+  // Em dois tempos: o replace primeiro; o push do visualizador só depois de a entrada trocada estar na
+  // tela. O roteador junta num só os dois navegar() de um mesmo clique, e então a rolagem (useRestaurarRolagem)
+  // nunca veria a entrada a que o Voltar do visualizador volta, e o item reabriria no topo.
+  const [ampliando, setAmpliando] = useState<{ imagemId: string; original: boolean; chaveAntes: string } | null>(null)
   const ampliarImagem = useCallback(
     (imagemId: string, original: boolean) => {
-      navegar({ pathname: location.pathname, search: location.search }, { replace: true, state: comImagemAberta(location.state, { imagemId, original }) })
-      navegar(`/imagem/${encodeURIComponent(imagemId)}`, { state: { ampliada: true, original } satisfies EstadoDoVisualizador })
+      void navegar({ pathname: location.pathname, search: location.search }, { replace: true, state: comImagemAberta(location.state, { imagemId, original }) })
+      setAmpliando({ imagemId, original, chaveAntes: location.key })
     },
-    [navegar, location.pathname, location.search, location.state],
+    [navegar, location.pathname, location.search, location.state, location.key],
   )
+  useEffect(() => {
+    if (!ampliando || location.key === ampliando.chaveAntes) return
+    setAmpliando(null)
+    void navegar(`/imagem/${encodeURIComponent(ampliando.imagemId)}`, { state: { ampliada: true, original: ampliando.original } satisfies EstadoDoVisualizador })
+  }, [ampliando, location.key, navegar])
   const imagem = (
     <ImagemItem
       numero={d.numero}

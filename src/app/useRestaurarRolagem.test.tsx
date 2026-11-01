@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useNavigate, type NavigateFunction } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { usarMotor } from '../banco/cliente'
 import { instalarMatchMedia } from '../test/larguraDeTela'
@@ -8,7 +8,7 @@ import { usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { AppRoutes } from './routes'
 import { useRestaurarRolagem } from './useRestaurarRolagem'
 
-vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async () => null) }))
+vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
 vi.mock('./RotaInicial', () => ({ RotaInicial: ({ children }: { children: React.ReactNode }) => children }))
 
 let y = 0
@@ -135,6 +135,67 @@ describe('useRestaurarRolagem (telas de mentira)', () => {
     expect(Object.values(guardado)).toContain(840)
   })
 
+  it('um REPLACE na mesma tela (as letras do filtro) não deixa entradas de lixo na sessão', () => {
+    abrir()
+    rolarAte(600)
+    act(() => void ir('/lista?filtro=a', { replace: true }))
+    act(() => void ir('/lista?filtro=ab', { replace: true }))
+    act(() => void ir('/lista?filtro=abc', { replace: true }))
+    expect(sessionStorage.getItem('iconodb:rolagem')).toBeNull()
+    act(() => void ir('/detalhe'))
+    // só a entrada que de fato fica no histórico (a última) foi guardada
+    expect(Object.values(JSON.parse(sessionStorage.getItem('iconodb:rolagem')!))).toEqual([600])
+  })
+
+  it('o scroll cortado durante a restauração não sobrescreve o alvo guardado', async () => {
+    abrir()
+    rolarAte(1500)
+    act(() => void ir('/detalhe'))
+    y = 0
+    altura = 800 // a lista ainda não chegou
+    act(() => void ir(-1))
+    y = 300 // o navegador corta a posição à altura da página curta e avisa
+    fireEvent.scroll(window)
+    act(() => void ir('/detalhe'))
+    expect(JSON.parse(sessionStorage.getItem('iconodb:rolagem')!)).toMatchObject({ default: 1500 })
+  })
+
+  it('passado 1 s sem a página crescer, o alvo continua sendo o guardado (o scrollY cortado só vale quando a pessoa rola)', async () => {
+    abrir()
+    rolarAte(1500)
+    act(() => void ir('/detalhe'))
+    y = 0
+    altura = 800
+    rolar.mockClear()
+    act(() => void ir(-1))
+    await waitFor(() => expect(chamadas()).toEqual([[0, 1500]]), { timeout: 2500 })
+    y = 700 // o que coube
+    fireEvent.scroll(window)
+    act(() => void ir('/detalhe'))
+    expect(JSON.parse(sessionStorage.getItem('iconodb:rolagem')!)).toMatchObject({ default: 1500 })
+  })
+
+  it('quem rola na espera assume a posição: vale onde ele parou, não o alvo', async () => {
+    abrir()
+    rolarAte(1500)
+    act(() => void ir('/detalhe'))
+    y = 0
+    altura = 800
+    act(() => void ir(-1))
+    fireEvent.wheel(window)
+    y = 420
+    fireEvent.scroll(window)
+    act(() => void ir('/detalhe'))
+    expect(JSON.parse(sessionStorage.getItem('iconodb:rolagem')!)).toMatchObject({ default: 420 })
+  })
+
+  it('ao fechar a aba (pagehide) a posição da entrada corrente fica guardada', () => {
+    abrir()
+    rolarAte(555)
+    fireEvent(window, new Event('pagehide'))
+    expect(JSON.parse(sessionStorage.getItem('iconodb:rolagem')!)).toMatchObject({ default: 555 })
+  })
+
   it('sessionStorage indisponível não quebra a navegação', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('bloqueado')
@@ -170,5 +231,65 @@ describe('useRestaurarRolagem no app: lista longa → detalhe → voltar', () =>
     act(() => void ir(-1))
     await screen.findAllByRole('link', { name: /Tell Probe Teste/ })
     await waitFor(() => expect(chamadas().at(-1)).toEqual([0, 1200]))
+  })
+})
+
+describe('useRestaurarRolagem no app: o Voltar da tela e o fechar do visualizador', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste())
+    usarFoldDoPacoteSintetico()
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+  afterAll(() => usarMotor(null))
+
+  function app(url: string) {
+    render(
+      <MemoryRouter initialEntries={[url]}>
+        <Captura />
+        <AppRoutes />
+        <Endereco />
+      </MemoryRouter>,
+    )
+  }
+  const Endereco = () => {
+    const { pathname, search } = useLocation()
+    return <output data-testid="endereco">{`${pathname}${search}`}</output>
+  }
+  const linhas = () => document.querySelectorAll<HTMLAnchorElement>('a.lista-linha')
+
+  it('o Voltar na tela do verbete é um voltar de verdade: a lista reaparece na posição e com o ?filtro=', async () => {
+    app('/glossario?filtro=leao')
+    await waitFor(() => expect(linhas().length).toBeGreaterThan(0))
+    rolarAte(1200)
+    await userEvent.click(linhas()[0]!)
+    await screen.findByRole('link', { name: 'Voltar ao glossário' })
+    expect(chamadas().at(-1)).toEqual([0, 0])
+    y = 0
+    await userEvent.click(screen.getByRole('link', { name: 'Voltar ao glossário' }))
+    await waitFor(() => expect(linhas().length).toBeGreaterThan(0))
+    expect(screen.getByTestId('endereco')).toHaveTextContent('/glossario?filtro=leao')
+    await waitFor(() => expect(chamadas().at(-1)).toEqual([0, 1200]))
+  })
+
+  it('o Voltar de um link direto (sem entrada anterior) leva ao destino, trocando a entrada', async () => {
+    app('/verbete/ZZ-nao-existe')
+    await userEvent.click(await screen.findByRole('link', { name: 'Voltar ao glossário' }))
+    await waitFor(() => expect(screen.getByTestId('endereco')).toHaveTextContent('/glossario'))
+    act(() => void ir(-1)) // não há nada atrás: continua no glossário
+    expect(screen.getByTestId('endereco')).toHaveTextContent('/glossario')
+  })
+
+  it('fechar o visualizador devolve o item à posição em que estava', async () => {
+    app('/item/CA00001')
+    await screen.findByRole('heading', { level: 1 })
+    rolarAte(700)
+    await userEvent.click(await screen.findByRole('link', { name: 'Ampliar a imagem' }))
+    await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+    expect(screen.getByTestId('endereco')).toHaveTextContent('/imagem/')
+    y = 0
+    await userEvent.keyboard('{Escape}')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByTestId('endereco')).toHaveTextContent('/item/CA00001')
+    await waitFor(() => expect(chamadas().at(-1)).toEqual([0, 700]))
   })
 })
