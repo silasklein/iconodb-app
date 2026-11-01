@@ -23,11 +23,25 @@ type SemId<T> = T extends unknown ? Omit<T, 'id'> : never
 
 type Pendente = { ok: (valor: unknown) => void; falha: (erro: Error) => void }
 
-/** O Motor que fala com src/banco/worker.ts. */
-export function motorDoWorker(): Motor {
+/**
+ * O Motor que fala com src/banco/worker.ts. Se o worker morre (o chunk ou o wasm não
+ * carregou, por exemplo abrindo sem internet), ele é encerrado, os pedidos pendentes e
+ * os seguintes falham, e `aoMorrer` avisa para que a próxima chamada crie outro worker.
+ */
+export function motorDoWorker(aoMorrer?: () => void): Motor {
   const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'iconodb-banco' })
   const pendentes = new Map<number, Pendente>()
   let proximo = 1
+  let morto: Error | null = null
+
+  function morrer(mensagem: string): void {
+    if (morto) return
+    morto = new Error(mensagem || 'O banco parou de responder.')
+    worker.terminate()
+    for (const p of pendentes.values()) p.falha(morto)
+    pendentes.clear()
+    aoMorrer?.()
+  }
 
   worker.onmessage = (e: MessageEvent<Resposta>) => {
     const r = e.data
@@ -42,14 +56,12 @@ export function motorDoWorker(): Motor {
       p.falha(erro)
     }
   }
-  worker.onerror = (e) => {
-    const erro = new Error(e.message || 'O banco parou de responder.')
-    for (const p of pendentes.values()) p.falha(erro)
-    pendentes.clear()
-  }
+  worker.onerror = (e) => morrer(e.message)
+  worker.onmessageerror = () => morrer('O banco mandou uma resposta ilegível.')
 
   function pedir<T>(pedido: SemId<Pedido>): Promise<T> {
     return new Promise<T>((ok, falha) => {
+      if (morto) return falha(morto)
       const id = proximo++
       pendentes.set(id, { ok: ok as (v: unknown) => void, falha })
       worker.postMessage({ ...pedido, id })
@@ -73,7 +85,15 @@ export function usarMotor(motor: Motor | null): void {
 }
 
 function motor(): Motor {
-  motorAtual ??= motorDoWorker()
+  if (!motorAtual) {
+    const novo: Motor = motorDoWorker(() => {
+      // Só esquece se ainda é este o motor em uso (um teste pode ter trocado).
+      if (motorAtual !== novo) return
+      motorAtual = null
+      aberto = null
+    })
+    motorAtual = novo
+  }
   return motorAtual
 }
 

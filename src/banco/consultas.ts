@@ -177,7 +177,13 @@ async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 'fonte'
 // Hipóteses
 // ---------------------------------------------------------------------------
 
-const ALVO_ITEM = `CASE WHEN h.target_type = 'element' THEN e.target_id WHEN h.target_type = 'item' THEN h.target_id END`
+/**
+ * O item a que a hipótese pertence: o próprio alvo (`item`) ou o item do elemento (`element`
+ * com `element.target_type = 'item'`). Hipóteses e elementos com `target_type = 'artifact'`
+ * ainda não se ligam a item nenhum (não há tabela de artefatos no pacote): ficam fora do item,
+ * dos grupos e dos objetos do verbete, e só aparecem por `hipotese(id)`.
+ */
+const ALVO_ITEM = `CASE WHEN h.target_type = 'element' AND e.target_type = 'item' THEN e.target_id WHEN h.target_type = 'item' THEN h.target_id END`
 
 const SQL_HIPOTESE = (esq: string, onde: string) => `
   SELECT h.id, h.target_type, h.target_id, h.level, h.modality, h.publication, h.locator, h.passage_id,

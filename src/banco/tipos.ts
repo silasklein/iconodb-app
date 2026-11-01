@@ -333,7 +333,7 @@ export interface Verbete extends VerbeteResumo {
 
 export interface ObraResumo {
   id: string
-  /** Primeira citação curta ("Keel 1992a"). */
+  /** Primeira citação curta ("Autor 1999"). */
   curta: string | null
   titulo: string | null
   /** Objetos que citam a obra. */

@@ -23,7 +23,7 @@ import {
   verbetes,
   vizinhos,
 } from './consultas'
-import { esquemaDaPublicacao, planoDeImportacao } from './nucleo'
+import { arquivosDoBanco, esquemaDaPublicacao, planoDeImportacao } from './nucleo'
 
 const pontosDeCodigo = (texto: string, inicio: number, fim: number) => [...texto].slice(inicio, fim).join('')
 
@@ -250,6 +250,21 @@ describe('grupo() segue author_group_item.ordinal', () => {
     expect(await vizinhos('CA00003', { tipo: 'grupo', id: 'GR-TESTE-I-01' })).toMatchObject({ posicao: 1, total: 3 })
   })
 
+  it("hipóteses e elementos com target_type 'artifact' ainda não se ligam a item nenhum", async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    // Elemento de artefato com o mesmo id de alvo de um item: não pode cair no item.
+    await executar(`INSERT INTO pub_TESTE.element (id, label, target_type, target_id) VALUES ('EL-ART-1', 'Probeteil', 'artifact', 'TESTE-0001')`)
+    await executar(`INSERT INTO pub_TESTE.hypothesis (id, target_type, target_id, level, modality) VALUES
+                      ('HY-ART-1', 'artifact', 'VA-000001', 'iconographic', 'possible'),
+                      ('HY-ART-2', 'element', 'EL-ART-1', 'iconographic', 'possible')`)
+    const todas = Object.values((await item('CA00001'))!.hipotesesPorNivel).flat().map((h) => h.id)
+    expect(todas).not.toContain('HY-ART-1')
+    expect(todas).not.toContain('HY-ART-2')
+    expect((await grupos())[0]!.hipoteses).toBe(7)
+    expect(await hipotese('HY-ART-1')).toMatchObject({ alvo: { tipo: 'artifact', id: 'VA-000001', itemId: null, numero: null } })
+    expect(await hipotese('HY-ART-2')).toMatchObject({ alvo: { tipo: 'element', itemId: null, numero: null, rotulo: 'Probeteil' } })
+  })
+
   it('remissões do texto (inclusive órfã) e hipóteses sobre outros objetos sustentadas pelo texto', async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     await executar(`INSERT INTO pub_TESTE.passage_item VALUES ('PA-TESTE-0001-cat-1', 'TESTE-0099', 'mentions'),
@@ -282,6 +297,36 @@ describe('sem pacote e reabertura', () => {
     for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
     expect((await reabrirBanco()).estado).toBe('aberto')
     expect((await contagens()).objetos).toBe(6)
+  })
+})
+
+describe('falha ao abrir', () => {
+  afterAll(() => usarMotor(null))
+
+  it('uma abertura que falha não deixa estado guardado: a seguinte tenta de novo', async () => {
+    const armazem = await armazemComPacote()
+    const blobs = await armazem.listar('blobs')
+    const guardados = new Map(await Promise.all(blobs.map(async (c) => [c, (await armazem.ler(c))!] as const)))
+    for (const c of blobs) await armazem.remover(c)
+    const banco = await bancoDeTeste({ armazem })
+    usarMotor(banco)
+    await expect(abrirBanco()).rejects.toThrow()
+    await expect(banco.executar('SELECT 1')).rejects.toBeInstanceOf(ErroSemPacote)
+    for (const [c, bytes] of guardados) await armazem.gravar(c, bytes)
+    expect((await abrirBanco()).estado).toBe('aberto')
+    expect((await contagens()).objetos).toBe(6)
+  })
+
+  it('o esquema repetido é detectado sem diferenciar maiúsculas', () => {
+    const manifesto = {
+      schema: 5,
+      gerado_em: 'x',
+      publicacoes: [{ sigla: 'TESTE' }, { sigla: 'teste' }],
+      arquivos: Object.fromEntries(
+        ['nucleo/comum.sqlite', 'nucleo/pub-TESTE.sqlite', 'nucleo/pub-teste.sqlite'].map((c) => [c, { sha256: 'a'.repeat(64), bytes: 1 }]),
+      ),
+    }
+    expect(arquivosDoBanco(manifesto).publicacoes).toEqual([{ sigla: 'TESTE', esquema: 'pub_TESTE' }])
   })
 })
 

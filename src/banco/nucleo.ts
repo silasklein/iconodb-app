@@ -51,7 +51,7 @@ export function arquivosDoBanco(manifesto: Manifesto): { arquivos: ArquivoDoBanc
   for (const { sigla } of manifesto.publicacoes) {
     const esquema = esquemaDaPublicacao(sigla)
     const pub = arquivo(`nucleo/pub-${sigla}.sqlite`, esquema)
-    if (!pub || publicacoes.some((p) => p.esquema === esquema)) continue
+    if (!pub || publicacoes.some((p) => p.esquema.toLowerCase() === esquema.toLowerCase())) continue
     arquivos.push(pub)
     publicacoes.push({ sigla, esquema })
   }
@@ -97,7 +97,14 @@ export interface OpcoesDoBanco {
 
 let modulo: Promise<Sqlite3Static> | null = null
 function carregarSqlite(): Promise<Sqlite3Static> {
-  modulo ??= sqlite3InitModule()
+  if (!modulo) {
+    const carregando = sqlite3InitModule()
+    modulo = carregando
+    // Se o wasm não carregou (sem rede, por exemplo), a próxima abertura tenta de novo.
+    carregando.catch(() => {
+      if (modulo === carregando) modulo = null
+    })
+  }
   return modulo
 }
 
@@ -159,6 +166,8 @@ export class Banco implements Motor {
       try {
         return (this.estado = await this.abrirPacote(manifesto))
       } catch (erro) {
+        // Nada fica meio aberto: sem estado guardado, o próximo abrir() tenta do zero.
+        this.fechar()
         if (!(erro instanceof PacoteMudou) || tentativa >= 2) throw erro
       }
     }
