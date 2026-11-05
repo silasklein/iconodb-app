@@ -320,8 +320,9 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
       await userEvent.tab()
       await waitFor(() => expect(dados('TESTE-2').coordenada).toEqual({ lat: 31.6, lon: 35.6 }))
       expect(estadoAtual().hlcDoCampo('sitio', 'TESTE-2', 'lat')).toBe(estadoAtual().hlcDoCampo('sitio', 'TESTE-2', 'lon'))
-      expect(screen.getByText('Coordenada guardada.')).toBeInTheDocument()
-      expect(localStorage.getItem(chaveDoRascunhoDaCoordenada('TESTE-2'))).toBeNull()
+      // A coordenada chega aos dados antes de a gravação terminar (o aviso e o rascunho apagado vêm no `then`): esperar os dois.
+      expect(await screen.findByText('Coordenada guardada.')).toBeInTheDocument()
+      await waitFor(() => expect(localStorage.getItem(chaveDoRascunhoDaCoordenada('TESTE-2'))).toBeNull())
     })
 
     it('fechar «Corrigir» com o par válido ainda no campo (sem sair dele antes) grava a coordenada', async () => {
