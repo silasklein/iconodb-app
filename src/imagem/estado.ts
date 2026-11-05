@@ -7,11 +7,17 @@ export interface EstadoDoVisualizador {
   ampliada: true
   /** O original (sem inversão) estava ligado no item. */
   original: boolean
+  /**
+   * Tarefa 10: o visualizador abre no modo de marcar para a nova hipótese deste objeto (o rascunho dela,
+   * src/hipoteses/rascunho.ts): concluir a região a põe no rascunho e volta ao item.
+   */
+  marcarPara?: string
 }
 
 export function lerEstadoDoVisualizador(state: unknown): EstadoDoVisualizador | null {
   const e = state as Partial<EstadoDoVisualizador> | null
-  return e && typeof e === 'object' && e.ampliada === true ? { ampliada: true, original: e.original === true } : null
+  if (!e || typeof e !== 'object' || e.ampliada !== true) return null
+  return { ampliada: true, original: e.original === true, ...(typeof e.marcarPara === 'string' && e.marcarPara ? { marcarPara: e.marcarPara } : {}) }
 }
 
 /**

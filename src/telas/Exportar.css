@@ -1,0 +1,216 @@
+/*
+ * Exportar (Tarefa 15). Sem desenho aprovado: a mesma linguagem de Sincronizacao.dc.html (título grande, seções com o
+ * título em caixa alta sobre um filete de 2 px, texto de apoio cinza) e os botões do app. Fundo claro das telas de consulta.
+ */
+.exp-pagina {
+  color: var(--texto-consulta);
+}
+.exp-topo {
+  display: flex;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 12px 0;
+}
+.exp-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  /* Embaixo, espaço para a mensagem presa ao pé da tela não cobrir o último botão. No celular a folga é a altura real da mensagem
+     (--exp-mensagem-alto, medida em Exportar.tsx) mais a margem dela e um respiro; 192px é o piso (a mensagem vazia ou curta). */
+  padding: 20px 24px 192px;
+  max-width: 640px;
+}
+@media (max-width: 767px) {
+  .exp-corpo {
+    padding-bottom: max(192px, calc(var(--exp-mensagem-alto, 0px) + 48px));
+  }
+}
+@media (min-width: 768px) {
+  .exp-corpo {
+    padding: 28px 48px 112px;
+  }
+}
+/* De 768 a 864px a mensagem (canto de baixo à direita, 480px de largura) ainda cruza os botões, que vão até x = 361: a folga volta a
+   acompanhar a altura dela. A partir de 865px ela fica fora da coluna e a folga fixa de 112px continua (o computador não muda). */
+@media (min-width: 768px) and (max-width: 864px) {
+  .exp-corpo {
+    padding-bottom: max(112px, calc(var(--exp-mensagem-alto, 0px) + 48px));
+  }
+}
+.exp-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-corpo h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.exp-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+
+.exp-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-secao h2 {
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 2px solid var(--texto-consulta);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.exp-texto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+  overflow-wrap: anywhere;
+}
+.exp-numeros {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* O botão: contorno; o da cópia de segurança, cheio (a ação principal da tela). Inteiro no celular. */
+.exp-botao {
+  margin-top: 4px;
+  min-height: var(--alvo-toque);
+  padding: 0 20px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--texto-consulta);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.exp-botao-principal {
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+}
+.exp-botao[aria-busy='true'] {
+  cursor: progress;
+}
+/* O nome e «Gerando…» no mesmo lugar: o botão não muda de largura enquanto gera. */
+.exp-botao > span {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+.exp-botao > [aria-hidden='true'] {
+  visibility: hidden;
+}
+@media (min-width: 768px) {
+  .exp-botao {
+    align-self: flex-start;
+  }
+}
+
+/* A mensagem do resultado: presa ao pé da tela (o botão tocado pode estar longe do topo). Vazia, não aparece. */
+.exp-mensagem {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 20;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--tip-fundo);
+  color: var(--tip-texto);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  /* Com o texto do sistema muito grande (1,5× ou mais) a mensagem não passa da tela: rola por dentro, e «Salvar o arquivo» e o link
+     «Baixar o arquivo» continuam ao alcance (O-3). 32px de respiro em cima, fora a área segura; vh é o recuo dos navegadores sem dvh. */
+  max-height: calc(100vh - 32px - max(16px, env(safe-area-inset-bottom)) - env(safe-area-inset-top));
+  max-height: calc(100dvh - 32px - max(16px, env(safe-area-inset-bottom)) - env(safe-area-inset-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.exp-mensagem:empty {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.exp-mensagem-erro {
+  border: 2px solid var(--tip-texto);
+}
+.exp-mensagem svg {
+  margin-top: 1px;
+}
+/* «Salvar o arquivo» (a folha de compartilhar recusada): o arquivo já montado, num toque novo. Inteiro no celular. */
+.exp-mensagem:has(.exp-salvar) {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.exp-mensagem:has(.exp-salvar) > span {
+  flex: 1 1 200px;
+}
+.exp-salvar {
+  flex: 1 1 100%;
+  min-height: var(--alvo-toque);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tip-texto);
+  color: var(--tip-fundo);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.exp-salvar:focus-visible {
+  outline: 2px solid var(--tip-texto);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .exp-salvar {
+    flex: 0 0 auto;
+  }
+}
+/* No computador, a mensagem fica no canto de baixo à direita, fora da coluna do conteúdo (como as outras mensagens do app). */
+@media (min-width: 768px) {
+  .exp-mensagem {
+    left: auto;
+    right: 24px;
+    width: min(480px, calc(100vw - 48px));
+    margin: 0;
+  }
+}
+/* «Baixar o arquivo»: o último recurso, um link simples abaixo do botão, com alvo de toque inteiro. */
+.exp-baixar {
+  flex: 1 1 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  font-size: 15px;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.exp-baixar:focus-visible {
+  outline: 2px solid var(--tip-texto);
+  outline-offset: 2px;
+}

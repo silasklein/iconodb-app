@@ -1,5 +1,5 @@
 import type { Ancora, Termo } from '../banco/tipos'
-import { montarTrechos, verbetesDaAncora, type Peca } from './trechos'
+import { chaveDoTermo, chavesDosTermos, formaNoTexto, montarTrechos, verbetesDaAncora, type Peca } from './trechos'
 
 /** Posição em code points (como o pipeline grava) de `trecho` dentro de `texto`. */
 function cp(texto: string, trecho: string): { inicio: number; fim: number } {
@@ -168,5 +168,39 @@ describe('verbetesDaAncora (correção 3)', () => {
     expect(verbetesDaAncora([leitura], 'HY-1')).toEqual([{ glId: 'GL-7', texto: 'sinal' }])
     expect(verbetesDaAncora([leitura], 'HY-X')).toEqual([])
     expect(verbetesDaAncora([{ texto: null, termos: [], ancoras: [] }], 'HY-1')).toEqual([])
+  })
+})
+
+describe('Tarefa 11: a forma em uso no lugar do termo (só o que se vê)', () => {
+  it('chavesDosTermos: cada termo inteiro em UTF-16, com um 𓀀 antes; termo fora do texto ou vazio não entra', () => {
+    const texto = '𓀀 ao lado de um leão-de-teste de cauda.'
+    const t = termo(texto, 'leão-de-teste', 'GL-1')
+    const a = texto.indexOf('leão-de-teste')
+    expect([...chavesDosTermos(texto, [t, { glId: 'GL-2', inicio: 5, fim: 5 }])]).toEqual([chaveDoTermo(a, a + 'leão-de-teste'.length, 'GL-1')])
+  })
+
+  it('uma peça cortada por uma âncora não é o termo inteiro (nenhuma das duas bate com a chave do termo)', () => {
+    const texto = 'Um leão-de-teste de cauda erguida aparece.'
+    const chaves = chavesDosTermos(texto, [termo(texto, 'leão-de-teste')])
+    const pecas = montarTrechos(texto, { ancoras: [ancora(texto, 'de-teste de cauda', 'HY-1')], termos: [termo(texto, 'leão-de-teste')] })
+    let b = 0
+    const inteiras: boolean[] = []
+    for (const p of pecas) {
+      const t = textoDe(p)
+      if (p.tipo === 'termo') inteiras.push(chaves.has(chaveDoTermo(b, b + t.length, 'GL-1')))
+      if (p.tipo === 'ancora') for (const parte of p.partes) if (parte.tipo === 'termo') inteiras.push(chaves.has(chaveDoTermo(b, b + parte.texto.length, 'GL-1')))
+      b += t.length
+    }
+    expect(inteiras).toEqual([false, false])
+  })
+
+  it('formaNoTexto: mantém a maiúscula do começo do texto guardado; o resto fica como a pessoa escreveu', () => {
+    expect(formaNoTexto('Selo de teste', 'selo de prova')).toBe('Selo de prova')
+    expect(formaNoTexto('selo de teste', 'selo de prova')).toBe('selo de prova')
+    expect(formaNoTexto('selo de teste', 'Selo de prova')).toBe('Selo de prova')
+    expect(formaNoTexto('Maḥteṣ Teste', 'maḥteṣ do teste')).toBe('Maḥteṣ do teste')
+    expect(formaNoTexto('Éden', 'éden novo')).toBe('Éden novo')
+    expect(formaNoTexto('1ª fase', 'primeira fase')).toBe('primeira fase')
+    expect(formaNoTexto('', 'x')).toBe('x')
   })
 })

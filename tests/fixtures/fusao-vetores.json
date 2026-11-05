@@ -1,0 +1,5718 @@
+[
+  {
+    "nome": "por-campo",
+    "descricao": "A muda o título e B muda o texto da mesma nota: os dois ficam.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000300000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "Texto de B"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "Nota",
+          "texto": "Texto"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000600000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "Título de A"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000600000-0000-aaaaaaaa\",\"campos\":{\"texto\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"Texto\"},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000300000-0000-bbbbbbbb\",\"valor\":\"Texto de B\"}],\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"Nota\"},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000600000-0000-aaaaaaaa\",\"valor\":\"Título de A\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "mesmo-campo",
+    "descricao": "Vence o maior hlc; os anteriores ficam no histórico em ordem de hlc.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "cccccccc-1-0",
+        "hlc": "1790000000003-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "quatro"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000000001-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "dois"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000000002-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "um"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "um"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000000003-0000-cccccccc\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"um\"},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000000001-0000-bbbbbbbb\",\"valor\":\"dois\"},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000000002-0000-aaaaaaaa\",\"valor\":\"um\"},{\"evento\":\"cccccccc-1-0\",\"hlc\":\"1790000000003-0000-cccccccc\",\"valor\":\"quatro\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "empates",
+    "descricao": "Mesmo milissegundo: o contador desempata; mesmo contador: o id do aparelho no hlc.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000000000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "B0"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "A1",
+          "b": "A1"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-2-0",
+        "hlc": "1790000000000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "b": "B1"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000000000-0001-bbbbbbbb\",\"campos\":{\"a\":[{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000000000-0000-bbbbbbbb\",\"valor\":\"B0\"},{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0001-aaaaaaaa\",\"valor\":\"A1\"}],\"b\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0001-aaaaaaaa\",\"valor\":\"A1\"},{\"evento\":\"bbbbbbbb-2-0\",\"hlc\":\"1790000000000-0001-bbbbbbbb\",\"valor\":\"B1\"}]},\"criadoEm\":\"1790000000000-0000-bbbbbbbb\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "relogio-adiantado",
+    "descricao": "B está 1 h adiantado; A edita depois de receber o evento de B e vence (Foco 3).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790003660000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "Edição de A (nova)"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790003660000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "Edição de B (velha)"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "Original"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790003660000-0002-aaaaaaaa\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"Original\"},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790003660000-0000-bbbbbbbb\",\"valor\":\"Edição de B (velha)\"},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790003660000-0002-aaaaaaaa\",\"valor\":\"Edição de A (nova)\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "excluir",
+    "descricao": "Excluir é uma marca: o registro e os campos continuam.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "x"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-aaaaaaaa\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"x\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "excluir-restaurar",
+    "descricao": "Excluir e depois restaurar volta o registro.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "x"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000002000-0000-aaaaaaaa\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"x\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"aaaaaaaa-3-0\",\"hlc\":\"1790000002000-0000-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "restaurar-excluir",
+    "descricao": "A marca de maior hlc entre excluir e restaurar decide.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "x"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000003000-0000-aaaaaaaa\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"x\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"aaaaaaaa-4-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "editar-depois-de-excluir",
+    "descricao": "Uma edição depois de excluir não desfaz a exclusão, mas fica nos campos.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000001500-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "editado"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "x"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001500-0000-bbbbbbbb\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"x\"},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000001500-0000-bbbbbbbb\",\"valor\":\"editado\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "so-exclusao",
+    "descricao": "Um registro só com evento de exclusão existe, excluído e sem campos.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000001000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-bbbbbbbb\",\"campos\":{},\"criadoEm\":\"1790000001000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000001000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"}],\"v\":1}"
+  },
+  {
+    "nome": "nulo-e-ausente",
+    "descricao": "null é um valor (limpa o campo); um campo nunca escrito fica ausente.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "texto": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000000001-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": null
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000000001-0000-aaaaaaaa\",\"campos\":{\"texto\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"a\"},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000000001-0000-aaaaaaaa\",\"valor\":null}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "colecao-ordem",
+    "descricao": "A ordem de uma coleção é uma lista inteira: vence a do maior hlc (Foco 1).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790003600001-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-3"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "nome": "Íbex",
+          "itens": [
+            "IT-1",
+            "IT-2",
+            "IT-3"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790003600000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-3",
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790003600001-0000-bbbbbbbb\",\"campos\":{\"itens\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\",\"IT-3\"]},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790003600000-0000-aaaaaaaa\",\"valor\":[\"IT-3\",\"IT-1\",\"IT-2\"]},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790003600001-0000-bbbbbbbb\",\"valor\":[\"IT-2\",\"IT-3\"]}],\"nome\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"Íbex\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"}],\"v\":1}"
+  },
+  {
+    "nome": "mesmo-reg-tipos",
+    "descricao": "O mesmo reg em tipos diferentes são registros diferentes.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "x": 0.25,
+          "y": 0.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "revisao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "estado": "aprovado"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-aaaaaaaa\",\"campos\":{\"x\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":0.25}],\"y\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":0.5}]},\"criadoEm\":\"1790000001000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"IT-0001\",\"tipo\":\"posicao\"},{\"alteradoEm\":\"1790000002000-0000-aaaaaaaa\",\"campos\":{\"estado\":[{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000002000-0000-aaaaaaaa\",\"valor\":\"aprovado\"}]},\"criadoEm\":\"1790000002000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"IT-0001\",\"tipo\":\"revisao\"}],\"v\":1}"
+  },
+  {
+    "nome": "malformados",
+    "descricao": "Eventos malformados ou de versão desconhecida são ignorados e contados (ignorados = 13).",
+    "eventos": [
+      {
+        "v": 2,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "v2"
+        }
+      },
+      {
+        "v": "1",
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": true,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000004000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "lixo",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-6-0",
+        "hlc": "1790000000000-0000-bbbbbbbb",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-7-0",
+        "hlc": "1790000007000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-8-0",
+        "hlc": "1790000008000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "livro",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-9-0",
+        "hlc": "1790000009000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "apagar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-10-0",
+        "hlc": "1790000010000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-11-0",
+        "hlc": "1790000011000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": []
+      },
+      null,
+      "texto",
+      [
+        {
+          "v": 1,
+          "id": "aaaaaaaa-1-0",
+          "hlc": "1790000001000-0000-aaaaaaaa",
+          "aparelho": "aaaaaaaa",
+          "tipo": "nota",
+          "reg": "NT-aaaaaaaa-1",
+          "op": "criar",
+          "campos": {
+            "titulo": "ok"
+          }
+        }
+      ],
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "ok"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-12-0",
+        "hlc": "1790000012000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "extra": "aceito"
+        },
+        "chaveDesconhecida": 1
+      }
+    ],
+    "estado": "{\"ignorados\":13,\"registros\":[{\"alteradoEm\":\"1790000012000-0000-aaaaaaaa\",\"campos\":{\"extra\":[{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000012000-0000-aaaaaaaa\",\"valor\":\"aceito\"}],\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":\"ok\"}]},\"criadoEm\":\"1790000001000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "id-repetido",
+    "descricao": "Mesmo id com conteúdo diferente (corrompido), mesmo hlc: vence a cópia inteira de maior JSON canônico (por ponto de código); não há união de campos.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "dois",
+          "outro": 1
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "um"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000000000-0000-aaaaaaaa\",\"campos\":{\"titulo\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"um\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "id-repetido-hlc-op",
+    "descricao": "Mesmo id, cópia com hlc maior e outra op (excluir): vence a de maior hlc, em qualquer ordem.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000005-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "original"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000000009-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "depois"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000000009-0000-aaaaaaaa\",\"campos\":{\"texto\":[{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000000009-0000-aaaaaaaa\",\"valor\":\"depois\"}]},\"criadoEm\":\"1790000000005-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000000005-0000-aaaaaaaa\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "repetidos",
+    "descricao": "Eventos repetidos não mudam nada (idempotência).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-3-0",
+        "hlc": "1790000001000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-5-0",
+        "hlc": "1790000021000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-4-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-3-0",
+        "hlc": "1790000001000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000006000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-5-0",
+        "hlc": "1790000028000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-7-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-17-0",
+        "hlc": "1790000033000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-8-0",
+        "hlc": "1790000009000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-9-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-12-0",
+        "hlc": "1790000010000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-5-0",
+        "hlc": "1790000021000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-7-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-17-0",
+        "hlc": "1790000033000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-7-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-6-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-16-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-8-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-14-0",
+        "hlc": "1790000003000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-12-0",
+        "hlc": "1790000011000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-13-0",
+        "hlc": "1790000017000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "",
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-6-0",
+        "hlc": "1790000038000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": true,
+          "itens": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000032000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-16-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-8-0",
+        "hlc": "1790000009000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-12-0",
+        "hlc": "1790000010000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000027000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-6-0",
+        "hlc": "1790000014000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-11-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-1-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-11-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-2-0",
+        "hlc": "1790000021000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-10-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-1-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-2-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-12-0",
+        "hlc": "1790000011000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000027000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-7-0",
+        "hlc": "1790000022000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-8-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-6-0",
+        "hlc": "1790000014000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-7-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000032000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-4-0",
+        "hlc": "1790000030000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-6-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-10-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-8-0",
+        "hlc": "1790000009000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-9-0",
+        "hlc": "1790000039000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-15-0",
+        "hlc": "1790000022000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "itens": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-18-0",
+        "hlc": "1790000028000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-9-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-8-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-3-0",
+        "hlc": "1790000009000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-1",
+            "IT-2"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-18-0",
+        "hlc": "1790000028000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-3-0",
+        "hlc": "1790000009000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-1",
+            "IT-2"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-6-0",
+        "hlc": "1790000038000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": true,
+          "itens": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-5-0",
+        "hlc": "1790000028000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-11-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-5-0",
+        "hlc": "1790000028000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-10-0",
+        "hlc": "1790000038000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-11-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-14-0",
+        "hlc": "1790000003000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-9-0",
+        "hlc": "1790000002000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-13-0",
+        "hlc": "1790000017000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "",
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-15-0",
+        "hlc": "1790000022000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "itens": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-9-0",
+        "hlc": "1790000002000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-2-0",
+        "hlc": "1790000021000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-4-0",
+        "hlc": "1790000030000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-7-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-10-0",
+        "hlc": "1790000038000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000032000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-2-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          },
+          "itens": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-3-0",
+        "hlc": "1790000001000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-4-0",
+        "hlc": "1790000030000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          },
+          "itens": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000006000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-4-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-8-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-10-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-6-0",
+        "hlc": "1790000038000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": true,
+          "itens": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-10-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-7-0",
+        "hlc": "1790000022000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-9-0",
+        "hlc": "1790000039000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-6-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000039000-0000-bbbbbbbb\",\"campos\":{\"cor\":[{\"evento\":\"bbbbbbbb-12-0\",\"hlc\":\"1790000010000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":true}],\"itens\":[{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000006000-0002-bbbbbbbb\",\"valor\":null},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"texto\":[{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":\"b\"}]},\"criadoEm\":\"1790000006000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"bbbbbbbb-9-0\",\"hlc\":\"1790000039000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"},{\"alteradoEm\":\"1790000038000-0000-cccccccc\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"cccccccc-6-0\",\"hlc\":\"1790000014000-0001-cccccccc\",\"valor\":null}],\"itens\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]}]},\"criadoEm\":\"1790000009000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"cccccccc-10-0\",\"hlc\":\"1790000038000-0000-cccccccc\",\"op\":\"excluir\"},\"id\":\"HY-cccccccc-1\",\"tipo\":\"hipotese\"},{\"alteradoEm\":\"1790000027000-0001-aaaaaaaa\",\"campos\":{},\"criadoEm\":\"1790000021000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000027000-0001-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000036000-0000-aaaaaaaa\",\"campos\":{\"itens\":[{\"evento\":\"cccccccc-11-0\",\"hlc\":\"1790000024000-0002-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":[]}],\"titulo\":[{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000007000-0000-cccccccc\",\"exclusao\":{\"evento\":\"bbbbbbbb-18-0\",\"hlc\":\"1790000028000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"NT-bbbbbbbb-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000038000-0002-bbbbbbbb\",\"campos\":{\"itens\":[{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"texto\":[{\"evento\":\"cccccccc-4-0\",\"hlc\":\"1790000007000-0000-cccccccc\",\"valor\":true}],\"titulo\":[{\"evento\":\"aaaaaaaa-7-0\",\"hlc\":\"1790000008000-0002-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":true}]},\"criadoEm\":\"1790000001000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"bbbbbbbb-17-0\",\"hlc\":\"1790000033000-0000-bbbbbbbb\",\"op\":\"restaurar\"},\"id\":\"IT-0001\",\"tipo\":\"posicao\"}],\"v\":1}"
+  },
+  {
+    "nome": "aleatorio",
+    "descricao": "120 eventos de 3 aparelhos, embaralhados (o porte deve dar o mesmo estado para qualquer permutação).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "bbbbbbbb-22-0",
+        "hlc": "1790000004000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-1-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-17-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-33-0",
+        "hlc": "1790000002000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-26-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [],
+          "texto": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-4-0",
+        "hlc": "1790000007000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-40-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true,
+          "titulo": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-7-0",
+        "hlc": "1790000022000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-6-0",
+        "hlc": "1790000038000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": true,
+          "itens": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-7-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-11-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-22-0",
+        "hlc": "1790000001000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-15-0",
+        "hlc": "1790000021000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ],
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-26-0",
+        "hlc": "1790000037000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-5-0",
+        "hlc": "1790000028000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-41-0",
+        "hlc": "1790000023000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "",
+          "itens": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-18-0",
+        "hlc": "1790000019000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-35-0",
+        "hlc": "1790000037000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "Maḥteṣ",
+          "texto": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-31-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": "Maḥteṣ",
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-33-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-13-0",
+        "hlc": "1790000017000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "",
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-17-0",
+        "hlc": "1790000025000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-29-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000027000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-9-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-22-0",
+        "hlc": "1790000024000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-28-0",
+        "hlc": "1790000013000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-32-0",
+        "hlc": "1790000002000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-27-0",
+        "hlc": "1790000011000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-12-0",
+        "hlc": "1790000019000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "a",
+          "cor": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-9-0",
+        "hlc": "1790000039000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-31-0",
+        "hlc": "1790000007000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-13-0",
+        "hlc": "1790000032000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-10-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-8-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-2-0",
+        "hlc": "1790000021000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-16-0",
+        "hlc": "1790000010000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-8-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-8-0",
+        "hlc": "1790000009000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-11-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-33-0",
+        "hlc": "1790000014000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-16-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-31-0",
+        "hlc": "1790000008000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-40-0",
+        "hlc": "1790000035000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-21-0",
+        "hlc": "1790000039000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-20-0",
+        "hlc": "1790000035000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-25-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-7-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-29-0",
+        "hlc": "1790000039000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-38-0",
+        "hlc": "1790000003000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-32-0",
+        "hlc": "1790000012000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [],
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-19-0",
+        "hlc": "1790000029000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-16-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-25-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-24-0",
+        "hlc": "1790000004000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "b",
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-20-0",
+        "hlc": "1790000012000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-1-0",
+        "hlc": "1790000006000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-20-0",
+        "hlc": "1790000039000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-14-0",
+        "hlc": "1790000004000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-19-0",
+        "hlc": "1790000015000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-12-0",
+        "hlc": "1790000011000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-21-0",
+        "hlc": "1790000038000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true,
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-10-0",
+        "hlc": "1790000036000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-35-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-37-0",
+        "hlc": "1790000030000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-15-0",
+        "hlc": "1790000022000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "itens": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-36-0",
+        "hlc": "1790000023000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-36-0",
+        "hlc": "1790000006000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-14-0",
+        "hlc": "1790000012000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-34-0",
+        "hlc": "1790000005000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "cor": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-23-0",
+        "hlc": "1790000021000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-29-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-12-0",
+        "hlc": "1790000010000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-18-0",
+        "hlc": "1790000028000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000032000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-42-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-28-0",
+        "hlc": "1790000016000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-27-0",
+        "hlc": "1790000035000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-41-0",
+        "hlc": "1790000035000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-44-0",
+        "hlc": "1790000037000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-6-0",
+        "hlc": "1790000014000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-13-0",
+        "hlc": "1790000019000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-3-0",
+        "hlc": "1790000001000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-43-0",
+        "hlc": "1790000005000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-24-0",
+        "hlc": "1790000026000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-27-0",
+        "hlc": "1790000023000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-4-0",
+        "hlc": "1790000030000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-11-0",
+        "hlc": "1790000020000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-15-0",
+        "hlc": "1790000023000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-35-0",
+        "hlc": "1790000012000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-32-0",
+        "hlc": "1790000006000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000027000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          },
+          "itens": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-10-0",
+        "hlc": "1790000038000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-19-0",
+        "hlc": "1790000024000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "",
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-3-0",
+        "hlc": "1790000009000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [
+            "IT-1",
+            "IT-2"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-25-0",
+        "hlc": "1790000032000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-21-0",
+        "hlc": "1790000006000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-30-0",
+        "hlc": "1790000017000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-34-0",
+        "hlc": "1790000016000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-23-0",
+        "hlc": "1790000016000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-17-0",
+        "hlc": "1790000033000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-24-0",
+        "hlc": "1790000029000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-39-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-39-0",
+        "hlc": "1790000018000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-30-0",
+        "hlc": "1790000005000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-9-0",
+        "hlc": "1790000002000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-18-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-28-0",
+        "hlc": "1790000030000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-26-0",
+        "hlc": "1790000025000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-6-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-38-0",
+        "hlc": "1790000039000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-14-0",
+        "hlc": "1790000003000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-30-0",
+        "hlc": "1790000025000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-23-0",
+        "hlc": "1790000002000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-34-0",
+        "hlc": "1790000013000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-2-0",
+        "hlc": "1790000024000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-37-0",
+        "hlc": "1790000018000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-5-0",
+        "hlc": "1790000021000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000039000-0001-cccccccc\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":0},{\"evento\":\"bbbbbbbb-12-0\",\"hlc\":\"1790000010000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":true},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":1.5}],\"itens\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":[]},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000006000-0002-bbbbbbbb\",\"valor\":null},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"texto\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-22-0\",\"hlc\":\"1790000024000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-21-0\",\"hlc\":\"1790000039000-0001-cccccccc\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000003000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"bbbbbbbb-9-0\",\"hlc\":\"1790000039000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"},{\"alteradoEm\":\"1790000039000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"cccccccc-6-0\",\"hlc\":\"1790000014000-0001-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-24-0\",\"hlc\":\"1790000026000-0001-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"itens\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-35-0\",\"hlc\":\"1790000012000-0001-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-17-0\",\"hlc\":\"1790000025000-0000-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}]},\"criadoEm\":\"1790000002000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"aaaaaaaa-29-0\",\"hlc\":\"1790000039000-0000-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"HY-cccccccc-1\",\"tipo\":\"hipotese\"},{\"alteradoEm\":\"1790000038000-0001-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"cccccccc-14-0\",\"hlc\":\"1790000012000-0000-cccccccc\",\"valor\":[]},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-38-0\",\"hlc\":\"1790000003000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"titulo\":[{\"evento\":\"cccccccc-16-0\",\"hlc\":\"1790000010000-0000-cccccccc\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-30-0\",\"hlc\":\"1790000017000-0000-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-26-0\",\"hlc\":\"1790000025000-0001-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-44-0\",\"hlc\":\"1790000037000-0001-bbbbbbbb\",\"valor\":[]},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}]},\"criadoEm\":\"1790000001000-0002-cccccccc\",\"exclusao\":{\"evento\":\"bbbbbbbb-40-0\",\"hlc\":\"1790000035000-0002-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000036000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-32-0\",\"hlc\":\"1790000002000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"cccccccc-24-0\",\"hlc\":\"1790000029000-0001-cccccccc\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-39-0\",\"hlc\":\"1790000018000-0001-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-23-0\",\"hlc\":\"1790000021000-0002-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-11-0\",\"hlc\":\"1790000024000-0002-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":[]}],\"texto\":[{\"evento\":\"cccccccc-18-0\",\"hlc\":\"1790000019000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"titulo\":[{\"evento\":\"bbbbbbbb-25-0\",\"hlc\":\"1790000006000-0000-bbbbbbbb\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-28-0\",\"hlc\":\"1790000013000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"a\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000002000-0000-cccccccc\",\"exclusao\":{\"evento\":\"aaaaaaaa-20-0\",\"hlc\":\"1790000035000-0001-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"NT-bbbbbbbb-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000038000-0002-bbbbbbbb\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-37-0\",\"hlc\":\"1790000030000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"itens\":[{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"texto\":[{\"evento\":\"cccccccc-4-0\",\"hlc\":\"1790000007000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":true},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-7-0\",\"hlc\":\"1790000008000-0002-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":true}]},\"criadoEm\":\"1790000001000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"cccccccc-26-0\",\"hlc\":\"1790000037000-0002-cccccccc\",\"op\":\"excluir\"},\"id\":\"IT-0001\",\"tipo\":\"posicao\"}],\"v\":1}"
+  },
+  {
+    "nome": "base-mais-eventos",
+    "descricao": "Base consolidada (estado.json) com os 70 primeiros eventos + os eventos 50 a 119 (repetindo 20 da base): igual à fusão de tudo.",
+    "base": {
+      "registros": [
+        {
+          "alteradoEm": "1790000039000-0001-cccccccc",
+          "campos": {
+            "cor": [
+              {
+                "evento": "bbbbbbbb-12-0",
+                "hlc": "1790000010000-0002-bbbbbbbb",
+                "valor": "a"
+              },
+              {
+                "evento": "bbbbbbbb-13-0",
+                "hlc": "1790000017000-0002-bbbbbbbb",
+                "valor": 1.5
+              },
+              {
+                "evento": "aaaaaaaa-15-0",
+                "hlc": "1790000021000-0002-aaaaaaaa",
+                "valor": [
+                  "IT-1",
+                  "IT-2"
+                ]
+              },
+              {
+                "evento": "aaaaaaaa-5-0",
+                "hlc": "1790000032000-0001-aaaaaaaa",
+                "valor": true
+              }
+            ],
+            "itens": [
+              {
+                "evento": "bbbbbbbb-1-0",
+                "hlc": "1790000006000-0002-bbbbbbbb",
+                "valor": null
+              },
+              {
+                "evento": "bbbbbbbb-13-0",
+                "hlc": "1790000017000-0002-bbbbbbbb",
+                "valor": ""
+              },
+              {
+                "evento": "aaaaaaaa-15-0",
+                "hlc": "1790000021000-0002-aaaaaaaa",
+                "valor": [
+                  "IT-2",
+                  "IT-1"
+                ]
+              },
+              {
+                "evento": "bbbbbbbb-15-0",
+                "hlc": "1790000022000-0001-bbbbbbbb",
+                "valor": 1.5
+              },
+              {
+                "evento": "aaaaaaaa-5-0",
+                "hlc": "1790000032000-0001-aaaaaaaa",
+                "valor": [
+                  "IT-2",
+                  "IT-1"
+                ]
+              }
+            ],
+            "texto": [
+              {
+                "evento": "bbbbbbbb-15-0",
+                "hlc": "1790000022000-0001-bbbbbbbb",
+                "valor": "b"
+              }
+            ],
+            "titulo": [
+              {
+                "evento": "cccccccc-21-0",
+                "hlc": "1790000039000-0001-cccccccc",
+                "valor": {
+                  "x": 1,
+                  "y": [
+                    2
+                  ]
+                }
+              }
+            ]
+          },
+          "criadoEm": "1790000004000-0001-aaaaaaaa",
+          "exclusao": {
+            "evento": "bbbbbbbb-9-0",
+            "hlc": "1790000039000-0000-bbbbbbbb",
+            "op": "excluir"
+          },
+          "id": "CO-aaaaaaaa-1",
+          "tipo": "colecao"
+        },
+        {
+          "alteradoEm": "1790000038000-0000-cccccccc",
+          "campos": {
+            "cor": [
+              {
+                "evento": "cccccccc-3-0",
+                "hlc": "1790000009000-0001-cccccccc",
+                "valor": 1.5
+              },
+              {
+                "evento": "cccccccc-6-0",
+                "hlc": "1790000014000-0001-cccccccc",
+                "valor": null
+              },
+              {
+                "evento": "bbbbbbbb-24-0",
+                "hlc": "1790000026000-0001-bbbbbbbb",
+                "valor": {
+                  "x": 1,
+                  "y": [
+                    2
+                  ]
+                }
+              }
+            ],
+            "itens": [
+              {
+                "evento": "cccccccc-3-0",
+                "hlc": "1790000009000-0001-cccccccc",
+                "valor": [
+                  "IT-1",
+                  "IT-2"
+                ]
+              },
+              {
+                "evento": "aaaaaaaa-19-0",
+                "hlc": "1790000024000-0001-aaaaaaaa",
+                "valor": ""
+              }
+            ],
+            "texto": [
+              {
+                "evento": "aaaaaaaa-17-0",
+                "hlc": "1790000025000-0000-aaaaaaaa",
+                "valor": [
+                  "IT-1",
+                  "IT-2"
+                ]
+              }
+            ],
+            "titulo": [
+              {
+                "evento": "aaaaaaaa-19-0",
+                "hlc": "1790000024000-0001-aaaaaaaa",
+                "valor": ""
+              }
+            ]
+          },
+          "criadoEm": "1790000009000-0000-bbbbbbbb",
+          "exclusao": {
+            "evento": "cccccccc-10-0",
+            "hlc": "1790000038000-0000-cccccccc",
+            "op": "excluir"
+          },
+          "id": "HY-cccccccc-1",
+          "tipo": "hipotese"
+        },
+        {
+          "alteradoEm": "1790000027000-0001-aaaaaaaa",
+          "campos": {
+            "cor": [
+              {
+                "evento": "cccccccc-14-0",
+                "hlc": "1790000012000-0000-cccccccc",
+                "valor": []
+              }
+            ],
+            "titulo": [
+              {
+                "evento": "cccccccc-16-0",
+                "hlc": "1790000010000-0000-cccccccc",
+                "valor": ""
+              }
+            ]
+          },
+          "criadoEm": "1790000001000-0002-cccccccc",
+          "exclusao": {
+            "evento": "aaaaaaaa-1-0",
+            "hlc": "1790000027000-0001-aaaaaaaa",
+            "op": "restaurar"
+          },
+          "id": "NT-aaaaaaaa-1",
+          "tipo": "nota"
+        },
+        {
+          "alteradoEm": "1790000036000-0000-aaaaaaaa",
+          "campos": {
+            "cor": [
+              {
+                "evento": "aaaaaaaa-12-0",
+                "hlc": "1790000019000-0001-aaaaaaaa",
+                "valor": ""
+              },
+              {
+                "evento": "cccccccc-24-0",
+                "hlc": "1790000029000-0001-cccccccc",
+                "valor": true
+              }
+            ],
+            "itens": [
+              {
+                "evento": "cccccccc-23-0",
+                "hlc": "1790000021000-0002-cccccccc",
+                "valor": null
+              },
+              {
+                "evento": "cccccccc-11-0",
+                "hlc": "1790000024000-0002-cccccccc",
+                "valor": [
+                  "IT-2",
+                  "IT-1"
+                ]
+              },
+              {
+                "evento": "aaaaaaaa-2-0",
+                "hlc": "1790000027000-0002-aaaaaaaa",
+                "valor": []
+              }
+            ],
+            "texto": [
+              {
+                "evento": "cccccccc-18-0",
+                "hlc": "1790000019000-0001-cccccccc",
+                "valor": "Maḥteṣ"
+              }
+            ],
+            "titulo": [
+              {
+                "evento": "bbbbbbbb-25-0",
+                "hlc": "1790000006000-0000-bbbbbbbb",
+                "valor": [
+                  "IT-2",
+                  "IT-1"
+                ]
+              },
+              {
+                "evento": "aaaaaaaa-12-0",
+                "hlc": "1790000019000-0001-aaaaaaaa",
+                "valor": "a"
+              },
+              {
+                "evento": "aaaaaaaa-2-0",
+                "hlc": "1790000027000-0002-aaaaaaaa",
+                "valor": {
+                  "x": 1,
+                  "y": [
+                    2
+                  ]
+                }
+              }
+            ]
+          },
+          "criadoEm": "1790000003000-0000-aaaaaaaa",
+          "exclusao": {
+            "evento": "aaaaaaaa-20-0",
+            "hlc": "1790000035000-0001-aaaaaaaa",
+            "op": "restaurar"
+          },
+          "id": "NT-bbbbbbbb-1",
+          "tipo": "nota"
+        },
+        {
+          "alteradoEm": "1790000038000-0002-bbbbbbbb",
+          "campos": {
+            "itens": [
+              {
+                "evento": "bbbbbbbb-6-0",
+                "hlc": "1790000038000-0002-bbbbbbbb",
+                "valor": {
+                  "x": 1,
+                  "y": [
+                    2
+                  ]
+                }
+              }
+            ],
+            "texto": [
+              {
+                "evento": "cccccccc-4-0",
+                "hlc": "1790000007000-0000-cccccccc",
+                "valor": true
+              }
+            ],
+            "titulo": [
+              {
+                "evento": "aaaaaaaa-7-0",
+                "hlc": "1790000008000-0002-aaaaaaaa",
+                "valor": 0
+              },
+              {
+                "evento": "bbbbbbbb-6-0",
+                "hlc": "1790000038000-0002-bbbbbbbb",
+                "valor": true
+              }
+            ]
+          },
+          "criadoEm": "1790000001000-0000-bbbbbbbb",
+          "exclusao": {
+            "evento": "bbbbbbbb-17-0",
+            "hlc": "1790000033000-0000-bbbbbbbb",
+            "op": "restaurar"
+          },
+          "id": "IT-0001",
+          "tipo": "posicao"
+        }
+      ],
+      "v": 1
+    },
+    "eventos": [
+      {
+        "v": 1,
+        "id": "cccccccc-29-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-15-0",
+        "hlc": "1790000021000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ],
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-28-0",
+        "hlc": "1790000016000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-25-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-33-0",
+        "hlc": "1790000002000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-18-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-26-0",
+        "hlc": "1790000025000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-22-0",
+        "hlc": "1790000024000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-23-0",
+        "hlc": "1790000002000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-27-0",
+        "hlc": "1790000035000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-37-0",
+        "hlc": "1790000030000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-36-0",
+        "hlc": "1790000006000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-37-0",
+        "hlc": "1790000018000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-26-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [],
+          "texto": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-42-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-14-0",
+        "hlc": "1790000004000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-29-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-34-0",
+        "hlc": "1790000016000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-17-0",
+        "hlc": "1790000025000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-24-0",
+        "hlc": "1790000026000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-20-0",
+        "hlc": "1790000035000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-32-0",
+        "hlc": "1790000006000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-41-0",
+        "hlc": "1790000035000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-33-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-34-0",
+        "hlc": "1790000005000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "cor": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-21-0",
+        "hlc": "1790000039000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-43-0",
+        "hlc": "1790000005000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-44-0",
+        "hlc": "1790000037000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-23-0",
+        "hlc": "1790000016000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-27-0",
+        "hlc": "1790000023000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-35-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-29-0",
+        "hlc": "1790000039000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-28-0",
+        "hlc": "1790000013000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-28-0",
+        "hlc": "1790000030000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-30-0",
+        "hlc": "1790000017000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-22-0",
+        "hlc": "1790000004000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-40-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true,
+          "titulo": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-32-0",
+        "hlc": "1790000012000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [],
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-33-0",
+        "hlc": "1790000014000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-31-0",
+        "hlc": "1790000007000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-21-0",
+        "hlc": "1790000038000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true,
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-18-0",
+        "hlc": "1790000019000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-34-0",
+        "hlc": "1790000013000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-24-0",
+        "hlc": "1790000029000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-35-0",
+        "hlc": "1790000012000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-17-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-38-0",
+        "hlc": "1790000003000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-39-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-24-0",
+        "hlc": "1790000004000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "b",
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-25-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-23-0",
+        "hlc": "1790000021000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-36-0",
+        "hlc": "1790000023000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-32-0",
+        "hlc": "1790000002000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-19-0",
+        "hlc": "1790000024000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "",
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-30-0",
+        "hlc": "1790000005000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-27-0",
+        "hlc": "1790000011000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-39-0",
+        "hlc": "1790000018000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-26-0",
+        "hlc": "1790000037000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-22-0",
+        "hlc": "1790000001000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-31-0",
+        "hlc": "1790000008000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-40-0",
+        "hlc": "1790000035000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-19-0",
+        "hlc": "1790000029000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-20-0",
+        "hlc": "1790000039000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-16-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-30-0",
+        "hlc": "1790000025000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-31-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": "Maḥteṣ",
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-38-0",
+        "hlc": "1790000039000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-35-0",
+        "hlc": "1790000037000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "Maḥteṣ",
+          "texto": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-41-0",
+        "hlc": "1790000023000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "",
+          "itens": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-25-0",
+        "hlc": "1790000032000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000039000-0001-cccccccc\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":0},{\"evento\":\"bbbbbbbb-12-0\",\"hlc\":\"1790000010000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":true},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":1.5}],\"itens\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":[]},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000006000-0002-bbbbbbbb\",\"valor\":null},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"texto\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-22-0\",\"hlc\":\"1790000024000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-21-0\",\"hlc\":\"1790000039000-0001-cccccccc\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000003000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"bbbbbbbb-9-0\",\"hlc\":\"1790000039000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"},{\"alteradoEm\":\"1790000039000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"cccccccc-6-0\",\"hlc\":\"1790000014000-0001-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-24-0\",\"hlc\":\"1790000026000-0001-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"itens\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-35-0\",\"hlc\":\"1790000012000-0001-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-17-0\",\"hlc\":\"1790000025000-0000-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}]},\"criadoEm\":\"1790000002000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"aaaaaaaa-29-0\",\"hlc\":\"1790000039000-0000-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"HY-cccccccc-1\",\"tipo\":\"hipotese\"},{\"alteradoEm\":\"1790000038000-0001-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"cccccccc-14-0\",\"hlc\":\"1790000012000-0000-cccccccc\",\"valor\":[]},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-38-0\",\"hlc\":\"1790000003000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"titulo\":[{\"evento\":\"cccccccc-16-0\",\"hlc\":\"1790000010000-0000-cccccccc\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-30-0\",\"hlc\":\"1790000017000-0000-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-26-0\",\"hlc\":\"1790000025000-0001-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-44-0\",\"hlc\":\"1790000037000-0001-bbbbbbbb\",\"valor\":[]},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}]},\"criadoEm\":\"1790000001000-0002-cccccccc\",\"exclusao\":{\"evento\":\"bbbbbbbb-40-0\",\"hlc\":\"1790000035000-0002-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000036000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-32-0\",\"hlc\":\"1790000002000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"cccccccc-24-0\",\"hlc\":\"1790000029000-0001-cccccccc\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-39-0\",\"hlc\":\"1790000018000-0001-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-23-0\",\"hlc\":\"1790000021000-0002-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-11-0\",\"hlc\":\"1790000024000-0002-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":[]}],\"texto\":[{\"evento\":\"cccccccc-18-0\",\"hlc\":\"1790000019000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"titulo\":[{\"evento\":\"bbbbbbbb-25-0\",\"hlc\":\"1790000006000-0000-bbbbbbbb\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-28-0\",\"hlc\":\"1790000013000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"a\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000002000-0000-cccccccc\",\"exclusao\":{\"evento\":\"aaaaaaaa-20-0\",\"hlc\":\"1790000035000-0001-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"NT-bbbbbbbb-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000038000-0002-bbbbbbbb\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-37-0\",\"hlc\":\"1790000030000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"itens\":[{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"texto\":[{\"evento\":\"cccccccc-4-0\",\"hlc\":\"1790000007000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":true},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-7-0\",\"hlc\":\"1790000008000-0002-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":true}]},\"criadoEm\":\"1790000001000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"cccccccc-26-0\",\"hlc\":\"1790000037000-0002-cccccccc\",\"op\":\"excluir\"},\"id\":\"IT-0001\",\"tipo\":\"posicao\"}],\"v\":1}"
+  },
+  {
+    "nome": "varias-bases",
+    "descricao": "Duas bases (a união delas) + eventos que repetem parte delas: igual à fusão de tudo.",
+    "base": [
+      {
+        "registros": [
+          {
+            "alteradoEm": "1790000039000-0000-bbbbbbbb",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "bbbbbbbb-12-0",
+                  "hlc": "1790000010000-0002-bbbbbbbb",
+                  "valor": "a"
+                },
+                {
+                  "evento": "bbbbbbbb-13-0",
+                  "hlc": "1790000017000-0002-bbbbbbbb",
+                  "valor": 1.5
+                },
+                {
+                  "evento": "aaaaaaaa-5-0",
+                  "hlc": "1790000032000-0001-aaaaaaaa",
+                  "valor": true
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "bbbbbbbb-1-0",
+                  "hlc": "1790000006000-0002-bbbbbbbb",
+                  "valor": null
+                },
+                {
+                  "evento": "bbbbbbbb-13-0",
+                  "hlc": "1790000017000-0002-bbbbbbbb",
+                  "valor": ""
+                },
+                {
+                  "evento": "bbbbbbbb-15-0",
+                  "hlc": "1790000022000-0001-bbbbbbbb",
+                  "valor": 1.5
+                },
+                {
+                  "evento": "aaaaaaaa-5-0",
+                  "hlc": "1790000032000-0001-aaaaaaaa",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                }
+              ],
+              "texto": [
+                {
+                  "evento": "bbbbbbbb-15-0",
+                  "hlc": "1790000022000-0001-bbbbbbbb",
+                  "valor": "b"
+                }
+              ]
+            },
+            "criadoEm": "1790000006000-0000-bbbbbbbb",
+            "exclusao": {
+              "evento": "bbbbbbbb-9-0",
+              "hlc": "1790000039000-0000-bbbbbbbb",
+              "op": "excluir"
+            },
+            "id": "CO-aaaaaaaa-1",
+            "tipo": "colecao"
+          },
+          {
+            "alteradoEm": "1790000038000-0000-cccccccc",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "cccccccc-3-0",
+                  "hlc": "1790000009000-0001-cccccccc",
+                  "valor": 1.5
+                },
+                {
+                  "evento": "cccccccc-6-0",
+                  "hlc": "1790000014000-0001-cccccccc",
+                  "valor": null
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "cccccccc-3-0",
+                  "hlc": "1790000009000-0001-cccccccc",
+                  "valor": [
+                    "IT-1",
+                    "IT-2"
+                  ]
+                }
+              ]
+            },
+            "criadoEm": "1790000009000-0000-bbbbbbbb",
+            "exclusao": {
+              "evento": "cccccccc-10-0",
+              "hlc": "1790000038000-0000-cccccccc",
+              "op": "excluir"
+            },
+            "id": "HY-cccccccc-1",
+            "tipo": "hipotese"
+          },
+          {
+            "alteradoEm": "1790000027000-0001-aaaaaaaa",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "cccccccc-14-0",
+                  "hlc": "1790000012000-0000-cccccccc",
+                  "valor": []
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "cccccccc-16-0",
+                  "hlc": "1790000010000-0000-cccccccc",
+                  "valor": ""
+                }
+              ]
+            },
+            "criadoEm": "1790000010000-0000-cccccccc",
+            "exclusao": {
+              "evento": "aaaaaaaa-1-0",
+              "hlc": "1790000027000-0001-aaaaaaaa",
+              "op": "restaurar"
+            },
+            "id": "NT-aaaaaaaa-1",
+            "tipo": "nota"
+          },
+          {
+            "alteradoEm": "1790000036000-0000-aaaaaaaa",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "aaaaaaaa-12-0",
+                  "hlc": "1790000019000-0001-aaaaaaaa",
+                  "valor": ""
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "cccccccc-11-0",
+                  "hlc": "1790000024000-0002-cccccccc",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                },
+                {
+                  "evento": "aaaaaaaa-2-0",
+                  "hlc": "1790000027000-0002-aaaaaaaa",
+                  "valor": []
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "aaaaaaaa-12-0",
+                  "hlc": "1790000019000-0001-aaaaaaaa",
+                  "valor": "a"
+                },
+                {
+                  "evento": "aaaaaaaa-2-0",
+                  "hlc": "1790000027000-0002-aaaaaaaa",
+                  "valor": {
+                    "x": 1,
+                    "y": [
+                      2
+                    ]
+                  }
+                }
+              ]
+            },
+            "criadoEm": "1790000007000-0000-cccccccc",
+            "exclusao": {
+              "evento": "aaaaaaaa-13-0",
+              "hlc": "1790000032000-0002-aaaaaaaa",
+              "op": "excluir"
+            },
+            "id": "NT-bbbbbbbb-1",
+            "tipo": "nota"
+          },
+          {
+            "alteradoEm": "1790000038000-0002-bbbbbbbb",
+            "campos": {
+              "itens": [
+                {
+                  "evento": "bbbbbbbb-6-0",
+                  "hlc": "1790000038000-0002-bbbbbbbb",
+                  "valor": {
+                    "x": 1,
+                    "y": [
+                      2
+                    ]
+                  }
+                }
+              ],
+              "texto": [
+                {
+                  "evento": "cccccccc-4-0",
+                  "hlc": "1790000007000-0000-cccccccc",
+                  "valor": true
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "aaaaaaaa-7-0",
+                  "hlc": "1790000008000-0002-aaaaaaaa",
+                  "valor": 0
+                },
+                {
+                  "evento": "bbbbbbbb-6-0",
+                  "hlc": "1790000038000-0002-bbbbbbbb",
+                  "valor": true
+                }
+              ]
+            },
+            "criadoEm": "1790000001000-0000-bbbbbbbb",
+            "exclusao": {
+              "evento": "bbbbbbbb-17-0",
+              "hlc": "1790000033000-0000-bbbbbbbb",
+              "op": "restaurar"
+            },
+            "id": "IT-0001",
+            "tipo": "posicao"
+          }
+        ],
+        "v": 1
+      },
+      {
+        "registros": [
+          {
+            "alteradoEm": "1790000039000-0001-cccccccc",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "aaaaaaaa-15-0",
+                  "hlc": "1790000021000-0002-aaaaaaaa",
+                  "valor": [
+                    "IT-1",
+                    "IT-2"
+                  ]
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "aaaaaaaa-15-0",
+                  "hlc": "1790000021000-0002-aaaaaaaa",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                },
+                {
+                  "evento": "bbbbbbbb-15-0",
+                  "hlc": "1790000022000-0001-bbbbbbbb",
+                  "valor": 1.5
+                }
+              ],
+              "texto": [
+                {
+                  "evento": "bbbbbbbb-15-0",
+                  "hlc": "1790000022000-0001-bbbbbbbb",
+                  "valor": "b"
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "cccccccc-21-0",
+                  "hlc": "1790000039000-0001-cccccccc",
+                  "valor": {
+                    "x": 1,
+                    "y": [
+                      2
+                    ]
+                  }
+                }
+              ]
+            },
+            "criadoEm": "1790000004000-0001-aaaaaaaa",
+            "exclusao": {
+              "evento": "aaaaaaaa-9-0",
+              "hlc": "1790000027000-0002-aaaaaaaa",
+              "op": "restaurar"
+            },
+            "id": "CO-aaaaaaaa-1",
+            "tipo": "colecao"
+          },
+          {
+            "alteradoEm": "1790000038000-0000-cccccccc",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "bbbbbbbb-24-0",
+                  "hlc": "1790000026000-0001-bbbbbbbb",
+                  "valor": {
+                    "x": 1,
+                    "y": [
+                      2
+                    ]
+                  }
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "aaaaaaaa-19-0",
+                  "hlc": "1790000024000-0001-aaaaaaaa",
+                  "valor": ""
+                }
+              ],
+              "texto": [
+                {
+                  "evento": "aaaaaaaa-17-0",
+                  "hlc": "1790000025000-0000-aaaaaaaa",
+                  "valor": [
+                    "IT-1",
+                    "IT-2"
+                  ]
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "aaaaaaaa-19-0",
+                  "hlc": "1790000024000-0001-aaaaaaaa",
+                  "valor": ""
+                }
+              ]
+            },
+            "criadoEm": "1790000011000-0000-bbbbbbbb",
+            "exclusao": {
+              "evento": "cccccccc-10-0",
+              "hlc": "1790000038000-0000-cccccccc",
+              "op": "excluir"
+            },
+            "id": "HY-cccccccc-1",
+            "tipo": "hipotese"
+          },
+          {
+            "alteradoEm": "1790000038000-0001-aaaaaaaa",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "cccccccc-14-0",
+                  "hlc": "1790000012000-0000-cccccccc",
+                  "valor": []
+                },
+                {
+                  "evento": "aaaaaaaa-21-0",
+                  "hlc": "1790000038000-0001-aaaaaaaa",
+                  "valor": true
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "aaaaaaaa-21-0",
+                  "hlc": "1790000038000-0001-aaaaaaaa",
+                  "valor": ""
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "cccccccc-16-0",
+                  "hlc": "1790000010000-0000-cccccccc",
+                  "valor": ""
+                },
+                {
+                  "evento": "bbbbbbbb-26-0",
+                  "hlc": "1790000025000-0001-bbbbbbbb",
+                  "valor": "a"
+                }
+              ]
+            },
+            "criadoEm": "1790000001000-0002-cccccccc",
+            "exclusao": {
+              "evento": "bbbbbbbb-20-0",
+              "hlc": "1790000012000-0002-bbbbbbbb",
+              "op": "excluir"
+            },
+            "id": "NT-aaaaaaaa-1",
+            "tipo": "nota"
+          },
+          {
+            "alteradoEm": "1790000035000-0001-aaaaaaaa",
+            "campos": {
+              "cor": [
+                {
+                  "evento": "aaaaaaaa-12-0",
+                  "hlc": "1790000019000-0001-aaaaaaaa",
+                  "valor": ""
+                },
+                {
+                  "evento": "bbbbbbbb-30-0",
+                  "hlc": "1790000025000-0002-bbbbbbbb",
+                  "valor": [
+                    "IT-1",
+                    "IT-2"
+                  ]
+                },
+                {
+                  "evento": "cccccccc-24-0",
+                  "hlc": "1790000029000-0001-cccccccc",
+                  "valor": true
+                }
+              ],
+              "itens": [
+                {
+                  "evento": "cccccccc-23-0",
+                  "hlc": "1790000021000-0002-cccccccc",
+                  "valor": null
+                },
+                {
+                  "evento": "cccccccc-11-0",
+                  "hlc": "1790000024000-0002-cccccccc",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                },
+                {
+                  "evento": "bbbbbbbb-30-0",
+                  "hlc": "1790000025000-0002-bbbbbbbb",
+                  "valor": 0
+                }
+              ],
+              "texto": [
+                {
+                  "evento": "cccccccc-18-0",
+                  "hlc": "1790000019000-0001-cccccccc",
+                  "valor": "Maḥteṣ"
+                },
+                {
+                  "evento": "cccccccc-27-0",
+                  "hlc": "1790000023000-0000-cccccccc",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                }
+              ],
+              "titulo": [
+                {
+                  "evento": "bbbbbbbb-25-0",
+                  "hlc": "1790000006000-0000-bbbbbbbb",
+                  "valor": [
+                    "IT-2",
+                    "IT-1"
+                  ]
+                },
+                {
+                  "evento": "aaaaaaaa-12-0",
+                  "hlc": "1790000019000-0001-aaaaaaaa",
+                  "valor": "a"
+                },
+                {
+                  "evento": "cccccccc-27-0",
+                  "hlc": "1790000023000-0000-cccccccc",
+                  "valor": true
+                }
+              ]
+            },
+            "criadoEm": "1790000003000-0000-aaaaaaaa",
+            "exclusao": {
+              "evento": "aaaaaaaa-20-0",
+              "hlc": "1790000035000-0001-aaaaaaaa",
+              "op": "restaurar"
+            },
+            "id": "NT-bbbbbbbb-1",
+            "tipo": "nota"
+          },
+          {
+            "alteradoEm": "1790000037000-0002-cccccccc",
+            "campos": {},
+            "criadoEm": "1790000002000-0002-cccccccc",
+            "exclusao": {
+              "evento": "cccccccc-26-0",
+              "hlc": "1790000037000-0002-cccccccc",
+              "op": "excluir"
+            },
+            "id": "IT-0001",
+            "tipo": "posicao"
+          }
+        ],
+        "v": 1
+      }
+    ],
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-20-0",
+        "hlc": "1790000035000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-25-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-35-0",
+        "hlc": "1790000037000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "Maḥteṣ",
+          "texto": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-41-0",
+        "hlc": "1790000035000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-35-0",
+        "hlc": "1790000008000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-39-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-27-0",
+        "hlc": "1790000011000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-35-0",
+        "hlc": "1790000012000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-36-0",
+        "hlc": "1790000023000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-29-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-36-0",
+        "hlc": "1790000006000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-19-0",
+        "hlc": "1790000024000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "",
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-31-0",
+        "hlc": "1790000008000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-40-0",
+        "hlc": "1790000027000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": true,
+          "titulo": "Maḥteṣ"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-15-0",
+        "hlc": "1790000021000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ],
+          "itens": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-24-0",
+        "hlc": "1790000029000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-27-0",
+        "hlc": "1790000023000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "titulo": true
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-43-0",
+        "hlc": "1790000005000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-16-0",
+        "hlc": "1790000008000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-32-0",
+        "hlc": "1790000012000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [],
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-34-0",
+        "hlc": "1790000013000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-26-0",
+        "hlc": "1790000037000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-32-0",
+        "hlc": "1790000002000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "cor": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-29-0",
+        "hlc": "1790000021000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-17-0",
+        "hlc": "1790000025000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-28-0",
+        "hlc": "1790000013000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-30-0",
+        "hlc": "1790000017000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-34-0",
+        "hlc": "1790000005000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": "b",
+          "cor": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-24-0",
+        "hlc": "1790000026000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "cor": {
+            "x": 1,
+            "y": [
+              2
+            ]
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-38-0",
+        "hlc": "1790000039000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-30-0",
+        "hlc": "1790000025000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-26-0",
+        "hlc": "1790000025000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-25-0",
+        "hlc": "1790000032000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-26-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": [],
+          "texto": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-42-0",
+        "hlc": "1790000014000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-30-0",
+        "hlc": "1790000005000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-32-0",
+        "hlc": "1790000006000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-40-0",
+        "hlc": "1790000035000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-41-0",
+        "hlc": "1790000023000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "",
+          "itens": 0
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-23-0",
+        "hlc": "1790000002000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-28-0",
+        "hlc": "1790000016000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-28-0",
+        "hlc": "1790000030000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "excluir",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-21-0",
+        "hlc": "1790000038000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "cor": true,
+          "itens": ""
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-37-0",
+        "hlc": "1790000030000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-25-0",
+        "hlc": "1790000006000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "criar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-38-0",
+        "hlc": "1790000003000-0000-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "itens": "b"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-33-0",
+        "hlc": "1790000014000-0001-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-31-0",
+        "hlc": "1790000031000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "criar",
+        "campos": {
+          "cor": "Maḥteṣ",
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-37-0",
+        "hlc": "1790000018000-0002-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "alterar",
+        "campos": {
+          "cor": 0,
+          "titulo": "a"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-24-0",
+        "hlc": "1790000004000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": "b",
+          "texto": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-22-0",
+        "hlc": "1790000024000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "texto": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-44-0",
+        "hlc": "1790000037000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "criar",
+        "campos": {
+          "titulo": []
+        }
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-33-0",
+        "hlc": "1790000002000-0000-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-18-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-27-0",
+        "hlc": "1790000035000-0002-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "colecao",
+        "reg": "CO-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": [
+            "IT-2",
+            "IT-1"
+          ],
+          "cor": 1.5
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-39-0",
+        "hlc": "1790000018000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "nota",
+        "reg": "NT-bbbbbbbb-1",
+        "op": "alterar",
+        "campos": {
+          "itens": null
+        }
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-33-0",
+        "hlc": "1790000031000-0001-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "posicao",
+        "reg": "IT-0001",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-29-0",
+        "hlc": "1790000039000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "restaurar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "cccccccc-31-0",
+        "hlc": "1790000007000-0002-cccccccc",
+        "aparelho": "cccccccc",
+        "tipo": "hipotese",
+        "reg": "HY-cccccccc-1",
+        "op": "alterar",
+        "campos": {}
+      },
+      {
+        "v": 1,
+        "id": "bbbbbbbb-34-0",
+        "hlc": "1790000016000-0001-bbbbbbbb",
+        "aparelho": "bbbbbbbb",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "titulo": 0,
+          "cor": [
+            "IT-1",
+            "IT-2"
+          ]
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000039000-0001-cccccccc\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":0},{\"evento\":\"bbbbbbbb-12-0\",\"hlc\":\"1790000010000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":true},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":1.5}],\"itens\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":[]},{\"evento\":\"bbbbbbbb-1-0\",\"hlc\":\"1790000006000-0002-bbbbbbbb\",\"valor\":null},{\"evento\":\"bbbbbbbb-13-0\",\"hlc\":\"1790000017000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-15-0\",\"hlc\":\"1790000021000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000032000-0001-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"texto\":[{\"evento\":\"aaaaaaaa-26-0\",\"hlc\":\"1790000003000-0000-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-15-0\",\"hlc\":\"1790000022000-0001-bbbbbbbb\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-22-0\",\"hlc\":\"1790000024000-0002-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-36-0\",\"hlc\":\"1790000006000-0000-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-27-0\",\"hlc\":\"1790000035000-0002-aaaaaaaa\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-21-0\",\"hlc\":\"1790000039000-0001-cccccccc\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000003000-0000-aaaaaaaa\",\"exclusao\":{\"evento\":\"bbbbbbbb-9-0\",\"hlc\":\"1790000039000-0000-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"CO-aaaaaaaa-1\",\"tipo\":\"colecao\"},{\"alteradoEm\":\"1790000039000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"cccccccc-6-0\",\"hlc\":\"1790000014000-0001-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-24-0\",\"hlc\":\"1790000026000-0001-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"itens\":[{\"evento\":\"cccccccc-3-0\",\"hlc\":\"1790000009000-0001-cccccccc\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-35-0\",\"hlc\":\"1790000012000-0001-aaaaaaaa\",\"valor\":[]},{\"evento\":\"aaaaaaaa-17-0\",\"hlc\":\"1790000025000-0000-aaaaaaaa\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"aaaaaaaa-24-0\",\"hlc\":\"1790000004000-0002-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-41-0\",\"hlc\":\"1790000023000-0002-bbbbbbbb\",\"valor\":\"\"},{\"evento\":\"aaaaaaaa-19-0\",\"hlc\":\"1790000024000-0001-aaaaaaaa\",\"valor\":\"\"}]},\"criadoEm\":\"1790000002000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"aaaaaaaa-29-0\",\"hlc\":\"1790000039000-0000-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"HY-cccccccc-1\",\"tipo\":\"hipotese\"},{\"alteradoEm\":\"1790000038000-0001-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"cccccccc-14-0\",\"hlc\":\"1790000012000-0000-cccccccc\",\"valor\":[]},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-38-0\",\"hlc\":\"1790000003000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-21-0\",\"hlc\":\"1790000038000-0001-aaaaaaaa\",\"valor\":\"\"}],\"texto\":[{\"evento\":\"aaaaaaaa-34-0\",\"hlc\":\"1790000005000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"titulo\":[{\"evento\":\"cccccccc-16-0\",\"hlc\":\"1790000010000-0000-cccccccc\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-34-0\",\"hlc\":\"1790000016000-0001-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-30-0\",\"hlc\":\"1790000017000-0000-cccccccc\",\"valor\":null},{\"evento\":\"bbbbbbbb-26-0\",\"hlc\":\"1790000025000-0001-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"bbbbbbbb-44-0\",\"hlc\":\"1790000037000-0001-bbbbbbbb\",\"valor\":[]},{\"evento\":\"bbbbbbbb-35-0\",\"hlc\":\"1790000037000-0002-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}]},\"criadoEm\":\"1790000001000-0002-cccccccc\",\"exclusao\":{\"evento\":\"bbbbbbbb-40-0\",\"hlc\":\"1790000035000-0002-bbbbbbbb\",\"op\":\"excluir\"},\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000036000-0000-aaaaaaaa\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-32-0\",\"hlc\":\"1790000002000-0000-cccccccc\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"\"},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]},{\"evento\":\"cccccccc-24-0\",\"hlc\":\"1790000029000-0001-cccccccc\",\"valor\":true}],\"itens\":[{\"evento\":\"cccccccc-39-0\",\"hlc\":\"1790000018000-0001-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-23-0\",\"hlc\":\"1790000021000-0002-cccccccc\",\"valor\":null},{\"evento\":\"cccccccc-11-0\",\"hlc\":\"1790000024000-0002-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-30-0\",\"hlc\":\"1790000025000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":[]}],\"texto\":[{\"evento\":\"cccccccc-18-0\",\"hlc\":\"1790000019000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]}],\"titulo\":[{\"evento\":\"bbbbbbbb-25-0\",\"hlc\":\"1790000006000-0000-bbbbbbbb\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-28-0\",\"hlc\":\"1790000013000-0001-aaaaaaaa\",\"valor\":\"b\"},{\"evento\":\"aaaaaaaa-12-0\",\"hlc\":\"1790000019000-0001-aaaaaaaa\",\"valor\":\"a\"},{\"evento\":\"cccccccc-27-0\",\"hlc\":\"1790000023000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-2-0\",\"hlc\":\"1790000027000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}}]},\"criadoEm\":\"1790000002000-0000-cccccccc\",\"exclusao\":{\"evento\":\"aaaaaaaa-20-0\",\"hlc\":\"1790000035000-0001-aaaaaaaa\",\"op\":\"restaurar\"},\"id\":\"NT-bbbbbbbb-1\",\"tipo\":\"nota\"},{\"alteradoEm\":\"1790000038000-0002-bbbbbbbb\",\"campos\":{\"cor\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":{\"x\":1,\"y\":[2]}},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":0},{\"evento\":\"cccccccc-37-0\",\"hlc\":\"1790000030000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":\"Maḥteṣ\"}],\"itens\":[{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":{\"x\":1,\"y\":[2]}}],\"texto\":[{\"evento\":\"cccccccc-4-0\",\"hlc\":\"1790000007000-0000-cccccccc\",\"valor\":true},{\"evento\":\"aaaaaaaa-32-0\",\"hlc\":\"1790000012000-0002-aaaaaaaa\",\"valor\":[]},{\"evento\":\"cccccccc-34-0\",\"hlc\":\"1790000013000-0000-cccccccc\",\"valor\":[\"IT-2\",\"IT-1\"]},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":true},{\"evento\":\"bbbbbbbb-31-0\",\"hlc\":\"1790000031000-0001-bbbbbbbb\",\"valor\":[\"IT-1\",\"IT-2\"]}],\"titulo\":[{\"evento\":\"cccccccc-35-0\",\"hlc\":\"1790000008000-0001-cccccccc\",\"valor\":1.5},{\"evento\":\"aaaaaaaa-7-0\",\"hlc\":\"1790000008000-0002-aaaaaaaa\",\"valor\":0},{\"evento\":\"bbbbbbbb-37-0\",\"hlc\":\"1790000018000-0002-bbbbbbbb\",\"valor\":\"a\"},{\"evento\":\"cccccccc-40-0\",\"hlc\":\"1790000027000-0001-cccccccc\",\"valor\":\"Maḥteṣ\"},{\"evento\":\"bbbbbbbb-6-0\",\"hlc\":\"1790000038000-0002-bbbbbbbb\",\"valor\":true}]},\"criadoEm\":\"1790000001000-0000-bbbbbbbb\",\"exclusao\":{\"evento\":\"cccccccc-26-0\",\"hlc\":\"1790000037000-0002-cccccccc\",\"op\":\"excluir\"},\"id\":\"IT-0001\",\"tipo\":\"posicao\"}],\"v\":1}"
+  },
+  {
+    "nome": "chaves-e-numeros",
+    "descricao": "Chaves ordenadas por ponto de código (U+FF01 antes de U+1F600); números como o JavaScript os escreve (5e-7, não 5e-07).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "😀": 1,
+          "！": {
+            "z": [
+              0.1,
+              1.5,
+              5e-7,
+              -3,
+              9007199254740991,
+              -9007199254740991,
+              1e-300
+            ],
+            "a": "Maḥteṣ 𝔸"
+          },
+          "Z": true,
+          "a": false
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-aaaaaaaa\",\"campos\":{\"Z\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":true}],\"a\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":false}],\"！\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":{\"a\":\"Maḥteṣ 𝔸\",\"z\":[0.1,1.5,5e-7,-3,9007199254740991,-9007199254740991,1e-300]}}],\"😀\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":1}]},\"criadoEm\":\"1790000001000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "numeros-grandes",
+    "descricao": "Números com módulo acima de 2^53 − 1 (9007199254740991) tornam o evento inválido (motivo numero; ignorados = 4).",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "n": 9007199254740991
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "1790000002000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "n": 9007199254740992
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "1790000003000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "n": [
+            -9007199254740992
+          ]
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "1790000004000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "n": {
+            "m": 1e+21
+          }
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000005000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "n": 1.7976931348623157e+308
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":4,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-aaaaaaaa\",\"campos\":{\"n\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":9007199254740991}]},\"criadoEm\":\"1790000001000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "controle",
+    "descricao": "Textos e chaves com caracteres de controle: escapados como JSON.stringify (\\u0000, \\n…); U+007F, U+2028 e \"/\" ficam crus.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "1790000001000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a\nb": "\u0000\u0001\u001f\b\f\n\r\t  \"\\/",
+          "\t": [
+            "\u0000"
+          ]
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":0,\"registros\":[{\"alteradoEm\":\"1790000001000-0000-aaaaaaaa\",\"campos\":{\"\\t\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":[\"\\u0000\"]}],\"a\\nb\":[{\"evento\":\"aaaaaaaa-1-0\",\"hlc\":\"1790000001000-0000-aaaaaaaa\",\"valor\":\"\\u0000\\u0001\\u001f\\b\\f\\n\\r\\t  \\\"\\\\/\"}]},\"criadoEm\":\"1790000001000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  },
+  {
+    "nome": "hlc-limites",
+    "descricao": "hlc com ms acima de LIMITE_MS (2250-01-01 = 8835955200000) é inválido (ignorados = 2); até o limite, mesmo acima de TETO_MS (2200), é válido.",
+    "eventos": [
+      {
+        "v": 1,
+        "id": "aaaaaaaa-1-0",
+        "hlc": "9999999999999-9999-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "absurdo"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-2-0",
+        "hlc": "8835955200001-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "além do limite"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-3-0",
+        "hlc": "8835955200000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "b": "no limite"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-4-0",
+        "hlc": "7258118400001-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "além do teto"
+        }
+      },
+      {
+        "v": 1,
+        "id": "aaaaaaaa-5-0",
+        "hlc": "1790000000000-0000-aaaaaaaa",
+        "aparelho": "aaaaaaaa",
+        "tipo": "nota",
+        "reg": "NT-aaaaaaaa-1",
+        "op": "alterar",
+        "campos": {
+          "a": "agora"
+        }
+      }
+    ],
+    "estado": "{\"ignorados\":2,\"registros\":[{\"alteradoEm\":\"8835955200000-0000-aaaaaaaa\",\"campos\":{\"a\":[{\"evento\":\"aaaaaaaa-5-0\",\"hlc\":\"1790000000000-0000-aaaaaaaa\",\"valor\":\"agora\"},{\"evento\":\"aaaaaaaa-4-0\",\"hlc\":\"7258118400001-0000-aaaaaaaa\",\"valor\":\"além do teto\"}],\"b\":[{\"evento\":\"aaaaaaaa-3-0\",\"hlc\":\"8835955200000-0000-aaaaaaaa\",\"valor\":\"no limite\"}]},\"criadoEm\":\"1790000000000-0000-aaaaaaaa\",\"exclusao\":null,\"id\":\"NT-aaaaaaaa-1\",\"tipo\":\"nota\"}],\"v\":1}"
+  }
+]

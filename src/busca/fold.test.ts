@@ -46,6 +46,6 @@ describe('textoIndexado() (forma colada, só para texto que vai ao índice)', ()
   })
 
   it('texto sem apóstrofo é só dobrado', () => {
-    expect(textoIndexado('Maḥraṣ Teste', tabela)).toBe('mahras teste')
+    expect(textoIndexado('Maḥteṣ Teste', tabela)).toBe('mahtes teste')
   })
 })

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { reabrirBanco } from '../banco/cliente'
 import { sair } from '../dropbox/auth'
 import { eErroDeRede, ErroDePacoteAusente, ErroDePermissao, fonteDropbox, resumoDoErro } from '../dropbox/fonte'
+import { MSG_SEM_PERMISSAO } from '../dropbox/mensagens'
 import { Logo } from '../ui/Logo'
 import { armazemPadrao, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type Etapa } from '../pacote/baixar'
@@ -18,6 +19,8 @@ import {
   MSG_SCHEMA,
   type Fonte,
 } from '../pacote/manifesto'
+import { camadaDoUsuarioVazia } from '../usuario/sincronizar'
+import { sincronizarAgora } from '../usuario/useSincronizacao'
 import './Preparando.css'
 
 const ETAPAS: Etapa[] = ['Banco de dados', 'Imagens de tela']
@@ -32,8 +35,7 @@ export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em out
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
 export const MSG_SEM_PACOTE_NO_DROPBOX =
   'O pacote não está na pasta do app no Dropbox. Ponha as pastas nucleo e imagens na pasta deste app, dentro de Dropbox → Aplicativos (o nome pode ter um número, como "(1)"), espere o Dropbox terminar de enviar e tente de novo.'
-export const MSG_SEM_PERMISSAO =
-  'O app não tem permissão para ler os arquivos. No App Console do Dropbox, aba Permissions, marque files.content.read e clique em Submit; depois toque em "Entrar de novo".'
+export { MSG_SEM_PERMISSAO }
 
 type Fase = 'baixando' | 'pronto' | 'erro'
 type Erro = 'sem-conexao' | 'schema' | 'pacote' | 'integridade' | 'em-andamento' | 'sem-pacote-no-dropbox' | 'sem-permissao' | 'geral'
@@ -71,12 +73,29 @@ function comCodigo(mensagem: string): ReactNode {
   return mensagem.split('`').map((trecho, i) => (i % 2 === 1 ? <code key={i}>{trecho}</code> : trecho))
 }
 
+/** A camada do usuário (notas, coleções, objetos SKC): é a primeira vez neste aparelho? E puxá-la. */
+export interface CamadaDoUsuario {
+  primeiraVez: () => Promise<boolean>
+  /** Sincroniza; true se deu certo. Nunca deve impedir de abrir o app. */
+  puxar: () => Promise<boolean>
+}
+
+const CAMADA_PADRAO: CamadaDoUsuario = {
+  primeiraVez: () => camadaDoUsuarioVazia(),
+  puxar: async () => (await sincronizarAgora('preparando')) !== null,
+}
+
+export const ETAPA_DO_USUARIO = 'Suas notas e coleções (SKC)'
+type EtapaDoUsuario = 'aguardando' | 'baixando' | 'pronto' | 'depois'
+
 export interface PreparandoProps {
   /** Onde o pacote é guardado (padrão: o OPFS). */
   armazem?: Armazem
   cache?: CacheImagens
   /** De onde vem o pacote (padrão: o Dropbox). null = sem login; lança sem internet. */
   obterFonte?: () => Promise<Fonte | null>
+  /** A camada do usuário (padrão: o IndexedDB e a sincronização do app). */
+  camadaDoUsuario?: CamadaDoUsuario
 }
 
 /**
@@ -84,11 +103,14 @@ export interface PreparandoProps {
  * computador). Um só componente: o tamanho muda no CSS, em 768 px.
  *
  * Baixa o pacote em duas etapas ("Banco de dados"; "Imagens de tela", que aqui são as
- * miniaturas). "Abrir assim que terminar" leva ao Início quando tudo estiver conferido;
- * sem ele, a tela fica e oferece "Abrir o app". Sem login vai para /entrar; sem internet
+ * miniaturas) e, na primeira vez da camada do usuário, depois do pacote, "Suas notas e coleções (SKC)"
+ * (ela não segura a abertura: com o pacote pronto, "Abrir o app" já vale e ela segue em segundo plano; uma
+ * falha nela não impede nada, a sincronização automática tenta de novo).
+ * "Abrir assim que terminar" leva ao Início quando tudo estiver conferido; sem ele, a tela fica e
+ * oferece "Abrir o app". Sem login vai para /entrar; sem internet
  * avisa e, se já há pacote no aparelho, deixa abri-lo.
  */
-export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: PreparandoProps) {
+export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDoUsuario = CAMADA_PADRAO }: PreparandoProps) {
   const navegar = useNavigate()
   const [fase, setFase] = useState<Fase>('baixando')
   const [erro, setErro] = useState<Erro | null>(null)
@@ -100,6 +122,17 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
   const [altaResolucao, setAltaResolucao] = useState(false)
   const montada = useRef(false)
   const iniciou = useRef(false)
+  // Na primeira vez (sem nada do usuário neste aparelho), a camada do usuário é baixada depois do pacote.
+  const [usuario, setUsuario] = useState<EtapaDoUsuario | null>(null)
+  const primeiraVezDoUsuario = useRef<Promise<boolean> | null>(null)
+  primeiraVezDoUsuario.current ??= camadaDoUsuario.primeiraVez().catch(() => false)
+  useEffect(() => {
+    let vivo = true
+    void primeiraVezDoUsuario.current!.then((sim) => vivo && sim && setUsuario((u) => u ?? 'aguardando'))
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   // Fundo escuro (#111111) no documento inteiro, como no design.
   useEffect(() => {
@@ -164,8 +197,21 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
     }
     if (!ativa()) return
     setTemPacote(true)
+    // O pacote está pronto: o app já pode ser aberto. A camada do usuário (na primeira vez) continua em
+    // segundo plano, sem segurar a abertura (o indicador de sincronização mostra o andamento); uma falha
+    // aqui não impede nada (a sincronização automática tenta depois).
     setFase('pronto')
-  }, [cache, guardado, navegar, obterFonte])
+    if (await primeiraVezDoUsuario.current!) {
+      if (ativa()) setUsuario('baixando')
+      void camadaDoUsuario
+        .puxar()
+        .catch(() => false)
+        .then((ok) => {
+          if (ok) primeiraVezDoUsuario.current = Promise.resolve(false)
+          if (montada.current) setUsuario(ok ? 'pronto' : 'depois')
+        })
+    }
+  }, [cache, camadaDoUsuario, guardado, navegar, obterFonte])
 
   useEffect(() => {
     montada.current = true
@@ -259,6 +305,24 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
               </li>
             )
           })}
+          {usuario && (
+            <li className="preparando-etapa">
+              <div className="preparando-etapa-linha">
+                <span>{ETAPA_DO_USUARIO}</span>
+                <span className="preparando-estado">{usuario === 'depois' ? 'sincroniza depois' : usuario}</span>
+              </div>
+              <div
+                className="preparando-barra"
+                role="progressbar"
+                aria-label={ETAPA_DO_USUARIO}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={usuario === 'pronto' ? 100 : 0}
+              >
+                <div className="preparando-barra-cheia" style={{ width: usuario === 'pronto' ? '100%' : '0%' }} />
+              </div>
+            </li>
+          )}
         </ul>
 
         <label className="preparando-preferencia">
@@ -267,6 +331,9 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox }: Prepar
         </label>
 
         {fase === 'baixando' && <p className="preparando-aviso">Mantenha o app aberto até terminar</p>}
+        {fase === 'pronto' && usuario === 'baixando' && (
+          <p className="preparando-aviso">Suas notas e coleções continuam sendo baixadas em segundo plano; o indicador de sincronização mostra o andamento.</p>
+        )}
 
         {fase === 'erro' && (
           <div role="alert" className="preparando-erro">

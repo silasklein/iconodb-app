@@ -1,0 +1,99 @@
+/*
+ * O ícone de sincronização e as marcas do canto (PC-Sincronizacao.dc.html). O pai é `position: relative`
+ * (o .icon-button, ou o .sync-icone-solto de 20 px). As cores seguem o texto (currentColor) e o fundo da
+ * tela (--sync-fundo: o anel do selo e o contorno do traço), claras ou escuras.
+ */
+.sync-glifo {
+  display: flex;
+}
+.sync-icone-solto {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  --sync-fundo: var(--fundo);
+}
+.icon-button {
+  --sync-fundo: var(--fundo);
+}
+
+.sync-marca-ponto {
+  position: absolute;
+  top: 8px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: currentColor;
+}
+.sync-icone-solto .sync-marca-ponto {
+  top: 0;
+  right: -1px;
+}
+
+.sync-marca-traco {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+.sync-traco-fundo {
+  stroke: var(--sync-fundo);
+}
+.sync-traco-linha {
+  stroke: currentColor;
+}
+
+.sync-marca-erro {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--sync-fundo);
+}
+.sync-icone-solto .sync-marca-erro {
+  top: -4px;
+  right: -6px;
+}
+.sync-erro-disco,
+.sync-erro-ponto {
+  fill: currentColor;
+}
+
+.sync-marca-aviso {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+.sync-icone-solto .sync-marca-aviso {
+  top: -4px;
+  right: -6px;
+}
+.sync-aviso-fundo {
+  fill: var(--sync-fundo);
+  stroke: currentColor;
+}
+.sync-aviso-sinal {
+  stroke: currentColor;
+}
+.sync-erro-ponto {
+  fill: var(--sync-fundo);
+}
+.sync-erro-sinal {
+  stroke: var(--sync-fundo);
+}
+
+/* As setas giram, uma volta a cada 1,2 s; com movimento reduzido ficam paradas (o estado vem pela dica e pelo nome). */
+.sync-girando {
+  animation: sync-girar 1.2s linear infinite;
+}
+@keyframes sync-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-girando {
+    animation: none;
+  }
+}

@@ -1,0 +1,434 @@
+/*
+ * Sincronização (Sincronizacao.dc.html no celular; o painel do computador, PC-Sincronizacao.dc.html, usa as
+ * mesmas peças em tamanho menor). Fundo claro das telas de consulta.
+ */
+.sync-pagina {
+  color: var(--texto-consulta);
+}
+.sync-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 12px 0;
+}
+.sync-onde {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+  padding-right: 12px;
+}
+.sync-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 24px 40px;
+  max-width: 640px;
+}
+@media (min-width: 768px) {
+  .sync-corpo {
+    padding: 28px 48px 48px;
+  }
+}
+.sync-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sync-cabeca .sync-onde {
+  padding-right: 0;
+}
+.sync-corpo h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.sync-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* O estado */
+.sync-estado {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.sync-estado .sync-icone-solto {
+  margin-top: 3px;
+}
+.sync-estado-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sync-estado-vivo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sync-estado-titulo {
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.sync-estado-apoio {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+  overflow-wrap: anywhere;
+}
+.sync-estado-aviso {
+  margin-top: 4px;
+}
+.sync-estado-painel {
+  padding: 4px 0 14px;
+}
+.sync-estado-painel .sync-estado-apoio {
+  font-size: 13px;
+}
+.sync-hora {
+  font-family: var(--fonte-codigo);
+}
+
+/* Entrar de novo (sem login ou sem permissão): um link-botão com alvo de 44 px. */
+.sync-acao-erro {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.sync-estado-tela + .sync-acao-erro {
+  margin-left: 32px;
+}
+
+/* O botão e a chave */
+.sync-controles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sync-salvar {
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sync-salvar-painel {
+  margin-top: 16px;
+  height: 44px;
+  font-size: 15px;
+}
+.sync-salvar kbd {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: #bdbdbd;
+  border: 1px solid var(--secundario-consulta);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.sync-chave {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--filete-consulta);
+  cursor: pointer;
+}
+.sync-chave-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+}
+.sync-chave-nome {
+  font-size: 16px;
+}
+.sync-chave-apoio {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.sync-chave input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--texto-consulta);
+}
+.sync-chave-painel {
+  margin-top: 6px;
+  min-height: 44px;
+  border-bottom: 0;
+  font-size: 14px;
+}
+.sync-chave-painel strong {
+  font-weight: 600;
+}
+
+/* As seções: título em caixa alta sobre um filete de 2 px */
+.sync-secao {
+  display: flex;
+  flex-direction: column;
+}
+.sync-secao h2 {
+  margin: 0;
+  padding: 12px 0 8px;
+  border-top: 2px solid var(--texto-consulta);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sync-lista,
+.sync-historico,
+.sync-detalhes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Ids como "…77x6…": sem a alternativa contextual da Geist, que troca o x entre dígitos por ×. */
+.sync-linha,
+.sync-historico-detalhe {
+  font-feature-settings: 'calt' 0;
+}
+.sync-linha {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--filete-consulta);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+/* A linha de "Vai subir" leva à tela do registro (A-11 da Tarefa 17); o foco é o global do app. */
+.sync-linha-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--filete-consulta);
+  text-underline-offset: 3px;
+}
+.sync-linha-link:hover {
+  text-decoration-color: currentColor;
+}
+.sync-linha .sync-hora {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+  flex-shrink: 0;
+}
+.sync-historico li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.sync-historico .sync-hora {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--secundario-consulta);
+}
+.sync-historico-textos,
+.sync-detalhes li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sync-historico-titulo {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sync-historico-detalhe,
+.sync-detalhe-motivo {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+  overflow-wrap: anywhere;
+}
+.sync-detalhes li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.sync-detalhe-titulo {
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sync-detalhes code {
+  font-family: var(--fonte-codigo);
+  font-size: 13px;
+}
+.sync-nota {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+
+/* O painel do computador (preso ao ícone da barra), branco também sobre as telas escuras. */
+.sync-painel-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  color: var(--texto-consulta);
+}
+.sync-painel-fundo {
+  position: absolute;
+  inset: 0;
+}
+.sync-painel {
+  position: absolute;
+  top: calc(var(--barra-superior) + 6px);
+  right: 64px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--barra-superior) - 16px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 20px 12px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  border: 1px solid var(--filete-consulta);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  font-family: var(--fonte-texto);
+  --fundo: var(--fundo-consulta);
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+}
+.sync-painel-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sync-painel-topo .icon-button {
+  margin-right: -10px;
+}
+.sync-painel-titulo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sync-secao-painel h2 {
+  padding: 10px 0 4px;
+}
+.sync-secao-painel + .sync-secao-painel h2 {
+  border-top: 0;
+  padding-top: 16px;
+}
+.sync-secao-painel .sync-linha {
+  min-height: 40px;
+  font-size: 14px;
+}
+.sync-secao-painel .sync-linha .sync-hora {
+  font-size: 12px;
+}
+.sync-painel-detalhes {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: 13px;
+  color: var(--secundario-consulta);
+}
+@media (pointer: coarse) {
+  .sync-painel-detalhes {
+    min-height: var(--alvo-toque);
+  }
+}
+
+/* "Tentar de novo" de uma imagem parada por erro permanente (imagens-usuario/ImagensComProblema.tsx). */
+.sync-tentar {
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .sync-tentar {
+    min-height: var(--alvo-toque);
+  }
+}
+
+/* «Baixar cópia de segurança» (Tarefa 15): leva à tela Exportar. Link com alvo de 44 px. */
+.sync-copia {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--filete-consulta);
+}
+.sync-copia a {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sync-copia .sync-nota {
+  margin: 0;
+}
+
+/* «Copiar detalhes»: o aviso de cópia ao lado do botão (a página não pula quando ele aparece). */
+.sync-copiar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-self: flex-start;
+}
+.sync-copiar .sync-detalhe-tecnico {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.sync-estado-tela + .sync-copiar {
+  margin-left: 32px;
+}
+.sync-copiar .aviso-de-copia {
+  padding: 0;
+}

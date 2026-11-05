@@ -3,15 +3,20 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Busca } from '../telas/Busca'
 import { Bibliografia } from '../telas/Bibliografia'
 import { Colecoes } from '../telas/Colecoes'
+import { Comparar } from '../telas/Comparar'
 import { Entrar } from '../telas/Entrar'
+import { Exportar } from '../telas/Exportar'
 import { Glossario } from '../telas/Glossario'
 import { Grupo } from '../telas/Grupo'
 import { Imagem } from '../telas/Imagem'
 import { Item } from '../telas/Item'
 import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
+import { NovoObjeto } from '../telas/NovoObjeto'
 import { Preparando } from '../telas/Preparando'
 import { Revisao } from '../telas/Revisao'
+import { Sincronizacao } from '../telas/Sincronizacao'
+import { NovoSitio } from '../sitios/NovoSitio'
 import { Sitios } from '../telas/Sitios'
 import { BarraSuperior } from '../ui/BarraSuperior'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -41,6 +46,8 @@ export const ROTAS: Rota[] = [
   { path: '/colecoes', elemento: <Colecoes /> },
   { path: '/grupo/:id', elemento: <Grupo /> },
   { path: '/item/:numero', elemento: <Item /> },
+  // Criar um objeto SKC (Tarefa 9). O objeto aberto é /item/<número> ou /item/<OB-…> (o Item resolve os dois).
+  { path: '/objeto/novo', elemento: <NovoObjeto /> },
   { path: '/imagem/:id', elemento: <Imagem /> },
   // O Glossário é também a tela de /verbete/:id (lista e verbete juntos no computador): o mesmo elemento nas duas rotas.
   { path: '/glossario', elemento: <Glossario /> },
@@ -48,10 +55,19 @@ export const ROTAS: Rota[] = [
   { path: '/bibliografia', elemento: <Bibliografia /> },
   { path: '/obra/:id', elemento: <Bibliografia /> },
   { path: '/sitios', elemento: <Sitios /> },
+  // Criar um sítio do usuário (Tarefa 12). `?nome=` e `?para=<objeto>` vêm de "Novo sítio com mais dados…" na ficha de um objeto.
+  { path: '/sitios/novo', elemento: <NovoSitio /> },
   { path: '/sitio/:id', elemento: <Sitios /> },
   { path: '/revisao', elemento: <Revisao /> },
   { path: '/atalhos', elemento: <Atalhos /> },
   { path: '/notas', elemento: <MinhasNotas /> },
+  // A nota aberta é também a tela de /nota/:id ("nova" cria uma): no computador a lista e a nota juntas, no celular a nota sozinha.
+  { path: '/nota/:id', elemento: <MinhasNotas /> },
+  { path: '/sincronizacao', elemento: <Sincronizacao /> },
+  // A bandeja de comparação (Tarefa 14): até 4 objetos lado a lado.
+  { path: '/comparar', elemento: <Comparar /> },
+  // As exportações (Tarefa 15): a cópia de segurança, as regiões (W3C Web Annotation) e as hipóteses para o MEDIATION.
+  { path: '/exportar', elemento: <Exportar /> },
 ]
 
 /**

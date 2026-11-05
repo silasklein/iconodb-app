@@ -5,6 +5,7 @@
  * como o pipeline em Python os grava (R49); quem desenha o texto converte para UTF-16
  * (Tarefa 8, `codepointsParaUtf16`).
  */
+import type { ReferenciaDeFonte } from './referencias'
 
 /** O "número" de um objeto (CA00001); um item sem objeto atribuído usa o id do item. */
 export type Numero = string
@@ -43,13 +44,14 @@ export interface Ancora {
   glId: string
   inicio: number
   fim: number
-  nivel: Nivel
-  modalidade: Modalidade
+  /** Null só numa hipótese SKC sem nível (ou sem certeza): nada é inventado no lugar. */
+  nivel: Nivel | null
+  modalidade: Modalidade | null
 }
 
 /** A leitura de uma fonte (uma por item-membro do objeto que tem descrição de catálogo). */
 export interface Leitura {
-  /** Rótulo da fonte, como "TESTE I, 2". */
+  /** Rótulo da fonte, como "TESTE I: 2" (decisão 39). */
   fonte: string
   publicacao: string
   itemId: string
@@ -69,8 +71,10 @@ export interface ItemDaFonte {
   id: string
   publicacao: string
   tipo: 'catalog' | 'intro_figure'
-  /** "TESTE I, 2" ou "TESTE I, Abb. 1". */
+  /** "TESTE I: 2" ou "TESTE I: Abb. 1" (decisão 39). */
   origem: string
+  /** A mesma referência em partes, para juntar várias numa linha (`formatarReferencias`). */
+  referencia: ReferenciaDeFonte
 }
 
 export interface Imagem {
@@ -242,7 +246,7 @@ export interface ItemDetalhe {
   numero: Numero
   /** Os itens-membros, na ordem das fontes. */
   itens: ItemDaFonte[]
-  /** "TESTE I, 60": a origem do primeiro item. */
+  /** "TESTE I: 60": a origem do primeiro item. */
   origem: string
   /** Tipo curto (primeira frase do campo 5), para grades e listas. */
   tipo: string | null
@@ -269,9 +273,20 @@ export interface ObjetoResumo {
   itemId: string
   origem: string
   tipo: string | null
+  /** O nome do sítio como o livro (ou a ficha SKC) o tem; as telas mostram o nome de agora (src/sitios/doUsuario.ts). */
   sitio: string | null
+  /** O id do sítio (`<SIGLA>-<n>` do livro, ou `SI-…` numa ficha SKC); null sem sítio. */
+  sitioId?: string | null
   miniatura: string | null
   display_mode: ModoDeExibicao | null
+  /** Objeto da camada do usuário (SKC), vindo da busca: sem itemId do pacote, miniatura nem modo de exibição. */
+  skc?: true
+  /** Objeto SKC com número provisório (Tarefa 9: ainda não confirmado por uma sincronização). */
+  provisorio?: true
+  /** Objeto SKC sem número (rascunho): `numero` é o id do registro. */
+  semNumero?: true
+  /** O SKC, Nr. do objeto SKC (decisão 38), se já tem. */
+  nrSkc?: number
 }
 
 export interface Grupo {
@@ -386,7 +401,8 @@ export interface Sitio extends Omit<SitioResumo, 'objetos'> {
 }
 
 export interface Regiao {
-  id: number
+  /** Número no pacote; `RG-…` numa região da camada do usuário (src/imagens-usuario/regioes.ts). */
+  id: number | string
   elementoId: string
   /** Rótulo em português, ou o do texto quando falta. */
   elemento: string

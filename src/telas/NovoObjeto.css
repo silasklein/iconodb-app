@@ -1,0 +1,313 @@
+/* NovoObjeto.dc.html (celular) e PC-NovoObjeto.dc.html (computador). */
+.novo-objeto {
+  min-height: 100vh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.novo-cabecalho {
+  padding: 8px 16px 0;
+}
+.novo-cabecalho h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.novo-skc {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.novo-apoio {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--corpo-consulta);
+  max-width: 62ch;
+}
+.novo-corpo {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px 40px;
+}
+.novo-corpo > .form-secao:first-of-type {
+  margin-top: 0;
+}
+.novo-recuperado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.novo-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .novo-link {
+    min-height: 44px;
+  }
+}
+.novo-erro-geral {
+  margin-bottom: 16px;
+}
+.novo-periodo-e-numero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.novo-periodo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.novo-duas {
+  display: grid;
+  gap: 14px;
+}
+.novo-medidas {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.novo-medidas legend {
+  margin-bottom: 6px;
+}
+.novo-medidas .form-campo > label {
+  font-weight: 400;
+  font-size: 12px;
+}
+.novo-leitura-ajuda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+.novo-pe {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+.novo-acoes-pe {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+}
+.novo-acoes-topo {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Imagens: as três fontes (celular), a área de soltar (computador), os cartões. */
+.novo-fontes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.novo-fonte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 64px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.novo-fonte:focus-visible,
+.novo-link:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.novo-soltar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 16px;
+  border: 1px dashed var(--controle);
+  border-radius: 8px;
+  font-size: 15px;
+}
+.novo-soltar-ativo {
+  border: 2px solid var(--texto);
+}
+.novo-soltar-botoes {
+  display: flex;
+  gap: 8px;
+}
+.novo-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.novo-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete);
+}
+.novo-cartao:last-child {
+  border-bottom: 1px solid var(--filete);
+}
+.novo-cartao-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.novo-cartao-miniatura {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  background: var(--superficie);
+  overflow: hidden;
+}
+.novo-cartao-miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.novo-cartao-texto {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.novo-cartao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.novo-cartao-principal {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--texto);
+  color: var(--fundo);
+  font-size: 12px;
+  font-weight: 500;
+}
+.novo-cartao-descricao {
+  font-size: 12px;
+  color: var(--secundario);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.novo-cartao-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 12px;
+}
+
+/* Computador: cabeçalho com os botões à direita; imagens à esquerda, o resto à direita. */
+@media (min-width: 768px) {
+  .novo-cabecalho {
+    padding: 24px 48px 20px;
+    border-bottom: 1px solid var(--filete);
+  }
+  .novo-caminho a {
+    font-size: 13px;
+    color: var(--secundario);
+  }
+  .novo-cabecalho h1 {
+    margin-top: 8px;
+    font-size: 44px;
+  }
+  .novo-cabecalho-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+  }
+  .novo-colunas {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) minmax(0, 800px);
+    gap: 0;
+  }
+  .novo-coluna-imagens {
+    padding: 24px 32px 48px 48px;
+    background: var(--superficie);
+    color: var(--texto-consulta);
+    min-height: calc(100vh - 220px);
+  }
+  .novo-coluna-imagens .novo-imagens {
+    margin-top: 0;
+  }
+  .novo-coluna-campos {
+    padding: 24px 48px 48px;
+  }
+  .novo-coluna-campos > .form-secao:first-child {
+    margin-top: 0;
+  }
+  .novo-periodo-e-numero {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .novo-periodo {
+    flex: 1;
+  }
+  .novo-periodo-e-numero .form-numero {
+    width: 260px;
+    flex-shrink: 0;
+  }
+  .novo-duas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .novo-origens {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: start;
+  }
+  .novo-origens > legend {
+    grid-column: 1 / -1;
+  }
+  .novo-pe {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--filete);
+  }
+  .novo-acoes-pe {
+    flex-direction: row;
+  }
+}

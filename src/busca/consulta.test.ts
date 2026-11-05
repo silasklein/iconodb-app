@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * Busca sobre o pacote sintético (6 objetos, 9 verbetes, 2 obras; sítios "Maḥraṣ Teste" e
+ * Busca sobre o pacote sintético (6 objetos, 9 verbetes, 2 obras; sítios "Maḥteṣ Teste" e
  * "Tell Probe Teste"): montagem da consulta FTS5 e `buscar`.
  */
 import { readFileSync } from 'node:fs'
@@ -17,8 +17,8 @@ const numeros = (r: { objetos: { numero: string }[] }) => r.objetos.map((o) => o
 
 describe('montarConsulta()', () => {
   it('dobra, entre aspas cada palavra, com prefixo * na última', () => {
-    expect(montarConsulta('mahras', tabela)).toBe('"mahras"*')
-    expect(montarConsulta('Maḥraṣ Teste', tabela)).toBe('"mahras" "teste"*')
+    expect(montarConsulta('mahtes', tabela)).toBe('"mahtes"*')
+    expect(montarConsulta('Maḥteṣ Teste', tabela)).toBe('"mahtes" "teste"*')
     expect(montarConsulta("Marduk's", tabela)).toBe('"marduk" "s"*')
     expect(montarConsulta('  leão   de  teste ', tabela)).toBe('"leao" "de" "teste"*')
   })
@@ -49,8 +49,8 @@ describe('buscar() sobre o pacote sintético', () => {
 
   const opcoes = { escopo: 'tudo', filtros: {}, tabela } as const
 
-  it('"mahras" acha os itens do sítio "Maḥraṣ Teste"', async () => {
-    const r = await buscar('mahras', opcoes)
+  it('"mahtes" acha os itens do sítio "Maḥteṣ Teste"', async () => {
+    const r = await buscar('mahtes', opcoes)
     expect(numeros(r)).toEqual(['BA00001', 'CA00001', 'CA00002'])
     expect(r.total).toBe(3)
   })
@@ -87,7 +87,7 @@ describe('buscar() sobre o pacote sintético', () => {
   })
 
   it('aspas e * digitados no meio não quebram o FTS5', async () => {
-    for (const digitado of ['"mahras', 'mahras"', 'mahras*', '*mahras', 'mahras OR', 'NEAR(', '(mahras', 'a AND', '^mahras', 'texto:mahras', '"" ""']) {
+    for (const digitado of ['"mahtes', 'mahtes"', 'mahtes*', '*mahtes', 'mahtes OR', 'NEAR(', '(mahtes', 'a AND', '^mahtes', 'texto:mahtes', '"" ""']) {
       await expect(buscar(digitado, opcoes)).resolves.toBeTruthy()
     }
   })
@@ -100,7 +100,7 @@ describe('buscar() sobre o pacote sintético', () => {
   })
 
   it('um único verbete que casa por prefixo também vai em destaque', async () => {
-    expect((await buscar('mahras', opcoes)).verbeteDestaque?.id).toBe('GL-900004')
+    expect((await buscar('mahtes', opcoes)).verbeteDestaque?.id).toBe('GL-900004')
   })
 
   it('várias respostas parciais e nenhuma exata: sem destaque, com "ver também"', async () => {
@@ -128,17 +128,17 @@ describe('buscar() sobre o pacote sintético', () => {
     )
   })
 
-  it('escopo "colecao": só grupos de obra (author_group)', async () => {
+  it('escopo "colecao": grupos de obra (author_group); as coleções SKC são testadas em usuario/indice.test.ts', async () => {
     expect((await buscar('xyzzy', { ...opcoes, escopo: 'colecao' })).total).toBe(0)
     // o título do primeiro grupo do pacote sintético: "Animais de teste e figuras de prova"
     const r = await buscar('figuras de prova', { ...opcoes, escopo: 'colecao' })
     expect(numeros(r)).toEqual(['CA00001', 'CA00002', 'CA00003'])
-    // coleção do usuário (2B) não é buscada: um título de coleção qualquer não acha nada
+    // sem coleção do usuário no estado, um título de coleção qualquer não acha nada
     expect((await buscar('minhas notas', { ...opcoes, escopo: 'colecao' })).total).toBe(0)
   })
 
   it('contagens por escopo, para as abas', async () => {
-    const r = await buscar('mahras', opcoes)
+    const r = await buscar('mahtes', opcoes)
     expect(r.contagens.tudo).toBe(3)
     expect(r.contagens.termo).toBeLessThanOrEqual(r.contagens.tudo)
     expect(Object.keys(r.contagens).sort()).toEqual(['bibliografia', 'colecao', 'local', 'termo', 'tudo'])
@@ -149,8 +149,8 @@ describe('buscar() sobre o pacote sintético', () => {
   })
 
   it('cada resultado é um objeto com número, origem, tipo, sítio e miniatura', async () => {
-    const [o] = (await buscar('mahras', opcoes)).objetos
-    expect(o).toMatchObject({ numero: 'BA00001', origem: 'TESTE I, 5' })
+    const [o] = (await buscar('mahtes', opcoes)).objetos
+    expect(o).toMatchObject({ numero: 'BA00001', origem: 'TESTE I: 5' })
     expect(o).toHaveProperty('miniatura')
     expect(o).toHaveProperty('sitio')
     expect(o).toHaveProperty('tipo')

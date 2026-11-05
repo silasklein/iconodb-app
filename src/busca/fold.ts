@@ -1,5 +1,5 @@
 /**
- * A dobra de texto da busca ("Maḥraṣ" = "mahras"), a mesma do pipeline em Python
+ * A dobra de texto da busca ("Maḥteṣ" = "mahtes"), a mesma do pipeline em Python
  * (iconodb/search/fold.py). O índice guarda o texto já dobrado; o app dobra a consulta
  * do mesmo jeito, a partir da tabela `nucleo/fold.json` do pacote. A tabela define o
  * algoritmo (`ordem` lista os passos), então o app a lê em vez de ter uma cópia fixa.

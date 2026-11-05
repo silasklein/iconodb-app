@@ -8,6 +8,8 @@ import { grupo } from '../banco/consultas'
 import type { EstadoVindoDaBusca } from '../busca/url'
 import { teclasNaoDeclaradas } from '../test/atalhosDeclarados'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { apertarQuandoPronto } from '../test/teclas'
+import { atalhoRegistrado } from '../app/atalhos'
 import { Imagem } from './Imagem'
 import { Item } from './Item'
 
@@ -45,8 +47,13 @@ const titulo = async () => screen.findByRole('heading', { level: 1 })
 const pronto = () => screen.findByRole('button', { name: 'Mostrar o original alemão', hidden: true })
 const tecla = async (key: string) => {
   await pronto()
+  // O "g" só arma uma sequência (vem do catálogo, não de um mapa registrado); as demais teclas esperam o registro do mapa do item.
+  const chave = key.length === 1 ? key.toLowerCase() : key
+  if (chave !== 'g') await waitFor(() => expect(atalhoRegistrado(chave, 'item'), `a tecla "${chave}" não foi registrada pelo item`).toBe(true))
   fireEvent.keyDown(document.body, { key })
 }
+/** O visualizador registra o Esc num efeito; espera o registro antes de apertar a tecla (userEvent não passa pelo `waitFor`). */
+const visualizadorPronto = () => waitFor(() => expect(atalhoRegistrado('Escape', 'visualizador')).toBe(true))
 
 describe('Item', () => {
   beforeAll(async () => {
@@ -62,9 +69,9 @@ describe('Item', () => {
       expect(await titulo()).toHaveTextContent('Pingente com leão-de-teste. Pedra de teste.')
       const cabeca = screen.getByTestId('item-cabeca')
       expect(within(cabeca).getByText('CA00001')).toHaveClass('item-numero')
-      expect(within(cabeca).getByText('TESTE I, 1')).toHaveClass('item-origem')
+      expect(within(cabeca).getByText('TESTE I: 1')).toHaveClass('item-origem')
       const ficha = screen.getByRole('group', { name: 'Ficha' })
-      expect(within(ficha).getByRole('link', { name: 'Maḥraṣ Teste' })).toHaveAttribute('href', '/sitio/TESTE-1')
+      expect(within(ficha).getByRole('link', { name: 'Maḥteṣ Teste' })).toHaveAttribute('href', '/sitio/TESTE-1')
       expect(ficha).toHaveTextContent('Calcolítico inicial de teste (4500–4000 aEC)')
       expect(ficha).toHaveTextContent('Musterstadt, Testmuseum, Inv. T-0001')
       expect(ficha).toHaveTextContent('H 4,2; B 3,1')
@@ -96,6 +103,7 @@ describe('Item', () => {
         expect(screen.getByText('2 / 2')).toBeInTheDocument()
         await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
         await waitFor(() => expect(document.querySelector('.vis-figura img')).toHaveAttribute('src', 'blob:imagens/TESTE/TESTE-0001/screen-2.webp'))
+        await visualizadorPronto()
         await userEvent.keyboard('{Escape}')
         await titulo()
         expect(await screen.findByText('2 / 2')).toBeInTheDocument()
@@ -110,6 +118,7 @@ describe('Item', () => {
         await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
         await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
         expect(screen.getByRole('button', { name: 'Mostrar o original sem inversão' })).toHaveAttribute('aria-pressed', 'true')
+        await visualizadorPronto()
         await userEvent.keyboard('{Escape}')
         await titulo()
         expect(await screen.findByRole('button', { name: 'Mostrar o original' })).toHaveAttribute('aria-pressed', 'true')
@@ -122,12 +131,12 @@ describe('Item', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Imagem seguinte' }))
         await userEvent.click(screen.getByRole('link', { name: 'Ampliar a imagem' }))
         await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+        await visualizadorPronto()
         await userEvent.keyboard('{Escape}')
         await titulo()
         expect(await screen.findByText('2 / 2')).toBeInTheDocument()
         expect(JSON.parse(screen.getByTestId('local').dataset.state!)).toMatchObject({ contexto: estado.contexto, origem: estado.origem })
-        await pronto()
-        await userEvent.keyboard('{ArrowRight}')
+        await apertarQuandoPronto('ArrowRight', 'item')
         await waitFor(() => expect(local()).toBe('/item/CA00002'))
         expect(JSON.parse(screen.getByTestId('local').dataset.state!)).not.toHaveProperty('imagemAberta')
       })
@@ -147,10 +156,14 @@ describe('Item', () => {
       expect(ancora.firstChild!.textContent).toBe('leão-de-teste')
     })
 
-    it('nenhum ícone de ação de escrita (nota, coleção, comparar, nova hipótese, trocar sítio) na 2A', async () => {
+    it('da escrita, a nota, a coleção e o sítio (Tarefa 12: trocar o sítio; Tarefa 14: comparar)', async () => {
       abrir('/item/CA00001')
       await titulo()
-      for (const nome of [/nota/i, /coleç/i, /compar/i, /registrar hipótese|nova hipótese/i, /trocar o sítio/i]) {
+      expect(screen.getAllByRole('link', { name: 'Escrever nota' }).length).toBeGreaterThan(0)
+      expect(screen.getByRole('button', { name: 'Adicionar à coleção' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Escolher ou trocar o sítio' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Comparar (0/4)' })).toBeInTheDocument()
+      for (const nome of [/registrar hipótese|nova hipótese/i]) {
         expect(screen.queryByRole('link', { name: nome })).toBeNull()
         expect(screen.queryByRole('button', { name: nome })).toBeNull()
       }
@@ -286,6 +299,7 @@ describe('Item', () => {
       await titulo()
       const campo = document.body.appendChild(document.createElement('input'))
       await pronto()
+      await waitFor(() => expect(atalhoRegistrado('z', 'item')).toBe(true)) // sem o registro, "não agiu" seria verdade por ele não existir
       fireEvent.keyDown(campo, { key: 'z' })
       expect(local()).toBe('/item/CA00001')
     })
@@ -315,7 +329,8 @@ describe('Item', () => {
       const linha = within(secao).getByRole('link', { name: /estrela de prova/ })
       expect(linha).toHaveTextContent('sem trecho no texto PT')
       expect(linha).toHaveTextContent('possível')
-      expect(within(secao).getByRole('heading', { name: 'Iconológico · 1' })).toBeInTheDocument()
+      expect(within(secao).getByRole('heading', { name: 'Iconológico' })).toBeInTheDocument()
+      expect(within(within(secao).getByRole('region', { name: 'Iconológico' })).getByText('1 hipótese')).toBeInTheDocument()
     })
 
     it('a linha da hipótese no item tem estilo próprio: o .hipotese-linha das listas (Verbete) não a desmonta', async () => {
@@ -327,7 +342,7 @@ describe('Item', () => {
       const linha = within(screen.getByRole('region', { name: 'Hipóteses por nível' })).getByRole('link', { name: /estrela de prova/ })
       expect(linha).not.toHaveClass('hipotese-linha')
       // O choque era a grade de 76 px + texto do .hipotese-linha de Lista.css por cima da do item.
-      expect(getComputedStyle(linha).gridTemplateColumns).toBe('minmax(0, 1fr) auto')
+      expect(getComputedStyle(linha).gridTemplateColumns).toBe('var(--coluna-marcador) minmax(0, 1fr) auto')
     })
 
     it('H mostra e esconde todas as hipóteses por nível (e rola até a seção, num efeito)', async () => {
@@ -494,7 +509,8 @@ describe('Item', () => {
       expect(botao).toHaveAttribute('aria-pressed', 'false')
       await tecla('L')
       expect(within(leituras()).getByText(/Der Probeanhänger zeigt/)).toHaveAttribute('lang', 'de')
-      expect(within(leituras()).queryByRole('link')).toBeNull()
+      // nenhum termo nem citação virou link; só o caminho para escrever a nota continua na voz "SKC notas"
+      expect(within(leituras()).queryAllByRole('link').map((a) => a.textContent?.trim())).toEqual(['Escrever nota'])
       expect(botao).toHaveAttribute('aria-pressed', 'true')
       await userEvent.click(botao)
       expect(within(leituras()).getByRole('link', { name: 'gravação de teste' })).toBeInTheDocument()
@@ -527,6 +543,7 @@ describe('Item', () => {
       const campo = document.createElement('input')
       document.body.append(campo)
       await pronto()
+      await waitFor(() => expect(atalhoRegistrado('l', 'item')).toBe(true)) // sem o registro, "não trocou" seria verdade por ele não existir
       fireEvent.keyDown(campo, { key: 'l' })
       expect(screen.getByRole('button', { name: 'Mostrar o original alemão' })).toHaveAttribute('aria-pressed', 'false')
       campo.remove()
@@ -547,6 +564,9 @@ describe('Item', () => {
       const relacoes = screen.getByRole('region', { name: 'Paralelos e relações' })
       expect(within(relacoes).getByRole('link', { name: 'CA00002' })).toHaveAttribute('href', '/item/CA00002')
       expect(relacoes).toHaveTextContent('Autor 1999: 14 Nr. 5')
+      // Decisão 39: o locator do paralelo (dado do pacote, "TESTE I, Nr. 1") aparece com dois pontos; a citação externa fica como veio.
+      expect(relacoes).toHaveTextContent('TESTE I: 1')
+      expect(relacoes).not.toHaveTextContent('TESTE I, Nr. 1')
       const bib = screen.getByRole('region', { name: 'Bibliografia' })
       expect(within(bib).getAllByRole('link', { name: /Autor 1999/ })[0]).toHaveAttribute('href', '/obra/BIB-900001')
       expect(within(bib).getAllByText('Achados de teste no vale de prova')[0]!.tagName).toBe('I')
@@ -568,7 +588,7 @@ describe('Item: links do texto achados na hora (R14)', () => {
     abrir('/item/CA00001')
     await titulo()
     expect(within(leituras()).getByRole('link', { name: 'Autor 1999: 12 Nr. 3, na bibliografia' })).toHaveAttribute('href', '/obra/BIB-900001')
-    const numero = within(leituras()).getByRole('link', { name: 'Abrir CA00002, TESTE I, 2' })
+    const numero = within(leituras()).getByRole('link', { name: 'Abrir CA00002, TESTE I: 2' })
     expect(numero).toHaveAttribute('href', '/item/CA00002')
     expect(numero).toHaveTextContent(/^2$/)
     await act(async () => {

@@ -3,9 +3,11 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { lerParametros, montarParametros, caminhoDaBusca } from '../busca/url'
 import { CampoDeBusca } from '../telas/CampoDeBusca'
 import { Menu } from '../telas/Menu'
+import { BotaoDeSincronizacao } from './BotaoDeSincronizacao'
 import { IconButton } from './IconButton'
 import { Logo } from './Logo'
-import { textoDePendencias, usePendencias } from './usePendencias'
+import { textoDePendencias } from './numero'
+import { usePendencias } from './usePendencias'
 import './BarraSuperior.css'
 
 export const PLACEHOLDER_DA_BUSCA = 'termo, sítio ou número…'
@@ -38,7 +40,7 @@ interface Props {
 /**
  * A barra superior das telas de computador (48 px, PC-*): à esquerda o logo SKC (leva ao Início),
  * ao centro a busca sempre visível, à direita os ícones Coleções, Glossário, Sítios, Bibliografia,
- * Revisão (um ponto, com "<N> pendências" na dica) e Menu. Sem ícone de sincronização na 2A.
+ * Revisão (um ponto, com "<N> pendências" na dica), Sincronização (a marca diz o estado; abre o painel) e Menu.
  *
  * Os atalhos `g` + letra valem no app todo (AtalhosGlobais). Na Busca, o campo da barra é o campo
  * da busca: digitar atualiza `q` no endereço (preservando escopo e filtros); nas outras telas,
@@ -110,6 +112,7 @@ export function BarraSuperior({ busca = true }: Props) {
             valor={texto}
             aoMudar={aoMudar}
             aoEnviar={aoEnviar}
+            navegar={navegar}
             placeholder={PLACEHOLDER_DA_BUSCA}
             atalho
           />
@@ -127,6 +130,7 @@ export function BarraSuperior({ busca = true }: Props) {
           atual={secao === 'revisao'}
           ponto={pend !== null && pend.total > 0}
         />
+        <BotaoDeSincronizacao />
         <IconButton
           icon="menu"
           label="Menu"

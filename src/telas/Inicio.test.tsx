@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
@@ -6,9 +6,11 @@ import { usarMotor } from '../banco/cliente'
 import { grupos } from '../banco/consultas'
 import { urlImagem } from '../pacote/imagens'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { definirSync, zerarSync } from '../../tests/suporte/syncSimulada'
 import { Inicio } from './Inicio'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
+vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
 
 function Onde() {
   const { pathname, search } = useLocation()
@@ -40,19 +42,19 @@ describe('Início', () => {
     const contagens = screen.getByRole('group', { name: 'O que há no banco' })
     await waitFor(() => expect(within(contagens).getByText('Objetos').nextElementSibling).toHaveTextContent('6'))
     expect(within(contagens).getByText('Hipóteses').nextElementSibling).toHaveTextContent('9')
-    expect(within(contagens).getByText('Verbetes').nextElementSibling).toHaveTextContent('9')
+    expect(within(contagens).getByText('Verbetes').nextElementSibling).toHaveTextContent('10') // com o GL-900010 (Tarefa 16)
   })
 
   it('tem o campo de busca com nome visível "Buscar" e o placeholder genérico', () => {
     abrir()
-    const campo = screen.getByRole('searchbox', { name: 'Buscar' })
+    const campo = screen.getByRole('combobox', { name: 'Buscar' })
     expect(campo).toHaveAttribute('placeholder', 'termo, sítio ou número…')
     expect(screen.getByText('Buscar', { selector: 'label' })).toBeVisible()
   })
 
   it('Enter leva à Busca com o que foi digitado', async () => {
     abrir()
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'leão{Enter}')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Buscar' }), 'leão{Enter}')
     expect(screen.getByTestId('onde')).toHaveTextContent('/busca?q=le%C3%A3o')
   })
 
@@ -93,17 +95,31 @@ describe('Início', () => {
   })
 
   describe('celular', () => {
-    it('tem a lupa, o menu e nenhum indicador de sincronização', () => {
+    it('tem a lupa, o menu e, tudo sincronizado, nenhum indicador de sincronização', () => {
+      zerarSync()
       abrir()
       expect(screen.getByRole('button', { name: 'Buscar' })).toHaveAttribute('aria-keyshortcuts', '/')
       expect(screen.getByRole('button', { name: 'Abrir o menu' })).toBeInTheDocument()
       expect(screen.queryByLabelText(/sincroniz/i)).not.toBeInTheDocument()
     })
 
+    it('com algo por enviar, o indicador (com o ponto) aparece antes da lupa e abre o menu', async () => {
+      zerarSync()
+      definirSync({ porEnviar: 3 })
+      abrir()
+      const indicador = screen.getByRole('button', { name: '3 alterações por enviar — abrir sincronização' })
+      expect(indicador.querySelector('[data-marca="ponto"]')).not.toBeNull()
+      expect(indicador.nextElementSibling).toBe(screen.getByRole('button', { name: 'Buscar' }))
+      await userEvent.click(indicador)
+      expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument()
+      expect(indicador).toHaveAttribute('aria-expanded', 'true')
+      zerarSync()
+    })
+
     it('a lupa leva o foco ao campo', async () => {
       abrir()
       await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
-      expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveFocus()
+      expect(screen.getByRole('combobox', { name: 'Buscar' })).toHaveFocus()
     })
 
     it('o menu abre como folha, Esc fecha e o foco volta ao botão', async () => {
@@ -123,9 +139,12 @@ describe('Início', () => {
     it('não repete o logo, a lupa e o menu (a barra superior os traz) e tem o campo grande', () => {
       instalarMatchMedia(1280)
       abrir()
+      act(() => definirSync({ porEnviar: 3 }))
       expect(screen.queryByRole('button', { name: 'Abrir o menu' })).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/por enviar/)).not.toBeInTheDocument()
+      act(() => zerarSync())
       expect(screen.queryByRole('img', { name: 'Logo SKC' })).not.toBeInTheDocument()
-      expect(screen.getByRole('searchbox', { name: 'Buscar' })).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Buscar' })).toBeInTheDocument()
       expect(document.querySelector('.campo-busca-inicio')).not.toBeNull()
       expect(screen.getByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeInTheDocument()
     })

@@ -1,7 +1,10 @@
-import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { verbetes, type VerbeteDaLista } from '../banco/consultas'
-import { tabelaDoPacote } from '../busca/fold'
+import { tabelaDoPacote, type FoldTabela } from '../busca/fold'
+import { useDuplicadosDoGlossario, useFormasEmUso, useObjetosPorVerbeteSkc, useEdicoesDosVerbetes, useVerbeteSkc, useVerbetesSkc } from '../glossario/doUsuario'
+import { ROTULO_DO_STATUS, situacaoDoVerbete } from '../glossario/modelo'
+import { restaurarVerbete } from '../glossario/operacoes'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Contagem } from '../ui/Contagem'
 import { CampoDeFiltro } from '../ui/CampoDeFiltro'
@@ -11,11 +14,13 @@ import { ListaEDetalhe } from '../ui/ListaEDetalhe'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
-import { numeroPtBr } from '../ui/usePendencias'
+import { numeroPtBr } from '../ui/numero'
 import { agrupar, filtrar, indexar, inicialDe, type Entrada } from './lista'
 import { useFiltroNaUrl } from './useFiltroNaUrl'
 import { Verbete } from './Verbete'
 import './Lista.css'
+import '../imagens-usuario/MarcaSkc.css'
+import '../glossario/Glossario.css'
 
 /** As abas são só por tipo; o tipo do banco (concept, name, technical) vira o nome da aba e o valor de ?tipo=. */
 const TIPOS = [
@@ -26,32 +31,54 @@ const TIPOS = [
 
 const plural = (n: number, um: string, varios: string) => `${numeroPtBr(n)} ${n === 1 ? um : varios}`
 
-async function carregar() {
-  const [lista, tabela] = await Promise.all([verbetes(), tabelaDoPacote()])
-  const entradas = indexar(
+/**
+ * Um verbete da lista: do pacote, ou do usuário (decisão 41: `skc`, sem tipo ainda; a forma em uso no lugar do `pt`, e a
+ * contagem dos objetos com hipótese SKC nele).
+ */
+type VerbeteNaLista = Omit<VerbeteDaLista, 'tipo'> & {
+  tipo: VerbeteDaLista['tipo'] | null
+  skc: boolean
+  /** A forma de antes, quando a pessoa mudou a forma em uso (Tarefa 11): não aparece, mas o filtro da lista a acha. */
+  antes?: string | null
+}
+
+const indexarVerbetes = (lista: readonly VerbeteNaLista[], tabela: FoldTabela) =>
+  indexar(
     lista,
     tabela,
     (v) => v.pt ?? v.de ?? v.id,
-    (v) => [v.pt, v.de, v.en, v.id].filter(Boolean).join(' '),
+    (v) => [v.pt, v.antes, v.de, v.en, v.id].filter(Boolean).join(' '),
   )
-  return { entradas, tabela, aprovados: lista.filter((v) => v.status === 'approved').length }
+
+async function carregar() {
+  const [lista, tabela] = await Promise.all([verbetes(), tabelaDoPacote()])
+  const entradas = indexarVerbetes(
+    lista.map((v) => ({ ...v, skc: false })),
+    tabela,
+  )
+  return { entradas, tabela }
 }
 
+const porOrdem = (x: Entrada<VerbeteNaLista>, y: Entrada<VerbeteNaLista>) => (x.ordem < y.ordem ? -1 : x.ordem > y.ordem ? 1 : 0)
+
 interface Linha {
-  v: VerbeteDaLista
+  v: VerbeteNaLista
+  /** Um verbete do usuário que pode ser o mesmo termo que outro (dois aparelhos o criaram sem internet). */
+  duplicado: boolean
   atual: boolean
   /** "?tipo=…&revisar=1": o que a lista guarda ao abrir um verbete. */
   busca: string
 }
 
 /** Uma linha da lista. Memoizada: digitar no filtro só refaz as linhas que entram ou saem. */
-const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, atual, busca }: Linha) {
+const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, duplicado, atual, busca }: Linha) {
   return (
     <Link
       className="lista-linha glossario-linha"
       to={{ pathname: `/verbete/${encodeURIComponent(v.id)}`, search: busca }}
       aria-current={atual ? 'page' : undefined}
       data-atual={atual ? '' : undefined}
+      data-verbete={v.id}
     >
       <span className="glossario-marca">
         {v.status === 'approved' && (
@@ -62,10 +89,23 @@ const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, atual, busca }: Linha) 
       </span>
       <span className="lista-textos">
         <span className="lista-nome glossario-pt">{v.pt ?? v.de ?? v.id}</span>
-        {v.pt && v.de && (
-          <span className="lista-sub" lang="de">
-            {v.de}
+        {v.skc ? (
+          <span className="lista-sub glossario-skc">
+            <span className="marca-skc">SKC</span> <span>{ROTULO_DO_STATUS[v.status]}</span>
+            {duplicado && <span className="glossario-duplicado">possível duplicado</span>}
           </span>
+        ) : (
+          v.pt &&
+          v.de && (
+            <span className="lista-sub" lang="de">
+              {v.de}
+              {duplicado && (
+                <span className="glossario-duplicado" lang="pt-BR">
+                  possível duplicado
+                </span>
+              )}
+            </span>
+          )
         )}
       </span>
       <Contagem n={v.objetos} um="objeto" varios="objetos" />
@@ -77,12 +117,13 @@ const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, atual, busca }: Linha) 
  * O Glossário (Glossario.dc.html e GlossarioRevisar.dc.html no celular, PC-Glossario.dc.html no computador).
  * É também a tela de /verbete/:id: no computador a lista fica à esquerda e o verbete à direita, sem remontar
  * a lista; no celular o verbete ocupa a tela. As abas são por tipo; "a revisar" fica no ícone de filtro; o
- * texto filtra a lista pela dobra do pacote ("mahras" acha "Maḥraṣ").
+ * texto filtra a lista pela dobra do pacote ("mahtes" acha "Maḥteṣ"). Os verbetes do usuário (decisão 41) entram na
+ * ordem, com a marca SKC e o estado; ainda sem tipo, só aparecem em "Todos" (e em "a revisar").
  */
 export function Glossario() {
   const { id } = useParams()
   const computador = useBreakpoint() === 'computador'
-  const { pathname } = useLocation()
+  const { pathname, state } = useLocation()
   const [params, setParams] = useSearchParams()
   const tipo = TIPOS.find((t) => t.valor === params.get('tipo')) ?? null
   const revisar = params.get('revisar') === '1'
@@ -90,6 +131,28 @@ export function Glossario() {
   const consulta = useDeferredValue(texto)
   const carga = useCarregar(carregar)
   const rolagem = useRef<HTMLDivElement>(null)
+  const doUsuario = useVerbetesSkc()
+  const objetosDoUsuario = useObjetosPorVerbeteSkc()
+  const formas = useFormasEmUso()
+  const edicoes = useEdicoesDosVerbetes()
+  const duplicados = useDuplicadosDoGlossario()
+  // Quem acabou de excluir um verbete do usuário chega aqui com o aviso e o "Restaurar" (revisão 1, M4); some ao restaurar.
+  const excluidoAgora = (state as { verbeteExcluido?: { id: string; nome: string } } | null)?.verbeteExcluido ?? null
+  const aindaExcluido = useVerbeteSkc(excluidoAgora?.id ?? '')?.excluido === true
+  const [falhouRestaurar, setFalhouRestaurar] = useState(false)
+  const restaurarRef = useRef<HTMLButtonElement>(null)
+  const tituloRef = useRef<HTMLHeadingElement>(null)
+  // Depois de "Restaurar o verbete" o aviso some: o foco vai para a linha do verbete restaurado (ou, se a lista a esconde, para o título).
+  const [restauradoEm, setRestauradoEm] = useState<string | null>(null)
+  useEffect(() => {
+    if (excluidoAgora && aindaExcluido) restaurarRef.current?.focus()
+  }, [excluidoAgora, aindaExcluido])
+  useEffect(() => {
+    if (restauradoEm === null) return
+    const linha = Array.from(document.querySelectorAll<HTMLElement>('[data-verbete]')).find((el) => el.getAttribute('data-verbete') === restauradoEm)
+    ;(linha ?? tituloRef.current)?.focus()
+    setRestauradoEm(null)
+  }, [restauradoEm, aindaExcluido])
 
   /** O que acompanha o endereço de um verbete: o tipo e o filtro de estado (o texto fica só na lista). */
   const busca = useMemo(() => {
@@ -100,7 +163,35 @@ export function Glossario() {
     return s ? `?${s}` : ''
   }, [tipo, revisar])
 
-  const dados = carga.fase === 'ok' ? carga.dados : null
+  const doPacote = carga.fase === 'ok' ? carga.dados : null
+  const dados = useMemo(() => {
+    if (!doPacote) return null
+    // O que a pessoa fez nos verbetes do livro (Tarefa 11): a forma em uso no lugar do nome e o estado que ela deu. As linhas
+    // mexidas são refeitas (o filtro acha a forma de agora e a do pacote); as outras seguem como vieram.
+    // Revisão 2 (N2): um verbete do livro criado de um verbete do usuário soma os objetos das hipóteses SKC das origens (o
+    // pacote não tem nenhum: as hipóteses ficam na camada); um que já era do livro conta só os do livro, como os outros.
+    const mexidos = doPacote.entradas.filter((e) => formas.has(e.item.id) || edicoes.has(e.item.id) || objetosDoUsuario.has(e.item.id))
+    const refeitos = indexarVerbetes(
+      mexidos.map((e) => {
+        const nova = formas.get(e.item.id)
+        return {
+          ...e.item,
+          pt: nova ?? e.item.pt,
+          antes: nova !== undefined ? e.item.pt : null,
+          status: situacaoDoVerbete(edicoes.get(e.item.id) ?? null, e.item.pt ?? e.item.de ?? e.item.id, e.item.status).status,
+          objetos: e.item.objetos + (objetosDoUsuario.get(e.item.id) ?? 0),
+        }
+      }),
+      doPacote.tabela,
+    )
+    // Verbetes do usuário (decisão 41): a forma em uso no lugar do nome; a criada só para o filtro.
+    const skc = indexarVerbetes(
+      doUsuario.map((v) => ({ id: v.id, tipo: null, pt: v.emUso, antes: v.emUso === v.forma ? null : v.forma, de: null, en: null, status: v.status, objetos: objetosDoUsuario.get(v.id) ?? 0, skc: true })),
+      doPacote.tabela,
+    )
+    const entradas = mexidos.length === 0 && skc.length === 0 ? doPacote.entradas : [...doPacote.entradas.filter((e) => !mexidos.includes(e)), ...refeitos, ...skc].sort(porOrdem)
+    return { ...doPacote, entradas, aprovados: entradas.filter((e) => e.item.status === 'approved').length }
+  }, [doPacote, doUsuario, objetosDoUsuario, formas, edicoes])
   const visiveis = useMemo(() => {
     if (!dados) return []
     const dosFiltros =
@@ -143,9 +234,29 @@ export function Glossario() {
   const lista = (
     <>
       <div className="lista-cabeca">
-        <h1>Glossário</h1>
+        <h1 ref={tituloRef} tabIndex={-1}>
+          Glossário
+        </h1>
         <span className="lista-apoio">{resumo}</span>
       </div>
+
+      {excluidoAgora && aindaExcluido && (
+        <p role="status" aria-label="Verbete excluído" className="glossario-excluido">
+          Verbete «{excluidoAgora.nome}» excluído.{' '}
+          <button
+            ref={restaurarRef}
+            type="button"
+            className="hit forma-desfazer"
+            onClick={() => {
+              setFalhouRestaurar(false)
+              restaurarVerbete(excluidoAgora.id).then(() => setRestauradoEm(excluidoAgora.id), () => setFalhouRestaurar(true))
+            }}
+          >
+            Restaurar o verbete
+          </button>
+          {falhouRestaurar && <span role="alert"> Não foi possível restaurar; tente de novo.</span>}
+        </p>
+      )}
 
       <div className="lista-ferramentas">
         <CampoDeFiltro rotulo="Buscar no glossário" placeholder={computador ? 'português, alemão ou inglês…' : 'pt, alemão ou inglês…'} valor={texto} aoMudar={setTexto} />
@@ -193,8 +304,8 @@ export function Glossario() {
                 <h2>{g.chave}</h2>
                 {i === 0 && <span>objetos</span>}
               </div>
-              {g.entradas.map((e: Entrada<VerbeteDaLista>) => (
-                <LinhaDoVerbete key={e.item.id} v={e.item} atual={e.item.id === id} busca={busca} />
+              {g.entradas.map((e: Entrada<VerbeteNaLista>) => (
+                <LinhaDoVerbete key={e.item.id} v={e.item} duplicado={duplicados.has(e.item.id)} atual={e.item.id === id} busca={busca} />
               ))}
             </section>
           ))}

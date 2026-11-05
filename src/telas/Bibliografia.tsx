@@ -12,14 +12,15 @@ import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { AvisoDeCopia, useCopiar } from '../ui/useCopiar'
-import { numeroPtBr } from '../ui/usePendencias'
+import { numeroPtBr } from '../ui/numero'
+import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { CabecalhoDoDetalhe, ErroNoDetalhe, MolduraDoDetalhe, NaoEncontrado, SecaoDeObjetos } from './detalhe'
 import { agrupar, filtrar, indexar, inicialDe, type Entrada } from './lista'
 import { useFiltroNaUrl } from './useFiltroNaUrl'
 import './Lista.css'
 
 const ANO = /\b(1[0-9]{3}|20[0-9]{2})\b/
-/** O ano da citação curta ("Stern et al. 1993 (NEAEHL)" → "1993"); "Sem ano" quando não há. */
+/** O ano da citação curta ("Amostra et al. 1999 (TESTE)" → "1999"); "Sem ano" quando não há. */
 const anoDe = (o: ObraResumo) => (o.curta ? ANO.exec(o.curta)?.[1] : undefined) ?? 'Sem ano'
 
 async function carregar() {
@@ -189,6 +190,7 @@ export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
         <p className="obra-citada">{citadas.map(([sigla, curtas]) => `Citada como ${curtas.map((c) => `«${c}»`).join(', ')} no ${sigla}`).join(' · ')}</p>
       )}
       <SecaoDeObjetos rotulo="Objetos que citam esta obra" titulo="Objetos que a citam" objetos={o.objetos} computador={computador} />
+      <NotasDoAlvo tipo="obra" ref_={o.id} variante="secao" />
     </MolduraDoDetalhe>
   )
 }

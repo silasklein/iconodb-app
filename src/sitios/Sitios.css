@@ -1,0 +1,790 @@
+/*
+ * Os sítios do usuário (Tarefa 12): o aviso de nome repetido, os campos de correção, o botão "Novo sítio", a marca SKC nas
+ * listas, o NovoSitio e a folha "Sítio deste objeto". As cores vêm das telas de consulta (a folha é clara mesmo sobre o item).
+ */
+.sitio-duplicado {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  max-width: 480px;
+}
+.sitio-duplicado p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* "Novo sítio" no alto da lista */
+.sitio-novo {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 0 16px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  color: var(--texto);
+  font-size: 15px;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.sitio-novo:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .sitio-novo {
+    min-height: 36px;
+  }
+}
+
+.sitio-nome-skc {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* A página do sítio: "no livro: …" ao lado do que foi corrigido */
+.sitio-no-livro {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+/* O modo "Corrigir": os campos no lugar */
+.sitio-corrigir {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 480px;
+}
+.sitio-corrigir .form-campo input,
+.sitio-corrigir .form-campo textarea {
+  box-sizing: border-box;
+}
+.sitio-campo-linha {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.sitio-campo-linha input {
+  flex-grow: 1;
+  min-width: 0;
+}
+.sitio-campo-linha .icon-button {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+@media (pointer: fine) {
+  .sitio-campo-linha .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+.sitio-fila {
+  padding: 18px 24px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (min-width: 768px) {
+  .sitio-fila {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+.sitio-fila .detalhe-botao,
+.sitio-fila .detalhe-botao-botao {
+  flex: 0 1 auto;
+}
+/* Com mouse a fila de ações do sítio é densa (36 px); só aqui: os outros .detalhe-botao do app seguem em 44 px. */
+@media (pointer: fine) {
+  .sitio-fila .detalhe-botao,
+  .sitio-fila .detalhe-botao-botao {
+    height: 36px;
+  }
+}
+
+/* As outras grafias */
+.sitio-grafias {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.sitio-grafia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 2px 0 10px;
+  background: var(--superficie);
+  border-radius: 6px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.sitio-grafia-lida {
+  padding-right: 8px;
+  min-height: 30px;
+}
+/* dentro da lista de dados (dl), a regra de `ul` do detalhe põe os itens em coluna: aqui são pílulas lado a lado */
+.detalhe-dl .sitio-grafias {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sitio-marca-nota {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.sitio-grafia .icon-button {
+  width: 36px;
+  height: 36px;
+}
+@media (pointer: coarse) {
+  .sitio-grafia .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* A coordenada em correção (um quadro, como Sitio.dc.html) */
+.sitio-coordenada-edicao {
+  margin-top: 4px;
+  padding: 14px 14px 16px;
+  border: 1px solid var(--texto);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sitio-coordenada-edicao h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sitio-coordenada-pares {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 10px;
+}
+.sitio-coordenada-pares input {
+  font-family: var(--fonte-codigo);
+}
+.sitio-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Excluir */
+.sitio-excluir {
+  margin: 26px 24px 0;
+}
+@media (min-width: 768px) {
+  .sitio-excluir {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.sitio-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.sitio-confirmar p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.sitio-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sitio-aviso-excluido {
+  margin: 14px 24px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (min-width: 768px) {
+  .sitio-aviso-excluido {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.sitio-link-botao {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 36px;
+  cursor: pointer;
+}
+.sitio-link-botao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .sitio-link-botao {
+    min-height: 44px;
+  }
+}
+
+.sitio-restaurar {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.sitio-marca {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* NovoSitio */
+.novo-sitio .novo-corpo {
+  max-width: 640px;
+  gap: 18px;
+}
+.novo-sitio .form-secao {
+  margin-top: 0;
+  gap: 20px;
+  border-top: 0;
+  padding-top: 0;
+}
+.novo-sitio .novo-pe {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+.novo-sitio .novo-acoes-pe {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+.novo-sitio .novo-acoes-pe .form-botao {
+  flex: 1 1 auto;
+}
+@media (min-width: 768px) {
+  .novo-sitio .novo-corpo {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+  .novo-sitio .novo-acoes-pe .form-botao {
+    flex: 0 0 auto;
+    padding-inline: 26px;
+  }
+}
+.novo-sitio .form-nota {
+  text-align: left;
+}
+.sitio-coordenada-campos {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+}
+.sitio-regioes {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 2px;
+}
+.sitio-regiao-opcao {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 22px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .sitio-regiao-opcao {
+    min-height: 36px;
+    border-radius: 18px;
+  }
+}
+.sitio-regiao-opcao[aria-pressed='true'] {
+  background: var(--texto);
+  color: var(--fundo);
+  border-color: var(--texto);
+}
+.sitio-regiao-opcao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* "Sítio deste objeto" (ItemSitio.dc.html, PC-ItemSitio.dc.html): folha branca de baixo no celular, diálogo no computador.
+   A camada, o fundo e a alça são os da folha de coleção (src/colecoes/FolhaDeColecao.css). */
+.trocar-sitio {
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+  color-scheme: light;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  box-sizing: border-box;
+}
+.trocar-sitio:focus {
+  outline: none;
+}
+.trocar-sitio :focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+.trocar-sitio-folha {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 52px;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 0 0;
+  overflow: hidden;
+}
+.trocar-sitio-dialogo {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  border-radius: 12px;
+  padding: 16px 0 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.trocar-sitio-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 24px;
+}
+.trocar-sitio-topo .icon-button {
+  margin-right: -12px;
+  color: var(--texto-consulta);
+}
+.trocar-sitio-etiqueta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.trocar-sitio-rolagem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.trocar-sitio-atual {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px 0;
+  border-top: 2px solid var(--texto-consulta);
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.trocar-sitio-atual-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+  padding-top: 2px;
+}
+.trocar-sitio-atual-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+.trocar-sitio-nome {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: var(--texto-consulta);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+span.trocar-sitio-nome {
+  text-decoration: none;
+}
+@media (pointer: fine) {
+  .trocar-sitio-nome {
+    min-height: 36px;
+  }
+}
+.trocar-sitio-apoio {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.trocar-sitio-busca .trocar-sitio-caixa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--texto-consulta);
+  border-radius: 8px;
+}
+.trocar-sitio-busca input {
+  flex-grow: 1;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 16px;
+}
+.trocar-sitio-busca input:focus-visible {
+  outline: none;
+}
+/* Sem o × nativo do WebKit (azul, fora do estilo): como o campo de busca do app (src/telas/CampoDeBusca.css). */
+.trocar-sitio-busca input::-webkit-search-cancel-button {
+  display: none;
+}
+.trocar-sitio-caixa:focus-within {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+.trocar-sitio-lista {
+  display: flex;
+  flex-direction: column;
+}
+.trocar-sitio-lista-topo {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.trocar-sitio-lista-topo .codigo {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--secundario-consulta);
+}
+.trocar-sitio-opcao {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 6px 8px 6px 6px;
+  border: 0;
+  border-top: 1px solid var(--filete-consulta);
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.trocar-sitio-opcao[aria-checked='true'] {
+  background: var(--superficie);
+  box-shadow: inset 2px 0 0 var(--texto-consulta);
+}
+.trocar-sitio-radio {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--texto-consulta);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.trocar-sitio-opcao[aria-checked='true'] .trocar-sitio-radio {
+  background: radial-gradient(circle, var(--texto-consulta) 0 4px, transparent 5px);
+}
+.trocar-sitio-opcao-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.trocar-sitio-opcao-nome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.trocar-sitio-opcao-apoio {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.trocar-sitio-vazio {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete-consulta);
+  font-size: 14px;
+  color: var(--corpo-consulta);
+}
+.trocar-sitio-novo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.trocar-sitio-criar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px dashed var(--secundario-consulta);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+.trocar-sitio-nota {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.trocar-sitio-pe {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--filete-consulta);
+}
+.trocar-sitio-botao {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--texto-consulta);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.trocar-sitio-botao-forte {
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+}
+.trocar-sitio-pe .trocar-sitio-voltar {
+  flex: 1 1 100%;
+  order: -1;
+}
+.trocar-sitio-botao {
+  flex: 1 1 0;
+}
+@media (min-width: 768px) {
+  .trocar-sitio-pe .trocar-sitio-voltar {
+    flex: 0 0 auto;
+    order: 0;
+    margin-right: auto;
+  }
+  .trocar-sitio-botao {
+    flex: 0 0 auto;
+  }
+}
+@media (pointer: fine) {
+  .trocar-sitio-botao {
+    min-height: 40px;
+  }
+}
+@media (pointer: coarse) {
+  .trocar-sitio-criar {
+    min-height: 48px;
+  }
+}
+
+/* ---------- Tarefa 19: o mapa, o filtro por região e «Lista | Mapa» (SitiosMapa.dc.html, PC-SitiosMapa.dc.html) ---------- */
+
+/* A linha acesa (o mouse está nela, ou no ponto dela) e a do ponto selecionado: o fundo cinza e a barra do item atual. */
+.sitio-linha-acesa,
+.sitio-linha-selecionada {
+  background: var(--superficie);
+}
+.sitio-linha-selecionada {
+  box-shadow: inset 2px 0 0 var(--texto);
+}
+.sitio-mapa {
+  display: block;
+  width: 100%;
+}
+/* No computador «Mostrar no mapa» só aparece na linha acesa, na selecionada ou com o foco (a linha fica limpa). */
+@media (min-width: 768px) {
+  .sitio-linha > .sitio-mostrar {
+    opacity: 0;
+  }
+  .sitio-linha:hover > .sitio-mostrar,
+  .sitio-linha:focus-within > .sitio-mostrar,
+  .sitio-linha-acesa > .sitio-mostrar,
+  .sitio-linha-selecionada > .sitio-mostrar {
+    opacity: 1;
+  }
+}
+
+/* Celular: o seletor «Lista | Mapa» */
+.sitios-vista {
+  display: flex;
+  margin-top: 12px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sitios-vista button {
+  -webkit-tap-highlight-color: transparent;
+  flex: 1 1 0;
+  height: 44px;
+  border: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sitios-vista button + button {
+  border-left: 1px solid var(--texto);
+}
+.sitios-vista button[aria-pressed='true'] {
+  background: var(--texto);
+  color: var(--fundo);
+}
+.sitios-vista button:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: -4px;
+}
+
+/* A faixa «47 SÍTIOS … Limpar filtro» sobre a lista filtrada */
+.sitios-contagem {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 8px 0 6px;
+  border-top: 2px solid var(--texto);
+}
+.sitios-contagem span {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sitios-contagem button {
+  flex: none;
+  white-space: nowrap;
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.sitios-contagem button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.sitios-contagem button:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.sitios-contagem + .lista-letras {
+  padding-top: 0;
+}
+
+/* Celular, no modo «Mapa»: a página tem a altura da tela e o mapa ocupa o que sobra. */
+.lista-pagina-mapa {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+}
+.lista-pagina-mapa .lista-corpo {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+.sitios-mapa-celular {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 12px -24px 0;
+  border-top: 1px solid var(--filete);
+}
+.mapa-carregando {
+  margin: 0;
+  padding: 24px;
+  font-size: 14px;
+  color: var(--corpo-consulta);
+}
+
+/* Computador: o título «Sítios» e, à direita dele, «Novo sítio» (PC-SitiosMapa, E-5). */
+.sitios-titulo-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.sitios-titulo-linha .sitio-novo {
+  margin-top: 0;
+  align-self: center;
+  white-space: nowrap;
+}

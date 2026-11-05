@@ -26,6 +26,6 @@ self.onmessage = async (e: MessageEvent<Pedido>) => {
     }
     self.postMessage({})
   } catch (erro) {
-    self.postMessage({ erro: erro instanceof Error ? erro.message : String(erro) })
+    self.postMessage({ erro: erro instanceof Error ? erro.message : String(erro), nome: erro instanceof Error ? erro.name : undefined })
   }
 }

@@ -102,10 +102,18 @@
   pointer-events: none;
 }
 .vis-regioes polygon {
-  fill: rgba(255, 255, 255, 0.1);
+  stroke-linejoin: round;
+}
+/* Contorno escuro por baixo do traço claro (Tarefa 10, revisão 1, M2): visível no desenho invertido e na foto clara. */
+.vis-regioes .regiao-halo {
+  fill: rgba(0, 0, 0, 0.12);
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 6px;
+}
+.vis-regioes .regiao-traco {
+  fill: none;
   stroke: #ffffff;
   stroke-width: 2.5px;
-  stroke-linejoin: round;
 }
 /* O nome do elemento: segue o canto da região, mas não cresce nem gira com a imagem. */
 .vis-rotulo {
@@ -251,6 +259,8 @@
   }
   .vis-ferramentas {
     width: auto;
+    /* As ferramentas do desenho (Tarefa 10) se somam às da ampliação: no computador, a barra cresce com elas. */
+    max-width: 100%;
     justify-content: center;
   }
   .vis-rodape {
@@ -261,4 +271,55 @@
   .vis-painel {
     width: 280px;
   }
+}
+
+/* Imagem do usuário: a marca SKC antes do crédito (decisão 33). A marca é a do item (ImagemItem.css). */
+.vis-credito-skc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Excluir uma região do usuário (Tarefa 10, revisão 1): a confirmação e o "Desfazer", no painel. */
+.vis-painel-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--filete-item);
+  border-radius: 8px;
+}
+.vis-painel-confirmar p,
+.vis-painel-aviso {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.vis-painel-aviso:empty {
+  display: none;
+}
+.vis-painel-confirmar-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.vis-painel-botao {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--texto-item);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--texto-item);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.vis-painel-botao-forte {
+  background: var(--texto-item);
+  color: var(--fundo-item);
+}
+.vis-painel-botao:focus-visible {
+  outline: 2px solid var(--texto-item);
+  outline-offset: 2px;
 }

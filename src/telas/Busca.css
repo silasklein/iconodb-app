@@ -279,6 +279,54 @@
   cursor: pointer;
 }
 
+/* Acertos da camada do usuário (SKC) que não são de um objeto: linhas separadas por filete, texto secundário */
+.busca-usuario {
+  margin-top: 28px;
+}
+.busca-usuario-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.busca-usuario-linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete);
+}
+.busca-usuario-linha:last-child {
+  border-bottom: 1px solid var(--filete);
+}
+.busca-usuario-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.busca-usuario-rotulo {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  color: var(--texto);
+}
+a.busca-usuario-rotulo {
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.busca-usuario-tipo {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.busca-usuario-marca {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--secundario);
+}
+
 /* Resultado antigo enquanto o novo carrega: não se toca */
 .busca-grade[inert] {
   opacity: 0.5;
@@ -363,6 +411,12 @@
   }
   .busca-facetas-topo span {
     font-size: 12px;
+    color: var(--secundario);
+  }
+  .busca-facetas-vazio {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
     color: var(--secundario);
   }
   .busca-computador .busca-principal {

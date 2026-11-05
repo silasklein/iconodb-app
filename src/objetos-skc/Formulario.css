@@ -1,0 +1,330 @@
+/* Os campos dos formulários de objeto SKC (NovoObjeto.dc.html, PC-NovoObjeto.dc.html e "Editar a ficha"). */
+.form-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 32px;
+  padding-top: 8px;
+  border-top: 2px solid var(--texto);
+}
+.form-secao:first-child {
+  margin-top: 0;
+}
+.form-secao-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.form-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.form-campo > label,
+.form-rotulo,
+.form-legenda {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+.form-apoio {
+  font-weight: 400;
+  color: var(--secundario);
+}
+.form-campo input,
+.form-campo textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--texto);
+  background: var(--fundo);
+}
+.form-campo textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.form-campo input:focus-visible,
+.form-campo textarea:focus-visible,
+.form-escolha-lista:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.form-ajuda {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.form-linha {
+  display: grid;
+  grid-template-columns: repeat(var(--colunas, 2), minmax(0, 1fr));
+  gap: 12px;
+}
+.form-medidas {
+  --colunas: 3;
+}
+
+/* Período: os botões em pílula (radiogroup). */
+.form-periodos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-radius: 20px;
+}
+.form-periodos[aria-invalid='true'] {
+  outline: 2px solid var(--texto);
+  outline-offset: 4px;
+}
+.form-periodo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 18px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .form-periodo {
+    min-height: 44px;
+    border-radius: 22px;
+  }
+}
+.form-periodo[aria-checked='true'] {
+  background: var(--texto);
+  color: var(--fundo);
+  border-color: var(--texto);
+}
+.form-periodo:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.form-periodo-codigo {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+}
+.form-numero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto-consulta);
+}
+.tema-item .form-numero {
+  background: #242424;
+  color: var(--texto);
+}
+.form-numero-valor {
+  font-family: var(--fonte-codigo);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+/* O SKC, Nr. ao lado do número (decisão 38): mesmo corpo do texto, sem o peso do número. */
+.form-numero-skc {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.form-numero p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.form-marca {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+.form-erro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Origem: os dois cartões de rádio. */
+.form-origens {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.form-origem {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.form-origem-ativa {
+  border: 2px solid var(--texto);
+}
+.form-origem-escolha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.form-origem-escolha input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+.form-origem-apoio {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--secundario);
+}
+
+/* Campo com sugestões (Sítio, Obra). */
+.form-escolha {
+  position: relative;
+}
+/* A caixa com pílulas antes do campo (os termos da nova hipótese, Tarefa 10). */
+.form-escolha-caixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 4px 6px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+}
+.form-escolha-caixa:focus-within {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.form-campo .form-escolha-caixa input {
+  flex: 1 1 140px;
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+}
+.form-campo .form-escolha-caixa input:focus-visible {
+  outline: none;
+}
+.form-escolha-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  overflow: hidden;
+}
+.form-escolha-lista[hidden] {
+  display: none;
+}
+.form-escolha-opcao {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--filete);
+  cursor: pointer;
+}
+.form-escolha-opcao:first-child {
+  border-top: 0;
+}
+.form-escolha-opcao[aria-selected='true'],
+.form-escolha-opcao:hover {
+  background: var(--superficie);
+  color: var(--texto-consulta);
+}
+.form-escolha-rotulo {
+  font-size: 15px;
+}
+.form-escolha-apoio {
+  /* O apoio do Sítio leva as grafias todas (o campo as procura); mostra duas linhas. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--secundario);
+}
+
+/* Botões do pé. */
+.form-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.form-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.form-botao-forte {
+  background: var(--texto);
+  color: var(--fundo);
+}
+.form-botao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .form-botao {
+    min-height: 40px;
+  }
+}
+.form-codigo {
+  font-family: var(--fonte-codigo);
+  font-size: 14px;
+}
+.form-nota {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+  text-align: center;
+}

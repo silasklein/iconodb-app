@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { estadoDoGrupo } from '../app/origem'
 import { grupo, type GrupoDetalhe } from '../banco/consultas'
+import { Colecao } from '../colecoes/Colecao'
+import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { Icon } from '../ui/Icon'
@@ -9,7 +11,7 @@ import { ImagemDeCapa } from '../ui/ImagemDeCapa'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
-import { numeroPtBr } from '../ui/usePendencias'
+import { numeroPtBr } from '../ui/numero'
 import { chaveDaObra, rotuloDaObra } from './obras'
 import './Grupo.css'
 
@@ -22,6 +24,11 @@ const objetos = (n: number) => `${numeroPtBr(n)} ${n === 1 ? 'objeto' : 'objetos
  */
 export function Grupo() {
   const { id = '' } = useParams()
+  // `/grupo/CO-…` é uma coleção SKC do usuário (Tarefa 7): a mesma rota, outra tela. Os ids do pacote nunca começam por CO-.
+  return id.startsWith('CO-') ? <Colecao id={id} /> : <GrupoDoPacote id={id} />
+}
+
+function GrupoDoPacote({ id }: { id: string }) {
   const carga = useCarregar(() => grupo(id), id)
   const computador = useBreakpoint() === 'computador'
   const { pathname, search } = useLocation()
@@ -123,6 +130,10 @@ export function Grupo() {
           ))}
         </div>
       </section>
+
+      <div className="grupo-notas">
+        <NotasDoAlvo tipo="grupo" ref_={g.id} variante="secao" />
+      </div>
     </div>
   )
 }

@@ -1,10 +1,15 @@
 type Ouvinte = (e: { matches: boolean }) => void
 
-/** Instala um matchMedia falso controlado pela largura da janela (só entende `min-width: Npx`). Devolve quem muda a largura. */
-export function instalarMatchMedia(larguraInicial: number): (nova: number) => void {
+/**
+ * Instala um matchMedia falso controlado pela largura da janela (só entende `min-width: Npx` e `hover: hover`). `hover`
+ * diz se o aparelho tem mouse (falso por padrão: um aparelho de toque). Devolve quem muda a largura.
+ */
+export function instalarMatchMedia(larguraInicial: number, opcoes: { hover?: boolean } = {}): (nova: number) => void {
   let largura = larguraInicial
+  const comMouse = opcoes.hover ?? false
   const ouvintes = new Set<Ouvinte>()
   const avalia = (consulta: string) => {
+    if (/\(hover:\s*hover\)/.test(consulta)) return comMouse
     const m = /min-width:\s*(\d+)px/.exec(consulta)
     return m ? largura >= Number(m[1]) : false
   }

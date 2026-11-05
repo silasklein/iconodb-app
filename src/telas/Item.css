@@ -109,6 +109,10 @@
   font-size: 14px;
   line-height: 1.5;
 }
+/* A ficha vazia do objeto SKC tem as mesmas margens da ficha (T17-B-27: encostava na borda esquerda no celular). */
+.item-ficha-vazia {
+  margin: 22px 24px 0;
+}
 .item-ficha div {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -168,7 +172,7 @@
   }
   .item-coluna-imagem-fixa {
     position: sticky;
-    top: 0;
+    top: var(--barra-superior);
     height: calc(100dvh - var(--barra-superior));
     display: flex;
     flex-direction: column;
@@ -214,6 +218,9 @@
   .item-ficha {
     margin: 22px 0 0;
     gap: 6px;
+  }
+  .item-ficha-vazia {
+    margin: 22px 0 0;
   }
   .item-ficha div {
     column-gap: 16px;
@@ -276,4 +283,130 @@
     grid-template-columns: 56px minmax(0, 1fr);
     column-gap: 12px;
   }
+}
+
+/*
+ * "Imagem adicionada · Desfazer" (ItemAdicionarImagem (c), PC-ItemAdicionarImagem (b)): faixa clara flutuante no pé.
+ * A região viva fica sempre na página (sem nada à vista quando vazia), para o leitor de tela anunciar o aviso.
+ */
+.item-aviso-imagem {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 30;
+  pointer-events: none;
+}
+.item-aviso-imagem-visivel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 8px;
+  background: #ededed;
+  color: #111111;
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: auto;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.item-aviso-imagem-desfazer {
+  flex-shrink: 0;
+  min-height: var(--alvo-toque);
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: #111111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.item-aviso-imagem-desfazer:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .item-aviso-imagem {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    max-width: 440px;
+  }
+  .item-aviso-imagem-desfazer {
+    min-height: 36px;
+  }
+}
+
+/*
+ * As mensagens do pé do Item (a da imagem e a de «Comparar (n/4)») se empilham no mesmo canto, em vez de uma cobrir a outra (T17-C-8):
+ * quem está fixo é o conjunto; cada mensagem fica no fluxo dele. A mais nova (Comparar) fica embaixo, mais perto do dedo.
+ */
+.item-avisos-do-pe {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+/* A região viva vazia continua na árvore (o leitor de tela anuncia o que chega nela) e não ocupa lugar: o vão só entra entre duas visíveis. */
+.item-avisos-do-pe > :not(:empty) ~ :not(:empty) {
+  margin-top: 8px;
+}
+.item-avisos-do-pe .item-aviso-imagem,
+.item-avisos-do-pe .aviso-comparar {
+  position: static;
+  max-width: none;
+}
+@media (min-width: 768px) {
+  .item-avisos-do-pe {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: min(480px, calc(100vw - 48px));
+  }
+}
+
+/*
+ * No item do computador, a barra superior fica presa no alto (revisão 1 da Tarefa 10, M1). Antes ela rolava junto e a
+ * coluna da imagem e o painel lateral (presos a `top: 0` com a altura da janela menos a barra) deixavam uma faixa de
+ * 48 px vazia embaixo, onde ficava o pé do painel ("Registrar hipótese"). Agora os dois ficam presos logo abaixo dela.
+ */
+@media (min-width: 768px) {
+  body:has(.item-pc) .barra-superior {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+}
+
+/* O sítio na ficha (Tarefa 12): o nome de agora, "no livro: …", a marca "excluído" e o botão de trocar. */
+.item-ficha-sitio {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.item-ficha-sitio-nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+}
+.item-ficha-sitio .icon-button {
+  flex-shrink: 0;
+  margin: -12px -10px -12px 0;
+}
+.item-ficha-no-livro {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-item);
 }

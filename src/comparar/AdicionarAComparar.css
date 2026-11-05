@@ -1,0 +1,62 @@
+/*
+ * A mensagem de "Comparar (n/4)" no Item e no objeto SKC: um aviso no pé da tela, como "Imagem adicionada · Desfazer".
+ * A região viva existe sempre (vazia sem aviso).
+ */
+.aviso-comparar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 30;
+  pointer-events: none;
+}
+.aviso-comparar-visivel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 8px;
+  background: #ededed;
+  color: #111111;
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: auto;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.aviso-comparar-acoes {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+.aviso-comparar-botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: #111111;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.aviso-comparar-botao:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .aviso-comparar {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    max-width: 480px;
+  }
+  .aviso-comparar-botao {
+    min-height: 36px;
+  }
+}

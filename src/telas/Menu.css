@@ -90,10 +90,6 @@
   color: var(--secundario-consulta);
   text-align: right;
 }
-.menu-secao {
-  margin-top: 8px;
-  border-bottom: 1px solid var(--filete-consulta);
-}
 
 /* Computador: popover sob o ícone Menu, à direita da barra. */
 .menu-popover-camada .menu-fundo {
@@ -114,4 +110,47 @@
 }
 .menu-item:disabled .menu-item-nome {
   color: var(--secundario-consulta);
+}
+
+/* A seção Sincronização (Menu.dc.html): o link para a tela, o estado e "Salvar e sincronizar". */
+.menu-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--filete-consulta);
+  --fundo: var(--fundo-consulta);
+}
+.menu-sync-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  text-decoration: none;
+  color: var(--texto-consulta);
+}
+.menu-sync-nome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.menu-sync-detalhes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--secundario-consulta);
+}
+.menu-sync-estado {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--corpo-consulta);
+}
+.menu-popover .sync-salvar-menu {
+  height: 44px;
+  font-size: 15px;
 }

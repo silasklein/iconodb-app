@@ -7,6 +7,7 @@
 import {
   ErroSemPacote,
   type EstadoBanco,
+  type Instrucao,
   type Linha,
   type Motor,
   type Parametros,
@@ -16,7 +17,7 @@ import {
 } from './protocolo'
 
 export { ErroSemPacote }
-export type { EstadoBanco, Linha, Motor, Parametro, Parametros, PublicacaoAberta } from './protocolo'
+export type { EstadoBanco, Instrucao, Linha, Motor, Parametro, Parametros, PublicacaoAberta } from './protocolo'
 
 /** Pedido sem o id (o cliente numera). */
 type SemId<T> = T extends unknown ? Omit<T, 'id'> : never
@@ -72,16 +73,26 @@ export function motorDoWorker(aoMorrer?: () => void): Motor {
     abrir: () => pedir<EstadoBanco>({ op: 'abrir' }),
     reabrir: () => pedir<EstadoBanco>({ op: 'reabrir' }),
     executar: (sql, parametros) => pedir<Linha[]>({ op: 'executar', sql, parametros }),
+    escreverUsuario: (lote) => pedir<void>({ op: 'usuario-escrever', lote }),
+    consultarUsuario: (sql, parametros) => pedir<Linha[]>({ op: 'usuario-consultar', sql, parametros }),
   }
 }
 
 let motorAtual: Motor | null = null
 let aberto: Promise<EstadoBanco> | null = null
+/** Muda a cada motor novo (testes, ou um worker que morreu): o índice do usuário, que mora no motor, sabe que sumiu. */
+let geracaoDoMotor = 0
 
 /** Troca o motor (testes). `null` volta ao worker na próxima chamada. */
 export function usarMotor(motor: Motor | null): void {
   motorAtual = motor
   aberto = null
+  geracaoDoMotor++
+}
+
+/** Identifica o motor em uso: o índice do usuário (src/usuario/indice.ts) se refaz quando ela muda. */
+export function geracaoDoBanco(): number {
+  return geracaoDoMotor
 }
 
 function motor(): Motor {
@@ -91,6 +102,7 @@ function motor(): Motor {
       if (motorAtual !== novo) return
       motorAtual = null
       aberto = null
+      geracaoDoMotor++
     })
     motorAtual = novo
   }
@@ -142,4 +154,15 @@ export async function publicacoesAbertas(): Promise<PublicacaoAberta[]> {
 export async function executar<T = Linha>(sql: string, parametros?: Parametros): Promise<T[]> {
   await publicacoesAbertas()
   return (await motor().executar(sql, parametros)) as T[]
+}
+
+/** Escreve num lote (uma transação) no índice da camada do usuário. Não exige pacote aberto. */
+export async function escreverUsuario(lote: readonly Instrucao[]): Promise<void> {
+  if (lote.length === 0) return
+  await motor().escreverUsuario?.(lote)
+}
+
+/** Consulta o índice da camada do usuário (só leitura). Não exige pacote aberto; sem índice, nenhuma linha. */
+export async function consultarUsuario<T = Linha>(sql: string, parametros?: Parametros): Promise<T[]> {
+  return ((await motor().consultarUsuario?.(sql, parametros)) ?? []) as T[]
 }

@@ -40,13 +40,13 @@ describe('tela Busca: consulta vazia', () => {
 
   it('o campo traz o que foi digitado e é pesquisável por rótulo', () => {
     abrir('/busca?q=%22')
-    expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveValue('"')
+    expect(screen.getByRole('combobox', { name: 'Buscar' })).toHaveValue('"')
   })
 
   it('limpar a busca esvazia o campo', async () => {
     abrir('/busca?q=%22')
     await userEvent.click(screen.getByRole('button', { name: 'Limpar a busca' }))
-    expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Buscar' })).toHaveValue('')
     await waitFor(() => expect(screen.getByText(/Digite um termo/)).toBeInTheDocument())
   })
 })
@@ -71,7 +71,7 @@ describe('tela Busca: sem o banco no aparelho', () => {
       reabrir: async () => real.reabrir(),
       executar: (sql, p) => real.executar(sql, p),
     })
-    abrir('/busca?q=mahras')
+    abrir('/busca?q=mahtes')
     expect(await screen.findByRole('alert')).toHaveTextContent(MSG_SEM_PACOTE)
     comPacote = true
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))

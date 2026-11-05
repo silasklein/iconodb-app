@@ -13,9 +13,9 @@ export function usarFoldDoPacoteSintetico(): void {
 
 let navegarAgora: NavigateFunction | null = null
 /** Navega como o histórico do navegador faria (por exemplo `irPara(-1)` é o Voltar). Dentro de `act`. */
-export function irPara(...args: Parameters<NavigateFunction>): void {
+export function irPara(...args: Parameters<NavigateFunction> | [caminho: string]): void {
   if (!navegarAgora) throw new Error('renderizarRota ainda não foi chamado')
-  void (navegarAgora as (...a: Parameters<NavigateFunction>) => unknown)(...args)
+  void (navegarAgora as (...a: unknown[]) => unknown)(...args)
 }
 
 /** Mostra o endereço atual (para os testes conferirem a navegação). */

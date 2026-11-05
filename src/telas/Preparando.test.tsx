@@ -61,11 +61,14 @@ function sincronizacaoManual() {
   }
 }
 
+/** A camada do usuário que o teste conduz (por padrão: não é a primeira vez, nada a puxar). */
+let camada: { primeiraVez: () => Promise<boolean>; puxar: () => Promise<boolean> }
+
 function montar(obterFonte: () => Promise<Fonte | null> = async () => FONTE, estrito = false) {
   const arvore = (
     <MemoryRouter initialEntries={['/preparando']}>
       <Routes>
-        <Route path="/preparando" element={<Preparando armazem={armazem} cache={cacheMemoria()} obterFonte={obterFonte} />} />
+        <Route path="/preparando" element={<Preparando armazem={armazem} cache={cacheMemoria()} obterFonte={obterFonte} camadaDoUsuario={camada} />} />
         <Route path="/" element={<p>Início do app</p>} />
         <Route path="/entrar" element={<p>Tela de entrada</p>} />
       </Routes>
@@ -80,10 +83,93 @@ async function comEstado() {
 
 beforeEach(() => {
   armazem = armazemMemoria()
+  camada = { primeiraVez: async () => false, puxar: vi.fn(async () => true) }
 })
 
 afterEach(() => {
   vi.resetAllMocks()
+})
+
+describe('Preparando: a camada do usuário na primeira vez', () => {
+  function camadaManual() {
+    let terminar!: (ok: boolean) => void
+    const puxar = vi.fn(() => new Promise<boolean>((ok) => (terminar = ok)))
+    camada = { primeiraVez: async () => true, puxar }
+    return { puxar, terminar: (ok: boolean) => act(async () => terminar(ok)) }
+  }
+
+  it('a etapa "Suas notas e coleções (SKC)" aparece e é baixada DEPOIS do pacote', async () => {
+    const c = camadaManual()
+    const s = sincronizacaoManual()
+    montar()
+    const etapa = (await screen.findByText('Suas notas e coleções (SKC)')).closest('li')!
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(etapa).toHaveTextContent('aguardando')
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    expect(c.puxar).not.toHaveBeenCalled()
+    await s.terminar('igual')
+    await waitFor(() => expect(c.puxar).toHaveBeenCalledTimes(1))
+    expect(etapa).toHaveTextContent('baixando')
+    // O pacote está pronto: abrir já é possível, mesmo com a camada do usuário ainda sincronizando.
+    expect(screen.getByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+    expect(screen.getByText(/continuam sendo baixadas em segundo plano/)).toBeInTheDocument()
+    await c.terminar(true)
+    expect(etapa).toHaveTextContent('pronto')
+    expect(screen.getByRole('progressbar', { name: 'Suas notas e coleções (SKC)' })).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+    expect(screen.queryByText(/continuam sendo baixadas/)).not.toBeInTheDocument()
+  })
+
+  it('"Abrir o app" não espera a camada do usuário, que segue em segundo plano depois de abrir', async () => {
+    const c = camadaManual()
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('igual')
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir o app' }))
+    expect(await screen.findByText('Início do app')).toBeInTheDocument()
+    expect(c.puxar).toHaveBeenCalledTimes(1)
+    // A camada do usuário termina com a tela já desmontada: nada quebra.
+    await c.terminar(true)
+    expect(screen.getByText('Início do app')).toBeInTheDocument()
+  })
+
+  it('se a camada do usuário falha, o app abre do mesmo jeito (sincroniza depois)', async () => {
+    const c = camadaManual()
+    const s = sincronizacaoManual()
+    montar()
+    await userEvent.click(await screen.findByRole('button', { name: 'Abrir assim que terminar' }))
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('igual')
+    // Abre assim que o pacote termina, sem esperar a camada do usuário (que ainda nem respondeu).
+    expect(await screen.findByText('Início do app')).toBeInTheDocument()
+    await waitFor(() => expect(c.puxar).toHaveBeenCalled())
+    await c.terminar(false)
+    expect(screen.getByText('Início do app')).toBeInTheDocument()
+  })
+
+  it('a etapa diz "sincroniza depois" quando falhou, sem alerta de erro', async () => {
+    const c = camadaManual()
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('igual')
+    await waitFor(() => expect(c.puxar).toHaveBeenCalled())
+    await c.terminar(false)
+    expect(screen.getByText('Suas notas e coleções (SKC)').closest('li')).toHaveTextContent('sincroniza depois')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+  })
+
+  it('fora da primeira vez, a etapa não aparece e nada é puxado aqui', async () => {
+    const s = sincronizacaoManual()
+    montar()
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.terminar('igual')
+    expect(await screen.findByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(camada.puxar).not.toHaveBeenCalled()
+  })
 })
 
 describe('Preparando', () => {
@@ -300,12 +386,13 @@ describe('Preparando', () => {
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
   })
 
-  it('sem a permissão files.content.read: explica e oferece entrar de novo (sai e vai à entrada)', async () => {
+  it('sem uma permissão (leitura ou escrita): explica as três e oferece entrar de novo (sai e vai à entrada)', async () => {
     const s = sincronizacaoManual()
     montar()
     await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
     await s.falhar(new ErroDePermissao('files.content.read'))
     expect(screen.getByRole('alert')).toHaveTextContent(MSG_SEM_PERMISSAO)
+    for (const escopo of ['files.content.read', 'files.content.write', 'files.metadata.read']) expect(MSG_SEM_PERMISSAO).toContain(escopo)
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Entrar de novo' }))
     expect(sair).toHaveBeenCalled()

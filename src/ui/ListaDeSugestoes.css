@@ -1,0 +1,380 @@
+/*
+ * Sugestões da busca (BuscaSugestoes no celular, PC-BuscaSugestoes no computador): a lista suspensa sob o campo, por
+ * categoria, e as buscas recentes. No celular os grupos empilham (o rótulo da categoria acima das linhas); a partir
+ * de 768 px o rótulo fica numa coluna de 96 px à esquerda. A linha ativa (↑ ↓) tem fundo e uma barra de 2 px.
+ */
+.sugestoes {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  text-align: left;
+}
+.sugestoes-lista {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px 0;
+  /* No celular a altura é a que sobra acima do teclado (--sugestoes-altura, posta pelo campo); sem ela, 68% da tela. */
+  max-height: min(var(--sugestoes-altura, 68dvh), 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sugestoes-grupo {
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+}
+.sugestoes-grupo-rotulo,
+.recentes-cabeca h2 {
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.sugestoes-grupo-rotulo {
+  padding-bottom: 2px;
+}
+.sugestoes-linhas {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Uma sugestão */
+.sugestao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 4px 0;
+  color: var(--texto);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--filete) 45%, transparent);
+  cursor: pointer;
+}
+.sugestao-com-miniatura {
+  min-height: 56px;
+}
+.sugestao-miniatura {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--superficie);
+}
+.sugestao-miniatura .miniatura-imagem {
+  max-width: 40px;
+  max-height: 40px;
+}
+.sugestao-miniatura .miniatura-aviso {
+  display: none;
+}
+.sugestao-texto {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sugestao-principal {
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sugestao-codigo {
+  font-size: 14px;
+  font-weight: 500;
+}
+.sugestao-complemento {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* O que casa: negrito (e a cor cheia, também nos textos secundários). */
+.forte {
+  font-weight: 600;
+  color: var(--texto);
+}
+.sugestao-marca {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--secundario);
+}
+.sugestao-enter {
+  display: none;
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--filete);
+  border-radius: 4px;
+  background: var(--fundo);
+  font-size: 12px;
+  color: var(--secundario);
+}
+.sugestao-ativa {
+  background: var(--superficie);
+  box-shadow: inset 2px 0 0 var(--texto);
+}
+.sugestao:hover,
+.recente-busca:hover,
+.sugestoes-todos:hover {
+  background: var(--superficie);
+}
+
+.sugestoes-vazia {
+  margin: 0;
+  padding: 14px 0 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+
+/* Ver todos os resultados */
+.sugestoes-todos {
+  margin: 16px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  border-top: 2px solid var(--texto);
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* O rodapé de dicas (só no computador) */
+.sugestoes-rodape {
+  display: none;
+}
+
+/* Buscas recentes */
+.recentes {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 12px;
+}
+.recentes-cabeca {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+}
+.recentes-cabeca h2 {
+  margin: 0;
+}
+.recentes-limpar {
+  min-height: var(--alvo-toque);
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+/* Duas colunas de linhas de mesma altura: as buscas (o listbox) e os × (um grupo ao lado). */
+.recentes {
+  --linha-recente: 48px;
+  max-height: var(--sugestoes-altura, none);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.recentes-corpo {
+  display: flex;
+  align-items: flex-start;
+}
+.recentes-lista {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.recentes-remover {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.recente-busca {
+  box-sizing: border-box;
+  height: var(--linha-recente);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--filete) 45%, transparent);
+  cursor: pointer;
+}
+.recente-busca > svg {
+  flex-shrink: 0;
+  color: var(--secundario);
+}
+.recente-busca > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recente-remover {
+  box-sizing: border-box;
+  width: var(--alvo-toque);
+  height: var(--linha-recente);
+  margin-right: -12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--filete) 45%, transparent);
+  padding: 0;
+  color: var(--secundario);
+  cursor: pointer;
+}
+.recentes-nota {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+
+/* Computador: lista suspensa de 520 px sob o campo, rótulos numa coluna à esquerda, rodapé de teclas. */
+@media (min-width: 768px) {
+  .sugestoes {
+    overflow: hidden;
+  }
+  .sugestoes-lista {
+    padding: 4px 0;
+  }
+  .sugestoes-grupo {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    padding-top: 0;
+  }
+  .sugestoes-grupo + .sugestoes-grupo {
+    border-top: 1px solid color-mix(in srgb, var(--filete) 45%, transparent);
+  }
+  .sugestoes-grupo-rotulo {
+    padding: 12px 0 0 16px;
+  }
+  .sugestoes-linhas {
+    padding: 2px 0;
+  }
+  .sugestao {
+    min-height: 40px;
+    padding: 4px 16px 4px 12px;
+    border-bottom: 0;
+  }
+  .sugestao-com-miniatura {
+    min-height: 52px;
+  }
+  .sugestao-miniatura {
+    width: 40px;
+    height: 40px;
+  }
+  .sugestao-miniatura .miniatura-imagem {
+    max-width: 36px;
+    max-height: 36px;
+  }
+  .sugestao-principal {
+    font-size: 15px;
+  }
+  .sugestao-codigo {
+    font-size: 13px;
+  }
+  .sugestao-complemento {
+    font-size: 12px;
+  }
+  .sugestao-ativa .sugestao-enter {
+    display: block;
+  }
+  .sugestoes-todos {
+    margin: 0;
+    min-height: 44px;
+    padding: 0 16px;
+    border-top: 1px solid var(--filete);
+    font-size: 14px;
+  }
+  .sugestoes-vazia {
+    padding: 10px 16px;
+  }
+  .sugestoes-rodape {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--superficie);
+    border-top: 1px solid var(--filete);
+    font-size: 12px;
+    color: var(--secundario);
+  }
+
+  .recentes {
+    padding: 0 0 4px;
+  }
+  .recentes-cabeca {
+    min-height: 40px;
+    padding: 0 16px;
+  }
+  .recentes-limpar {
+    min-height: 36px;
+    font-size: 13px;
+  }
+  .recentes {
+    --linha-recente: 40px;
+  }
+  .recentes-lista {
+    padding-left: 16px;
+  }
+  .recentes-remover {
+    padding: 0 6px;
+  }
+  .recente-busca {
+    border-bottom: 0;
+    font-size: 15px;
+  }
+  .recente-remover {
+    width: 36px;
+    margin-right: 0;
+    border-bottom: 0;
+    border-radius: 6px;
+  }
+  .recentes-nota {
+    display: none;
+  }
+}
+@media (min-width: 768px) and (pointer: coarse) {
+  .sugestao {
+    min-height: var(--alvo-toque);
+  }
+  .recentes {
+    --linha-recente: var(--alvo-toque);
+  }
+  .recente-remover {
+    width: var(--alvo-toque);
+  }
+}

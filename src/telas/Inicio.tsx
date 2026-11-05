@@ -1,14 +1,17 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useIrParaBusca } from '../busca/useIrParaBusca'
 import { contagens, grupos } from '../banco/consultas'
 import { IconButton } from '../ui/IconButton'
 import { ImagemDeCapa } from '../ui/ImagemDeCapa'
+import { MarcasDeSincronizacao } from '../ui/IconeDeSincronizacao'
 import { Logo } from '../ui/Logo'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
-import { numeroPtBr } from '../ui/usePendencias'
+import { numeroPtBr } from '../ui/numero'
 import { PLACEHOLDER_DA_BUSCA } from '../ui/BarraSuperior'
+import { alteracoes, textosDoEstado } from '../usuario/textosDaSync'
+import { useSincronizacao } from '../usuario/useSincronizacao'
 import { CampoDeBusca } from './CampoDeBusca'
 import { Menu } from './Menu'
 import './Inicio.css'
@@ -29,9 +32,14 @@ const ENTRADAS: { rotulo: string; para: string }[] = [
 export function Inicio() {
   const computador = useBreakpoint() === 'computador'
   const irParaBusca = useIrParaBusca()
+  const navegar = useNavigate()
   const [texto, setTexto] = useState('')
   const [menu, setMenu] = useState<{ gatilho: HTMLElement | null } | null>(null)
   const campo = useRef<HTMLDivElement>(null)
+  // Main.dc.html: com algo por enviar, um indicador pequeno antes da lupa; ele abre o Menu (seção Sincronização).
+  const sync = useSincronizacao()
+  const rotuloDoIndicador = `${alteracoes(sync.porEnviar)} por enviar — abrir sincronização`
+  const marcaDoIndicador = ((m) => (m === 'nenhuma' ? 'ponto' : m))(textosDoEstado(sync, 'Ctrl+S').marca)
 
   const carga = useCarregar(async () => {
     const [c, g] = await Promise.all([contagens(), grupos()])
@@ -50,6 +58,19 @@ export function Inicio() {
         <header className="inicio-topo">
           <Logo scale={2} tone="light" />
           <div className="inicio-topo-icones">
+            {sync.porEnviar > 0 && (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={rotuloDoIndicador}
+                data-tip={rotuloDoIndicador}
+                aria-haspopup="dialog"
+                aria-expanded={menu !== null}
+                onClick={(e) => setMenu({ gatilho: e.currentTarget })}
+              >
+                <MarcasDeSincronizacao marca={marcaDoIndicador} />
+              </button>
+            )}
             <IconButton
               icon="buscar"
               label="Buscar"
@@ -96,6 +117,7 @@ export function Inicio() {
             valor={texto}
             aoMudar={setTexto}
             aoEnviar={irParaBusca}
+            navegar={navegar}
             placeholder={PLACEHOLDER_DA_BUSCA}
             atalho
           />

@@ -1,0 +1,44 @@
+/* Decisão 50: «Este verbete (sítio) veio de você» na página do livro (src/telas/VeioDeVoce.tsx). */
+.veio-de-voce .detalhe-secao-topo {
+  align-items: center;
+}
+.veio-de-voce-texto,
+.veio-de-voce-status,
+.veio-de-voce-falha {
+  margin: 0 0 12px;
+  max-width: 560px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.veio-de-voce-status:empty {
+  margin: 0;
+}
+.veio-de-voce-status strong {
+  font-weight: 600;
+}
+.veio-de-voce-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+/* m-UI1: a mesma caixa de «Excluir o sítio» (.sitio-confirmar, src/sitios/Sitios.css) */
+.veio-de-voce-confirmar p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.veio-de-voce-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.veio-de-voce-falha {
+  margin-top: 12px;
+}
+.veio-de-voce-id {
+  white-space: nowrap;
+}

@@ -9,6 +9,7 @@ import {
   ErroDeSincronizacaoEmAndamento,
   lerManifesto,
   MSG_SCHEMA,
+  SCHEMAS_ACEITOS,
   type Fonte,
   type Manifesto,
 } from './manifesto'
@@ -83,7 +84,7 @@ function comArquivosTrocados(
 function comSchema(base: Fonte, schema: number): Fonte {
   return {
     listar: (p) => base.listar(p),
-    baixar: (c) => (c === MANIFESTO ? manifestoAlterado(base, (m) => void (m.schema = schema as 5)) : base.baixar(c)),
+    baixar: (c) => (c === MANIFESTO ? manifestoAlterado(base, (m) => void (m.schema = schema)) : base.baixar(c)),
   }
 }
 
@@ -109,13 +110,19 @@ afterEach(() => {
 describe('lerManifesto', () => {
   it('lê o manifesto do pacote sintético', async () => {
     const m = await lerManifesto(fonteDeTeste())
-    expect(m.schema).toBe(5)
+    expect(m.schema).toBe(6)
     expect(m.publicacoes[0]?.sigla).toBe('TESTE')
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it('recusa schema diferente de 5 com a mensagem combinada', async () => {
-    const fonte = comSchema(fonteDeTeste(), 4)
+  it('aceita o schema 6 (o de agora, com redirecionamentos) e o 5 (o anterior, sem a tabela; Tarefa 16)', async () => {
+    expect(SCHEMAS_ACEITOS).toEqual([5, 6])
+    expect((await lerManifesto(comSchema(fonteDeTeste(), 5))).schema).toBe(5)
+    expect((await lerManifesto(comSchema(fonteDeTeste(), 6))).schema).toBe(6)
+  })
+
+  it.each([4, 7, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
+    const fonte = comSchema(fonteDeTeste(), schema)
     await expect(lerManifesto(fonte)).rejects.toBeInstanceOf(ErroDeSchema)
     await expect(lerManifesto(fonte)).rejects.toThrow(
       'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.',
@@ -175,8 +182,8 @@ describe('pacote com defeito: conferido antes de baixar e da troca', () => {
 })
 
 describe('sincronizarPacote', () => {
-  it('um schema diferente de 5 é recusado e nada é baixado nem gravado', async () => {
-    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 6))
+  it('um schema que o app não lê (7) é recusado e nada é baixado nem gravado', async () => {
+    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 7))
     const { armazem, opcoes } = ambiente()
     await expect(sincronizarPacote(fonte, semProgresso, opcoes)).rejects.toBeInstanceOf(ErroDeSchema)
     expect(baixados).toEqual([])

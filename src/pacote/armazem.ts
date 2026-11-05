@@ -17,6 +17,11 @@ export interface Armazem {
   remover(caminho: string): Promise<void>
   /** Caminhos dos arquivos sob o prefixo (recursivo); prefixo "" lista tudo. */
   listar(prefixo: string): Promise<string[]>
+  /**
+   * O arquivo como Blob, sem ler o conteúdo (no OPFS, o File de `getFile()`): para enviar em fatias um arquivo grande
+   * sem copiá-lo inteiro para a memória. Opcional.
+   */
+  arquivo?(caminho: string): Promise<Blob | null>
 }
 
 export function armazemMemoria(): Armazem {
@@ -39,6 +44,10 @@ export function armazemMemoria(): Armazem {
       const base = prefixo === '' ? '' : `${prefixo.replace(/\/+$/, '')}/`
       return [...arquivos.keys()].filter((c) => c.startsWith(base))
     },
+    async arquivo(caminho) {
+      const b = arquivos.get(caminho)
+      return b ? new Blob([b.slice() as BlobPart]) : null
+    },
   }
 }
 
@@ -53,13 +62,20 @@ function naoEncontrado(erro: unknown): boolean {
   return nome === 'NotFoundError' || nome === 'TypeMismatchError'
 }
 
+/** Um erro com o nome do original (o worker só manda texto; QuotaExceededError precisa chegar como tal). */
+function erroComNome(mensagem: string, nome?: string): Error {
+  const e = new Error(mensagem)
+  if (nome) e.name = nome
+  return e
+}
+
 /** Escreve num worker (createSyncAccessHandle), para navegadores sem createWritable no thread principal. */
-function escreverNoWorker(destino: string[], bytes: Uint8Array): Promise<void> {
+function escreverNoWorker(raiz: string, destino: string[], bytes: Uint8Array): Promise<void> {
   return new Promise((ok, falha) => {
     const worker = new Worker(new URL('./escritor.worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (e: MessageEvent<{ erro?: string }>) => {
+    worker.onmessage = (e: MessageEvent<{ erro?: string; nome?: string }>) => {
       worker.terminate()
-      if (e.data.erro) falha(new Error(e.data.erro))
+      if (e.data.erro) falha(erroComNome(e.data.erro, e.data.nome))
       else ok()
     }
     worker.onerror = (e) => {
@@ -67,19 +83,22 @@ function escreverNoWorker(destino: string[], bytes: Uint8Array): Promise<void> {
       falha(new Error(e.message))
     }
     const copia = bytes.slice()
-    worker.postMessage({ destino: [PASTA_RAIZ, ...destino], bytes: copia }, [copia.buffer])
+    worker.postMessage({ destino: [raiz, ...destino], bytes: copia }, [copia.buffer])
   })
 }
 
 export interface OpcoesOpfs {
   /** Força o caminho do worker (para testar). */
   semCreateWritable?: boolean
+  /** A pasta do OPFS (padrão: `pacote`). As imagens do usuário usam outra (src/imagens-usuario/local.ts). */
+  pasta?: string
 }
 
 export function armazemOpfs(opcoes: OpcoesOpfs = {}): Armazem {
+  const nomeDaPasta = opcoes.pasta ?? PASTA_RAIZ
   let raiz: Promise<FileSystemDirectoryHandle> | null = null
   const pasta = () => {
-    raiz ??= navigator.storage.getDirectory().then((r) => r.getDirectoryHandle(PASTA_RAIZ, { create: true }))
+    raiz ??= navigator.storage.getDirectory().then((r) => r.getDirectoryHandle(nomeDaPasta, { create: true }))
     return raiz
   }
 
@@ -135,11 +154,15 @@ export function armazemOpfs(opcoes: OpcoesOpfs = {}): Armazem {
         await w.write(bytes as BufferSource)
         await w.close()
       } else {
-        await escreverNoWorker(partes(caminho), bytes)
+        await escreverNoWorker(nomeDaPasta, partes(caminho), bytes)
       }
     },
     async existe(caminho) {
       return (await arquivo(caminho)) !== null
+    },
+    async arquivo(caminho) {
+      const h = await arquivo(caminho)
+      return h ? h.getFile() : null
     },
     async remover(caminho) {
       const p = partes(caminho)

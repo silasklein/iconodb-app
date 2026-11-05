@@ -1,0 +1,141 @@
+/* A aba SKC das Coleções (ColecoesObjetos.dc.html): os objetos do usuário e as coleções dele. */
+.painel-skc {
+  display: flex;
+  flex-direction: column;
+}
+.painel-skc-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.painel-skc-secao + .painel-skc-secao {
+  padding-top: 8px;
+}
+.painel-skc-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.painel-skc-novo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px dashed var(--texto);
+  color: inherit;
+  text-decoration: none;
+}
+.painel-skc-novo-titulo {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.painel-skc-novo-apoio {
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--secundario);
+}
+.painel-skc-novo:hover .painel-skc-novo-titulo {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.painel-skc-colecoes {
+  display: flex;
+  flex-direction: column;
+}
+.painel-skc-aviso {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.painel-skc-aviso:empty {
+  display: none;
+}
+.painel-skc-criar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.painel-skc-criar label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.painel-skc-criar input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  min-height: var(--alvo-toque);
+  padding: 8px 12px;
+  border: 1px solid var(--texto);
+  border-radius: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 16px;
+}
+.painel-skc-criar input[aria-invalid='true'] {
+  border-width: 2px;
+}
+.painel-skc-botoes {
+  display: flex;
+  gap: 24px;
+}
+.painel-skc-criar-botao {
+  margin-top: 8px;
+}
+.painel-skc-excluidas {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--filete);
+}
+.painel-skc-excluidas h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.painel-skc-excluidas ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.painel-skc-excluidas li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: var(--alvo-toque);
+  border-bottom: 1px solid var(--filete);
+  font-size: 15px;
+}
+.painel-skc-excluida-nome {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--corpo-consulta);
+}
+@media (min-width: 768px) {
+  /* as linhas de coleção não têm miniatura: voltam ao desenho simples (nome à esquerda, contagem à direita) */
+  .painel-skc-colecoes .colecoes-grupo {
+    display: flex;
+    padding: 6px 0;
+  }
+  .painel-skc-colecoes .colecoes-grupo-texto {
+    display: contents;
+  }
+  .painel-skc-colecoes .colecoes-grupo-n {
+    font-size: 13px;
+  }
+  .painel-skc-grade {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+  }
+  .painel-skc-novo {
+    min-height: 150px;
+  }
+}

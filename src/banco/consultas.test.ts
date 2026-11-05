@@ -10,19 +10,27 @@ import { armazemMemoria } from '../pacote/armazem'
 import { abrirBanco, aoReabrir, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
 import {
   contagens,
+  elementosSemRegiaoNoPacote,
   grupo,
   grupos,
   hipotese,
   imagem,
   item,
+  linhasDaFila,
+  localizadoresDosObjetos,
+  lugaresDosCasos,
+  numerosDosTrechos,
   obra,
   obras,
-  pendencias,
   regioes,
+  regioesDoLivro,
+  regioesDoLivroParaExportar,
   sitio,
   sitios,
+  traducoesNaoRevisadasNoPacote,
   verbete,
   verbetes,
+  verbetesAReverNoPacote,
   vizinhos,
 } from './consultas'
 import { arquivosDoBanco, esquemaDaPublicacao, planoDeImportacao } from './nucleo'
@@ -39,8 +47,18 @@ describe('consultas sobre o pacote sintético', () => {
     expect(await abrirBanco()).toMatchObject({ estado: 'aberto', publicacoes: [{ sigla: 'TESTE', esquema: 'pub_TESTE' }] })
   })
 
+  it('R22: o esquema do pacote sintético não tem comentários SQL (nem siglas e nomes reais neles)', async () => {
+    for (const esquema of ['main', 'pub_TESTE', 'busca']) {
+      const sqls = (await executar<{ sql: string }>(`SELECT sql FROM ${esquema}.sqlite_master WHERE sql IS NOT NULL`)).map((l) => l.sql)
+      expect(sqls.length, esquema).toBeGreaterThan(0)
+      expect(sqls.filter((x) => x.includes('--') || x.includes('/*')), esquema).toEqual([])
+      expect(sqls.filter((x) => /IPIAO|GGG|Schroer|Keel/.test(x)), esquema).toEqual([])
+    }
+  })
+
   it('contagens() bate com o pacote', async () => {
-    expect(await contagens()).toEqual({ objetos: 6, hipoteses: 9, verbetes: 9 })
+    // o pacote sintético traz o verbete GL-900010 e o sítio TESTE-3 publicados da camada do usuário (Tarefa 16)
+    expect(await contagens()).toEqual({ objetos: 6, hipoteses: 9, verbetes: 10 })
     // e com o que está nos bancos, contado à parte
     const [o] = await executar<{ n: number }>('SELECT count(*) AS n FROM main.object')
     const [h] = await executar<{ n: number }>('SELECT count(*) AS n FROM pub_TESTE.hypothesis')
@@ -52,18 +70,60 @@ describe('consultas sobre o pacote sintético', () => {
     await expect(executar("UPDATE main.object SET period_code = 'X'")).rejects.toThrow(/readonly/i)
   })
 
-  it('pendencias() soma a fila de revisão de todas as bases, por tipo', async () => {
-    const p = await pendencias()
-    const [c] = await executar<{ n: number }>('SELECT count(*) AS n FROM main.review_queue')
-    const [q] = await executar<{ n: number }>('SELECT count(*) AS n FROM pub_TESTE.review_queue')
-    expect(p.total).toBe(c!.n + q!.n)
-    expect(p.total).toBe(2)
-    expect(p.porTipo.map((t) => [t.tipo, t.quantidade])).toEqual([
-      ['citacao_nao_resolvida', 1],
-      ['traducao_termo_alterado', 1],
+  it('linhasDaFila() traz cada linha como o pipeline a gravou; as de item levam o número do objeto', async () => {
+    const l = await linhasDaFila()
+    expect(l).toEqual([
+      { tipo: 'citacao_nao_resolvida', entidade: 'passage', entidadeId: 'PA-TESTE-I.S.9-cap-1', detalhe: 'Fantasma 1888: 3: obra fora da bibliografia', numero: null },
+      { tipo: 'traducao_termo_alterado', entidade: 'passage', entidadeId: 'PA-TESTE-0003-cat-1', detalhe: "GL-900003: 'olhos de botão' (m) -> 'olho em forma de botão' (m)", numero: null },
     ])
-    expect(p.porTipo[0]!.rotulo).toBe('Citações não resolvidas')
-    expect(p.porTipo.reduce((s, t) => s + t.quantidade, 0)).toBe(p.total)
+  })
+
+  it('lugaresDosCasos() leva um trecho ao item dele, uma imagem e uma citação também, e um item a si mesmo', async () => {
+    const lugares = await lugaresDosCasos([
+      { entidade: 'passage', entidadeId: 'PA-TESTE-0003-cat-1' },
+      { entidade: 'item', entidadeId: 'TESTE-0004' },
+      { entidade: 'bib_ref', entidadeId: '2' },
+      { entidade: 'passage', entidadeId: 'PA-TESTE-I.S.9-cap-1' }, // sem item, nem introdução de grupo
+      { entidade: 'gazetteer', entidadeId: null },
+    ])
+    expect(lugares.get('passage|PA-TESTE-0003-cat-1')).toEqual({ itemId: 'TESTE-0003', numero: 'CA00003', grupoId: null, origem: 'TESTE I: 3' })
+    expect(lugares.get('item|TESTE-0004')).toMatchObject({ numero: 'CA00004', origem: 'TESTE I: 4' })
+    expect(lugares.get('bib_ref|2')).toMatchObject({ itemId: 'TESTE-0001', numero: 'CA00001' })
+    expect(lugares.has('passage|PA-TESTE-I.S.9-cap-1')).toBe(false)
+    expect(lugares.size).toBe(3)
+  })
+
+  it('lugaresDosCasos() leva um campo do catálogo (id#campo) e uma hipótese ao objeto delas', async () => {
+    const lugares = await lugaresDosCasos([
+      { entidade: 'catalog_field', entidadeId: 'TESTE-0003#5' },
+      { entidade: 'hypothesis', entidadeId: 'HY-900003' },
+      { entidade: 'hypothesis', entidadeId: 'HY-INEXISTENTE' },
+    ])
+    expect(lugares.get('catalog_field|TESTE-0003#5')).toEqual({ itemId: 'TESTE-0003', numero: 'CA00003', grupoId: null, origem: 'TESTE I: 3' })
+    expect(lugares.get('hypothesis|HY-900003')).toMatchObject({ numero: 'CA00002', origem: 'TESTE I: 2' })
+    expect(lugares.has('hypothesis|HY-INEXISTENTE')).toBe(false)
+  })
+
+  it('elementosSemRegiaoNoPacote() traz os elementos do livro sem região, com a primeira imagem do item', async () => {
+    const l = await elementosSemRegiaoNoPacote()
+    expect(l).toHaveLength(1) // EL-900001 tem região no pacote; EL-900002 não
+    expect(l[0]).toMatchObject({ id: 'EL-900002', rotuloDe: 'Testlöwe', itemId: 'TESTE-0001', imagem: 'IMG-TESTE-0001-1' })
+    expect(l[0]!.rotulo.length).toBeGreaterThan(0)
+  })
+
+  it('traducoesNaoRevisadasNoPacote() traz só as de máquina, trechos e campos do catálogo (id#categoria)', async () => {
+    const l = await traducoesNaoRevisadasNoPacote()
+    expect(l.filter((t) => t.entidade === 'passage')).toHaveLength(8)
+    expect(l.filter((t) => t.entidade === 'catalog_field')).toHaveLength(18)
+    expect(l.filter((t) => t.entidade === 'catalog_field').every((t) => /^TESTE-\d+#\d$/.test(t.entidadeId))).toBe(true)
+    const [revisado] = await executar<{ id: string }>("SELECT id FROM pub_TESTE.passage WHERE translation_state = 'reviewed'")
+    expect(l.some((t) => t.entidadeId === revisado!.id)).toBe(false)
+    expect(l.length).toBe(26)
+  })
+
+  it('verbetesAReverNoPacote() traz os verbetes propostos com a forma original', async () => {
+    expect((await verbetesAReverNoPacote()).map((v) => v.id)).toEqual(['GL-900002', 'GL-900005', 'GL-900007', 'GL-900008'])
+    expect((await verbetesAReverNoPacote())[0]).toEqual({ id: 'GL-900002', original: 'figura denteada' })
   })
 
   it('item() do item com 𓀀 traz termos e âncoras em code points', async () => {
@@ -71,7 +131,7 @@ describe('consultas sobre o pacote sintético', () => {
     expect(it2).not.toBeNull()
     const leitura = it2!.leituras[0]!
     expect(it2!.leituras).toHaveLength(1)
-    expect(leitura.fonte).toBe('TESTE I, 2')
+    expect(leitura.fonte).toBe('TESTE I: 2')
     expect(leitura.texto).toContain('𓀀')
     expect(leitura.termos).toEqual([{ glId: 'GL-900001', inicio: 38, fim: 51 }])
     // em code points o recorte é o termo; em UTF-16 (o índice nativo do JS) não seria
@@ -91,11 +151,11 @@ describe('consultas sobre o pacote sintético', () => {
     expect(porItem).toEqual(porNumero)
     const i = porNumero!
     expect(i.numero).toBe('CA00001')
-    expect(i.origem).toBe('TESTE I, 1')
-    expect(i.itens).toEqual([{ id: 'TESTE-0001', publicacao: 'TESTE', tipo: 'catalog', origem: 'TESTE I, 1' }])
+    expect(i.origem).toBe('TESTE I: 1')
+    expect(i.itens).toEqual([{ id: 'TESTE-0001', publicacao: 'TESTE', tipo: 'catalog', origem: 'TESTE I: 1', referencia: { obra: 'TESTE I', numero: 1, sufixo: '', abb: false } }])
     expect(i.tipo).toBe('Pingente com leão-de-teste')
     expect(i.descricao).toBe('Pingente com leão-de-teste. Pedra de teste.')
-    expect(i.sitio).toMatchObject({ id: 'TESTE-1', nome: 'Maḥraṣ Teste', glId: 'GL-900004', certeza: 'certain' })
+    expect(i.sitio).toMatchObject({ id: 'TESTE-1', nome: 'Maḥteṣ Teste', glId: 'GL-900004', certeza: 'certain' })
     expect(i.acervo).toBe('Musterstadt, Testmuseum, Inv. T-0001')
     expect(i.medidas).toEqual({
       texto: 'H 4,2; B 3,1.',
@@ -108,7 +168,7 @@ describe('consultas sobre o pacote sintético', () => {
       expect.objectContaining({ esquema: 'TESTE', periodoDe: 'Frühes Test-Chalkolithikum', anoDe: -4500, anoAte: -4000, cssl: [{ codigo: 'CHAL', relacao: 'within', aproximada: false }] }),
     ])
     expect(i.catalogo.map((c) => c.categoria)).toEqual([3, 4, 5, 6, 7, 8])
-    expect(i.catalogo[0]).toMatchObject({ itemId: 'TESTE-0001', texto: expect.stringContaining('Maḥraṣ Teste'), termos: [{ glId: 'GL-900004', inicio: 0, fim: 12 }] })
+    expect(i.catalogo[0]).toMatchObject({ itemId: 'TESTE-0001', texto: expect.stringContaining('Maḥteṣ Teste'), termos: [{ glId: 'GL-900004', inicio: 0, fim: 12 }] })
     expect(i.catalogo[3]).toMatchObject({ categoria: 6, literal: 'H 4,2; B 3,1.', texto: null, termos: [] })
     expect(i.hipotesesPorNivel.pre_iconographic.map((h) => h.id)).toEqual(['HY-900002'])
     expect(i.hipotesesPorNivel.iconographic.map((h) => h.id)).toEqual(['HY-900001'])
@@ -196,7 +256,7 @@ describe('consultas sobre o pacote sintético', () => {
   it('grupo() traz a introdução e os objetos na ordem de author_group_item', async () => {
     const g = await grupo('GR-TESTE-I-02')
     expect(g!.itens.map((o) => o.numero)).toEqual(['CA00004', 'BA00001', 'BA00002'])
-    expect(g!.itens[1]).toMatchObject({ itemId: 'TESTE-0005', origem: 'TESTE I, 5', tipo: 'Selo de teste', sitio: 'Maḥraṣ Teste', miniatura: 'imagens/TESTE/TESTE-0005/thumb-1.webp', display_mode: 'tons' })
+    expect(g!.itens[1]).toMatchObject({ itemId: 'TESTE-0005', origem: 'TESTE I: 5', tipo: 'Selo de teste', sitio: 'Maḥteṣ Teste', miniatura: 'imagens/TESTE/TESTE-0005/thumb-1.webp', display_mode: 'tons' })
     expect(g!.introducao).toMatchObject({ id: 'PA-TESTE-I.S.19-ovw-1', texto: expect.stringContaining('selos de teste'), termos: [{ glId: 'GL-900009', inicio: 3, fim: 17 }] })
     expect(await grupo('GR-NAO-EXISTE')).toBeNull()
   })
@@ -213,7 +273,7 @@ describe('consultas sobre o pacote sintético', () => {
     const lugar = await verbete('GL-900004')
     expect(lugar!.objetos.map((o) => o.numero)).toEqual(['CA00001', 'CA00002', 'BA00001'])
     expect(await verbete('GL-000000')).toBeNull()
-    expect((await verbetes()).map((x) => x.id)).toHaveLength(9)
+    expect((await verbetes()).map((x) => x.id)).toHaveLength(10)
 
     const o = await obra('BIB-900002')
     expect(o).toMatchObject({ id: 'BIB-900002', curta: 'Autora 2004', citadaComo: { TESTE: ['Autora 2004'] } })
@@ -226,8 +286,9 @@ describe('consultas sobre o pacote sintético', () => {
 
     const ss = await sitios()
     expect(ss.map((s) => [s.id, s.nome, s.objetos])).toEqual([
-      ['TESTE-1', 'Maḥraṣ Teste', 3],
+      ['TESTE-1', 'Maḥteṣ Teste', 3],
       ['TESTE-2', 'Tell Probe Teste', 3],
+      ['TESTE-3', 'Tell Usuário Teste', 0], // o sítio do usuário publicado (Tarefa 16)
     ])
     const s = await sitio('TESTE-2')
     expect(s).toMatchObject({ id: 'TESTE-2', literal: 'Tell Probe Teste', metodo: 'gazetteer', lat: 31.9132, lon: 35.2071 })
@@ -247,7 +308,7 @@ describe('consultas sobre o pacote sintético', () => {
   })
 
   it('sitios() e sitio() trazem a região: o verbete-pai do verbete do nome, ou null', async () => {
-    expect((await sitios()).map((x) => x.regiao)).toEqual([null, null])
+    expect((await sitios()).map((x) => x.regiao)).toEqual([null, null, null])
     expect((await sitio('TESTE-1'))!.regiao).toBeNull()
   })
 
@@ -268,6 +329,41 @@ describe('consultas sobre o pacote sintético', () => {
       },
     ])
     expect(await regioes('IMG-TESTE-0001-1')).toEqual([])
+  })
+
+  it('regioesDoLivroParaExportar (Tarefa 15): as regiões, o tamanho das imagens, os verbetes dos elementos, os elementos pedidos e as obras', async () => {
+    const d = await regioesDoLivroParaExportar(['IMG-TESTE-0001-2', 'IMG-NAO-EXISTE'], ['EL-900001', 'EL-999999'])
+    const regiao = {
+      sigla: 'TESTE',
+      elementoId: 'EL-900001',
+      rotulo: 'figura denteada',
+      rotuloDe: 'Zackenfigur',
+      imagem: 'IMG-TESTE-0003-1',
+      seletor: '<polygon points="0.30,0.25 0.70,0.25 0.62,0.75 0.38,0.75"/>',
+    }
+    expect(d.regioes).toEqual([regiao])
+    // O tamanho das imagens das regiões do livro e das pedidas (as imagens do livro onde o usuário desenhou).
+    expect([...d.tamanhos.entries()].sort()).toEqual([
+      ['IMG-TESTE-0001-2', { largura: 1200, altura: 900 }],
+      ['IMG-TESTE-0003-1', { largura: 900, altura: 1200 }],
+    ])
+    // HY-900005 é sobre o elemento EL-900001, com o verbete GL-900002.
+    expect([...d.termosDosElementos.entries()]).toEqual([['EL-900001', ['GL-900002']]])
+    // Os elementos pedidos (onde o usuário desenhou): a obra e os rótulos; o que não existe fica de fora.
+    expect([...d.elementos.entries()]).toEqual([['EL-900001', { sigla: 'TESTE', rotulo: 'figura denteada', rotuloDe: 'Zackenfigur' }]])
+    // A obra, os autores e a língua (a do rótulo original).
+    expect([...d.publicacoes.entries()]).toEqual([['TESTE', { obra: 'TESTE I', autores: ['Autora, Primeira Teste', 'Autor, Segundo Teste'], lingua: 'de' }]])
+    // Só para contar, a tela lê só as regiões (sem termos nem obras).
+    expect(await regioesDoLivro()).toEqual([regiao])
+  })
+
+  it('localizadoresDosObjetos (Tarefa 15, MEDIATION): o localizador de cada objeto no estilo do pacote, «TESTE I, Nr. 3»', async () => {
+    const m = await localizadoresDosObjetos(['CA00003', 'CA00001', 'CA99999', 'OB-aaaaaaaa-1'])
+    expect([...m.entries()].sort()).toEqual([
+      ['CA00001', 'TESTE I, Nr. 1'],
+      ['CA00003', 'TESTE I, Nr. 3'],
+    ])
+    expect((await localizadoresDosObjetos([])).size).toBe(0)
   })
 
   it('imagem(id) traz a imagem com o número do objeto e quantas imagens ele tem', async () => {
@@ -313,7 +409,7 @@ describe('grupo() segue author_group_item.ordinal', () => {
     await executar("UPDATE pub_TESTE.hypothesis SET passage_id = 'PA-TESTE-0001-cat-1', cited_from_item = 'TESTE-0001' WHERE id = 'HY-900003'")
     const i = await item('CA00001')
     expect(i!.relacoes.remissoes).toEqual([
-      { itemId: 'TESTE-0002', numero: 'CA00002', origem: 'TESTE I, 2' },
+      { itemId: 'TESTE-0002', numero: 'CA00002', origem: 'TESTE I: 2' },
       { itemId: 'TESTE-0099', numero: null, origem: null },
     ])
     expect(i!.outrasHipoteses.map((h) => [h.id, h.alvo.numero, h.citadaDe])).toEqual([['HY-900003', 'CA00002', 'TESTE-0001']])
@@ -436,7 +532,80 @@ describe('nomes dos esquemas e plano de importação no pool', () => {
     expect((await sitios()).map((x) => [x.id, x.regiao])).toEqual([
       ['TESTE-1', { id: 'GL-900001', nome: 'leão-de-teste' }],
       ['TESTE-2', null],
+      ['TESTE-3', null],
     ])
     expect((await sitio('TESTE-1'))!.regiao).toEqual({ id: 'GL-900001', nome: 'leão-de-teste' })
+  })
+})
+
+describe('decisão 40: as citações no texto do usuário', () => {
+  beforeAll(async () => usarMotor(await bancoDeTeste()))
+  afterAll(() => usarMotor(null))
+
+  it('revisão 1: fontesDosObjetos de um item sem objeto (sem linha em object_member) usa o próprio item', async () => {
+    const { fontesDosObjetos } = await import('./consultas')
+    expect(await fontesDosObjetos(['TESTE-0001'])).toEqual([{ obra: 'TESTE I', numero: 1, sufixo: '', abb: false }])
+    expect(await fontesDosObjetos(['ZZ99999'])).toEqual([])
+    // revisão 2: o recurso é por número (um com membros não esconde o outro, sem membros)
+    expect(await fontesDosObjetos(['CA00001', 'TESTE-0002'])).toEqual([
+      { obra: 'TESTE I', numero: 1, sufixo: '', abb: false },
+      { obra: 'TESTE I', numero: 2, sufixo: '', abb: false },
+    ])
+  })
+
+  it('obrasDoPacote: a sigla e o volume de cada obra aberta', async () => {
+    const { obrasDoPacote } = await import('./consultas')
+    expect(await obrasDoPacote()).toEqual(['TESTE I'])
+  })
+
+  it('objetosDasFontes: o objeto de cada referência que existe, pela chave; as outras ficam de fora', async () => {
+    const { objetosDasFontes } = await import('./consultas')
+    const r = await objetosDasFontes([
+      { obra: 'TESTE I', numero: 1 },
+      { obra: 'TESTE I', numero: 5 },
+      { obra: 'TESTE I', numero: 9 },
+      { obra: 'TESTE II', numero: 1 },
+      { obra: 'TESTE I', numero: 1, sufixo: 'a' },
+      { obra: 'TESTE I', numero: 1, abb: true },
+    ])
+    expect([...r]).toEqual([
+      ['TESTE I:1', 'CA00001'],
+      ['TESTE I:5', 'BA00001'],
+    ])
+    expect(await objetosDasFontes([])).toEqual(new Map())
+  })
+  it('elementosDoObjeto: os elementos dos itens do objeto (rótulo em português, senão o do texto), para "Sobre" da nova hipótese', async () => {
+    const { elementosDoObjeto } = await import('./consultas')
+    expect(await elementosDoObjeto('CA00001')).toEqual([{ id: 'EL-900002', rotulo: 'leão-de-teste', rotuloDe: 'Testlöwe', pai: null }])
+    expect(await elementosDoObjeto('CA00003')).toEqual([{ id: 'EL-900001', rotulo: 'figura denteada', rotuloDe: 'Zackenfigur', pai: null }])
+    expect(await elementosDoObjeto('CA00004')).toEqual([])
+    expect(await elementosDoObjeto('ZZ99999')).toEqual([])
+  })
+})
+
+describe('lugaresDosCasos(): o trecho da introdução de um grupo', () => {
+  beforeAll(async () => usarMotor(await bancoDeTeste({ escrita: true })))
+  afterAll(() => usarMotor(null))
+
+  it('com itens, leva ao item; sem item nenhum, leva ao grupo cuja introdução ele é', async () => {
+    const com = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.19-ovw-1' }])
+    expect(com.get('passage|PA-TESTE-I.S.19-ovw-1')).toMatchObject({ itemId: 'TESTE-0004', grupoId: null })
+    await executar("DELETE FROM pub_TESTE.passage_item WHERE passage_id = 'PA-TESTE-I.S.19-ovw-1'")
+    const so = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.19-ovw-1' }])
+    expect(so.get('passage|PA-TESTE-I.S.19-ovw-1')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-02', origem: 'TESTE I · introdução' })
+  })
+})
+
+describe('numerosDosTrechos(): de que objeto do livro é cada trecho (T17-B-4)', () => {
+  beforeAll(async () => usarMotor(await bancoDeTeste()))
+  afterAll(() => usarMotor(null))
+
+  it('o trecho que descreve um item é do objeto desse item; um que só o menciona (introdução) não é de nenhum', async () => {
+    const m = await numerosDosTrechos(['PA-TESTE-0003-cat-1', 'PA-TESTE-0005-cat-1', 'PA-TESTE-I.S.9-ovw-1', 'PA-NAO-EXISTE'])
+    expect([...m]).toEqual([
+      ['PA-TESTE-0003-cat-1', ['CA00003']],
+      ['PA-TESTE-0005-cat-1', ['BA00001']],
+    ])
+    expect((await numerosDosTrechos([])).size).toBe(0)
   })
 })

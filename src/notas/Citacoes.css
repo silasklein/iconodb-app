@@ -1,0 +1,225 @@
+/*
+ * Citações reconhecidas no texto do usuário (decisão 40): os números e os intervalos como os links da nota, e a folha
+ * de um intervalo (celular: de baixo; computador: diálogo), com as cores das telas de consulta.
+ */
+.citacao-intervalo {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+/* O alvo de toque cresce sem mexer na linha (auditoria UX: 44 px; um link dentro do texto não pode crescer na largura
+   sem afastar as palavras, então cresce na altura, onde a linha deixa). */
+.citacao-link {
+  position: relative;
+  border-radius: 2px;
+}
+@media (pointer: coarse) {
+  .citacao-link::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
+  }
+}
+.citacao-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* ---- a folha ---- */
+.folha-citacao-ancora {
+  display: contents;
+}
+.folha-citacao-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.folha-citacao-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.folha-citacao {
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+  color-scheme: light;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.folha-citacao:focus {
+  outline: none;
+}
+.folha-citacao:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+.folha-citacao :focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+.folha-citacao-folha {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86dvh;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 24px max(24px, env(safe-area-inset-bottom));
+}
+.folha-citacao-dialogo {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100vw - 48px));
+  max-height: calc(100dvh - 96px);
+  border-radius: 12px;
+  padding: 12px 24px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.folha-citacao-alca {
+  align-self: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+}
+.folha-citacao-conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.folha-citacao-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.folha-citacao-folha .folha-citacao-topo .icon-button {
+  margin-right: -12px;
+  color: var(--texto-consulta);
+}
+.folha-citacao-dialogo .folha-citacao-topo .icon-button {
+  margin-right: -8px;
+  color: var(--texto-consulta);
+}
+.folha-citacao-titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.folha-citacao-apoio,
+.folha-citacao-comparar {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.folha-citacao-comparar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding-top: 12px;
+}
+.folha-citacao-comparar-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alvo-toque);
+  padding: 0 16px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .folha-citacao-comparar-botao {
+    min-height: 40px;
+  }
+}
+.folha-citacao-comparar-botao:focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+.folha-citacao-comparar-apoio {
+  flex: 1 1 200px;
+}
+.folha-citacao-comparar-erro {
+  flex-basis: 100%;
+  color: var(--texto-consulta);
+}
+.folha-citacao-lista {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border-bottom: 1px solid var(--filete-consulta);
+}
+.folha-citacao-linha {
+  border-top: 1px solid var(--filete-consulta);
+}
+.folha-citacao-link,
+.folha-citacao-ausente {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 6px 0;
+  color: var(--texto-consulta);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+@media (hover: hover) {
+  .folha-citacao-link:hover .folha-citacao-numero {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+.folha-citacao-imagem {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f3f3;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.folha-citacao-imagem .miniatura-aviso {
+  font-size: 12px;
+  line-height: 1.2;
+}
+.folha-citacao-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.folha-citacao-numero {
+  font-size: 15px;
+}
+.folha-citacao-fonte {
+  font-size: 15px;
+}
+.folha-citacao-tipo {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+  overflow-wrap: anywhere;
+}
+.folha-citacao-ausente .folha-citacao-fonte {
+  color: var(--secundario-consulta);
+}

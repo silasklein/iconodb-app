@@ -1,0 +1,437 @@
+/*
+ * Hipóteses SKC, posição e nova hipótese (Tarefa 10; NovaHipotese.dc.html, PC-ItemNovaHipotese.dc.html). Dentro do
+ * painel branco da hipótese (PainelHipotese.css): as cores são as das telas de consulta.
+ */
+.painel-hipotese .marca-skc,
+.secao .marca-skc {
+  border-color: var(--secundario);
+  color: var(--texto);
+}
+
+/* O painel é branco (as cores de consulta) também para os campos (CampoDeEscolha usa --fundo). */
+.painel-hipotese {
+  --fundo: var(--fundo-consulta);
+}
+
+/* Segmentos (Nível, Certeza, Sua posição): caixas encostadas, a escolhida preta. */
+.segmentos {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  border: 1px solid var(--controle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.segmento {
+  min-height: 40px;
+  padding: 4px 2px;
+  border: 0;
+  border-left: 1px solid var(--controle);
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.segmento:first-child {
+  border-left: 0;
+}
+.segmento[aria-checked='true'] {
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+}
+.segmento:focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: -4px;
+  box-shadow: inset 0 0 0 4px var(--fundo-consulta);
+}
+@media (pointer: coarse) {
+  .segmento {
+    min-height: 44px;
+  }
+}
+
+/* Termos: pílulas com × e o campo de busca no glossário. */
+.termos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.termos-escolhidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.termo-pilula {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding-left: 10px;
+  border-radius: 6px;
+  background: var(--superficie);
+  font-size: 14px;
+}
+/* Um termo a criar ao registrar (decisão 41): "novo" na pílula, sem depender da cor. */
+.termo-novo {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--secundario);
+  border-radius: 3px;
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  line-height: 18px;
+}
+.termo-tirar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Com mouse, 36 × 36 no mínimo; no toque, 44 × 44 (abaixo). */
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.termo-tirar:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+@media (pointer: coarse) {
+  .termo-pilula {
+    min-height: 44px;
+  }
+  .termo-tirar {
+    width: 44px;
+    height: 44px;
+  }
+}
+.termos-invalido .form-escolha input {
+  border-color: var(--texto-consulta);
+  border-width: 2px;
+}
+
+.hipoteses-erro {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-consulta);
+}
+.hipoteses-erro::before {
+  content: '! ';
+}
+
+/* Texto do usuário (justificativa): lido limpo, editado com [[ (decisão 37). */
+.texto-editavel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.texto-editavel-bloco {
+  font-size: 15px;
+  line-height: 1.55;
+  cursor: text;
+  border-radius: 4px;
+}
+.texto-editavel-bloco:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+.texto-editavel-vazio {
+  margin: 0;
+  font-size: 14px;
+  color: var(--secundario-consulta);
+}
+.texto-editavel-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+}
+.texto-editavel-ajuda {
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.texto-editavel-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.texto-editavel-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.texto-editavel-botao:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .texto-editavel-botao {
+    min-height: 44px;
+  }
+}
+
+/* Sua posição (hipótese do livro) e as partes do painel da hipótese SKC. */
+.posicao,
+.hipotese-skc-justificativa,
+.hipotese-skc-edicao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--filete-consulta);
+}
+.posicao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.posicao-tirar {
+  align-self: flex-start;
+}
+.hipotese-skc-mais {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.painel-hipotese-apoio {
+  color: var(--secundario-consulta);
+}
+
+/* Nova hipótese: o mesmo painel (folha ou terceira coluna), com o formulário e o botão no pé. */
+.nova-hipotese .painel-hipotese-corpo {
+  gap: 18px;
+}
+.nova-hipotese-trecho {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nova-hipotese-trecho figcaption {
+  font-size: 13px;
+  font-weight: 600;
+}
+.nova-hipotese-trecho figcaption span {
+  font-weight: 400;
+  color: var(--secundario-consulta);
+}
+.nova-hipotese-trecho blockquote {
+  margin: 0;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--texto-consulta);
+  font-size: 16px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.nova-hipotese fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nova-hipotese legend,
+.nova-hipotese .form-rotulo {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nova-hipotese-sobre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nova-hipotese-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 18px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.nova-hipotese-chip[aria-pressed='true'] {
+  background: var(--texto-consulta);
+  border-color: var(--texto-consulta);
+  color: var(--fundo-consulta);
+}
+.nova-hipotese-chip-regiao {
+  border-style: dashed;
+}
+.nova-hipotese-chip-regiao[aria-pressed='true'] {
+  border-style: dashed;
+  background: var(--superficie);
+  color: var(--texto-consulta);
+  border-color: var(--texto-consulta);
+}
+.nova-hipotese-chip:focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .nova-hipotese-chip {
+    min-height: 44px;
+    border-radius: 22px;
+  }
+}
+.nova-hipotese-ajuda {
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.nova-hipotese-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nova-hipotese-campo > label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.nova-hipotese-campo input,
+.nova-hipotese-campo select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 6px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 16px;
+}
+.nova-hipotese-campo input:focus-visible,
+.nova-hipotese-campo select:focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 1px;
+}
+.nova-hipotese-pe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+.painel-hipotese-lateral.nova-hipotese .nova-hipotese-pe {
+  padding: 12px 24px 14px;
+  border-top: 1px solid #e0e0e0;
+}
+.nova-hipotese-registrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--texto-consulta);
+  color: var(--fundo-consulta);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.nova-hipotese-registrar:focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+.nova-hipotese-teclas {
+  margin: 0;
+  font-size: 12px;
+  color: var(--secundario-consulta);
+  text-align: center;
+}
+.nova-hipotese-teclas kbd {
+  font-family: var(--fonte-codigo);
+}
+.nova-hipotese .campo-nota textarea {
+  min-height: 88px;
+}
+
+/* "Registrar hipótese" sobre o trecho selecionado. */
+.botao-do-trecho {
+  position: fixed;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--texto-item);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.botao-do-trecho kbd {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.botao-do-trecho:focus-visible {
+  outline: 2px solid var(--texto-item);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .botao-do-trecho {
+    min-height: 40px;
+  }
+}
+
+/* "Descartar" (revisão 1, I2): um link discreto no pé; a confirmação no lugar dos botões. */
+.nova-hipotese-descartar-botao {
+  align-self: center;
+}
+.nova-hipotese-descartar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nova-hipotese-descartar p {
+  margin: 0;
+  font-size: 14px;
+}
+.nova-hipotese-descartar-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nova-hipotese-descartar-sim {
+  flex: 1 1 auto;
+}
+
+/* O rascunho mudou (ou saiu) em outra aba (revisão 3, M5): o aviso no alto do formulário, com a escolha. */
+.nova-hipotese-conflito {
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 2px solid currentColor;
+}

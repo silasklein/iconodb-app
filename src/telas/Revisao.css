@@ -1,25 +1,197 @@
+/* Revisão (Revisao.dc.html, PC-Revisao.dc.html): grupos que abrem, com os casos e as ações. */
+.revisao {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); /* o aviso fixo de «Desfazer» não cobre o último caso */
+}
 .revisao-tipos {
   margin: 16px 0 0;
   padding: 0;
   list-style: none;
   border-top: 2px solid var(--texto);
 }
-.revisao-tipos li {
+.revisao-tipos > li {
+  border-bottom: 1px solid var(--filete);
+}
+.revisao-grupo-cabeca {
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  min-height: var(--alvo-toque);
-  box-sizing: border-box;
+  gap: 12px;
+  min-height: 56px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--filete);
-  font-size: 15px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
-.revisao-tipos .codigo {
-  font-size: 13px;
+.revisao-grupo-cabeca:focus-visible,
+.revisao-caso a:focus-visible,
+.revisao-ver-todas:focus-visible,
+.revisao-desfazer:focus-visible,
+.revisao-caso .icon-button:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.revisao-grupo-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.revisao-grupo-rotulo {
+  font-size: 15px;
+  font-weight: 500;
+}
+.revisao-grupo-apoio {
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--secundario);
+}
+.revisao-grupo-fim {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.revisao-grupo-quantidade {
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-.revisao-nota {
-  margin-top: 16px;
+.revisao-grupo-quantidade-so-consulta {
+  color: var(--secundario);
+}
+.revisao-so-consulta {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.revisao-casos {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 10px;
+}
+.revisao-casos ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.revisao-caso {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px dashed var(--filete);
+}
+.revisao-caso-numero {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--secundario);
+  color: inherit;
+}
+.revisao-caso-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.revisao-caso-o-que {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.revisao-caso-onde {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--secundario);
+}
+.revisao-caso-acoes {
+  display: flex;
+}
+.revisao-caso-resolvido .revisao-caso-o-que,
+.revisao-caso-resolvido .revisao-caso-numero {
+  color: var(--secundario);
+}
+.revisao-resolvidos-titulo {
+  margin: 12px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.revisao-ver-todas {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--secundario);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.revisao-desfazer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--alvo-toque);
+  padding: 0 12px;
+  border: 1px solid var(--secundario);
+  border-radius: 8px;
+  background: var(--fundo);
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .revisao-desfazer {
+    min-height: var(--alvo-mouse);
+  }
+}
+.revisao-erro {
+  margin-top: 12px;
+}
+/* O aviso fixo depois de uma ação: o que foi marcado e «Desfazer». */
+.revisao-aviso {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  max-width: 520px;
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-size: 14px;
+  z-index: 5;
+}
+.revisao-aviso[hidden] {
+  display: none;
+}
+@media (min-width: 768px) {
+  .revisao-aviso {
+    left: 48px;
+    right: auto;
+    width: 520px;
+  }
 }

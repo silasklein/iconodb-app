@@ -1,0 +1,172 @@
+/*
+ * A camada do desenho da região (Imagem.dc.html, PC-Imagem.dc.html, PC-ItemNovaHipotese.dc.html): traço branco
+ * contínuo, o fecho tracejado, pontos brancos e o primeiro ponto vazado (tocar nele fecha).
+ */
+.desenho {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  touch-action: none;
+  cursor: crosshair;
+}
+.desenho svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.desenho polyline,
+.desenho polygon,
+.desenho line {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2px;
+}
+.desenho polygon {
+  fill: rgba(255, 255, 255, 0.12);
+}
+.desenho .desenho-fecho {
+  stroke-dasharray: 3 4;
+  stroke-width: 1.5px;
+}
+.desenho-ponto {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #000000;
+  transform: scale(calc(1 / var(--escala, 1)));
+  pointer-events: none;
+}
+.desenho-ponto-primeiro {
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: #000000;
+  border: 2px solid #ffffff;
+}
+@media (pointer: coarse) {
+  .desenho-ponto {
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+  }
+  .desenho-ponto-primeiro {
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+  }
+}
+
+/* As instruções e a contagem, sobre o preto. */
+.desenho-instrucao {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-item);
+  text-align: center;
+}
+.desenho-contagem {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario-item);
+}
+
+/* "Nomear o elemento da região nova" (o fim da marcação, fora do fluxo da nova hipótese). */
+.regiao-nova {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--fundo-item);
+  color: var(--texto-item);
+  border-top: 1px solid var(--filete-item);
+}
+.regiao-nova label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.regiao-nova input,
+.regiao-nova select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--filete-item);
+  border-radius: 6px;
+  background: #0a0a0a;
+  color: var(--texto-item);
+  font: inherit;
+  font-size: 16px;
+}
+.regiao-nova input:focus-visible,
+.regiao-nova select:focus-visible {
+  outline: 2px solid var(--texto-item);
+  outline-offset: 1px;
+}
+.regiao-nova-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.regiao-nova-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.regiao-nova-botao {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--texto-item);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto-item);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+/* "Já há uma hipótese em preparo neste objeto" (revisão 3, M5): a pergunta antes de trocá-la. */
+.regiao-nova-pergunta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.regiao-nova-pergunta p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.regiao-nova-botao-forte {
+  background: var(--texto-item);
+  color: var(--fundo-item);
+}
+.regiao-nova-botao:focus-visible {
+  outline: 2px solid var(--texto-item);
+  outline-offset: 2px;
+}
+.regiao-nova-erro {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.regiao-nova-erro::before {
+  content: '! ';
+}
+.regiao-nova-ajuda {
+  margin: 0;
+  font-size: 12px;
+  color: var(--secundario-item);
+}
+@media (pointer: fine) {
+  .regiao-nova-botao {
+    min-height: 40px;
+  }
+}

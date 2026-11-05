@@ -47,35 +47,85 @@
   color: var(--secundario);
 }
 
+/* Hipóteses por nível (decisão 35; ItemNiveis.dc.html, PC-ItemNiveis.dc.html): cada nível é um bloco com filete de 2 px. */
 .hipoteses-nivel {
+  --coluna-marcador: 36px;
+  --marcador-vazio: #6b6b6b;
+  margin-top: 32px;
+  border-top: 2px solid var(--texto);
+  padding-top: 14px;
+}
+.secao-corpo > .hipoteses-nivel:first-child {
+  margin-top: 8px;
+}
+.nivel-cabeca {
+  display: grid;
+  grid-template-columns: var(--coluna-marcador) minmax(0, 1fr) auto;
+  align-items: start;
+}
+.nivel-cabeca .marcador-nivel {
+  padding-top: 8px;
+  --marcador-cheio: var(--texto);
+}
+.nivel-titulos {
   display: flex;
   flex-direction: column;
-  margin-top: 12px;
+  gap: 2px;
 }
-.hipoteses-nivel h3 {
-  margin: 0 0 6px;
-  font-family: var(--fonte-texto);
-  font-size: 12px;
+.nivel-titulos h3 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  line-height: 1.2;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #d4d4d4;
+  letter-spacing: -0.01em;
+}
+.nivel-explica {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.nivel-contagem {
+  position: relative;
+  font-size: 14px;
+  line-height: 24px;
+  color: var(--texto);
+}
+.nivel-linhas {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
 }
 .item-hipotese-linha {
+  --marcador-cheio: var(--secundario);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 12px;
-  align-items: baseline;
-  min-height: 48px;
-  padding: 10px 0;
-  border-top: 1px dashed var(--filete);
+  grid-template-columns: var(--coluna-marcador) minmax(0, 1fr) auto;
+  min-height: 44px;
   color: var(--texto);
   text-decoration: none;
 }
+.item-hipotese-linha-marcador {
+  display: flex;
+  padding-top: 18px;
+}
+.item-hipotese-linha-texto,
+.item-hipotese-linha-modalidade {
+  border-top: 1px solid var(--filete-fino);
+}
 .item-hipotese-linha-texto {
+  padding: 10px 0;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 23px;
   overflow-wrap: anywhere;
+}
+.item-hipotese-linha-nome,
+.item-hipotese-linha-sobre {
+  display: block;
+}
+/* O « · » entre o nome e o alvo só existe onde eles ficam na mesma linha (computador). */
+.item-hipotese-linha-sep {
+  display: none;
 }
 .item-hipotese-linha-nome {
   text-decoration: underline dotted;
@@ -83,15 +133,102 @@
   text-underline-offset: 4px;
 }
 .item-hipotese-linha-sobre {
+  font-size: 13px;
+  line-height: 20px;
   color: var(--secundario);
 }
+/* No celular o alvo e o aviso correm juntos e quebram como texto (T17-C-23); o «·» do aviso fica colado à primeira
+   palavra dele por um espaço que não quebra, então nunca sobra sozinho na ponta da linha nem abre a linha de baixo. */
 .item-hipotese-linha-modalidade {
+  padding: 10px 0 10px 16px;
   font-size: 12px;
+  line-height: 23px;
   color: var(--secundario);
 }
 @media (hover: hover) {
   .item-hipotese-linha:hover .item-hipotese-linha-nome {
     text-decoration-color: currentColor;
+  }
+}
+/* Legenda: uma vez por seção, depois de «Registrar hipótese» (decisão 52). Quadrados de 30×8 na cor do texto, como no desenho. */
+.nivel-legenda {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  --marcador-cheio: var(--texto);
+  --marcador-vazio: #6b6b6b;
+}
+.nivel-legenda-titulo {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.nivel-legenda-linha {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 36px;
+  font-size: 14px;
+}
+.nivel-legenda-explica {
+  color: var(--secundario);
+}
+.nivel-legenda p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+/* No celular: uma linha só («■□□ vê · ■■□ significa · ■■■ cultura»). */
+.nivel-legenda-compacta {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  min-height: 36px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.nivel-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.nivel-legenda-ponto {
+  color: var(--secundario);
+}
+@media (min-width: 768px) {
+  .hipoteses-nivel {
+    --coluna-marcador: 44px;
+    margin-top: 40px;
+  }
+  .nivel-titulos h3 {
+    font-size: 20px;
+  }
+  .nivel-cabeca .marcador-nivel {
+    padding-top: 8px;
+  }
+  .nivel-legenda {
+    margin-top: 32px;
+  }
+  /* Computador: «nome · alvo · sem trecho no texto PT» numa linha só (PC-ItemNiveis); só o celular quebra. */
+  .item-hipotese-linha-nome,
+  .item-hipotese-linha-sobre,
+  .item-hipotese-linha-sep {
+    display: inline;
+  }
+  .item-hipotese-linha-sep {
+    color: var(--secundario);
+  }
+  /* No computador a linha é uma só; se faltar lugar, o aviso desce inteiro. */
+  .item-hipotese-linha-aviso {
+    white-space: nowrap;
   }
 }
 
@@ -120,6 +257,21 @@
   color: inherit;
   text-decoration-color: #6b6b6b;
   text-underline-offset: 3px;
+}
+/* A dica de um termo do catálogo quebra em mais de uma linha e fica dentro da coluna (T17-B-8; `ajustarDica` põe `--dica-x`). */
+.catalogo dd .termo[data-tip]::after {
+  left: var(--dica-x, 0);
+  right: auto;
+  white-space: normal;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  line-height: 1.4;
+  text-decoration: none;
+  z-index: 20;
+}
+.catalogo dd .termo[data-tip][data-acima]::after {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .relacoes-grupo + .relacoes-grupo {

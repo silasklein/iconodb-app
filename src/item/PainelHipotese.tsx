@@ -1,13 +1,18 @@
-import { useEffect, useRef, type KeyboardEvent as TeclaDoReact, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { useAtalhos } from '../app/useAtalhos'
+import { formatarLocalizador } from '../banco/referencias'
 import { hipotese } from '../banco/consultas'
 import type { Hipotese } from '../banco/tipos'
 import { caminhoDaBusca } from '../busca/url'
+import { useFormasEmUso, useNomeVivo } from '../glossario/doUsuario'
+import { ConteudoSkc, etiquetaDaHipoteseSkc, nomeDaHipoteseSkc, useHipoteseSkc, type TextosDasLeituras } from '../hipoteses/ConteudoSkc'
+import { eHipoteseSkc } from '../hipoteses/modelo'
+import { PosicaoNaHipotese } from '../hipoteses/PosicaoNaHipotese'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
+import { MarcadorDeNivel } from '../ui/MarcadorDeNivel'
 import { IconButton } from '../ui/IconButton'
 import { useCarregar } from '../ui/useCarregar'
+import { CascaDoPainel } from './CascaDoPainel'
 import {
   autores,
   nomeDaHipotese,
@@ -42,99 +47,64 @@ interface Props {
   regiaoAcesa?: boolean
   /** Os verbetes marcados no trecho da hipótese (`verbetesDaAncora`): um link para cada. */
   verbetes?: readonly VerbeteDoTrecho[]
+  /** Hipótese SKC (Tarefa 10): os textos das leituras, para o aviso "o texto da fonte mudou", e o rótulo de cada fonte. */
+  textos?: TextosDasLeituras
+  rotulosDasFontes?: ReadonlyMap<string, string>
 }
 
 const SEM_VERBETES: readonly VerbeteDoTrecho[] = []
-
-const FOCAVEIS = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+const SEM_TEXTOS: TextosDasLeituras = new Map()
 
 /**
  * Uma hipótese aberta: nível e modalidade, o termo, o recorte da fonte, autores, origem, alvo e
  * verificação, e os caminhos ao verbete e à busca pelo termo. No celular é uma folha modal (foco
  * preso, Esc, fundo que fecha, o resto inerte); no computador, um painel lateral não modal, que
  * fica sobre a coluna de leitura e nunca sobre a imagem. Em ambos o foco entra no painel e volta
- * à âncora ao fechar.
+ * à âncora ao fechar (CascaDoPainel).
+ *
+ * Tarefa 10: uma hipótese do livro tem, no fim, "Sua posição" (concordo, discordo, em aberto); uma hipótese SKC
+ * (`HY-<aparelho>-<n>`) vem da camada do usuário, com o rótulo SKC (ConteudoSkc).
  */
-export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = null, aoIr, regiaoAcesa = false, verbetes = SEM_VERBETES }: Props) {
-  const carga = useCarregar(() => hipotese(id), id)
-  const raiz = useRef<HTMLDivElement>(null)
-  const atual = useRef({ aoFechar, aoIr, ordem, devolverFoco })
-  atual.current = { aoFechar, aoIr, ordem, devolverFoco }
+export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = null, aoIr, regiaoAcesa = false, verbetes = SEM_VERBETES, textos = SEM_TEXTOS, rotulosDasFontes = SEM_TEXTOS }: Props) {
+  const skc = eHipoteseSkc(id)
+  const carga = useCarregar(() => (skc ? Promise.resolve(null) : hipotese(id)), id)
+  const hSkc = useHipoteseSkc(skc ? id : '')
+  const formas = useFormasEmUso()
+  const nomeDe = useNomeVivo()
+  const atual = { ordem, aoIr }
   const folha = variante === 'folha'
 
-  // O foco entra no painel; na folha, o resto da tela fica inerte. Ao fechar, o foco volta.
-  useEffect(() => {
-    const anterior = document.activeElement as HTMLElement | null
-    const portal = folha ? raiz.current?.closest('.painel-hipotese-camada') : null
-    const inertes = portal ? [...document.body.children].filter((el) => el !== portal && !el.hasAttribute('inert')) : []
-    for (const el of inertes) el.setAttribute('inert', '')
-    raiz.current?.focus()
-    return () => {
-      for (const el of inertes) el.removeAttribute('inert')
-      const destino = atual.current.devolverFoco?.() ?? anterior
-      if (destino?.isConnected) destino.focus()
-    }
-  }, [folha])
+  const h = !skc && carga.fase === 'ok' ? carga.dados : null
+  const nome = skc ? (hSkc ? nomeDaHipoteseSkc(hSkc, nomeDe) : null) : h ? nomeDaHipotese(h, formas) : null
+  const etiqueta = skc ? (hSkc ? etiquetaDaHipoteseSkc(hSkc) : '') : h ? `${ROTULO_DO_NIVEL[h.nivel]} · ${ROTULO_DA_MODALIDADE[h.modalidade]}` : ''
 
-  // Ao trocar de hipótese por "[" / "]", o botão usado pode sumir (chegou ao fim): o foco fica no painel.
-  useEffect(() => {
-    const ativo = document.activeElement
-    if (raiz.current && (!ativo || ativo === document.body || !raiz.current.contains(ativo))) raiz.current.focus()
-  }, [id])
+  // O nível de agora: o de uma hipótese SKC muda na hora quando a pessoa o edita; sem nível, nenhum marcador.
+  const nivelAtual = skc ? (hSkc?.nivel ?? null) : (h?.nivel ?? null)
 
-  // Esc fecha; "[" e "]" andam pelas hipóteses do texto. Na folha (modal) as teclas são dela; no painel lateral,
-  // Esc vindo da busca da barra é do campo (o registro de atalhos só entrega Esc de campos a quem é dono dele).
-  useAtalhos(
-    {
-      Escape: () => atual.current.aoFechar(),
-      '[': () => {
-        const { ordem: o, aoIr: ir } = atual.current
-        if (!o?.anterior) return false
-        ir?.(o.anterior)
-      },
-      ']': () => {
-        const { ordem: o, aoIr: ir } = atual.current
-        if (!o?.seguinte) return false
-        ir?.(o.seguinte)
-      },
-    },
-    'hipotese',
-    { raiz: () => raiz.current },
-  )
-
-  const prender = (e: TeclaDoReact) => {
-    if (!folha || e.key !== 'Tab' || !raiz.current) return
-    const itens = [...raiz.current.querySelectorAll<HTMLElement>(FOCAVEIS)]
-    if (itens.length === 0) return
-    const primeiro = itens[0]!
-    const ultimo = itens[itens.length - 1]!
-    const dentro = raiz.current.contains(document.activeElement) && document.activeElement !== raiz.current
-    if (e.shiftKey && (document.activeElement === primeiro || !dentro)) {
-      e.preventDefault()
-      ultimo.focus()
-    } else if (!e.shiftKey && (document.activeElement === ultimo || !dentro)) {
-      e.preventDefault()
-      primeiro.focus()
-    }
-  }
-
-  const h = carga.fase === 'ok' ? carga.dados : null
-  const nome = h ? nomeDaHipotese(h) : null
-
-  const painel = (
-    <div
-      ref={raiz}
-      className={`painel-hipotese painel-hipotese-${variante}`}
-      role="dialog"
-      aria-modal={folha ? true : undefined}
-      aria-label={nome ? `Hipótese ${nome}` : 'Hipótese'}
-      aria-busy={carga.fase === 'carregando' || undefined}
-      tabIndex={-1}
-      onKeyDown={prender}
+  return (
+    <CascaDoPainel
+      variante={variante}
+      rotulo={nome ? `Hipótese ${nome}` : 'Hipótese'}
+      ocupado={!skc && carga.fase === 'carregando'}
+      aoFechar={aoFechar}
+      devolverFoco={devolverFoco}
+      chave={id}
+      atalhos={{
+        '[': () => {
+          if (!atual.ordem?.anterior) return false
+          atual.aoIr?.(atual.ordem.anterior)
+        },
+        ']': () => {
+          if (!atual.ordem?.seguinte) return false
+          atual.aoIr?.(atual.ordem.seguinte)
+        },
+      }}
     >
-      {folha && <div className="painel-hipotese-alca" aria-hidden="true" />}
       <div className="painel-hipotese-topo">
-        <span className="painel-hipotese-etiqueta">{h ? `${ROTULO_DO_NIVEL[h.nivel]} · ${ROTULO_DA_MODALIDADE[h.modalidade]}` : ''}</span>
+        <span className="painel-hipotese-etiqueta">
+          <MarcadorDeNivel nivel={nivelAtual} tamanho="painel" comTexto={false} />
+          {etiqueta}
+        </span>
         <IconButton icon="fechar" label="Fechar o painel" shortcut="Escape" shortcutLabel="Esc" onClick={aoFechar} />
       </div>
       {ordem && (
@@ -145,9 +115,19 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
         </div>
       )}
       <div className="painel-hipotese-corpo">
-        {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
-        {carga.fase === 'ok' && h === null && <p>Hipótese não encontrada.</p>}
-        {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} verbetes={verbetes} />}
+        {skc ? (
+          hSkc ? (
+            <ConteudoSkc h={hSkc} regiaoAcesa={regiaoAcesa} textos={textos} rotulosDasFontes={rotulosDasFontes} />
+          ) : (
+            <p>Hipótese não encontrada.</p>
+          )
+        ) : (
+          <>
+            {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
+            {carga.fase === 'ok' && h === null && <p>Hipótese não encontrada.</p>}
+            {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} verbetes={verbetes} formas={formas} />}
+          </>
+        )}
       </div>
       {!folha && (
         <p className="painel-hipotese-teclas">
@@ -159,16 +139,7 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
           <kbd>H</kbd> todas por nível · <kbd>Esc</kbd> fecha
         </p>
       )}
-    </div>
-  )
-
-  if (!folha) return painel
-  return createPortal(
-    <div className="painel-hipotese-camada">
-      <div className="painel-hipotese-fundo" onClick={aoFechar} aria-hidden="true" />
-      {painel}
-    </div>,
-    document.body,
+    </CascaDoPainel>
   )
 }
 
@@ -177,15 +148,16 @@ function BotaoDeOrdem({ icone, rotulo, atalho, destino, aoIr }: { icone: 'anteri
   return <IconButton icon={icone} label={rotulo} shortcut={atalho} tipPosition={icone === 'anterior' ? 'start' : 'end'} onClick={() => aoIr?.(destino)} />
 }
 
-function Conteudo({ h, regiaoAcesa, verbetes }: { h: Hipotese; regiaoAcesa: boolean; verbetes: readonly VerbeteDoTrecho[] }) {
+function Conteudo({ h, regiaoAcesa, verbetes, formas }: { h: Hipotese; regiaoAcesa: boolean; verbetes: readonly VerbeteDoTrecho[]; formas: ReadonlyMap<string, string> }) {
   const termo = h.termos[0] ?? null
   // Os verbetes do trecho e, depois, os termos da hipótese que não estão nele.
-  const lista: VerbeteDoTrecho[] = [...verbetes]
-  for (const t of h.termos) if (!lista.some((v) => v.glId === t.glId)) lista.push({ glId: t.glId, texto: t.pt ?? t.de ?? t.glId })
+  // Cada um com a forma em uso de agora (Tarefa 11); o texto do trecho é o do pacote.
+  const lista: VerbeteDoTrecho[] = verbetes.map((v) => ({ ...v, texto: formas.get(v.glId) ?? v.texto }))
+  for (const t of h.termos) if (!lista.some((v) => v.glId === t.glId)) lista.push({ glId: t.glId, texto: formas.get(t.glId) ?? t.pt ?? t.de ?? t.glId })
   const linhas: [string, ReactNode][] = []
   if (h.citacao) linhas.push(['Fonte', <span lang="de">{`»${h.citacao}«`}</span>])
   if (h.autores.length > 0) linhas.push(['Autores', autores(h.autores)])
-  if (h.locator) linhas.push(['Origem', h.locator])
+  if (h.locator) linhas.push(['Origem', formatarLocalizador(h.locator)])
   linhas.push(['Sobre', <Sobre h={h} regiaoAcesa={regiaoAcesa} />])
   if (!temAncora(h)) linhas.push(['Trecho', 'sem trecho no texto PT'])
   if (h.religiosidade) linhas.push(['Religiosidade', ROTULO_DA_RELIGIOSIDADE[h.religiosidade]])
@@ -195,7 +167,7 @@ function Conteudo({ h, regiaoAcesa, verbetes }: { h: Hipotese; regiaoAcesa: bool
   return (
     <>
       <div className="painel-hipotese-cabeca">
-        <h2>{nomeDaHipotese(h)}</h2>
+        <h2>{nomeDaHipotese(h, formas)}</h2>
         <span className="painel-hipotese-ids codigo">
           {ids}
           {termo?.de && (
@@ -234,13 +206,14 @@ function Conteudo({ h, regiaoAcesa, verbetes }: { h: Hipotese; regiaoAcesa: bool
           )}
           <Link
             className="painel-hipotese-secundaria"
-            to={caminhoDaBusca(termo?.pt ?? termo?.de ?? lista[0]!.texto, { escopo: 'termo' })}
+            to={caminhoDaBusca((termo && formas.get(termo.glId)) ?? termo?.pt ?? termo?.de ?? lista[0]!.texto, { escopo: 'termo' })}
             aria-label="Filtrar a busca por este termo"
           >
             Filtrar a busca
           </Link>
         </div>
       )}
+      <PosicaoNaHipotese hipotese={h.id} />
     </>
   )
 }

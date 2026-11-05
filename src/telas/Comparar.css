@@ -1,0 +1,471 @@
+/*
+ * Comparar (Comparar.dc.html): no computador, os objetos lado a lado numa só grade; cada coluna usa subgrade, então as
+ * linhas (cabeça, imagem, cada campo da ficha, cada leitura, pé) têm a mesma altura em todas: um texto longo numa coluna
+ * alarga a linha para todas, e uma célula que falta fica vazia no mesmo lugar. No celular, uma coluna por vez, deslizando.
+ */
+.comparar {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+@media (min-width: 768px) {
+  .comparar {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+}
+.comparar-corpo {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 48px;
+}
+.comparar-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 0 16px;
+}
+.comparar-titulo {
+  margin: 0;
+  font-family: var(--fonte-texto);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--secundario);
+}
+.comparar-acoes {
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* Avisos */
+.comparar-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
+}
+.comparar-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 8px 16px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.comparar-avisos .comparar-aviso {
+  margin: 8px 0 0;
+}
+/* A falha de gravar o Desfazer: fica ao lado da oferta (que continua ali para tentar de novo); nunca só pela cor. */
+.comparar-aviso-falha {
+  flex-basis: 100%;
+  font-weight: 600;
+}
+.comparar-aviso:empty {
+  /* A região viva fica sempre no lugar (vazia), para o leitor de tela anunciar o texto que chega; vazia, não ocupa espaço. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.comparar-aviso[hidden] {
+  display: none;
+}
+.comparar-excedentes {
+  padding: 10px 12px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.comparar-excedentes h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.comparar-excedentes p {
+  margin: 0;
+}
+.comparar-excedentes ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.comparar-excedentes li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.comparar-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .comparar-link {
+    min-height: var(--alvo-toque);
+  }
+}
+
+/* Adicionar por número */
+.comparar-adicionar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 8px 16px 0;
+  max-width: 480px;
+}
+.comparar-adicionar .form-campo {
+  flex: 1 1 200px;
+}
+.comparar-adicionar-acoes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Vazio */
+.comparar-vazio {
+  max-width: 560px;
+  padding: 24px 16px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.comparar-vazio p {
+  margin: 0 0 12px;
+}
+
+/* Posição no celular */
+.comparar-posicao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 12px 0;
+  border-bottom: 1px solid var(--filete);
+}
+.comparar-posicao-n {
+  font-size: 14px;
+}
+
+/* A faixa das colunas: celular = uma por vez, deslizando */
+.comparar-colunas {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 8px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .comparar-colunas {
+    scroll-behavior: smooth;
+  }
+}
+.comparar-coluna {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+}
+.comparar-cabeca {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 12px 0 14px;
+}
+.comparar-numero {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 4px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--secundario);
+}
+/* Na linha do número o espaço entre as peças é o `column-gap`: uma marca que desce começa rente à margem. */
+.comparar-numero .marca-ligado,
+.comparar-numero .marca-excluido {
+  margin-left: 0;
+}
+/* O número e a origem («CA00006 · SKC») formam um bloco só na primeira linha; as marcas («ligado a…», «provisório»)
+   descem inteiras. Se a origem for longa demais para a coluna, o bloco quebra por dentro, e o «·» vai junto com a
+   origem (nunca fica sozinho no fim da linha nem começa uma linha sozinho). */
+.comparar-numero-e-origem {
+  max-width: 100%;
+}
+.comparar-origem {
+  white-space: nowrap;
+}
+.comparar-cabeca h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.comparar-cabeca h2.comparar-sem-dados {
+  font-family: var(--fonte-texto);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  color: var(--secundario);
+}
+
+/* A imagem: o visualizador do Item numa caixa de altura fixa */
+.comparar-imagem {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--painel-imagem);
+}
+.comparar-imagem .imagem-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  --altura-max-imagem: 250px;
+}
+.comparar-imagem .imagem-item-painel {
+  min-height: 260px;
+  padding: 12px;
+}
+.comparar-imagem .imagem-item-pe {
+  min-height: 44px;
+  padding: 0 8px 0 12px;
+}
+.comparar-imagem .imagem-item-credito {
+  padding: 0 12px 8px;
+}
+.comparar-imagem-vazia {
+  flex: 1 1 auto;
+  min-height: 260px;
+}
+
+/* A ficha e as leituras: uma linha por campo */
+.comparar-linhas {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+.comparar-celula {
+  min-width: 0;
+  padding: 10px 0;
+}
+.comparar-celula-leitura {
+  border-top: 1px solid var(--filete);
+}
+.comparar-celula dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.comparar-celula dd {
+  margin: 2px 0 0;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  overflow-wrap: anywhere;
+}
+.comparar-difere dd {
+  color: #ffffff;
+  font-weight: 600;
+}
+.comparar-difere .comparar-texto {
+  font-weight: 400;
+}
+.comparar-celula-vazia dd {
+  color: var(--secundario);
+}
+.comparar-sinal {
+  font-family: var(--fonte-codigo);
+  font-weight: 500;
+}
+.comparar-texto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+.comparar-celula-ficha .comparar-texto {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.comparar-texto-recolhido {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
+}
+.comparar-nota {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--secundario);
+}
+
+/* O pé: abrir o item e tirar */
+.comparar-pe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  min-height: 56px;
+  border-top: 1px solid var(--filete);
+}
+
+/* Computador: todas as colunas à vista, linhas alinhadas por subgrade */
+@media (min-width: 768px) {
+  .comparar-topo {
+    padding: 12px 24px 0 32px;
+  }
+  .comparar-titulo {
+    font-size: 13px;
+  }
+  .comparar-avisos {
+    padding: 0 32px;
+  }
+  .comparar-adicionar,
+  .comparar-aviso {
+    margin-left: 32px;
+    margin-right: 32px;
+  }
+  .comparar-avisos .comparar-aviso {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .comparar-colunas {
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+    /* As linhas (cabeça, imagem, cada campo ou leitura, pé) vêm inline em `gridTemplateRows`: `repeat(0, auto)` é inválido
+       e, sem nenhuma linha («só as diferenças» e tudo igual), derrubava a declaração inteira. */
+    column-gap: 1px;
+    background: var(--filete);
+    margin-top: 16px;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .comparar-coluna {
+    display: grid;
+    grid-template-rows: subgrid;
+    background: var(--fundo);
+    padding: 0 40px;
+  }
+  .comparar-colunas[data-n='3'] .comparar-coluna,
+  .comparar-colunas[data-n='4'] .comparar-coluna {
+    padding: 0 20px;
+  }
+  .comparar-cabeca {
+    min-height: 96px;
+    padding: 0 0 18px;
+  }
+  .comparar-cabeca h2 {
+    font-size: 26px;
+  }
+  .comparar-colunas[data-n='3'] .comparar-cabeca h2,
+  .comparar-colunas[data-n='4'] .comparar-cabeca h2 {
+    font-size: 20px;
+  }
+  .comparar-imagem .imagem-item-painel {
+    min-height: 0;
+  }
+  .comparar-imagem-vazia {
+    min-height: 0;
+  }
+  /* A linha da subgrade é o próprio dl: cada célula vai à sua linha. */
+  .comparar-linhas {
+    display: contents;
+  }
+  .comparar-celula {
+    padding: 14px 0 8px;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-ficha,
+  .comparar-colunas[data-n='2'] .comparar-celula-ficha {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 4px 0;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-ficha dd,
+  .comparar-colunas[data-n='2'] .comparar-celula-ficha dd {
+    margin: 0;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-ficha dt,
+  .comparar-colunas[data-n='2'] .comparar-celula-ficha dt {
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  /* Com um ou dois objetos a sigla da leitura fica à esquerda do texto, como no desenho. */
+  .comparar-colunas[data-n='1'] .comparar-celula-leitura,
+  .comparar-colunas[data-n='2'] .comparar-celula-leitura {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 12px;
+    padding-top: 16px;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-leitura dt,
+  .comparar-colunas[data-n='2'] .comparar-celula-leitura dt {
+    flex-wrap: wrap;
+    gap: 0 6px;
+    align-items: flex-start;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-leitura dd,
+  .comparar-colunas[data-n='2'] .comparar-celula-leitura dd {
+    margin: 0;
+  }
+  .comparar-colunas[data-n='1'] .comparar-celula-ficha:first-child,
+  .comparar-colunas[data-n='2'] .comparar-celula-ficha:first-child {
+    padding-top: 18px;
+  }
+}
+
+/* «ligado a CA…»: o objeto está ligado a outro e este não é o principal do grupo */
+.marca-ligado {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--secundario-item);
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/*
+ * No computador a dica dos botões do alto sai à ESQUERDA do botão, na altura dele, e não embaixo: com o mouse parado onde estava o
+ * «Esvaziar» (que sai da fila e deixa o «+» no lugar), a dica de baixo cobria o «Desfazer» da mensagem (T17-C-3).
+ */
+@media (min-width: 768px) and (hover: hover) {
+  .comparar-acoes [data-tip]::after {
+    top: 50%;
+    right: calc(100% + 6px);
+    transform: translateY(-50%);
+  }
+}

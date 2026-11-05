@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { vi } from 'vitest'
 import type { ObjetoResumo, Verbete } from '../banco/tipos'
-import { buscar, type ResultadoDaBusca } from '../busca/consulta'
+import { buscar, type AcertoDoUsuario, type ResultadoDaBusca } from '../busca/consulta'
 import { BarraSuperior } from '../ui/BarraSuperior'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Busca } from './Busca'
@@ -14,8 +14,7 @@ import css from './Busca.css?raw'
  * busca/consulta.test.ts sobre o pacote sintético; aqui `buscar` é simulada para
  * olhar só a tela: verbete em destaque, abas, etiquetas, sem resultado, filtros, estado do roteador.
  */
-// A barra superior lê a fila de revisão: aqui, vazia.
-vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(async () => ({ total: 0, porTipo: [] })), sitios: vi.fn(async () => []) }))
+vi.mock('../banco/consultas', () => ({ sitios: vi.fn(async () => []) }))
 vi.mock('../pacote/local', () => ({ lerEstado: vi.fn(async () => ({ schema: 5 })) }))
 vi.mock('../busca/consulta', async (original) => ({ ...(await original<typeof import('../busca/consulta')>()), buscar: vi.fn() }))
 
@@ -23,7 +22,7 @@ describe('tela Busca: resultados', () => {
   const objeto = (numero: string, extra: Partial<ObjetoResumo> = {}): ObjetoResumo => ({
     numero,
     itemId: `TESTE-${numero}`,
-    origem: 'TESTE I, 1',
+    origem: 'TESTE I: 1',
     tipo: 'Selo de teste',
     sitio: 'Tell Probe Teste',
     miniatura: null,
@@ -39,6 +38,8 @@ describe('tela Busca: resultados', () => {
     total: 3,
     totalSemFiltros: 3,
     contagens: { tudo: 3, termo: 2, local: 0, bibliografia: 1, colecao: 0 },
+    usuario: [],
+    contagensDoUsuario: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
     facetas: [
       { chave: 'publicacao', rotulo: 'Publicação', opcoes: [{ valor: 'TESTE', rotulo: 'TESTE I', n: 3, ativa: false }] },
       {
@@ -171,11 +172,11 @@ describe('tela Busca: resultados', () => {
   it('digitar busca depois de uma pequena espera; Esc limpa o campo', async () => {
     mock.mockResolvedValue(resultado())
     abrirComRota('/busca')
-    const campo = screen.getByRole('searchbox', { name: 'Buscar' })
-    await userEvent.type(campo, 'mahras')
+    const campo = screen.getByRole('combobox', { name: 'Buscar' })
+    await userEvent.type(campo, 'mahtes')
     expect(mock).not.toHaveBeenCalled()
     await waitFor(() => expect(mock).toHaveBeenCalledTimes(1))
-    expect(mock).toHaveBeenCalledWith('mahras', expect.anything())
+    expect(mock).toHaveBeenCalledWith('mahtes', expect.anything())
     await userEvent.keyboard('{Escape}')
     expect(campo).toHaveValue('')
   })
@@ -205,10 +206,20 @@ describe('tela Busca: resultados', () => {
     instalarMatchMedia(375)
   })
 
+  it('T17-B-29: uma busca só com acertos do usuário (sem facetas) não deixa a coluna «Filtros» vazia: ela diz que não há o que filtrar', async () => {
+    instalarMatchMedia(1280)
+    mock.mockResolvedValue(resultado({ objetos: [], numeros: [], total: 0, totalSemFiltros: 0, facetas: [], usuario: [{ tipo: 'nota', ref: 'NT-aaaaaaaa-1', rotulo: 'uma nota', trecho: '', destino: '/nota/NT-aaaaaaaa-1' } as never], contagensDoUsuario: { tudo: 1, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
+    abrirComRota('/busca?q=nota')
+    const facetas = await screen.findByRole('complementary', { name: 'Filtros' })
+    expect(within(facetas).getByText('Não há o que filtrar nesta busca.')).toBeInTheDocument()
+    expect(within(facetas).queryByRole('group')).toBeNull()
+    instalarMatchMedia(375)
+  })
+
   it('tocar numa aba logo depois de digitar não desfaz o que ainda não foi enviado (e vice-versa)', async () => {
     mock.mockResolvedValue(resultado())
     abrirComRota('/busca')
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 'ma')
+    await userEvent.type(screen.getByRole('combobox', { name: 'Buscar' }), 'ma')
     await userEvent.click(screen.getByRole('button', { name: 'Termo' })) // antes dos 250 ms de espera
     await waitFor(() => expect(mock).toHaveBeenLastCalledWith('ma', expect.objectContaining({ escopo: 'termo' })))
     // e a espera vencida depois não volta ao escopo antigo
@@ -222,8 +233,8 @@ describe('tela Busca: resultados', () => {
     mock.mockResolvedValue(resultado())
     abrirComBarra('/busca?q=leao')
     const facetas = await screen.findByRole('complementary', { name: 'Filtros' })
-    expect(screen.getAllByRole('searchbox', { name: 'Buscar' })).toHaveLength(1) // só o da barra
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar' }), 's')
+    expect(screen.getAllByRole('combobox', { name: 'Buscar' })).toHaveLength(1) // só o da barra
+    await userEvent.type(screen.getByRole('combobox', { name: 'Buscar' }), 's')
     await userEvent.click(within(facetas).getByRole('checkbox', { name: /iconográfico/ }))
     await waitFor(() => expect(mock).toHaveBeenLastCalledWith('leaos', expect.objectContaining({ filtros: { nivel: ['iconographic'] } })))
     instalarMatchMedia(375)
@@ -299,6 +310,95 @@ describe('tela Busca: resultados', () => {
       await waitFor(() => expect(screen.queryByRole('button', { name: /^Mostrar mais/ })).not.toBeInTheDocument())
       expect(document.activeElement).not.toBe(document.body)
       expect(document.activeElement).toBe(screen.getByRole('link', { name: /CA00003/ }))
+    })
+  })
+  describe('acertos da camada do usuário (SKC) que não são de um objeto', () => {
+    const acerto = (extra: Partial<AcertoDoUsuario> & Pick<AcertoDoUsuario, 'tipo' | 'ref' | 'rotulo'>): AcertoDoUsuario => ({ skc: true, objeto: null, ...extra })
+    const soUsuario = (usuario: AcertoDoUsuario[], extra: Partial<ResultadoDaBusca> = {}) =>
+      resultado({
+        objetos: [],
+        numeros: [],
+        total: 0,
+        totalSemFiltros: 0,
+        contagens: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+        usuario,
+        contagensDoUsuario: { tudo: usuario.length, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+        ...extra,
+      })
+
+    it('só acertos do usuário não é "Nada encontrado": mostra o grupo "Na sua camada (SKC)" com rótulo, tipo e marca', async () => {
+      mock.mockResolvedValue(
+        soUsuario([
+          acerto({ tipo: 'nota', ref: 'NT-a-1', rotulo: 'Sobre o sítio' }),
+          acerto({ tipo: 'colecao', ref: 'CO-a-1', rotulo: 'Minhas notas de leão' }),
+          acerto({ tipo: 'sitio', ref: 'SI-a-1', rotulo: 'Tell Novo' }),
+          acerto({ tipo: 'hipotese', ref: 'HY-a-1', rotulo: 'íbex' }),
+        ]),
+      )
+      abrirComRota('/busca?q=leao')
+      const grupo = await screen.findByRole('region', { name: 'Na sua camada (SKC)' })
+      expect(screen.queryByText(/Nada encontrado/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: /objeto/ })).not.toBeInTheDocument()
+      const linhas = within(grupo).getAllByRole('listitem')
+      expect(linhas).toHaveLength(4)
+      expect(linhas[0]).toHaveTextContent('Sobre o sítio')
+      expect(linhas[0]).toHaveTextContent('Nota')
+      expect(linhas[0]).toHaveTextContent('SKC')
+      expect(linhas[1]).toHaveTextContent('Coleção')
+      expect(linhas[2]).toHaveTextContent('Sítio')
+      expect(linhas[3]).toHaveTextContent('Hipótese')
+      // a nota, a coleção e o sítio têm tela (Tarefa 12); a hipótese ainda é texto, sem link
+      expect(within(grupo).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/nota/NT-a-1', '/grupo/CO-a-1', '/sitio/SI-a-1'])
+      // a região viva anuncia
+      await waitFor(() => expect(document.querySelector('[data-contagem]')).toHaveTextContent('4 acertos na sua camada'))
+    })
+
+    it('com objetos e acertos soltos: a grade e o grupo, um depois do outro', async () => {
+      mock.mockResolvedValue(resultado({ usuario: [acerto({ tipo: 'nota', ref: 'NT-a-1', rotulo: 'Uma nota solta' })] }))
+      abrirComRota('/busca?q=leao')
+      expect(await screen.findByRole('heading', { level: 2, name: '3 objetos' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /CA00001/ })).toBeInTheDocument()
+      const grupo = screen.getByRole('region', { name: 'Na sua camada (SKC)' })
+      expect(within(grupo).getByText('Uma nota solta')).toBeInTheDocument()
+      await waitFor(() => expect(document.querySelector('[data-contagem]')).toHaveTextContent('3 objetos e 1 acerto na sua camada'))
+    })
+
+    it('onde existe uma rota para o tipo, o rótulo é um link: a nota abre na tela da nota, o sítio na página do sítio; sem rota, texto', async () => {
+      mock.mockResolvedValue(soUsuario([acerto({ tipo: 'nota', ref: 'NT-a-1', rotulo: 'Sobre o sítio' }), acerto({ tipo: 'sitio', ref: 'SI-a-1', rotulo: 'Tell Novo' }), acerto({ tipo: 'hipotese', ref: 'HY-a-1', rotulo: 'íbex' })]))
+      abrirComRota('/busca?q=leao')
+      const grupo = await screen.findByRole('region', { name: 'Na sua camada (SKC)' })
+      expect(within(grupo).getByRole('link', { name: 'Sobre o sítio' })).toHaveAttribute('href', '/nota/NT-a-1')
+      expect(within(grupo).getByRole('link', { name: 'Tell Novo' })).toHaveAttribute('href', '/sitio/SI-a-1')
+      expect(within(grupo).queryByRole('link', { name: 'íbex' })).not.toBeInTheDocument()
+    })
+
+    it('as abas somam os acertos do usuário à contagem e dizem isso ao leitor de tela', async () => {
+      mock.mockResolvedValue(
+        resultado({
+          usuario: [acerto({ tipo: 'colecao', ref: 'CO-a-1', rotulo: 'Minhas notas' })],
+          contagensDoUsuario: { tudo: 1, termo: 0, local: 0, bibliografia: 0, colecao: 1 },
+        }),
+      )
+      abrirComRota('/busca?q=leao')
+      expect(await screen.findByRole('button', { name: /^Coleção/ })).toHaveAccessibleName('Coleção, 1 acerto na sua camada')
+      expect(screen.getByRole('button', { name: /^Tudo/ })).toHaveAccessibleName('Tudo, 3 objetos e 1 acerto na sua camada')
+      expect(screen.getByRole('button', { name: /^Termo/ })).toHaveAccessibleName('Termo, 2 objetos')
+      expect(screen.getByRole('button', { name: /^Tudo/ })).toHaveTextContent('4')
+    })
+
+    it('"Nada encontrado" sugere Tudo também quando o que há lá é da camada do usuário', async () => {
+      mock.mockResolvedValue(soUsuario([], { contagensDoUsuario: { tudo: 2, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
+      abrirComRota('/busca?q=leao&escopo=termo')
+      expect(await screen.findByText('Nada encontrado para «leao»')).toBeInTheDocument()
+      expect(screen.getByText(/Em «Tudo» há 2 acertos na sua camada/)).toBeInTheDocument()
+    })
+
+    it('o cartão de um objeto SKC leva a marca SKC e abre /item/<número>', async () => {
+      mock.mockResolvedValue(resultado({ objetos: [objeto('CA00005', { skc: true, itemId: 'OB-a-1' })], numeros: ['CA00005'], total: 1, totalSemFiltros: 1 }))
+      abrirComRota('/busca?q=leao')
+      const cartao = await screen.findByRole('link', { name: /CA00005/ })
+      expect(cartao).toHaveTextContent('CA00005 · SKC')
+      expect(cartao).toHaveAttribute('href', '/item/CA00005')
     })
   })
 })

@@ -1,8 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { temEntradaAnterior } from '../ui/useVoltar'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useAtalhos } from '../app/useAtalhos'
-import { imagem as buscarImagem, regioes as buscarRegioes } from '../banco/consultas'
-import type { Imagem as ImagemDoBanco, Regiao } from '../banco/tipos'
+import { elementosDoObjeto, imagem as buscarImagem, quantasImagensDoObjeto, regioes as buscarRegioes } from '../banco/consultas'
+import { DesenhoDeRegiao } from '../imagem/DesenhoDeRegiao'
+import { desfazer as desfazerPasso, fechar as fecharDesenho, novaEdicao, type Edicao } from '../imagem/desenhar'
+import { useElementosSkc } from '../hipoteses/doUsuario'
+import type { ElementoParaEscolher } from '../hipoteses/NovaHipotese'
+import { alterarRegiao, dependentesDaRegiao, excluirRegiao, restaurarRegiao } from '../hipoteses/operacoes'
+import { guardarRascunhoDaHipotese, lerRascunhoDaHipotese, rascunhoNovo } from '../hipoteses/rascunho'
+import { hipoteseEmPreparo } from '../hipoteses/useNovaHipotese'
+import { gruposDe } from '../objetos-skc/atual'
+import { RegiaoNova } from '../hipoteses/RegiaoNova'
+import { emCampoDeTexto } from '../app/atalhos'
+import type { Regiao } from '../banco/tipos'
+import { comoImagemExibida, creditoDaImagem, type ImagemExibida } from '../imagens-usuario/exibicao'
+import { regioesDoUsuario } from '../imagens-usuario/regioes'
+import { imagensDoObjeto, lerImagem, type ImagemDoUsuario } from '../imagens-usuario/registro'
+import { estadoAtual, useEstado, type Estado } from '../usuario/estado'
 import { comImagemAberta, lerEstadoDoVisualizador, pedirFocoNoAmpliar, type EstadoDoVisualizador } from '../imagem/estado'
 import {
   ajustar,
@@ -20,16 +35,15 @@ import {
   type Tamanho,
   type Vista,
 } from '../imagem/zoom'
-import { estiloDeInversao, giroDaImagem, pontosDoPoligono, transformDoGiro, useUrlDaImagem } from '../item/imagemComum'
+import { estiloDeInversao, giroDaImagem, pontosDoPoligono, transformDoGiro, useUrlDaImagemExibida } from '../item/imagemComum'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { IconButton } from '../ui/IconButton'
-import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { useTema } from '../ui/useTema'
 import './Imagem.css'
 
-type ImagemComNumero = ImagemDoBanco & { numero: string; total: number }
+type ImagemComNumero = ImagemExibida & { numero: string; total: number }
 
 /** Quanto uma seta anda a figura ampliada (px). */
 const PASSO_DA_SETA = 60
@@ -50,8 +64,59 @@ export function Imagem() {
   const { id = '' } = useParams()
   const { state } = useLocation()
   const origem = lerEstadoDoVisualizador(state)
+  // Uma imagem do usuário (decisão 33) vem da camada do usuário; as do livro, do pacote.
+  if (/^IM-/.test(id)) return <ImagemDoUsuarioNoVisualizador key={id} id={id} origem={origem} />
+  return <ImagemDoLivro key={id} id={id} origem={origem} />
+}
+
+const NAO_ENCONTRADA = (
+  <>
+    <h1>Imagem não encontrada</h1>
+    <p>
+      <Link to="/colecoes">Ver as coleções</Link> · <Link to="/busca">Buscar</Link>
+    </p>
+  </>
+)
+
+/**
+ * Uma imagem do usuário no visualizador: a posição conta as do livro primeiro (como no item); as regiões são as
+ * marcadas pelo usuário nela. Excluída ou desconhecida: "Imagem não encontrada".
+ */
+function ImagemDoUsuarioNoVisualizador({ id, origem }: { id: string; origem: EstadoDoVisualizador | null }) {
+  const img = useEstado(
+    useMemo(() => {
+      let reg: unknown = null
+      let lida: ImagemDoUsuario | null = null
+      return (e: Estado) => {
+        const r = e.registro('imagem', id) ?? null
+        if (r !== reg) {
+          reg = r
+          lida = r ? lerImagem(r) : null
+        }
+        return lida
+      }
+    }, [id]),
+  )
+  const alvo = img?.alvo ?? ''
+  const todas = useEstado(useCallback((e: Estado) => imagensDoObjeto(e, alvo), [alvo]))
+  const doLivro = useCarregar(() => (alvo ? quantasImagensDoObjeto(alvo) : Promise.resolve(0)), alvo)
+  const mapaDeRegioes = useEstado(useCallback((e: Estado) => e.registros.get('regiao'), []))
+  const regioes = useMemo(() => regioesDoUsuario(estadoAtual(), id), [id, mapaDeRegioes])
+  if (!img || img.excluido) return <Casca origem={origem}>{NAO_ENCONTRADA}</Casca>
+  if (doLivro.fase === 'carregando') return <Casca origem={origem} ocupada />
+  const livro = doLivro.fase === 'ok' ? doLivro.dados : 0
+  const posicao = Math.max(todas.findIndex((i) => i.id === id), 0)
+  const exibida: ImagemComNumero = { ...comoImagemExibida(img, livro + posicao + 1), numero: img.alvo, total: livro + todas.length }
+  return <Visualizador img={exibida} regioes={regioes} origem={origem} />
+}
+
+function ImagemDoLivro({ id, origem }: { id: string; origem: EstadoDoVisualizador | null }) {
   const carga = useCarregar(() => buscarImagem(id), id)
   const cargaDasRegioes = useCarregar(() => buscarRegioes(id), id)
+  // As regiões que o usuário marcou nesta imagem do livro (Tarefa 10) entram depois das do pacote.
+  const mapaDeRegioes = useEstado(useCallback((e: Estado) => e.registros.get('regiao'), []))
+  const doUsuario = useMemo(() => regioesDoUsuario(estadoAtual(), id), [id, mapaDeRegioes])
+  const regioes = useMemo(() => [...(cargaDasRegioes.fase === 'ok' ? cargaDasRegioes.dados : []), ...doUsuario], [cargaDasRegioes, doUsuario])
 
   if (carga.fase === 'carregando') return <Casca origem={origem} ocupada />
   if (carga.fase === 'erro') {
@@ -61,17 +126,8 @@ export function Imagem() {
       </Casca>
     )
   }
-  if (carga.dados === null) {
-    return (
-      <Casca origem={origem}>
-        <h1>Imagem não encontrada</h1>
-        <p>
-          <Link to="/colecoes">Ver as coleções</Link> · <Link to="/busca">Buscar</Link>
-        </p>
-      </Casca>
-    )
-  }
-  return <Visualizador key={carga.dados.id} img={carga.dados} regioes={cargaDasRegioes.fase === 'ok' ? cargaDasRegioes.dados : []} origem={origem} />
+  if (carga.dados === null) return <Casca origem={origem}>{NAO_ENCONTRADA}</Casca>
+  return <Visualizador key={carga.dados.id} img={carga.dados} regioes={regioes} origem={origem} />
 }
 
 /**
@@ -135,6 +191,14 @@ interface Props {
 
 function Visualizador({ img, regioes, origem }: Props) {
   const navegar = useNavigate()
+  // `?desenhar=EL-…` (a Revisão, «Regiões a desenhar»): abre já marcando, e a região é mais uma desse elemento do livro.
+  const [parametros, definirParametros] = useSearchParams()
+  const elementoADesenhar = parametros.get('desenhar')
+  // Veio da Revisão por uma navegação DESTE app (T17-B-22): a primeira entrada da sessão não tem entrada anterior, e voltar sairia do app.
+  // Lido na montagem: tirar o `?desenhar=` depois de salvar (T17-B-21) troca a chave sem mudar de onde se veio.
+  const localizacao = useLocation()
+  const { state } = localizacao
+  const veioDaRevisao = useRef(!!elementoADesenhar && temEntradaAnterior(localizacao))
   const computador = useBreakpoint() === 'computador'
   const palcoRef = useRef<HTMLDivElement>(null)
   const topoRef = useRef<HTMLDivElement>(null)
@@ -142,11 +206,10 @@ function Visualizador({ img, regioes, origem }: Props) {
   const [vista, setVista] = useState<Vista>(VISTA_INICIAL)
   const [original, setOriginal] = useState(origem?.original ?? false)
   const [mostrarRegioes, setMostrarRegioes] = useState(true)
-  const [ocultas, setOcultas] = useState<ReadonlySet<number>>(new Set())
+  const [ocultas, setOcultas] = useState<ReadonlySet<number | string>>(new Set())
   const [natural, setNatural] = useState<Tamanho | null>(null)
 
-  const caminho = img.tela ?? img.miniatura
-  const { url, falhou, aoFalhar } = useUrlDaImagem(caminho)
+  const { url, aviso, aoFalhar } = useUrlDaImagemExibida(img)
   const traco = img.display_mode === 'traco'
   const invertida = traco && !original
   const giro = giroDaImagem(img.rotacao)
@@ -165,13 +228,77 @@ function Visualizador({ img, regioes, origem }: Props) {
   const alternarOriginal = useCallback(() => setOriginal((o) => !o), [])
   const alternarRegioes = useCallback(() => setMostrarRegioes((m) => !m), [])
 
+  // ---- marcar uma região (Tarefa 10; Imagem.dc.html, PC-Imagem.dc.html) ----
+  // Vindo da nova hipótese (`marcarPara`), abre já marcando; concluir põe o polígono no rascunho dela e volta ao item.
+  const marcarPara = origem?.marcarPara ?? null
+  const [marcando, setMarcando] = useState(() => !!marcarPara || !!elementoADesenhar)
+  const [edicao, setEdicao] = useState<Edicao>(() => {
+    const r = marcarPara ? lerRascunhoDaHipotese(marcarPara) : null
+    return r?.sobre.tipo === 'nova' && r.sobre.regiao?.imagem === img.id ? novaEdicao({ pontos: r.sobre.regiao.pontos, fechado: true }) : novaEdicao()
+  })
+  /** A região do usuário cujos pontos estão sendo editados (null: uma região nova). */
+  const [editandoRegiao, setEditandoRegiao] = useState<string | null>(null)
+  const [falhaDaRegiao, setFalhaDaRegiao] = useState(false)
+  const [faltamPontos, setFaltamPontos] = useState(false)
+  const [regiaoExcluida, setRegiaoExcluida] = useState<Regiao | null>(null)
+  useEffect(() => setFaltamPontos(false), [edicao])
+  // Os elementos (para "mais uma região de" e "Pertence a") só são lidos quando se marca.
+  const elementosDoLivro = useCarregar(() => (!marcando || img.numero.startsWith('OB-') ? Promise.resolve([]) : elementosDoObjeto(img.numero)), `${img.numero}|${marcando}`)
+  const elementosSkc = useElementosSkc([img.numero])
+  const elementos = useMemo<ElementoParaEscolher[]>(
+    () => [...(elementosDoLivro.fase === 'ok' ? elementosDoLivro.dados.map((e) => ({ id: e.id, rotulo: e.rotulo })) : []), ...elementosSkc.map((e) => ({ id: e.id, rotulo: e.rotulo }))],
+    [elementosDoLivro, elementosSkc],
+  )
+  const comecarAMarcar = useCallback(() => {
+    setEdicao(novaEdicao())
+    setEditandoRegiao(null)
+    setMarcando(true)
+    setMostrarRegioes(true)
+  }, [])
+  const pararDeMarcar = useCallback(() => {
+    setMarcando(false)
+    setEdicao(novaEdicao())
+    setEditandoRegiao(null)
+  }, [])
+  const editarPontos = useCallback((r: Regiao) => {
+    setEdicao(novaEdicao({ pontos: r.pontos, fechado: true }))
+    setEditandoRegiao(String(r.id))
+    setMarcando(true)
+  }, [])
+
   // Fechar: vindo do item, volta no histórico (o item reaparece como estava); aberto direto, leva ao item do objeto.
   // O item devolve o foco ao "Ampliar a imagem" ao montar (ver estado.ts).
   const fechar = useCallback(() => {
     pedirFocoNoAmpliar()
-    if (origem) navegar(-1)
+    // Vindo da Revisão (`?desenhar=`, um link comum, sem estado) volta a ela; aberto direto (sem histórico) vai ao objeto.
+    if (origem || veioDaRevisao.current) navegar(-1)
     else navegar(`/item/${encodeURIComponent(img.numero)}`, { replace: true, state: comImagemAberta(null, { imagemId: img.id, original }) })
   }, [origem, navegar, img.numero, img.id, original])
+
+  /** Concluir (Enter): fecha a região e, conforme o caso, volta à nova hipótese, grava os pontos editados ou pede o nome. */
+  const concluir = useCallback(() => {
+    if (!marcando) return false
+    // Já fechada, dando nome à região: não há o que concluir aqui (o Enter fica com o formulário do nome).
+    if (edicao.atual.fechado && !marcarPara && !editandoRegiao) return false
+    const fechado = edicao.atual.fechado ? edicao.atual : fecharDesenho(edicao.atual)
+    // Menos de 3 pontos (ou sem área): a instrução diz por que não concluiu (M6).
+    if (!fechado.fechado) {
+      setFaltamPontos(true)
+      return
+    }
+    if (fechado !== edicao.atual) setEdicao((e) => ({ atual: fechado, antes: [...e.antes, e.atual] }))
+    if (marcarPara) {
+      const r = lerRascunhoDaHipotese(marcarPara) ?? rascunhoNovo(marcarPara, null)
+      const antes = r.sobre.tipo === 'nova' ? r.sobre.regiao : null
+      guardarRascunhoDaHipotese({ ...r, sobre: { tipo: 'nova', regiao: { imagem: img.id, pontos: fechado.pontos, nome: antes?.nome ?? '', pai: antes?.pai ?? null } } })
+      fechar()
+      return
+    }
+    if (editandoRegiao) {
+      setFalhaDaRegiao(false)
+      alterarRegiao(editandoRegiao, fechado.pontos).then(pararDeMarcar, () => setFalhaDaRegiao(true))
+    }
+  }, [marcando, edicao, marcarPara, editandoRegiao, img.id, fechar, pararDeMarcar])
 
   // O foco começa no Fechar: Esc e Tab agem a partir dele.
   useEffect(() => {
@@ -188,9 +315,18 @@ function Visualizador({ img, regioes, origem }: Props) {
     if (!url || vistaAtual.current.escala <= 1) return false
     alterarVista((v, p, c) => mover(v, dx, dy, p, c))
   }
+  const desfazerPonto = () => {
+    if (!marcando || emCampoDeTexto(document.activeElement)) return false
+    setEdicao(desfazerPasso)
+  }
   useAtalhos(
     {
-      Escape: fechar,
+      Escape: () => (marcando && !marcarPara ? pararDeMarcar() : fechar()),
+      e: () => (url ? (marcando ? (marcarPara ? fechar() : pararDeMarcar()) : comecarAMarcar()) : false),
+      // Com o foco num botão, Enter é dele (o navegador o aciona; revisão 4, I1).
+      Enter: () => (marcando && !emCampoDeTexto(document.activeElement) && !(document.activeElement as HTMLElement | null)?.closest('button, a') ? concluir() : false),
+      'Control+Z': desfazerPonto,
+      'Meta+Z': desfazerPonto,
       i: () => (url && traco ? alternarOriginal() : false),
       '+': ampliarUm,
       '=': ampliarUm,
@@ -252,7 +388,8 @@ function Visualizador({ img, regioes, origem }: Props) {
   const aoPressionar = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     try {
-      e.currentTarget.setPointerCapture(e.pointerId)
+      // Marcando, o palco não captura: o soltar tem de chegar à camada do desenho (que põe o ponto).
+      if (!marcando) e.currentTarget.setPointerCapture(e.pointerId)
     } catch {
       /* sem captura, o arrasto segue enquanto o ponteiro estiver sobre o palco */
     }
@@ -272,7 +409,8 @@ function Visualizador({ img, regioes, origem }: Props) {
       alterarVista((v, p, c) => pinca(v, de, para, p, c))
     } else if (n === 1) {
       if (toque.current && distancia(agora, toque.current) > TOQUE_MAX_MOVIMENTO) toque.current.movido = true
-      alterarVista((v, p, c) => (v.escala > 1 ? mover(v, agora.x - antes.x, agora.y - antes.y, p, c) : v))
+      // Marcando, um dedo desenha (DesenhoDeRegiao); a imagem anda com dois.
+      if (!marcando) alterarVista((v, p, c) => (v.escala > 1 ? mover(v, agora.x - antes.x, agora.y - antes.y, p, c) : v))
     }
     // Com três ou mais dedos não há gesto, mas a posição de cada um continua sendo acompanhada: ao
     // sobrar dois, a pinça parte de onde eles estão e não de onde estavam.
@@ -286,7 +424,7 @@ function Visualizador({ img, regioes, origem }: Props) {
     if (!ponteiros.current.delete(e.pointerId)) return
     const t = toque.current
     toque.current = null
-    if (e.type !== 'pointerup' || ponteiros.current.size > 0 || !t || t.movido || Date.now() - t.t > TOQUE_MAX_DURACAO) return
+    if (marcando || e.type !== 'pointerup' || ponteiros.current.size > 0 || !t || t.movido || Date.now() - t.t > TOQUE_MAX_DURACAO) return
     const anterior = ultimoToque.current
     if (anterior && t.t - anterior.t < TOQUE_DUPLO_JANELA && distancia(t, anterior) < TOQUE_DUPLO_DISTANCIA) {
       ultimoToque.current = null
@@ -316,8 +454,58 @@ function Visualizador({ img, regioes, origem }: Props) {
   }, [palco.w, palco.h, caixa.w, caixa.h])
 
   // ---- regiões ----
-  const visiveis = mostrarRegioes && url ? regioes.filter((r) => !ocultas.has(r.id)) : []
-  const alternarRegiao = (id: number) =>
+  const visiveis = mostrarRegioes && url ? regioes.filter((r) => !ocultas.has(r.id) && String(r.id) !== editandoRegiao) : []
+  const n = edicao.atual.pontos.length
+  const fechada = edicao.atual.fechado
+  const nomeando = marcando && fechada && !marcarPara && !editandoRegiao
+  const instrucao = computador
+    ? 'Clique põe pontos · clique no 1º ponto para fechar · Enter conclui · Esc cancela a marcação'
+    : 'Toque para pôr pontos · toque no primeiro para fechar a região'
+  const principalDaImagem = () => gruposDe(estadoAtual()).principal(img.numero)
+  const regiaoNova = nomeando && (
+    <RegiaoNova
+      key={edicao.antes.length}
+      objeto={img.numero}
+      imagem={img.id}
+      pontos={edicao.atual.pontos}
+      elementos={elementos}
+      elementoInicial={elementoADesenhar}
+      aoDescartar={pararDeMarcar}
+      emPreparo={() => {
+        const r = hipoteseEmPreparo(principalDaImagem())
+        if (!r) return null
+        // O "Sobre" que a região tomaria na hipótese em preparo (revisão 4, m4).
+        const s = r.sobre
+        const substitui = s.tipo === 'elemento' ? s.rotulo || 'região' : s.tipo === 'nova' && s.regiao ? `região nova ${s.regiao.nome.trim() || 'sem nome'}, ainda não salva` : null
+        return { substitui }
+      }}
+      aoSalva={(r, destino) => {
+        pararDeMarcar()
+        // O elemento que veio da Revisão já foi atendido: «Marcar região» de novo não volta travado nele (T17-B-21).
+        if (elementoADesenhar) {
+          definirParametros(
+            (atual) => {
+              const p = new URLSearchParams(atual)
+              p.delete('desenhar')
+              return p
+            },
+            { replace: true, state },
+          )
+        }
+        if (destino === 'so-a-regiao') return
+        // A hipótese sobre o elemento da região, no item do objeto. O rascunho é o do PRINCIPAL do grupo de ligação (a
+        // tela que o abre), não o do membro dono da imagem (revisão 3, M5). "em-preparo": a região entra na que já existe.
+        const objeto = principalDaImagem()
+        const sobre = { tipo: 'elemento' as const, id: r.elementoId, rotulo: r.rotulo }
+        const emPreparo = destino === 'em-preparo' ? hipoteseEmPreparo(objeto) : null
+        guardarRascunhoDaHipotese(emPreparo ? { ...emPreparo, aberto: true, sobre } : { ...rascunhoNovo(objeto, null), sobre })
+        pedirFocoNoAmpliar()
+        if (origem) navegar(-1)
+        else navegar(`/item/${encodeURIComponent(objeto)}`, { replace: true })
+      }}
+    />
+  )
+  const alternarRegiao = (id: number | string) =>
     setOcultas((o) => {
       const n = new Set(o)
       if (!n.delete(id)) n.add(id)
@@ -381,12 +569,14 @@ function Visualizador({ img, regioes, origem }: Props) {
                   if (w > 0 && h > 0) setNatural({ w, h })
                 }}
               />
+              {marcando && <DesenhoDeRegiao edicao={edicao} aoMudar={setEdicao} giro={giro} />}
               {visiveis.length > 0 && (
                 <>
                   <svg className="vis-regioes" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
-                    {visiveis.map((r) => (
-                      <polygon key={r.id} points={pontosDoPoligono(r.pontos)} vectorEffect="non-scaling-stroke" />
-                    ))}
+                    {visiveis.flatMap((r) => [
+                      <polygon key={`${r.id}-h`} className="regiao-halo" points={pontosDoPoligono(r.pontos)} vectorEffect="non-scaling-stroke" />,
+                      <polygon key={`${r.id}-t`} className="regiao-traco" points={pontosDoPoligono(r.pontos)} vectorEffect="non-scaling-stroke" />,
+                    ])}
                   </svg>
                   {visiveis.map((r) => {
                     const x = Math.min(...r.pontos.map((p) => p[0]))
@@ -401,31 +591,78 @@ function Visualizador({ img, regioes, origem }: Props) {
               )}
             </div>
           ) : (
-            <p className="vis-aviso" aria-hidden={!falhou}>
-              {falhou ? MSG_IMAGEM_OFFLINE : ''}
+            <p className="vis-aviso" aria-hidden={!aviso}>
+              {aviso ?? ''}
             </p>
           )}
         </div>
 
-        {img.credito && <p className="vis-credito">{img.credito}</p>}
+        {img.skc ? (
+          <p className="vis-credito vis-credito-skc">
+            <span className="marca-skc">SKC</span>
+            <span>{creditoDaImagem(img.skc)}</span>
+          </p>
+        ) : (
+          img.credito && <p className="vis-credito">{img.credito}</p>
+        )}
 
         {url && (
           <div className="vis-rodape">
             <div role="toolbar" aria-label="Ferramentas da imagem" className="vis-ferramentas">
-              <IconButton icon="recolher" label="Reduzir" shortcut="-" shortcutLabel="−" tipAbove onClick={() => alterarVista((v, p, c) => passo(v, -1, p, c))} />
-              <span className="vis-escala codigo">{`${emPorcento(vista.escala)} %`}</span>
-              <IconButton icon="adicionar" label="Ampliar" shortcut="Z +" shortcutLabel="Z ou +" tipAbove onClick={() => alterarVista((v, p, c) => passo(v, 1, p, c))} />
+              {/* No celular, marcando, a barra fica com as ferramentas do desenho (a pinça continua ampliando). */}
+              {(computador || !marcando) && (
+                <>
+                  <IconButton icon="recolher" label="Reduzir" shortcut="-" shortcutLabel="−" tipAbove onClick={() => alterarVista((v, p, c) => passo(v, -1, p, c))} />
+                  <span className="vis-escala codigo">{`${emPorcento(vista.escala)} %`}</span>
+                  <IconButton icon="adicionar" label="Ampliar" shortcut="Z +" shortcutLabel="Z ou +" tipAbove onClick={() => alterarVista((v, p, c) => passo(v, 1, p, c))} />
+                </>
+              )}
               <IconButton icon="ajustar" label="Ajustar à tela" shortcut="0" tipAbove onClick={ajustarATela} />
               {(temRegioes || (computador && inverter)) && <span className="vis-separador" aria-hidden="true" />}
               {temRegioes && <IconButton icon="regioes" label="Mostrar as regiões" shortcut="R" pressionado={mostrarRegioes} tipAbove onClick={alternarRegioes} />}
               {computador && inverter}
+              <span className="vis-separador" aria-hidden="true" />
+              <IconButton
+                icon="marcarRegiao"
+                label="Marcar região"
+                shortcut="E"
+                pressionado={marcando}
+                tipAbove
+                onClick={() => (marcando ? (marcarPara ? fechar() : pararDeMarcar()) : comecarAMarcar())}
+              />
+              {marcando && (
+                <>
+                  <IconButton icon="desfazer" label="Desfazer o último ponto" shortcut="Control+Z Meta+Z" shortcutLabel="Ctrl/⌘Z" tipAbove onClick={() => setEdicao(desfazerPasso)} />
+                  <IconButton icon="confirmar" label={marcarPara ? 'Concluir e voltar à hipótese' : 'Concluir a região'} shortcut="Enter" tipAbove onClick={() => void concluir()} />
+                </>
+              )}
             </div>
           </div>
         )}
+        {marcando && (
+          <p className="desenho-instrucao" role="status">
+            {faltamPontos && !fechada ? 'Ponha pelo menos 3 pontos que formem uma área para concluir.' : fechada ? (marcarPara ? 'Região fechada · arraste os pontos para ajustar · Enter volta à hipótese' : editandoRegiao ? 'Arraste os pontos · Enter grava' : elementoADesenhar ? 'Região fechada · confira o elemento e salve' : 'Região fechada · dê um nome ao elemento') : instrucao}
+            {' · '}
+            <span className="desenho-contagem">{`${editandoRegiao ? 'Região' : 'Região nova'}: ${n} ${n === 1 ? 'ponto' : 'pontos'}`}</span>
+            {falhaDaRegiao && ' · não foi possível gravar; tente de novo'}
+          </p>
+        )}
+        {!computador && regiaoNova}
       </main>
 
-      {temRegioes && (
-        <ListaDeRegioes regioes={regioes} ocultas={ocultas} aoAlternar={alternarRegiao} comPainel={computador} />
+      {(temRegioes || (computador && (nomeando || regiaoExcluida))) && (
+        <ListaDeRegioes
+          excluida={regiaoExcluida}
+          setExcluida={setRegiaoExcluida}
+          regioes={regioes}
+          ocultas={ocultas}
+          aoAlternar={alternarRegiao}
+          comPainel={computador}
+          aoEditar={marcando ? undefined : editarPontos}
+          podeExcluir={!marcando}
+        >
+          {computador && regiaoNova}
+        </ListaDeRegioes>
       )}
     </div>
   )
@@ -437,7 +674,31 @@ const arred = (v: number) => Number(v.toFixed(2))
  * A lista das regiões: para leitores de tela (celular) ou o painel "Elementos e regiões" (computador),
  * onde cada região liga e desliga.
  */
-function ListaDeRegioes({ regioes, ocultas, aoAlternar, comPainel }: { regioes: readonly Regiao[]; ocultas: ReadonlySet<number>; aoAlternar: (id: number) => void; comPainel: boolean }) {
+function ListaDeRegioes({
+  regioes,
+  ocultas,
+  aoAlternar,
+  comPainel,
+  aoEditar,
+  podeExcluir = false,
+  excluida = null,
+  setExcluida = () => undefined,
+  children,
+}: {
+  regioes: readonly Regiao[]
+  ocultas: ReadonlySet<number | string>
+  aoAlternar: (id: number | string) => void
+  comPainel: boolean
+  /** Regiões do usuário (`RG-…`, Tarefa 10): editar os pontos e excluir (com confirmação e "Desfazer"). */
+  aoEditar?: (r: Regiao) => void
+  podeExcluir?: boolean
+  /** A região que acabou de ser excluída ("Desfazer"); fica no Visualizador, para o painel continuar mesmo sem regiões. */
+  excluida?: Regiao | null
+  setExcluida?: (r: Regiao | null) => void
+  /** "Nomear o elemento da região nova", no pé do painel. */
+  children?: ReactNode
+}) {
+  const [excluindo, setExcluindo] = useState<Regiao | null>(null)
   if (!comPainel) {
     return (
       <ul className="so-leitor" aria-label="Regiões da imagem">
@@ -459,11 +720,64 @@ function ListaDeRegioes({ regioes, ocultas, aoAlternar, comPainel }: { regioes: 
               <span className="vis-painel-nome">
                 <span>{r.elemento}</span>
                 {r.elementoDe && r.elementoDe !== r.elemento && <span className="vis-painel-de">{r.elementoDe}</span>}
+                {typeof r.id === 'string' && <span className="vis-painel-de">SKC · região sua</span>}
               </span>
+              {typeof r.id === 'string' && aoEditar && <IconButton icon="editarFicha" label={`Editar os pontos da região ${r.elemento}`} onClick={() => aoEditar(r)} />}
+              {typeof r.id === 'string' && podeExcluir && <IconButton icon="excluir" label={`Excluir a região ${r.elemento}`} onClick={() => setExcluindo(r)} />}
             </li>
           )
         })}
       </ul>
+      {excluindo && <ConfirmarExclusao regiao={excluindo} aoCancelar={() => setExcluindo(null)} aoExcluida={(r) => {
+        setExcluindo(null)
+        setExcluida(r)
+      }} />}
+      <p className="vis-painel-aviso" role="status">
+        {excluida && (
+          <>
+            {`Região excluída: ${excluida.elemento}. `}
+            <button type="button" className="vis-painel-botao" onClick={() => void restaurarRegiao(String(excluida.id)).then(() => setExcluida(null))}>
+              Desfazer
+            </button>
+          </>
+        )}
+      </p>
+      {children}
     </aside>
+  )
+}
+
+/**
+ * "Excluir a região" (revisão 1, I6; exclusão nomeada da auditoria): diz quantas hipóteses falam do elemento que a região
+ * é, pede confirmação, e depois oferece "Desfazer". As hipóteses continuam, com o nome guardado e "(região excluída)".
+ */
+function ConfirmarExclusao({ regiao, aoCancelar, aoExcluida }: { regiao: Regiao; aoCancelar: () => void; aoExcluida: (r: Regiao) => void }) {
+  const id = String(regiao.id)
+  const { hipoteses, regioes } = dependentesDaRegiao(id)
+  const [falhou, setFalhou] = useState(false)
+  const partes = [
+    hipoteses > 0 ? `${hipoteses === 1 ? '1 hipótese fala' : `${hipoteses} hipóteses falam`} deste elemento; ${hipoteses === 1 ? 'ela fica' : 'elas ficam'} sem região na imagem.` : 'Nenhuma hipótese fala deste elemento.',
+    regioes > 0 ? `${regioes === 1 ? 'Outra região é' : `Outras ${regioes} regiões são`} deste elemento.` : '',
+  ].filter(Boolean)
+  return (
+    <div className="vis-painel-confirmar" role="group" aria-label={`Excluir a região ${regiao.elemento}?`}>
+      <p>{`Excluir a região «${regiao.elemento}»? ${partes.join(' ')}`}</p>
+      {falhou && <p role="alert">Não foi possível excluir; tente de novo.</p>}
+      <span className="vis-painel-confirmar-acoes">
+        <button type="button" className="vis-painel-botao" autoFocus onClick={aoCancelar}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="vis-painel-botao vis-painel-botao-forte"
+          onClick={() => {
+            setFalhou(false)
+            excluirRegiao(id).then(() => aoExcluida(regiao), () => setFalhou(true))
+          }}
+        >
+          Excluir
+        </button>
+      </span>
+    </div>
   )
 }

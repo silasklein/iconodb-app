@@ -68,7 +68,7 @@ function Convencoes() {
         <div>
           <dt>Número do objeto</dt>
           <dd>
-            O número principal é o do banco (por exemplo <span className="codigo">CA00001</span>). A referência do livro, como <span className="codigo">IPIAO I, 60</span>, aparece só como origem.
+            O número principal é o do banco (por exemplo <span className="codigo">CA00001</span>). A referência do livro, como <span className="codigo">IPIAO I: 60</span>, aparece só como origem.
           </dd>
         </div>
         <div>
@@ -77,6 +77,10 @@ function Convencoes() {
             O rótulo de cada leitura diz de onde ela vem. <span className="codigo">IPIAO</span>: Schroer e Keel, <i lang="de">Die Ikonographie Palästinas/Israels und der Alte Orient</i>. <span className="codigo">GGG</span>: Keel e Uehlinger,{' '}
             <i lang="de">Göttinnen, Götter und Gottessymbole</i>. <span className="codigo">SKC</span>: as suas próprias notas e leituras (as iniciais de quem usa o app).
           </dd>
+        </div>
+        <div>
+          <dt>Pontos muito juntos no mapa</dt>
+          <dd>No mapa dos sítios, pontos quase no mesmo lugar só se separam com mais zoom ou pelo teclado (Tab e as setas). O minimapa se atualiza quando você solta o mapa.</dd>
         </div>
       </dl>
     </section>
@@ -102,7 +106,7 @@ export function Atalhos() {
           {computador && <IconButton icon="fechar" label="Fechar a lista de atalhos" shortcut="Escape" shortcutLabel="Esc" tipPosition="start" onClick={voltar} />}
         </header>
         <p className="pagina-consulta-apoio">
-          As teclas não valem dentro de campos de texto, nem com Ctrl, ⌘ ou Alt (essas ficam com o navegador).
+          As teclas não valem dentro de campos de texto, nem com Ctrl, ⌘ ou Alt (essas ficam com o navegador). A exceção é Ctrl+S (⌘S no Mac): salva e sincroniza em qualquer lugar.
         </p>
         {CONTEXTOS.map((c) => (
           <section key={c} className="atalhos-secao" aria-labelledby={`atalhos-${c}`}>

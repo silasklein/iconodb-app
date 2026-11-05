@@ -4,7 +4,12 @@
  */
 import { arquivosDoBanco } from '../banco/arquivos'
 
-export const SCHEMA_ESPERADO = 5
+/**
+ * O schema que o pipeline gera agora (6: a tabela `redirecionamento`, Tarefa 16) e os que o app abre. Um pacote do schema 5
+ * (sem a tabela) continua aberto: o app só não tem redirecionamentos (src/pacote/redirecionamentos.ts).
+ */
+export const SCHEMA_ESPERADO = 6
+export const SCHEMAS_ACEITOS: readonly number[] = [5, 6]
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
 export const MSG_SCHEMA = 'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.'
 
@@ -97,7 +102,7 @@ const eObjeto = (v: unknown): v is Record<string, unknown> => typeof v === 'obje
 /** Confere o schema (antes de tudo) e o formato. Serve também ao estado guardado no aparelho. */
 export function validarManifesto(dados: unknown): Manifesto {
   if (!eObjeto(dados)) throw new ErroDeManifesto()
-  if (dados.schema !== SCHEMA_ESPERADO) throw new ErroDeSchema()
+  if (typeof dados.schema !== 'number' || !SCHEMAS_ACEITOS.includes(dados.schema)) throw new ErroDeSchema()
   const { arquivos, publicacoes } = dados
   if (!eObjeto(arquivos) || !Array.isArray(publicacoes) || typeof dados.gerado_em !== 'string') throw new ErroDeManifesto()
   for (const a of Object.values(arquivos)) {

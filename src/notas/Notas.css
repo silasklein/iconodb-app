@@ -1,0 +1,554 @@
+/*
+ * Notas SKC (Nota.dc.html, PC-ItemNota.dc.html, MinhasNotas.dc.html, PC-Notas.dc.html).
+ * As cores vêm do tema ativo (--texto, --fundo, --secundario, --filete): a nota do item é escura; Minhas notas, clara.
+ */
+.nota-texto {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.nota-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+@media (hover: hover) {
+  .nota-link:hover {
+    text-decoration-color: currentColor;
+  }
+}
+/* Um alvo que não existe mais: texto, com o sublinhado pontilhado e um "?" pequeno. */
+.nota-ausente {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--secundario);
+  text-underline-offset: 3px;
+}
+.nota-ausente-marca {
+  margin-left: 1px;
+  font-size: 12px;
+  line-height: 0;
+  color: var(--secundario);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------ o editor */
+.editor-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  min-width: 0;
+}
+.editor-nota-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.editor-nota-rotulo {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.editor-nota-situacao {
+  font-size: 12px;
+  color: var(--secundario);
+}
+
+/* A nota que não se edita: o texto como no quadro, num bloco que se toca para editar. */
+.nota-leitura-bloco {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--texto);
+  cursor: text;
+  overflow-wrap: break-word;
+}
+.nota-leitura-bloco:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.nota-leitura-grande {
+  min-height: 40dvh;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 20px;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+.nota-leitura-grande:focus-visible {
+  outline-offset: 6px;
+  border-radius: 2px;
+}
+.nota-leitura-vazia {
+  color: var(--secundario);
+}
+/* "Editar": rótulo visível (o texto sozinho não é um alvo óbvio), 44 px de altura no toque. */
+.editor-nota-acoes-grupo {
+  display: contents;
+}
+.nota-editar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--alvo-toque);
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .nota-editar {
+    min-height: var(--alvo-mouse);
+  }
+}
+.campo-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.campo-nota-texto {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 236px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.campo-nota-texto[aria-invalid='true'] {
+  border-color: var(--texto);
+  border-width: 2px;
+}
+/* A tela de uma nota (celular): sem moldura, letra maior, ocupa o espaço. */
+.campo-nota-grande {
+  min-height: 40dvh;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 20px;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+  resize: none;
+}
+/* Sem moldura, o foco precisa de um anel próprio: 2 px, afastado do texto. */
+.campo-nota-grande:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 6px;
+  border-radius: 2px;
+}
+.editor-nota-erro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--texto);
+  border-left: 2px solid var(--texto);
+  padding-left: 10px;
+}
+.editor-nota-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.editor-nota-ajuda {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+  flex: 1 1 260px;
+}
+.editor-nota-ajuda kbd {
+  font-family: var(--fonte-codigo);
+}
+.editor-nota-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nota-botao {
+  min-height: var(--alvo-toque);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--texto);
+  color: var(--fundo);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .nota-botao {
+    min-height: var(--alvo-mouse);
+  }
+}
+
+/* A lista de sugestões do [[: no fluxo, logo abaixo do campo (nada de posição absoluta sobre o texto).
+   O cinza de apoio (--superficie) é claro nos dois temas; aqui ele acompanha o tema, para a opção escolhida
+   não ficar clara com letra clara na tela escura da nota. */
+.sugestoes-na-nota {
+  --superficie: color-mix(in srgb, var(--texto) 12%, var(--fundo));
+  position: static;
+  margin-top: 0;
+  max-width: 480px;
+}
+.sugestoes-na-nota .sugestoes-lista {
+  max-height: min(260px, 40dvh);
+}
+
+/* ------------------------------------------------------------------ as notas de um alvo */
+.nota-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.nota-item {
+  min-width: 0;
+}
+.nota-cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 10px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}
+/* O rótulo "[1] · 31/10/2026" é o botão ou link que abre a nota: alvo de 44 px de altura, sem aumentar a letra. */
+.nota-rotulo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  margin: -12px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.nota-origem {
+  color: var(--secundario);
+}
+a.nota-origem {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+@media (hover: hover) {
+  .nota-rotulo:hover,
+  a.nota-origem:hover {
+    color: var(--texto);
+    text-decoration-color: currentColor;
+  }
+}
+.nota-conteudo {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+.nota-escrever {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: var(--alvo-toque);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .nota-escrever:hover {
+    text-decoration-color: currentColor;
+  }
+}
+@media (pointer: fine) {
+  .nota-rotulo,
+  .nota-escrever {
+    min-height: var(--alvo-mouse);
+  }
+  .nota-rotulo {
+    margin: -8px 0;
+  }
+}
+.nota-no-lugar {
+  min-width: 0;
+}
+.notas-do-alvo .nota-corpo {
+  padding-bottom: 8px;
+}
+.notas-do-alvo .detalhe-vazio {
+  margin-bottom: 4px;
+}
+.grupo-notas {
+  margin: 0 24px;
+  padding-bottom: 48px;
+}
+.grupo-notas .detalhe-secao {
+  margin: 0;
+}
+@media (min-width: 768px) {
+  .grupo-notas {
+    margin: 0 48px;
+    padding-bottom: 64px;
+    max-width: 720px;
+  }
+  .nota-conteudo {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+}
+
+/* O aviso "O texto da fonte mudou": discreto, ao lado do ícone de aviso, com o botão "Já conferi". */
+.nota-aviso {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--texto);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nota-aviso > svg {
+  margin-top: 3px;
+}
+.nota-aviso-texto {
+  margin: 0;
+}
+.nota-aviso-botao {
+  grid-column: 2;
+  justify-self: start;
+  min-height: var(--alvo-toque);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .nota-aviso-botao {
+    min-height: var(--alvo-mouse);
+  }
+}
+
+/* ------------------------------------------------------------------ Minhas notas e a tela da nota */
+.notas-ferramentas {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  row-gap: 12px;
+}
+.notas-ferramentas .campo-filtro {
+  flex: 1 1 220px;
+}
+.notas-ligada {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--secundario);
+}
+.notas-ligada select {
+  min-height: var(--alvo-toque);
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+}
+@media (pointer: fine) {
+  .notas-ligada select {
+    min-height: var(--alvo-mouse);
+  }
+}
+.notas-dia {
+  margin-top: 8px;
+}
+.nota-da-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--filete);
+  color: var(--texto);
+  text-decoration: none;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+}
+.nota-da-lista[aria-current='page'] {
+  background: var(--superficie);
+  box-shadow: inset 2px 0 0 var(--texto);
+  padding-left: 10px;
+}
+.nota-da-lista-cabeca {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}
+.nota-da-lista-texto {
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nota-da-lista-liga {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}
+@media (hover: hover) {
+  .nota-da-lista:hover .nota-da-lista-texto {
+    text-decoration: underline;
+    text-decoration-color: var(--controle);
+    text-underline-offset: 3px;
+  }
+}
+
+.nota-aviso-tela {
+  padding: 24px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.nota-aviso-tela p {
+  margin: 0 0 12px;
+}
+.nota-painel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.nota-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 0;
+}
+.nota-barra-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.nota-painel-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 24px 48px;
+  min-width: 0;
+  max-width: 760px;
+}
+.nota-painel-pagina {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.nota-painel-pagina .nota-barra {
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+.nota-em {
+  margin: 0;
+  font-size: 15px;
+  color: var(--secundario);
+}
+.nota-em .nota-link {
+  color: var(--texto);
+}
+.nota-ligacoes dl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--filete);
+}
+.nota-ligacoes dl > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nota-ligacoes dt {
+  font-size: 12px;
+  color: var(--secundario);
+  padding-top: 2px;
+}
+.nota-ligacoes dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .nota-painel-corpo {
+    padding: 16px 32px 64px;
+  }
+  .nota-barra {
+    padding: 12px 24px 0 32px;
+  }
+}
+.nota-excluida {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  margin: 0;
+  font-size: 15px;
+}
+.nota-aviso-titulo {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* A miniatura é um desenho de linhas escuras: o quadrinho dela continua claro também na tela escura. */
+.sugestoes-na-nota .sugestao-miniatura {
+  background: #f3f3f3;
+}

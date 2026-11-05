@@ -34,6 +34,24 @@ const GLIFOS = {
       <path d="M6 13l6 6 6-6" />
     </>
   ),
+  /** Subir um lugar na lista (coleção: mover o item). */
+  subir: (
+    <>
+      <path d="M12 20V5" />
+      <path d="M6 11l6-6 6 6" />
+    </>
+  ),
+  /** Pegar um item para mover (coleção). */
+  arrastar: (
+    <>
+      <circle cx="9" cy="6" r="1" />
+      <circle cx="15" cy="6" r="1" />
+      <circle cx="9" cy="12" r="1" />
+      <circle cx="15" cy="12" r="1" />
+      <circle cx="9" cy="18" r="1" />
+      <circle cx="15" cy="18" r="1" />
+    </>
+  ),
   /** Menu do app (Main, PC-*). */
   menu: (
     <>
@@ -106,6 +124,13 @@ const GLIFOS = {
       <path d="M20 20l-4.2-4.2" />
     </>
   ),
+  /** Uma busca recente (BuscaSugestoes). */
+  recentes: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
   /** Filtrar resultados (Busca, Glossario). */
   filtro: (
     <>
@@ -150,6 +175,22 @@ const GLIFOS = {
     <>
       <rect x="8" y="8" width="12" height="12" />
       <path d="M16 8V4H4v12h4" />
+    </>
+  ),
+  /** Editar a ficha (e as imagens) de um objeto SKC: lápis dentro de um quadrado (ObjetoSKC, decisão 34). */
+  editarFicha: (
+    <>
+      <path d="M11 4H4v16h16v-7" />
+      <path d="M17.5 3.5l3 3-8.5 8.5H9v-3z" />
+    </>
+  ),
+  /** Registrar hipótese: camadas com + (ObjetoSKC, decisão 34). */
+  registrarHipotese: (
+    <>
+      <path d="M13 6.5L12 6 3 10.5 12 15l9-4.5" />
+      <path d="M3 15l9 4.5 9-4.5" />
+      <path d="M19 2v6" />
+      <path d="M16 5h6" />
     </>
   ),
   /** Escrever nota (Item). */
@@ -265,6 +306,40 @@ const GLIFOS = {
       <path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" />
     </>
   ),
+  /** Adicionar imagem ao objeto (ItemAdicionarImagem, PC-ItemAdicionarImagem). */
+  adicionarImagem: (
+    <>
+      <path d="M13 5H4v14h14v-6" />
+      <path d="M4 16l4-4 3 3 2-2 5 5" />
+      <path d="M19 2v6" />
+      <path d="M16 5h6" />
+    </>
+  ),
+  /** Tirar foto com a câmera (ItemAdicionarImagem). */
+  camera: (
+    <>
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+      <path d="M15.5 13a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z" />
+    </>
+  ),
+  /** Escolher da galeria de fotos (ItemAdicionarImagem). */
+  fotos: (
+    <>
+      <path d="M4 5h16v14H4z" />
+      <path d="M10.5 10a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+      <path d="M4 17l5-5 4 4 2-2 5 5" />
+    </>
+  ),
+  /** Escolher do app Arquivos (ItemAdicionarImagem). */
+  arquivos: <path d="M3 6h6l2 2h10v11H3z" />,
+  /** Arrastar ou enviar arquivos (PC-ItemAdicionarImagem). */
+  enviarArquivo: (
+    <>
+      <path d="M12 15V4" />
+      <path d="M7.5 8.5L12 4l4.5 4.5" />
+      <path d="M4 15v5h16v-5" />
+    </>
+  ),
   /** Marcar região (Imagem, NovaHipotese). */
   marcarRegiao: <path d="M4 8l6-4 9 3 1 9-7 5-8-3z" />,
   /** Mostrar ou ocultar as regiões (Imagem). */
@@ -316,6 +391,15 @@ const GLIFOS = {
       <path d="M17 12h5" />
     </>
   ),
+  /** Alfinete de mapa: «Mostrar no mapa» nas linhas do celular (SitiosMapa). */
+  alfinete: (
+    <>
+      <path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </>
+  ),
+  /** Limites das regiões: o polígono tracejado (SitiosMapa, PC-SitiosMapa). */
+  limites: <path d="M4 5l7-1.5 9 3-1.5 9.5L10 20l-6-3.5z" strokeDasharray="2.5 2.5" />,
   /** Opção escolhida (ItemSitio). */
   marcado: (
     <>

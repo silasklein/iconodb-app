@@ -205,3 +205,30 @@ describe('fonteDropbox', () => {
     expect(c.filesListFolderContinue).toHaveBeenCalledWith({ cursor: 'c1' })
   })
 })
+
+describe('a Fonte do pacote é só leitura', () => {
+  it('expõe apenas listar e baixar, e nunca chama envio, cópia, movimento ou exclusão', async () => {
+    const proibidos = ['filesUpload', 'filesUploadSessionStart', 'filesUploadSessionAppendV2', 'filesUploadSessionFinish', 'filesDelete', 'filesDeleteV2', 'filesMoveV2', 'filesCopyV2', 'filesCreateFolderV2', 'filesSaveUrl']
+    const espioes = Object.fromEntries(proibidos.map((n) => [n, vi.fn()]))
+    const c = falso({ ...espioes, filesListFolder: vi.fn(async () => ({ result: { entries: [], has_more: false, cursor: 'c' } })) })
+    usarCliente(c)
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    expect(Object.keys(fonte).sort()).toEqual(['baixar', 'listar'])
+    await fonte.baixar('nucleo/manifest.json')
+    await fonte.listar('usuario')
+    await fonte.listar('')
+    for (const n of proibidos) expect(espioes[n]).not.toHaveBeenCalled()
+  })
+
+  it('listar("usuario") lista a pasta do usuário (recursivo), só para leitura', async () => {
+    const c = falso({
+      filesListFolder: vi.fn(async () => ({
+        result: { entries: [{ '.tag': 'file', path_display: '/usuario/estado.json' }], has_more: false, cursor: 'c' },
+      })),
+    })
+    usarCliente(c)
+    const fonte = (await fonteDropbox({ esperar: sem_espera }))!
+    expect(await fonte.listar('usuario')).toEqual(['usuario/estado.json'])
+    expect(c.filesListFolder).toHaveBeenCalledWith({ path: '/usuario', recursive: true })
+  })
+})

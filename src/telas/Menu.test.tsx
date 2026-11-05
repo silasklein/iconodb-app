@@ -1,11 +1,14 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { pendencias, sitios } from '../banco/consultas'
+import { linhasDaFila, sitios } from '../banco/consultas'
+import { linhasDeTeste } from '../../tests/suporte/filaDeTeste'
+import { definirSync, modulo as sync, zerarSync } from '../../tests/suporte/syncSimulada'
 import { Menu } from './Menu'
 
-vi.mock('../banco/consultas', () => ({ pendencias: vi.fn(), sitios: vi.fn() }))
+vi.mock('../banco/consultas', () => ({ linhasDaFila: vi.fn(), verbetesAReverNoPacote: vi.fn(async () => []), elementosSemRegiaoNoPacote: vi.fn(async () => []), traducoesNaoRevisadasNoPacote: vi.fn(async () => []), lugaresDosCasos: vi.fn(async () => new Map()), sitios: vi.fn() }))
 vi.mock('../pacote/local', () => ({ lerEstado: vi.fn(async () => ({ schema: 5 })) }))
+vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
 
 function abrir(props: Partial<React.ComponentProps<typeof Menu>> = {}) {
   const aoFechar = vi.fn()
@@ -21,7 +24,7 @@ function abrir(props: Partial<React.ComponentProps<typeof Menu>> = {}) {
 
 describe('Menu', () => {
   beforeEach(() => {
-    vi.mocked(pendencias).mockResolvedValue({ total: 4248, porTipo: [] })
+    vi.mocked(linhasDaFila).mockResolvedValue(linhasDeTeste(4248))
     vi.mocked(sitios).mockResolvedValue(Array.from({ length: 90 }, () => ({}) as never))
   })
 
@@ -39,18 +42,61 @@ describe('Menu', () => {
     expect(await within(nav).findByText('90 sítios')).toBeInTheDocument()
   })
 
-  it('Comparar, Sincronização e Ajustes ficam desabilitados, com "na próxima versão"', () => {
+  it('Comparar é um link com o contador da bandeja; Ajustes fica desabilitado, com "na próxima versão"', () => {
     abrir()
-    for (const nome of ['Comparar', 'Sincronização', 'Ajustes']) {
-      const item = screen.getByRole('button', { name: new RegExp(nome) })
-      expect(item).toBeDisabled()
-      expect(item).toHaveTextContent('na próxima versão')
-    }
+    const comparar = screen.getByRole('link', { name: /Comparar/ })
+    expect(comparar).toHaveAttribute('href', '/comparar')
+    expect(comparar).toHaveTextContent('0/4')
+    const item = screen.getByRole('button', { name: /Ajustes/ })
+    expect(item).toBeDisabled()
+    expect(item).toHaveTextContent('na próxima versão')
   })
 
-  it('não oferece "Salvar e sincronizar" (a sincronização é da 2B)', () => {
-    abrir()
-    expect(screen.queryByText(/Salvar e sincronizar/)).not.toBeInTheDocument()
+  describe('a seção Sincronização (Menu.dc.html)', () => {
+    beforeEach(() => zerarSync())
+
+    it('o link "Sincronização" com "Detalhes" leva à tela; o estado e a última; o botão "Salvar e sincronizar"', async () => {
+      const as1910 = new Date(new Date().setHours(19, 10, 0, 0)).getTime()
+      definirSync({ porEnviar: 3, ultimaEm: as1910 })
+      const { aoFechar } = abrir()
+      const secao = screen.getByRole('region', { name: 'Sincronização' })
+      const link = within(secao).getByRole('link', { name: /Sincronização/ })
+      expect(link).toHaveAttribute('href', '/sincronizacao')
+      expect(link).toHaveTextContent('Detalhes')
+      expect(link.querySelector('[data-marca="ponto"]')).not.toBeNull()
+      expect(within(secao).getByText(/3 alterações por enviar/).parentElement).toHaveTextContent('3 alterações por enviar · última às 19:10')
+      // A hora fica fora da região viva: não é lida de novo a cada rodada.
+      expect(within(secao).getByRole('status')).toHaveTextContent(/^3 alterações por enviar$/)
+      const botao = within(secao).getByRole('button', { name: 'Salvar e sincronizar' })
+      expect(botao).toHaveAttribute('aria-keyshortcuts', 'Control+S Meta+S')
+      await userEvent.click(botao)
+      expect(sync.sincronizarAgora).toHaveBeenCalledWith('manual')
+      expect(aoFechar).not.toHaveBeenCalled()
+      await userEvent.click(link)
+      expect(aoFechar).toHaveBeenCalled()
+    })
+
+    it('sincronizado: sem ponto; sem login, o aviso de entrar de novo', () => {
+      definirSync({ estado: { erro: 'login', mensagem: 'Entre de novo para sincronizar' } })
+      abrir()
+      const secao = screen.getByRole('region', { name: 'Sincronização' })
+      expect(within(secao).getByRole('status')).toHaveTextContent('Entre de novo para sincronizar')
+      act(() => zerarSync())
+      expect(within(secao).getByRole('link', { name: /Sincronização/ }).querySelector('[data-marca]')).toBeNull()
+    })
+  })
+
+  it('"Exportar" leva a /exportar, logo antes de "Atalhos e convenções", e fecha o menu como as outras entradas', async () => {
+    const { aoFechar } = abrir()
+    const nav = screen.getByRole('navigation', { name: 'Menu' })
+    const exportar = within(nav).getByRole('link', { name: /Exportar/ })
+    expect(exportar).toHaveAttribute('href', '/exportar')
+    const links = within(nav).getAllByRole('link').map((l) => l.getAttribute('href'))
+    expect(links.indexOf('/exportar')).toBe(links.indexOf('/atalhos') - 1)
+    // O teclado: Tab chega a ela, e Enter a abre (fecha o menu), como nas outras.
+    exportar.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(aoFechar).toHaveBeenCalled()
   })
 
   it('"Atalhos e convenções" leva a /atalhos e declara a tecla ?', () => {

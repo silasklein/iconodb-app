@@ -1,4 +1,4 @@
-import { numeroPtBr } from './usePendencias'
+import { numeroPtBr } from './numero'
 
 /**
  * Um número solto numa lista ("3" objetos): o texto escondido dá a unidade ao leitor de tela

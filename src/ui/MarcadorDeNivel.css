@@ -1,0 +1,18 @@
+/* Marcador de profundidade (decisão 35). A cor vem do contexto; o padrão é a cor do texto e o secundário. */
+.marcador-nivel {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.marcador-nivel svg {
+  display: block;
+  flex-shrink: 0;
+}
+.marcador-cheio {
+  fill: var(--marcador-cheio, var(--texto));
+}
+.marcador-vazio {
+  fill: none;
+  stroke: var(--marcador-vazio, var(--secundario));
+  stroke-width: 1;
+}

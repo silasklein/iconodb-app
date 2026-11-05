@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import type { Verbete } from '../banco/tipos'
 import {
   CHAVES_DE_FILTRO,
@@ -8,11 +8,14 @@ import {
   ROTULO_DO_ESCOPO,
   buscar,
   type ChaveDeFiltro,
+  type AcertoDoUsuario,
   type Escopo,
   type Filtros,
   type ResultadoDaBusca,
 } from '../busca/consulta'
+import { ROTULO_DO_TIPO_DO_USUARIO, rotaDoAcertoDoUsuario } from '../busca/rotasDoUsuario'
 import { MAXIMO_DA_LISTA, estadoDoResultado, type EstadoVindoDaBusca, lerParametros, montarParametros, temFiltros, type ParametrosDaBusca } from '../busca/url'
+import { useEstado } from '../usuario/estado'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { IconButton } from '../ui/IconButton'
@@ -36,6 +39,10 @@ type Estado =
   | { fase: 'erro'; erro: unknown; tentarDeNovo: () => void }
 
 const objetos = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'objeto' : 'objetos'}`
+const acertosSKC = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'acerto' : 'acertos'} na sua camada`
+/** "3 objetos", "1 acerto na sua camada" ou "3 objetos e 1 acerto na sua camada". */
+const quantos = (objs: number, usuario: number) =>
+  [objs > 0 || usuario === 0 ? objetos(objs) : null, usuario > 0 ? acertosSKC(usuario) : null].filter(Boolean).join(' e ')
 
 const TIPO_DO_VERBETE: Record<Verbete['tipo'], string> = { concept: 'conceito', name: 'nome', technical: 'técnico' }
 
@@ -45,6 +52,8 @@ function useBusca(q: string, escopo: Escopo, filtros: Filtros, limite: number): 
   const [tentativa, setTentativa] = useState(0)
   const tentarDeNovo = useCallback(() => setTentativa((t) => t + 1), [])
   const chave = JSON.stringify([q, escopo, filtros, limite, tentativa])
+  // A camada do usuário (notas, objetos SKC…) está na busca: uma gravação ou uma sincronização refaz o resultado.
+  const doUsuario = useEstado((e) => e)
   useEffect(() => {
     if (q.trim() === '') {
       setEstado({ fase: 'vazia' })
@@ -59,14 +68,15 @@ function useBusca(q: string, escopo: Escopo, filtros: Filtros, limite: number): 
     return () => {
       vivo = false
     }
-    // `chave` resume q, escopo, filtros, limite e as tentativas ("Tentar de novo")
-  }, [chave])
+    // `chave` resume q, escopo, filtros, limite e as tentativas ("Tentar de novo"); `doUsuario`, o estado do usuário
+  }, [chave, doUsuario])
   return estado
 }
 
 export function Busca() {
   const [params, setParams] = useSearchParams()
   const { pathname, search } = useLocation()
+  const navegar = useNavigate()
   const computador = useBreakpoint() === 'computador'
   const atual = useMemo(() => lerParametros(params), [params])
   const { q, escopo, filtros } = atual
@@ -172,7 +182,7 @@ export function Busca() {
   }, [computador])
 
   // No computador o campo é o da barra superior (BarraSuperior); aqui só o do celular.
-  const campo = computador ? null : <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} atalho />
+  const campo = computador ? null : <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} navegar={navegar} atalho />
 
   const abas = (
     <div className="busca-escopos" role="group" aria-label="Escopo da busca">
@@ -181,13 +191,13 @@ export function Busca() {
           key={e}
           type="button"
           aria-pressed={e === escopo}
-          aria-label={resultado ? `${ROTULO_DO_ESCOPO[e]}, ${objetos(resultado.contagens[e])}` : undefined}
+          aria-label={resultado ? `${ROTULO_DO_ESCOPO[e]}, ${quantos(resultado.contagens[e], resultado.contagensDoUsuario[e])}` : undefined}
           onClick={() => ir({ escopo: e })}
         >
           {ROTULO_DO_ESCOPO[e]}
           {resultado && (
             <span className="busca-escopo-n codigo" aria-hidden="true">
-              {resultado.contagens[e].toLocaleString('pt-BR')}
+              {(resultado.contagens[e] + resultado.contagensDoUsuario[e]).toLocaleString('pt-BR')}
             </span>
           )}
         </button>
@@ -248,6 +258,7 @@ export function Busca() {
                 {resultado && <span>contagem em {objetos(resultado.totalSemFiltros)}</span>}
               </div>
               {resultado && <Facetas facetas={resultado.facetas} aoAlternar={alternar} />}
+              {resultado && resultado.facetas.length === 0 && <p className="busca-facetas-vazio">Não há o que filtrar nesta busca.</p>}
             </aside>
           )}
 
@@ -257,8 +268,8 @@ export function Busca() {
 
             {/* Sempre no DOM (região viva que aparece junto com o texto não é lida): anuncia a contagem. */}
             <p className="so-leitor" role="status" data-contagem="">
-              {resultado && resultado.total > 0
-                ? objetos(resultado.total) +
+              {resultado && (resultado.total > 0 || resultado.usuario.length > 0)
+                ? quantos(resultado.total, resultado.usuario.length) +
                   (temFiltros(filtros) ? `, ${resultado.totalSemFiltros.toLocaleString('pt-BR')} sem filtros` : '')
                 : ''}
             </p>
@@ -319,28 +330,33 @@ export function Busca() {
                     </div>
                   )}
 
-                  {resultado.total === 0 ? (
+                  {resultado.total === 0 && resultado.usuario.length === 0 ? (
                     <SemResultado q={q} escopo={escopo} resultado={resultado} aoTudo={() => ir({ escopo: 'tudo' })} aoLimpar={limparFiltros} />
                   ) : (
                     <>
-                      <div className="busca-grade" ref={grade} inert={ocupado}>
-                        {resultado.objetos.map((o) => (
-                          <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoDoCartao(o.numero)} />
-                        ))}
-                      </div>
-                      {resultado.objetos.length < resultado.total && (
-                        <button
-                          type="button"
-                          className="busca-mais"
-                          onClick={() => {
-                            if (ocupado) return
-                            focoNoCartao.current = resultado.objetos.length
-                            setLimite((l) => l + OBJETOS_POR_PAGINA)
-                          }}
-                        >
-                          Mostrar mais ({(resultado.total - resultado.objetos.length).toLocaleString('pt-BR')})
-                        </button>
+                      {resultado.total > 0 && (
+                        <>
+                          <div className="busca-grade" ref={grade} inert={ocupado}>
+                            {resultado.objetos.map((o) => (
+                              <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} state={estadoDoCartao(o.numero)} />
+                            ))}
+                          </div>
+                          {resultado.objetos.length < resultado.total && (
+                            <button
+                              type="button"
+                              className="busca-mais"
+                              onClick={() => {
+                                if (ocupado) return
+                                focoNoCartao.current = resultado.objetos.length
+                                setLimite((l) => l + OBJETOS_POR_PAGINA)
+                              }}
+                            >
+                              Mostrar mais ({(resultado.total - resultado.objetos.length).toLocaleString('pt-BR')})
+                            </button>
+                          )}
+                        </>
                       )}
+                      {resultado.usuario.length > 0 && <AcertosDoUsuario acertos={resultado.usuario} />}
                     </>
                   )}
                 </section>
@@ -354,6 +370,40 @@ export function Busca() {
         <FolhaDeFiltros resultado={resultado} aoAlternar={alternar} aoLimpar={limparFiltros} aoFechar={() => setFolha(false)} />
       )}
     </>
+  )
+}
+
+/** Os acertos da camada do usuário que não são de um objeto: nota solta, coleção, sítio, hipótese. */
+function AcertosDoUsuario({ acertos }: { acertos: AcertoDoUsuario[] }) {
+  return (
+    <section className="busca-usuario" aria-labelledby="busca-usuario-titulo">
+      <div className="busca-contagem">
+        <h2 id="busca-usuario-titulo">Na sua camada (SKC)</h2>
+        <span>{acertos.length.toLocaleString('pt-BR')}</span>
+      </div>
+      <ul className="busca-usuario-lista">
+        {acertos.map((a) => {
+          const rota = rotaDoAcertoDoUsuario(a.tipo, a.ref)
+          return (
+            <li key={`${a.tipo}:${a.ref}`} className="busca-usuario-linha">
+              <span className="busca-usuario-texto">
+                {rota ? (
+                  <Link className="busca-usuario-rotulo hit" to={rota}>
+                    {a.rotulo}
+                  </Link>
+                ) : (
+                  <span className="busca-usuario-rotulo">{a.rotulo}</span>
+                )}
+                <span className="busca-usuario-tipo">{ROTULO_DO_TIPO_DO_USUARIO[a.tipo] ?? a.tipo}</span>
+              </span>
+              <span className="busca-usuario-marca codigo" title="Da sua camada (SKC)">
+                SKC
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 
@@ -371,7 +421,7 @@ function SemResultado({
   aoLimpar: () => void
 }) {
   const filtrado = resultado.totalSemFiltros > 0
-  const noutroEscopo = escopo !== 'tudo' && resultado.contagens.tudo > 0
+  const noutroEscopo = escopo !== 'tudo' && resultado.contagens.tudo + resultado.contagensDoUsuario.tudo > 0
   return (
     <div className="busca-aviso" role="status">
       <p className="busca-nada">Nada encontrado para «{q.trim()}»</p>
@@ -386,7 +436,7 @@ function SemResultado({
       {noutroEscopo && (
         <>
           <p>
-            Em «{ROTULO_DO_ESCOPO.tudo}» há {objetos(resultado.contagens.tudo)}.
+            Em «{ROTULO_DO_ESCOPO.tudo}» há {quantos(resultado.contagens.tudo, resultado.contagensDoUsuario.tudo)}.
           </p>
           <button type="button" className="busca-link" onClick={aoTudo}>
             Buscar em Tudo

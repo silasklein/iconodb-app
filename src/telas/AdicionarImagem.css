@@ -1,0 +1,656 @@
+/*
+ * Adicionar imagem / Editar a imagem: folha branca de baixo no celular (ItemAdicionarImagem.dc.html), diálogo branco
+ * de 880 px no computador (PC-ItemAdicionarImagem.dc.html). As cores das telas de consulta sobre a tela escura do item.
+ */
+.adicionar-imagem-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.adicionar-imagem-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.adicionar-imagem {
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+  /* A folha é clara mesmo sobre a tela escura do item: os controles nativos (rádio, caixa) também. */
+  color-scheme: light;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  box-sizing: border-box;
+}
+.adicionar-imagem:focus {
+  outline: none;
+}
+.adicionar-imagem:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+.adicionar-imagem :focus-visible {
+  outline: 2px solid var(--texto-consulta);
+  outline-offset: 2px;
+}
+
+/* ---- celular: a folha ---- */
+.adicionar-imagem-folha {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(100dvh - 52px);
+  border-radius: 16px 16px 0 0;
+  padding: 10px 24px max(24px, env(safe-area-inset-bottom));
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.adicionar-imagem-folha.adicionar-imagem-detalhes,
+.adicionar-imagem-folha.adicionar-imagem-editar {
+  top: 52px;
+  max-height: none;
+  padding: 10px 0 0;
+  gap: 0;
+  overflow: hidden;
+}
+.adicionar-imagem-alca {
+  align-self: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+}
+.adicionar-imagem-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  min-height: 44px;
+}
+.adicionar-imagem-detalhes .adicionar-imagem-topo,
+.adicionar-imagem-folha.adicionar-imagem-editar .adicionar-imagem-topo {
+  padding: 0 24px;
+}
+.adicionar-imagem-folha .adicionar-imagem-topo .icon-button {
+  margin-right: -12px;
+  color: var(--texto-consulta);
+}
+.adicionar-imagem-etiqueta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.adicionar-imagem-etiqueta .codigo {
+  font-family: var(--fonte-codigo);
+  letter-spacing: 0.02em;
+}
+.adicionar-imagem-intro {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+.adicionar-imagem-fontes {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e0e0e0;
+}
+.adicionar-imagem-fonte {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  border: 0;
+  border-top: 1px solid #e0e0e0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--texto-consulta);
+  text-align: left;
+  cursor: pointer;
+}
+.adicionar-imagem-fonte-icone {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--filete-consulta);
+  border-radius: 8px;
+}
+.adicionar-imagem-fonte-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 16px;
+}
+.adicionar-imagem-fonte-apoio {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+}
+.adicionar-imagem-nota {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.adicionar-imagem-cancelar {
+  margin-top: 4px;
+  height: 48px;
+}
+
+.adicionar-imagem-rolagem {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.adicionar-imagem-escolhida {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.adicionar-imagem-previa {
+  width: 96px;
+  height: 120px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #6e6e6e;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px;
+  box-sizing: border-box;
+}
+img.adicionar-imagem-previa {
+  padding: 0;
+  background: var(--superficie);
+}
+.adicionar-imagem-previa-erro {
+  background: var(--superficie);
+  color: var(--texto-consulta);
+  border: 2px solid var(--texto-consulta);
+  font-weight: 600;
+}
+.adicionar-imagem-escolhida .adicionar-imagem-previa-erro {
+  width: 160px;
+}
+.adicionar-imagem-escolhida-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.adicionar-imagem-nome {
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.adicionar-imagem-apoio {
+  font-size: 13px;
+  color: var(--secundario-consulta);
+  font-weight: 400;
+}
+.adicionar-imagem-trocar,
+.adicionar-imagem-link {
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 2px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto-consulta);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .adicionar-imagem-trocar,
+  .adicionar-imagem-link {
+    min-height: var(--alvo-toque);
+  }
+}
+
+/* ---- os campos ---- */
+.adicionar-imagem-tipo {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.adicionar-imagem-tipo legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.adicionar-imagem-opcao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.adicionar-imagem-opcao input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #111111;
+}
+.adicionar-imagem-detectado {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--secundario-consulta);
+}
+.adicionar-imagem-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adicionar-imagem-campo label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.adicionar-imagem-campo input {
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--texto-consulta);
+  background: var(--fundo-consulta);
+  box-sizing: border-box;
+}
+.adicionar-imagem-campo input[aria-invalid='true'] {
+  border: 2px solid var(--texto-consulta);
+}
+.adicionar-imagem-sugestoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+.adicionar-imagem-sugestao {
+  position: relative;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 16px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* O alvo de toque é de 44 px, mesmo com o desenho de 32 (auditoria UX). */
+.adicionar-imagem-sugestao::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+.adicionar-imagem-ajuda {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
+}
+.adicionar-imagem-principal span {
+  line-height: 1.35;
+}
+.adicionar-imagem-principal-apoio {
+  display: block;
+  font-size: 12px;
+}
+.adicionar-imagem-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--texto-consulta);
+}
+.adicionar-imagem-erro svg {
+  margin-top: 2px;
+}
+.adicionar-imagem-excluir {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* ---- o pé (botões) ---- */
+.adicionar-imagem-pe {
+  flex-shrink: 0;
+  padding: 12px 24px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.adicionar-imagem-folha .adicionar-imagem-pe {
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+.adicionar-imagem-botoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px;
+}
+.adicionar-imagem-botoes-um {
+  grid-template-columns: minmax(0, 1fr);
+}
+.adicionar-imagem-pe .adicionar-imagem-nota {
+  text-align: center;
+  margin: 0;
+}
+.adicionar-imagem-botao {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.adicionar-imagem-botao-principal {
+  border: 0;
+  background: #111111;
+  color: #ffffff;
+  font-weight: 500;
+}
+.adicionar-imagem-botao-principal:focus-visible {
+  outline-offset: 3px;
+}
+.adicionar-imagem-botao-pequeno {
+  height: 40px;
+  padding: 0 14px;
+}
+@media (pointer: coarse) {
+  .adicionar-imagem-botao-pequeno {
+    height: var(--alvo-toque);
+  }
+}
+
+/* ---- as excluídas ---- */
+.adicionar-imagem-excluidas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.adicionar-imagem-excluidas ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.adicionar-imagem-excluidas li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 14px;
+}
+.adicionar-imagem-excluida-mini {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--superficie);
+}
+.adicionar-imagem-excluida-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.adicionar-imagem-excluida-texto {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.adicionar-imagem-excluidas .adicionar-imagem-link {
+  align-self: center;
+  margin: 0;
+}
+
+/* ---- computador: o diálogo ---- */
+.adicionar-imagem-dialogo {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(880px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  border-radius: 12px;
+  padding: 20px 28px 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.adicionar-imagem-dialogo.adicionar-imagem-editar {
+  width: min(520px, calc(100vw - 48px));
+}
+.adicionar-imagem-dialogo .adicionar-imagem-topo .icon-button {
+  color: var(--texto-consulta);
+  margin-right: -8px;
+}
+.adicionar-imagem-titulo {
+  margin: 0;
+  font-family: var(--fonte-texto);
+  font-size: 18px;
+  font-weight: 600;
+}
+.adicionar-imagem-titulo .codigo {
+  margin-left: 4px;
+  font-family: var(--fonte-codigo);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--secundario-consulta);
+}
+.adicionar-imagem-corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 32px;
+  padding: 12px 0 20px;
+}
+.adicionar-imagem-esquerda,
+.adicionar-imagem-direita {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.adicionar-imagem-direita {
+  gap: 16px;
+}
+.adicionar-imagem-soltar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 168px;
+  padding: 20px;
+  border: 1.5px dashed var(--controle);
+  border-radius: 8px;
+  background: var(--superficie);
+  text-align: center;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+.adicionar-imagem-soltar-ativa {
+  border-color: var(--texto-consulta);
+  background: #e9e9e9;
+}
+.adicionar-imagem-soltar-botoes {
+  display: flex;
+  gap: 8px;
+}
+.adicionar-imagem-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.adicionar-imagem-cartao {
+  border: 1px solid var(--filete-consulta);
+  border-radius: 8px;
+  padding: 10px;
+}
+.adicionar-imagem-cartao-atual {
+  border: 2px solid var(--texto-consulta);
+  padding: 9px;
+}
+.adicionar-imagem-cartao-botao {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.adicionar-imagem-cartao .adicionar-imagem-previa {
+  width: 100%;
+  height: 200px;
+}
+.adicionar-imagem-cartao-pe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.adicionar-imagem-cartao-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.adicionar-imagem-cartao-pe .icon-button {
+  color: var(--texto-consulta);
+}
+.adicionar-imagem-cartao .adicionar-imagem-nome {
+  font-size: 14px;
+}
+.adicionar-imagem-cartao .adicionar-imagem-apoio {
+  font-size: 12px;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-pe {
+  margin: 0 -28px;
+  padding: 14px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'erro erro' 'nota botoes';
+  align-items: center;
+  column-gap: 16px;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-erro-geral {
+  grid-area: erro;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-pe .adicionar-imagem-nota {
+  grid-area: nota;
+  text-align: left;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-botoes {
+  grid-area: botoes;
+  display: flex;
+  gap: 10px;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-botao {
+  height: 40px;
+  padding: 0 18px;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-campo input {
+  height: 42px;
+}
+.adicionar-imagem-dialogo .adicionar-imagem-rolagem {
+  padding: 12px 0 20px;
+}
+
+/* Revisão 1, M6: "Descartar N imagens?" (Esc ou o fundo, com imagens escolhidas). */
+.adicionar-imagem-confirmar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 2px solid var(--texto-consulta);
+  border-radius: 8px;
+  background: var(--superficie);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.adicionar-imagem-confirmar p {
+  margin: 0;
+}
+.adicionar-imagem-confirmar-botoes {
+  display: flex;
+  gap: 8px;
+}
+/* Celular estreito: os dois botões empilhados, cada rótulo numa linha só. */
+@media (max-width: 420px) {
+  .adicionar-imagem-confirmar-botoes {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+}
+.adicionar-imagem-detalhe {
+  display: block;
+  margin-top: 6px;
+  font-weight: 400;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.adicionar-imagem-previa-erro {
+  flex-direction: column;
+}

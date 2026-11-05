@@ -59,7 +59,8 @@ export interface EstadoVindoDaBusca {
   inicio: number
   /** Quantos objetos o resultado tem de verdade. */
   total: number
-  origem: { rotulo: 'Busca'; caminho: string }
+  /** `rotulo` é 'Busca' para o resultado de uma busca; uma coleção SKC (Tarefa 7) usa o nome dela e `colecao: true`. */
+  origem: { rotulo: string; caminho: string; colecao?: true }
 }
 
 /** Mais que isto na lista e o estado do histórico fica pesado: vai só uma janela em volta do objeto aberto. */

@@ -7,6 +7,7 @@
  * Os deslocamentos de texto ficam em code points (ver tipos.ts).
  */
 import { executar, publicacoesAbertas, type Parametro, type PublicacaoAberta } from './cliente'
+import { chaveDaFonte, formatarReferencias, type ReferenciaDeFonte } from './referencias'
 import {
   NIVEIS,
   type Ancora,
@@ -28,7 +29,6 @@ import {
   type ModoDeExibicao,
   type Numero,
   type ObjetoResumo,
-  type Pendencias,
   type Obra,
   type ObraResumo,
   type Paralelo,
@@ -88,11 +88,14 @@ async function linhasPorPublicacao(montar: (esq: string, sigla: string) => strin
   return sql ? executar<L>(sql, parametros) : []
 }
 
-/** "TESTE I, 60", "TESTE I, 95a" ou "TESTE I, Abb. 1". */
+/** A referência de um item na fonte: obra e volume ("TESTE I"), número, sufixo e se é figura da introdução. */
+function referenciaDe(l: L): ReferenciaDeFonte {
+  return { obra: `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim(), numero: n(l.number) ?? 0, sufixo: s(l.suffix) ?? '', abb: l.kind === 'intro_figure' }
+}
+
+/** "TESTE I: 60", "TESTE I: 95a" ou "TESTE I: Abb. 1" (decisão 39: o formato de `formatarReferencias`). */
 function origemDe(l: L): string {
-  const prefixo = `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim()
-  const numero = l.kind === 'intro_figure' ? `Abb. ${n(l.number)}` : `${n(l.number)}${s(l.suffix) ?? ''}`
-  return `${prefixo}, ${numero}`
+  return formatarReferencias([referenciaDe(l)])
 }
 
 /** Tipo curto: a primeira frase do campo 5, sem o ponto final. */
@@ -141,7 +144,7 @@ const SQL_ITEM = (esq: string) => `
   FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
   WHERE i.id IN ${EM_IDS}`
 
-const SQL_RESUMO = (esq: string) => `
+const SQL_RESUMO = (esq: string, sigla: string) => `
   SELECT i.id, i.publication, i.kind, i.number, i.suffix, coalesce(i.volume, p.volume) AS volume,
     coalesce(r.texto, cf.literal) AS campo5,
     (SELECT coalesce(g.pt, st.literal_name) FROM ${esq}.assertion a
@@ -149,6 +152,10 @@ const SQL_RESUMO = (esq: string) => `
        LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
      WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot'
      ORDER BY a.is_primary DESC, a.id LIMIT 1) AS sitio,
+    (SELECT '${sigla}-' || st.id FROM ${esq}.assertion a
+       JOIN ${esq}.site st ON st.id = a.site_id
+     WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot'
+     ORDER BY a.is_primary DESC, a.id LIMIT 1) AS sitio_id,
     im.thumb_path, im.display_mode
   FROM ${esq}.item i
   LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
@@ -183,11 +190,26 @@ export async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 
       origem: origemDe(l),
       tipo: tipoCurto(s(l.campo5)),
       sitio: s(l.sitio),
+      sitioId: s(l.sitio_id),
       miniatura: s(l.thumb_path),
       display_mode: s(l.display_mode) as ModoDeExibicao | null,
     })
   }
   return resumos
+}
+
+/**
+ * Os resumos dos objetos com estes números (`CA00001`), na ordem pedida, um por objeto (o do primeiro item dele).
+ * O número que o pacote não tem fica de fora.
+ */
+export async function resumosDosObjetos(numeros: readonly string[]): Promise<ObjetoResumo[]> {
+  const unicos = [...new Set(numeros)]
+  if (unicos.length === 0) return []
+  const membrosL = await executar<L>(`SELECT object_id, min(item_id) AS item_id FROM main.object_member WHERE object_id IN ${EM_IDS} GROUP BY object_id`, { $ids: ids(unicos) })
+  const itemDe = new Map(membrosL.map((l) => [s(l.object_id)!, s(l.item_id)!]))
+  const resumos = await resumosDosItens([...itemDe.values()], 'dada')
+  const porNumero = new Map(resumos.map((r) => [r.numero, r]))
+  return unicos.flatMap((numero) => porNumero.get(numero) ?? [])
 }
 
 // ---------------------------------------------------------------------------
@@ -289,50 +311,165 @@ export async function contagens(): Promise<Contagens> {
   return { objetos: n(l!.objetos) ?? 0, hipoteses: n(l!.hipoteses) ?? 0, verbetes: n(l!.verbetes) ?? 0 }
 }
 
-/** Os motivos da fila de revisão com nome próprio; os outros aparecem pelo motivo, legível. */
-const ROTULO_DA_PENDENCIA: Record<string, string> = {
-  citacao_nao_resolvida: 'Citações não resolvidas',
-  traducao_termo_alterado: 'Traduções com termo alterado',
-  traducao_desatualizada: 'Traduções desatualizadas',
-  medidas_nao_normalizadas: 'Medidas não organizadas',
-  datacao_nao_normalizada: 'Datações não organizadas',
-  sitio_nao_normalizado: 'Sítios não resolvidos',
-  remissao_ilegivel: 'Remissões ilegíveis',
-  anotacao_invalida: 'Anotações inválidas',
-  decisao_sem_verbete: 'Decisões sem verbete',
-  correspondencia_invalida: 'Correspondências inválidas',
-  mencao_de_figura_ambigua: 'Menções de figura ambíguas',
-  credito_do_desenho_ausente: 'Créditos de desenho ausentes',
-  credito_de_figura_ilegivel: 'Créditos de figura ilegíveis',
-  aparato_menos_de_5_campos: 'Aparato do catálogo a conferir',
-  aparato_divisao_ambigua: 'Aparato do catálogo a conferir',
-  aparato_divisao_por_recurso: 'Aparato do catálogo a conferir',
-  aparato_campo_suspeito: 'Aparato do catálogo a conferir',
+/** Uma linha da fila de revisão do pacote, como o pipeline a gravou (a base `main` primeiro, depois cada publicação, cada uma por `id`). */
+export interface LinhaDaFila {
+  /** O motivo (`review_queue.reason`). */
+  tipo: string
+  entidade: string
+  entidadeId: string | null
+  detalhe: string
+  /** Para uma linha de item: o número do objeto dele (o id do item se não tem número). */
+  numero: string | null
 }
 
-function rotuloDaPendencia(motivo: string): string {
-  const conhecido = ROTULO_DA_PENDENCIA[motivo]
-  if (conhecido) return conhecido
-  const legivel = motivo.replace(/_/g, ' ').trim()
-  return legivel.charAt(0).toUpperCase() + legivel.slice(1)
-}
-
-/** Quantos casos a fila de revisão tem (comum e todas as publicações), por tipo. Só contagens: a Revisão da 2A não age. */
-export async function pendencias(): Promise<Pendencias> {
+/** Todas as linhas da fila de revisão do pacote (a Revisão, o Menu e o ponto da barra contam a partir delas). */
+export async function linhasDaFila(): Promise<LinhaDaFila[]> {
   const pubs = await publicacoesAbertas()
-  const uniao = ['SELECT reason FROM main.review_queue', ...pubs.map((p) => `SELECT reason FROM ${p.esquema}.review_queue`)].join(' UNION ALL ')
-  const linhas = await executar<L>(`SELECT reason, count(*) AS n FROM (${uniao}) GROUP BY reason`)
-  // Motivos diferentes podem ter o mesmo nome (os do aparato do catálogo): somam num tipo só, o do primeiro.
-  const porRotulo = new Map<string, { tipo: string; rotulo: string; quantidade: number }>()
+  const campos = 'entity, entity_id, reason, detail'
+  const uniao = [`SELECT 0 AS o, id, ${campos} FROM main.review_queue`, ...pubs.map((p, i) => `SELECT ${i + 1} AS o, id, ${campos} FROM ${p.esquema}.review_queue`)].join(' UNION ALL ')
+  const linhas = await executar<L>(`SELECT entity, entity_id, reason, detail FROM (${uniao}) ORDER BY o, id`)
+  const itens = linhas.filter((l) => s(l.entity) === 'item' && l.entity_id != null).map((l) => s(l.entity_id)!)
+  const numeros = await numerosDosItens(itens)
+  return linhas.map((l) => {
+    const entidade = s(l.entity)!
+    const entidadeId = s(l.entity_id)
+    return { tipo: s(l.reason)!, entidade, entidadeId, detalhe: s(l.detail) ?? '', numero: entidade === 'item' && entidadeId ? (numeros.get(entidadeId) ?? entidadeId) : null }
+  })
+}
+
+/** Um elemento do livro (uma parte do desenho: «Testlöwe») que ainda não tem região desenhada em nenhuma imagem. */
+export interface ElementoSemRegiao {
+  id: string
+  /** O nome em português (a proposta), senão o do livro. */
+  rotulo: string
+  /** O nome como está no livro (alemão). */
+  rotuloDe: string
+  itemId: string
+  /** A imagem do item onde desenhar (a primeira); null se o item não tem imagem. */
+  imagem: string | null
+}
+
+/**
+ * Os elementos do livro sem nenhuma região no pacote (`element` sem `element_region`): a Revisão os lista em «Regiões a
+ * desenhar», e desenhar uma região do usuário para o elemento resolve o caso (src/revisao/fila.ts). Só elementos de item (os
+ * de `artifact` não têm imagem própria).
+ */
+export async function elementosSemRegiaoNoPacote(): Promise<ElementoSemRegiao[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq) => `
+      SELECT e.id, e.label, e.label_pt, e.target_id,
+             (SELECT im.id FROM ${esq}.image im WHERE im.item_id = e.target_id ORDER BY im.ordinal, im.id LIMIT 1) AS imagem
+      FROM ${esq}.element e
+      WHERE e.target_type = 'item' AND NOT EXISTS (SELECT 1 FROM ${esq}.element_region r WHERE r.element_id = e.id)`,
+  )
+  return linhas
+    .map((l) => ({ id: s(l.id)!, rotulo: s(l.label_pt) ?? s(l.label) ?? s(l.id)!, rotuloDe: s(l.label) ?? '', itemId: s(l.target_id)!, imagem: s(l.imagem) }))
+    .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+}
+
+/** Uma tradução ainda de máquina (`translation_state = 'machine'`): um trecho ou um campo do catálogo (`<item>#<categoria>`). */
+export interface TraducaoNaoRevisada {
+  entidade: 'passage' | 'catalog_field'
+  entidadeId: string
+}
+
+/** As traduções de máquina ainda não revisadas do pacote (trechos e campos do catálogo): a lista «Traduções não revisadas». */
+export async function traducoesNaoRevisadasNoPacote(): Promise<TraducaoNaoRevisada[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq) => `
+      SELECT 'passage' AS entidade, id AS entity_id FROM ${esq}.passage WHERE translation_state = 'machine'
+      UNION ALL
+      SELECT 'catalog_field' AS entidade, unit_id AS entity_id FROM ${esq}.catalog_field WHERE translation_state = 'machine'`,
+  )
+  return linhas
+    .map((l): TraducaoNaoRevisada => ({ entidade: s(l.entidade) as TraducaoNaoRevisada['entidade'], entidadeId: s(l.entity_id)! }))
+    .sort((x, y) => (x.entidade === y.entidade ? (x.entidadeId < y.entidadeId ? -1 : x.entidadeId > y.entidadeId ? 1 : 0) : x.entidade < y.entidade ? -1 : 1))
+}
+
+/**
+ * De que objeto(s) do livro é cada trecho: os objetos dos itens que o trecho DESCREVE (`passage_item.role = 'describes'`; uma
+ * introdução só os menciona e não é de objeto nenhum). Os trechos que não existem ou não descrevem nada não vêm. A hipótese
+ * ancorada num trecho do livro é do objeto dele (T17-B-4).
+ */
+export async function numerosDosTrechos(trechos: readonly string[]): Promise<Map<string, string[]>> {
+  const saida = new Map<string, string[]>()
+  const unicos = [...new Set(trechos)]
+  if (unicos.length === 0) return saida
+  const linhas = await linhasPorPublicacao((esq) => `SELECT passage_id, item_id FROM ${esq}.passage_item WHERE role = 'describes' AND passage_id IN ${EM_IDS}`, { $ids: ids(unicos) })
+  if (linhas.length === 0) return saida
+  const numeros = await numerosDosItens([...new Set(linhas.map((l) => s(l.item_id)!))])
   for (const l of linhas) {
-    const tipo = s(l.reason)!
-    const rotulo = rotuloDaPendencia(tipo)
-    const atual = porRotulo.get(rotulo)
-    if (atual) atual.quantidade += n(l.n) ?? 0
-    else porRotulo.set(rotulo, { tipo, rotulo, quantidade: n(l.n) ?? 0 })
+    const n = numeros.get(s(l.item_id)!)!
+    const lista = saida.get(s(l.passage_id)!) ?? []
+    if (!lista.includes(n)) lista.push(n)
+    saida.set(s(l.passage_id)!, lista.sort())
   }
-  const porTipo = [...porRotulo.values()].sort((x, y) => y.quantidade - x.quantidade || x.rotulo.localeCompare(y.rotulo, 'pt'))
-  return { total: porTipo.reduce((soma, t) => soma + t.quantidade, 0), porTipo }
+  return new Map([...saida].sort(([a], [b]) => (a < b ? -1 : 1)))
+}
+
+/** Onde um caso da fila está: o objeto (para abrir) ou o grupo da introdução, e a referência na fonte ("TESTE I: 11"). */
+export interface LugarDoCaso {
+  /** O número do objeto; null quando o caso é de uma introdução (sem item). */
+  numero: string | null
+  itemId: string | null
+  /** O grupo cuja introdução tem o trecho (quando o trecho não pertence a nenhum item). */
+  grupoId: string | null
+  origem: string
+}
+
+/**
+ * O objeto e a referência de cada caso da fila, pelo par (entidade, id): um item é ele mesmo; um trecho, uma imagem ou uma
+ * citação levam ao item a que pertencem; o trecho de uma introdução leva ao grupo. Os casos sem lugar (por exemplo, o aviso
+ * de um gazetteer) ficam de fora. A chave do mapa é "<entidade>|<id>".
+ */
+export async function lugaresDosCasos(pares: readonly { entidade: string; entidadeId: string | null }[]): Promise<Map<string, LugarDoCaso>> {
+  const por = (entidade: string) => [...new Set(pares.filter((p) => p.entidade === entidade && p.entidadeId).map((p) => p.entidadeId!))]
+  const pubs = await publicacoesAbertas()
+  const saida = new Map<string, LugarDoCaso>()
+  if (pubs.length === 0) return saida
+  const paraItem = new Map<string, string>() // "entidade|id" → id do item
+  for (const i of por('item')) paraItem.set(`item|${i}`, i)
+  const consultar = async (entidade: string, lista: string[], sql: (esq: string) => string) => {
+    if (lista.length === 0) return
+    for (const l of await executar<L>(pubs.map((p) => sql(p.esquema)).join(' UNION ALL '), { $ids: ids(lista) })) {
+      const chave = `${entidade}|${s(l.entity_id)}`
+      if (l.item_id != null && !paraItem.has(chave)) paraItem.set(chave, s(l.item_id)!)
+    }
+  }
+  const passagens = por('passage')
+  await consultar('passage', passagens, (esq) => `SELECT passage_id AS entity_id, min(item_id) AS item_id FROM ${esq}.passage_item WHERE passage_id IN ${EM_IDS} GROUP BY passage_id`)
+  await consultar('image', por('image'), (esq) => `SELECT id AS entity_id, item_id FROM ${esq}.image WHERE id IN ${EM_IDS}`)
+  await consultar('bib_ref', por('bib_ref'), (esq) => `SELECT CAST(id AS TEXT) AS entity_id, item_id FROM ${esq}.bib_ref WHERE CAST(id AS TEXT) IN ${EM_IDS}`)
+  // Um campo do catálogo é `<item>#<categoria>`: o item é o que vem antes do `#`.
+  for (const campo of por('catalog_field')) paraItem.set(`catalog_field|${campo}`, campo.split('#')[0]!)
+  await consultar(
+    'hypothesis',
+    por('hypothesis'),
+    (esq) => `SELECT h.id AS entity_id, ${ALVO_ITEM} AS item_id FROM ${esq}.hypothesis h LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id WHERE h.id IN ${EM_IDS}`,
+  )
+  const itens = [...new Set(paraItem.values())]
+  if (itens.length > 0) {
+    const numeros = await numerosDosItens(itens)
+    const origens = new Map<string, string>()
+    for (const l of await executar<L>(pubs.map((p) => SQL_ITEM(p.esquema)).join(' UNION ALL '), { $ids: ids(itens) })) origens.set(s(l.id)!, origemDe(l))
+    for (const [chave, itemId] of paraItem) saida.set(chave, { itemId, numero: numeros.get(itemId) ?? itemId, grupoId: null, origem: origens.get(itemId) ?? itemId })
+  }
+  // Os trechos sem item: a introdução de um grupo da autora.
+  const soltas = passagens.filter((p) => !saida.has(`passage|${p}`))
+  if (soltas.length > 0) {
+    const sql = pubs.map((p) => `SELECT intro_passage_id AS entity_id, id AS grupo, publication, volume FROM ${p.esquema}.author_group WHERE intro_passage_id IN ${EM_IDS}`).join(' UNION ALL ')
+    for (const l of await executar<L>(sql, { $ids: ids(soltas) })) {
+      const chave = `passage|${s(l.entity_id)}`
+      if (!saida.has(chave)) saida.set(chave, { itemId: null, numero: null, grupoId: s(l.grupo)!, origem: `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim() + ' · introdução' })
+    }
+  }
+  return saida
+}
+
+/** Os verbetes do pacote que ainda estão "a revisar" (o estado do pacote), com a forma original: o que a Revisão conta menos o que a pessoa já aprovou. */
+export async function verbetesAReverNoPacote(): Promise<{ id: string; original: string }[]> {
+  const linhas = await executar<L>("SELECT id, pt, de FROM main.glossary_entry WHERE status = 'proposed'")
+  return linhas.map((l) => ({ id: s(l.id)!, original: s(l.pt) ?? s(l.de) ?? s(l.id)! }))
 }
 
 const SQL_GRUPO = (esq: string, onde: string) => `
@@ -622,7 +759,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
 
   return {
     numero: m.numero,
-    itens: m.itens.map((l): ItemDaFonte => ({ id: s(l.id)!, publicacao: s(l.publication)!, tipo: s(l.kind) as ItemDaFonte['tipo'], origem: origemDe(l) })),
+    itens: m.itens.map((l): ItemDaFonte => ({ id: s(l.id)!, publicacao: s(l.publication)!, tipo: s(l.kind) as ItemDaFonte['tipo'], origem: origemDe(l), referencia: referenciaDe(l) })),
     origem: origemDe(m.itens[0]!),
     tipo: tipoCurto(descricao),
     descricao,
@@ -709,6 +846,33 @@ export async function verbetes(): Promise<VerbeteDaLista[]> {
   return linhas
     .map((l): VerbeteDaLista => ({ ...verbeteResumoDe(l), en: s(l.en), objetos: n(l.objetos) ?? 0 }))
     .sort((x, y) => (x.pt ?? x.de ?? '').localeCompare(y.pt ?? y.de ?? '', 'pt'))
+}
+
+/**
+ * Os redirecionamentos do pacote (Tarefa 16; `redirecionamento` do comum.sqlite, schema 6): o verbete ou o sítio que a pessoa
+ * criou e o pipeline publicou com um id do livro. Um pacote do schema 5 não tem a tabela: nenhum. `verbeteExiste`: o destino
+ * é um verbete do pacote (m7; o de um sítio quem confere é src/pacote/redirecionamentos.ts, pela lista dos sítios).
+ */
+export async function redirecionamentos(): Promise<{ de: string; para: string; tipo: string; verbeteExiste: boolean; criado: boolean }[]> {
+  const [t] = await executar<L>("SELECT count(*) AS n FROM main.sqlite_master WHERE type = 'table' AND name = 'redirecionamento'")
+  if (!n(t?.n)) return []
+  // `criado` (decisão 50; revisão 2 da Tarefa 16): o destino foi criado do registro do usuário. Uma tabela sem a coluna
+  // (a da revisão 1, nunca publicada) conta como 0: a página do livro não diz «veio de você».
+  const [c] = await executar<L>("SELECT count(*) AS n FROM pragma_table_info('redirecionamento', 'main') WHERE name = 'criado'")
+  const criado = n(c?.n) ? 'r.criado' : '0'
+  const linhas = await executar<L>(
+    `SELECT r.de, r.para, r.tipo, ${criado} AS criado, EXISTS (SELECT 1 FROM main.glossary_entry g WHERE g.id = r.para) AS existe FROM main.redirecionamento r ORDER BY r.de`,
+  )
+  return linhas.map((l) => ({ de: s(l.de) ?? '', para: s(l.para) ?? '', tipo: s(l.tipo) ?? '', verbeteExiste: !!n(l.existe), criado: n(l.criado) === 1 }))
+}
+
+/**
+ * O `pt` (a forma de verbete, a etiqueta, que pode levar glosa) e o `pt_text` (a de texto corrido, quando há) de cada
+ * verbete do pacote. A forma em uso do usuário (Tarefa 11) compara-se com estas (src/glossario/exibirTermo.ts).
+ */
+export async function formasDosVerbetes(): Promise<{ id: string; pt: string | null; ptTexto: string | null }[]> {
+  const linhas = await executar<L>('SELECT id, pt, pt_text FROM main.glossary_entry')
+  return linhas.map((l) => ({ id: s(l.id)!, pt: s(l.pt), ptTexto: s(l.pt_text) }))
 }
 
 export async function verbete(glId: string): Promise<Verbete | null> {
@@ -886,6 +1050,210 @@ export async function regioes(imagemId: string): Promise<Regiao[]> {
     }))
 }
 
+/** Uma região do pacote para a exportação W3C (Tarefa 15; src/usuario/exportar.ts). */
+export interface RegiaoDoLivroParaExportar {
+  sigla: string
+  elementoId: string
+  rotulo: string | null
+  rotuloDe: string
+  imagem: string
+  seletor: string
+}
+
+export interface DadosDoLivroParaRegioes {
+  regioes: RegiaoDoLivroParaExportar[]
+  /** O tamanho em pixels (`width_px`, `height_px`: o quadro da figura antes do giro) das imagens das regiões e das pedidas. */
+  tamanhos: Map<string, { largura: number; altura: number }>
+  /** Os verbetes das hipóteses do livro sobre cada elemento (`EL-…` → `GL-…`, na ordem da hipótese e do termo). */
+  termosDosElementos: Map<string, string[]>
+  /** Os elementos pedidos (onde o usuário desenhou): a obra e os rótulos. */
+  elementos: Map<string, { sigla: string; rotulo: string | null; rotuloDe: string }>
+  /** Por sigla: a obra ("TESTE I"), os autores e a língua (`publication.language`). */
+  publicacoes: Map<string, { obra: string; autores: string[]; lingua: string | null }>
+}
+
+/**
+ * Todas as regiões desenhadas no pacote (`element_region` com o rótulo do elemento), em ordem de (sigla, elemento,
+ * imagem). Sozinha: a tela Exportar só as conta.
+ */
+export async function regioesDoLivro(): Promise<RegiaoDoLivroParaExportar[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq, sigla) => `SELECT '${sigla}' AS sigla, r.element_id, r.selector, r.image_id, e.label, e.label_pt
+                     FROM ${esq}.element_region r JOIN ${esq}.element e ON e.id = r.element_id`,
+  )
+  const ordem = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+  return linhas
+    .map((l) => ({
+      sigla: s(l.sigla)!,
+      elementoId: s(l.element_id)!,
+      rotulo: s(l.label_pt),
+      rotuloDe: s(l.label) ?? '',
+      imagem: s(l.image_id)!,
+      seletor: s(l.selector) ?? '',
+    }))
+    .sort((a, b) => ordem(a.sigla, b.sigla) || ordem(a.elementoId, b.elementoId) || ordem(a.imagem, b.imagem))
+}
+
+/**
+ * O que a exportação das regiões (W3C Web Annotation) precisa do pacote: todas as regiões desenhadas, o tamanho das imagens
+ * (as das regiões e as `imagens` pedidas: imagens do livro onde o usuário desenhou), os verbetes ligados aos elementos pelas
+ * hipóteses do livro, os `elementos` pedidos (os do livro sobre os quais o usuário desenhou) e cada publicação.
+ */
+export async function regioesDoLivroParaExportar(imagens: readonly string[], elementos: readonly string[] = []): Promise<DadosDoLivroParaRegioes> {
+  const regioes = await regioesDoLivro()
+  const pedidas = [...new Set([...regioes.map((r) => r.imagem), ...imagens])]
+  const tamanhos = new Map<string, { largura: number; altura: number }>()
+  if (pedidas.length > 0) {
+    const ims = await linhasPorPublicacao((esq) => `SELECT id, width_px, height_px FROM ${esq}.image WHERE id IN ${EM_IDS}`, { $ids: ids(pedidas) })
+    for (const l of ims) {
+      const largura = n(l.width_px)
+      const altura = n(l.height_px)
+      if (largura && altura && largura > 0 && altura > 0) tamanhos.set(s(l.id)!, { largura, altura })
+    }
+  }
+  const termos = await linhasPorPublicacao(
+    (esq) => `SELECT h.target_id, h.id AS hipotese, t.glossary_id, t.ordinal FROM ${esq}.hypothesis h
+              JOIN ${esq}.hypothesis_term t ON t.hypothesis_id = h.id WHERE h.target_type = 'element'`,
+  )
+  termos.sort((a, b) => (s(a.hipotese)! < s(b.hipotese)! ? -1 : s(a.hipotese)! > s(b.hipotese)! ? 1 : (n(a.ordinal) ?? 0) - (n(b.ordinal) ?? 0)))
+  const termosDosElementos = new Map<string, string[]>()
+  for (const l of termos) {
+    const el = s(l.target_id)!
+    const lista = termosDosElementos.get(el) ?? []
+    if (!lista.includes(s(l.glossary_id)!)) lista.push(s(l.glossary_id)!)
+    termosDosElementos.set(el, lista)
+  }
+  const doElemento = new Map<string, { sigla: string; rotulo: string | null; rotuloDe: string }>()
+  const unicos = [...new Set(elementos)]
+  if (unicos.length > 0) {
+    const els = await linhasPorPublicacao((esq, sigla) => `SELECT '${sigla}' AS sigla, id, label, label_pt FROM ${esq}.element WHERE id IN ${EM_IDS}`, { $ids: ids(unicos) })
+    for (const l of els) doElemento.set(s(l.id)!, { sigla: s(l.sigla)!, rotulo: s(l.label_pt), rotuloDe: s(l.label) ?? '' })
+  }
+  const pubs = await linhasPorPublicacao((esq) => `SELECT sigla, authors, volume, language FROM ${esq}.publication`)
+  const publicacoes = new Map<string, { obra: string; autores: string[]; lingua: string | null }>()
+  for (const l of pubs) {
+    const autores = json<unknown[]>(l.authors, []).filter((a): a is string => typeof a === 'string' && a.trim() !== '')
+    publicacoes.set(s(l.sigla)!, { obra: `${s(l.sigla) ?? ''} ${s(l.volume) ?? ''}`.trim(), autores, lingua: s(l.language)?.trim() || null })
+  }
+  return { regioes, tamanhos, termosDosElementos, elementos: doElemento, publicacoes }
+}
+
+/**
+ * O localizador de cada objeto do pacote (CA…) no estilo do `hypothesis.locator` do pacote, para o MEDIATION (Tarefa 15):
+ * "TESTE I, Nr. 3" (uma figura da introdução: "Abb."); um objeto com vários itens, os itens separados por "; ", na ordem
+ * das fontes. Objetos que o pacote não conhece ficam de fora.
+ */
+export async function localizadoresDosObjetos(numeros: readonly string[]): Promise<Map<string, string>> {
+  const saida = new Map<string, string>()
+  const pedidos = [...new Set(numeros)]
+  if (pedidos.length === 0) return saida
+  const membrosL = await executar<L>(`SELECT object_id, item_id FROM main.object_member WHERE object_id IN ${EM_IDS}`, { $ids: ids(pedidos) })
+  if (membrosL.length === 0) return saida
+  const objetoDoItem = new Map(membrosL.map((l) => [s(l.item_id)!, s(l.object_id)!]))
+  const itens = await linhasPorPublicacao(SQL_ITEM, { $ids: ids([...objetoDoItem.keys()]) })
+  itens.sort(await comparadorDeFonte())
+  const doObjeto = new Map<string, string[]>()
+  for (const l of itens) {
+    const obj = objetoDoItem.get(s(l.id)!)
+    if (!obj) continue
+    const ref = referenciaDe(l)
+    doObjeto.set(obj, [...(doObjeto.get(obj) ?? []), `${ref.obra}, ${ref.abb ? 'Abb.' : 'Nr.'} ${ref.numero}${ref.sufixo ?? ''}`])
+  }
+  for (const [obj, lista] of doObjeto) saida.set(obj, lista.join('; '))
+  return saida
+}
+
+/** Um elemento da imagem de um objeto (`element`), para "Sobre" da nova hipótese (Tarefa 10). */
+export interface ElementoDoObjeto {
+  id: string
+  /** Em português, senão como no texto. */
+  rotulo: string
+  rotuloDe: string
+  pai: string | null
+}
+
+/** Os elementos dos itens do objeto (os do artefato não entram: o app ainda não mostra artefatos), na ordem do id. */
+export async function elementosDoObjeto(numero: string): Promise<ElementoDoObjeto[]> {
+  const m = await membros(numero)
+  if (!m) return []
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT id, label, label_pt, parent_id FROM ${esq}.element WHERE target_type = 'item' AND target_id IN ${EM_IDS}`,
+    { $ids: ids(m.itens.map((l) => s(l.id)!)) },
+  )
+  return linhas
+    .map((l) => ({ id: s(l.id)!, rotulo: s(l.label_pt) ?? s(l.label) ?? s(l.id)!, rotuloDe: s(l.label) ?? '', pai: s(l.parent_id) }))
+    .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+}
+
+/** Quantas imagens do livro o objeto tem (todas as fontes). O visualizador de uma imagem do usuário põe as dela depois destas. */
+/** Os números de todos os objetos do pacote (a tabela `object`: só objetos dos livros), para a numeração SKC (Tarefa 9). */
+export async function numerosDosObjetos(): Promise<string[]> {
+  const linhas = await executar<L>('SELECT id FROM main.object')
+  return linhas.map((l) => s(l.id)!).filter(Boolean)
+}
+
+/**
+ * As referências de origem (obra, número; decisão 39) de todos os itens dos objetos de livro dados, na ordem das fontes
+ * (a do cabeçalho do Item): a parte dos livros da linha "números nas fontes" (decisão 38), para `formatarReferencias`.
+ * Números sem item no pacote ficam de fora.
+ */
+export async function fontesDosObjetos(numeros: readonly string[]): Promise<ReferenciaDeFonte[]> {
+  if (numeros.length === 0) return []
+  const membros = await executar<L>(`SELECT object_id, item_id FROM main.object_member WHERE object_id IN ${EM_IDS}`, { $ids: ids(numeros) })
+  // Por número: sem linhas de membro, o "número" pode ser o próprio item (como em quantasImagensDoObjeto).
+  const comMembros = new Set(membros.map((m) => s(m.object_id)!))
+  const doItem = [...membros.map((m) => s(m.item_id)!), ...numeros.filter((nr) => !comMembros.has(nr))]
+  const itens = await linhasPorPublicacao(SQL_ITEM, { $ids: ids(doItem) })
+  return itens.sort(await comparadorDeFonte()).map(referenciaDe)
+}
+
+// ---------------------------------------------------------------------------
+// Citações no texto do usuário (decisão 40)
+// ---------------------------------------------------------------------------
+
+/** As obras de cada publicação aberta, com o volume ("TESTE I"), como as referências de origem as escrevem. */
+export async function obrasDoPacote(): Promise<string[]> {
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT DISTINCT i.publication AS sigla, coalesce(i.volume, p.volume) AS volume FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication`,
+  )
+  return [...new Set(linhas.map((l) => `${s(l.sigla) ?? ''} ${s(l.volume) ?? ''}`.trim()).filter(Boolean))]
+}
+
+/**
+ * O objeto de cada referência de livro citada (decisão 40), pela `chaveDaFonte`: a mesma correspondência da busca exata
+ * (obra com o volume, número, letra, Abb.). Uma referência sem item no pacote fica de fora. Uma consulta só, pelos números.
+ */
+export async function objetosDasFontes(refs: readonly Pick<ReferenciaDeFonte, 'obra' | 'numero' | 'sufixo' | 'abb'>[]): Promise<Map<string, Numero>> {
+  const pedidas = new Set(refs.map((r) => chaveDaFonte(r.obra, r.numero, r.sufixo ?? '', !!r.abb)))
+  const achados = new Map<string, Numero>()
+  if (pedidas.size === 0) return achados
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT i.id, i.publication, i.kind, i.number, i.suffix, coalesce(i.volume, p.volume) AS volume
+              FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
+              WHERE i.kind IN ('catalog', 'intro_figure') AND i.number IN (SELECT value FROM json_each($numeros))`,
+    { $numeros: JSON.stringify([...new Set(refs.map((r) => r.numero))]) },
+  )
+  const doItem = new Map<string, string>()
+  for (const l of linhas) {
+    const r = referenciaDe(l)
+    const chave = chaveDaFonte(r.obra, r.numero, r.sufixo ?? '', !!r.abb)
+    if (pedidas.has(chave) && !doItem.has(chave)) doItem.set(chave, s(l.id)!)
+  }
+  const numeros = await numerosDosItens([...doItem.values()])
+  for (const chave of pedidas) {
+    const item = doItem.get(chave)
+    if (item) achados.set(chave, numeros.get(item)!)
+  }
+  return achados
+}
+
+export async function quantasImagensDoObjeto(numero: string): Promise<number> {
+  const membros = await executar<L>('SELECT item_id FROM main.object_member WHERE object_id = $n', { $n: numero })
+  const itens = membros.length > 0 ? membros.map((m) => s(m.item_id)!) : [numero]
+  const contagens = await linhasPorPublicacao((esq) => `SELECT count(*) AS n FROM ${esq}.image WHERE item_id IN ${EM_IDS}`, { $ids: ids(itens) })
+  return contagens.reduce((soma, c) => soma + (n(c.n) ?? 0), 0)
+}
+
 /** Uma imagem pelo id, com o número do objeto e quantas imagens o objeto tem (o visualizador). */
 export async function imagem(id: string): Promise<(Imagem & { numero: Numero; total: number }) | null> {
   const [linha] = await linhasPorPublicacao((esq) => `SELECT * FROM ${esq}.image WHERE id = $id`, { $id: id })
@@ -896,4 +1264,89 @@ export async function imagem(id: string): Promise<(Imagem & { numero: Numero; to
   const itens = membros.length > 0 ? membros.map((m) => s(m.item_id)!) : [img.itemId]
   const contagens = await linhasPorPublicacao((esq) => `SELECT count(*) AS n FROM ${esq}.image WHERE item_id IN ${EM_IDS}`, { $ids: ids(itens) })
   return { ...img, numero, total: contagens.reduce((soma, c) => soma + (n(c.n) ?? 0), 0) }
+}
+
+// ---------------------------------------------------------------------------
+// Notas SKC (Parte 2B, Tarefa 6): o que as notas precisam saber do pacote
+// ---------------------------------------------------------------------------
+
+/** O que uma nota pode ligar no pacote. */
+export type TipoDeAlvoDoPacote = 'verbete' | 'obra' | 'objeto' | 'sitio' | 'grupo'
+
+export interface AlvoDoPacote {
+  ref: string
+  tipo: TipoDeAlvoDoPacote
+  /** Como o alvo se chama: o verbete, a citação da obra, o tipo do objeto, o sítio, o título do grupo. */
+  rotulo: string
+  /** Objetos: o número (CA00001), em fonte de código; null nos outros. */
+  codigo: string | null
+}
+
+/**
+ * Dos ids dados (`GL-…`, `BIB-…`, número de objeto em maiúsculas, `<SIGLA>-<n>` de sítio, id de grupo), os que existem
+ * no pacote, com o rótulo de cada um. Um id que não está no mapa não existe: a nota o mostra como texto, sem link.
+ * Uma consulta por tipo, todas em paralelo; nada é lido além do rótulo.
+ */
+export async function alvosDoPacote(refs: readonly string[]): Promise<Map<string, AlvoDoPacote>> {
+  const unicos = [...new Set(refs)]
+  const achados = new Map<string, AlvoDoPacote>()
+  if (unicos.length === 0) return achados
+  const p = { $ids: ids(unicos) }
+  const [verbetesL, obrasL, objetosL, sitiosL, gruposL] = await Promise.all([
+    executar<L>(`SELECT id, coalesce(pt, de, id) AS rotulo FROM main.glossary_entry WHERE id IN ${EM_IDS}`, p),
+    executar<L>(`SELECT id, csl_json, short_cites FROM main.bib_entry WHERE id IN ${EM_IDS}`, p),
+    executar<L>(`SELECT object_id, min(item_id) AS item_id FROM main.object_member WHERE object_id IN ${EM_IDS} GROUP BY object_id`, p),
+    linhasPorPublicacao(
+      (esq, sigla) => `SELECT '${sigla}-' || st.id AS id, coalesce(g.pt, st.literal_name) AS rotulo FROM ${esq}.site st
+                       LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id WHERE '${sigla}-' || st.id IN ${EM_IDS}`,
+      p,
+    ),
+    linhasPorPublicacao((esq) => `SELECT id, coalesce(title_pt, title_de, id) AS rotulo FROM ${esq}.author_group WHERE id IN ${EM_IDS}`, p),
+  ])
+  for (const l of verbetesL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'verbete', rotulo: s(l.rotulo)!, codigo: null })
+  for (const l of obrasL) {
+    const csl = json<Record<string, unknown> | null>(l.csl_json, null)
+    const rotulo = primeiraCitacao(citadaComoDe(l.short_cites)) ?? tituloDoCsl(csl) ?? s(l.id)!
+    achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'obra', rotulo, codigo: null })
+  }
+  if (objetosL.length > 0) {
+    const resumos = await resumosDosItens(objetosL.map((l) => s(l.item_id)!), 'dada')
+    const tipos = new Map(resumos.map((r) => [r.numero, r.tipo]))
+    for (const l of objetosL) {
+      const numero = s(l.object_id)!
+      achados.set(numero, { ref: numero, tipo: 'objeto', rotulo: tipos.get(numero) ?? numero, codigo: numero })
+    }
+  }
+  for (const l of sitiosL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'sitio', rotulo: s(l.rotulo)!, codigo: null })
+  for (const l of gruposL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'grupo', rotulo: s(l.rotulo)!, codigo: null })
+  return achados
+}
+
+/** Um trecho do texto da fonte, como impresso (o alemão do livro), e o id dele no pacote. */
+export interface TrechoDaFonte {
+  id: string
+  texto: string
+}
+
+/** Os trechos que descrevem o objeto (`passage_item.role = 'describes'`): o que uma nota sobre o objeto ancora. */
+export async function trechosDoObjeto(numero: string): Promise<TrechoDaFonte[]> {
+  const m = await membros(numero)
+  if (!m) return []
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT p.id, p.text FROM ${esq}.passage_item pi JOIN ${esq}.passage p ON p.id = pi.passage_id
+              WHERE pi.role = 'describes' AND pi.item_id IN ${EM_IDS}`,
+    { $ids: ids(m.itens.map((l) => s(l.id)!)) },
+  )
+  return linhas.map((l) => ({ id: s(l.id)!, texto: s(l.text) ?? '' })).sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+}
+
+/**
+ * Os trechos com estes ids no pacote de agora (os que já não existem não vêm). `null` é "fonte indisponível": nenhuma
+ * publicação aberta, então nada se pode dizer sobre os trechos (não é o mesmo que "os trechos saíram do pacote").
+ */
+export async function trechosDaFonte(trechos: readonly string[]): Promise<TrechoDaFonte[] | null> {
+  if (trechos.length === 0) return []
+  if ((await publicacoesAbertas()).length === 0) return null
+  const linhas = await linhasPorPublicacao((esq) => `SELECT id, text FROM ${esq}.passage WHERE id IN ${EM_IDS}`, { $ids: ids([...new Set(trechos)]) })
+  return linhas.map((l) => ({ id: s(l.id)!, texto: s(l.text) ?? '' }))
 }

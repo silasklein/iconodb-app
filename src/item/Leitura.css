@@ -55,6 +55,14 @@
   scroll-margin-top: 96px;
 }
 /* O termo dentro da âncora: o mesmo pontilhado, na cor do texto (mais claro que o da âncora). */
+/* A hipótese SKC (Tarefa 10): o mesmo sublinhado, tracejado, para distinguir da hipótese do livro. */
+.leitura-texto .ancora-skc {
+  text-decoration-style: dashed;
+  text-decoration-color: var(--secundario);
+}
+.leitura-texto .ancora-skc.ancora-ativa {
+  text-decoration: none;
+}
 .leitura-texto .ancora .termo-marcado {
   text-decoration: underline dotted;
   text-decoration-color: var(--texto);
@@ -88,4 +96,115 @@
     font-size: 17px;
     line-height: 1.6;
   }
+}
+
+/* O trecho da nova hipótese, com o formulário aberto (Tarefa 10; CSS Custom Highlight API). */
+::highlight(trecho-da-hipotese) {
+  background-color: rgba(237, 237, 237, 0.28);
+  color: var(--texto-item);
+}
+
+/*
+ * A dica de um termo que diz a forma em uso ou o que o tradutor escreveu (revisão 2, m7): quebra em mais de uma linha (uma
+ * forma longa perto da borda não passa da tela), aparece ao passar o mouse, ao focar pelo teclado (o link do termo, ou o
+ * link da hipótese que o envolve) e enquanto se toca e segura. Um toque rápido segue o link; a forma está também no nome
+ * acessível e na página do verbete.
+ *
+ * Dentro de um trecho de hipótese, em aparelho com mouse, a dica NÃO sai sozinha: ela vai dentro da prévia da hipótese (uma
+ * caixa só, junto da linha do trecho; ver `.ancora-previa`). No toque, a dica de antes continua como está.
+ */
+.leitura-texto {
+  position: relative;
+}
+/* A dica se ancora no TERMO (T17-B-7): sai logo abaixo dele (ou acima, perto do pé da janela), e `ajustarDica` a puxa
+   para dentro da coluna de leitura (`--dica-x`). Nunca passa da largura da tela. */
+.leitura-texto .termo[data-tip],
+.leitura-texto .termo-marcado[data-tip] {
+  position: relative;
+}
+.leitura-texto .termo[data-tip]::after,
+.leitura-texto .termo-marcado[data-tip]::after {
+  left: var(--dica-x, 0);
+  right: auto;
+  white-space: normal;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  line-height: 1.4;
+  text-decoration: none;
+  z-index: 20;
+}
+.leitura-texto .termo[data-tip][data-acima]::after,
+.leitura-texto .termo-marcado[data-tip][data-acima]::after {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+.leitura-texto .termo[data-tip]:active::after {
+  display: block;
+}
+@media (hover: none) {
+  .leitura-texto .ancora:focus-visible .termo-marcado[data-tip]::after,
+  .leitura-texto .ancora:active .termo-marcado[data-tip]::after {
+    display: block;
+  }
+}
+/* Com mouse, a dica de um termo dentro de um trecho de hipótese é a linha da prévia: aqui ela fica escondida (inclusive a
+   do hover direto no termo, que o `[data-tip]:hover` geral mostraria). */
+@media (hover: hover) {
+  .leitura-texto .ancora .termo-marcado[data-tip]::after,
+  .leitura-texto .ancora .termo-marcado[data-tip]:hover::after,
+  .leitura-texto .ancora .termo-marcado[data-tip]:focus-visible::after {
+    display: none;
+  }
+}
+
+/*
+ * A prévia da hipótese (decisão 35, PC-ItemNiveis.dc.html): só onde há mouse (o componente nem a monta no toque), ao passar
+ * ou focar o trecho. É filha do link e se posiciona em relação ao PARÁGRAFO (nunca sai da coluna de leitura); a posição
+ * (top/left) vem de `posicaoDaPrevia`, logo abaixo da linha do trecho em que o mouse está. O espaço transparente de 4 px em
+ * cima e embaixo faz parte dela: o mouse pode ir do trecho até a caixa sem passar por um vão (WCAG 1.4.13, pairável).
+ */
+.leitura-texto .ancora-previa {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(300px, 100%);
+  padding: 4px 0;
+  text-decoration: none;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  user-select: none;
+  cursor: default;
+  z-index: 20;
+}
+.ancora-previa-caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 13px;
+  line-height: 1.5;
+  --marcador-cheio: #111111;
+  --marcador-vazio: #8a8a8a;
+}
+.ancora-previa-nivel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ancora-previa-caixa strong {
+  font-weight: 600;
+}
+.ancora-previa-termo,
+.ancora-previa-dica {
+  color: #5e5e5e;
 }

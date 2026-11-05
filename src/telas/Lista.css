@@ -220,7 +220,8 @@
 }
 .sitio-linha {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* O nome, a contagem e «Mostrar no mapa» (ou o vazio do mesmo tamanho): as colunas alinham em todas as linhas. */
+  grid-template-columns: minmax(0, 1fr) auto 44px;
   align-items: center;
   column-gap: 8px;
   border-bottom: 1px solid var(--filete);
@@ -272,11 +273,8 @@
   /* mesmo tamanho do IconButton */
   color: var(--texto);
 }
-.sitio-linha:has(.sitio-mapa) {
-  grid-template-columns: minmax(0, 1fr) auto 44px;
-}
 @media (min-width: 768px) {
-  .sitio-linha:has(.sitio-mapa) {
+  .sitio-linha {
     grid-template-columns: minmax(0, 1fr) auto 40px;
   }
 }
@@ -472,7 +470,8 @@
   font-size: 15px;
   color: var(--corpo-consulta);
 }
-.detalhe-botao {
+.detalhe-botao,
+.detalhe-botao-botao {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -485,6 +484,21 @@
   font-size: 15px;
   text-decoration: none;
   white-space: nowrap;
+}
+/* O mesmo botão quando faz algo em vez de abrir um endereço (Corrigir, no sítio): um <button>. */
+.detalhe-botao-botao {
+  background: var(--fundo);
+  font-family: inherit;
+  cursor: pointer;
+}
+.detalhe-botao-botao[aria-pressed='true'] {
+  background: var(--texto);
+  color: var(--fundo);
+  border-color: var(--texto);
+}
+.detalhe-botao-botao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
 }
 .detalhe-fila {
   display: flex;

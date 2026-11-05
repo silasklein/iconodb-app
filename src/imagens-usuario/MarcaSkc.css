@@ -1,0 +1,28 @@
+/*
+ * A marca SKC (decisão 33): segue o tema da página onde está, claro ou escuro, no celular e no computador. As variáveis
+ * --texto e --secundario já se trocam em .tema-item (src/ui/tokens.css), então não há lista de telas.
+ */
+.marca-skc {
+  flex-shrink: 0;
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 0 5px;
+  border: 1px solid var(--secundario);
+  border-radius: 3px;
+  color: var(--texto);
+}
+/* «excluído», ao lado do nome de um sítio seu que se excluiu (ficha do item, ficha do SKC, "Sítio deste objeto"). */
+.marca-excluido {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--secundario-item);
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.trocar-sitio .marca-excluido {
+  border-color: var(--secundario-consulta);
+}

@@ -1,0 +1,154 @@
+/*
+ * Os verbetes do usuário (decisão 41) nas telas de consulta (Glossário e verbete): a marca SKC nas cores da tela
+ * (a base está em src/imagens-usuario/MarcaSkc.css, feita para a tela escura do item).
+ */
+.glossario-skc .marca-skc,
+.verbete-skc .marca-skc,
+.hipotese-meta .marca-skc {
+  border-color: var(--secundario);
+  color: var(--texto);
+}
+.glossario-linha .glossario-skc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* A linha de baixo é itálica para o alemão; "a revisar" é português. */
+  font-style: normal;
+}
+
+/*
+ * A forma em uso de um verbete, editada no lugar (Verbete.dc.html e o painel de PC-Glossario.dc.html): o campo e o
+ * "Voltar à proposta original" quadrado ao lado, Aprovar (ou "Aprovado por você" e "Voltar a revisar"), a nota.
+ */
+.forma-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 420px;
+}
+.forma-linha {
+  display: flex;
+  gap: 8px;
+}
+.forma-linha input {
+  flex-grow: 1;
+  min-width: 0;
+}
+.forma-voltar {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.forma-voltar .icon-button {
+  width: 46px;
+  height: 46px;
+}
+@media (pointer: fine) {
+  .forma-voltar .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+.forma-aviso,
+.forma-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+.forma-desfazer {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.forma-aprovar {
+  align-self: stretch;
+}
+.forma-aprovado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.forma-aprovado-texto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .forma-aprovar {
+    align-self: flex-start;
+    padding-inline: 22px;
+  }
+}
+
+.detalhe-dl-depois-do-editor:not(:empty) {
+  margin-top: 22px;
+}
+
+/* Possível duplicado e excluir (verbete do usuário). */
+.verbete-duplicado {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  max-width: 420px;
+}
+.verbete-duplicado p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.verbete-skc-excluir {
+  margin: 26px 24px 0;
+}
+.verbete-skc-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+}
+.verbete-skc-confirmar p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.verbete-skc-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.verbete-skc-excluir .form-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.glossario-duplicado {
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--controle);
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.glossario-excluido {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}

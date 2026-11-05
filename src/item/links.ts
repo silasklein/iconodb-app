@@ -8,7 +8,7 @@ export interface Ocupado {
 }
 
 interface Contexto {
-  /** O rótulo da leitura ("TESTE I, 1"): a remissão só vale dentro da mesma obra e volume. */
+  /** O rótulo da leitura ("TESTE I: 1"): a remissão só vale dentro da mesma obra e volume. */
   fonte: string
   /** O item da leitura: só as referências bibliográficas dele (ou sem item) entram. */
   itemId: string
@@ -16,14 +16,18 @@ interface Contexto {
   remissoes: readonly Remissao[]
 }
 
-/** O número do catálogo de uma origem ("TESTE I, 2" → "2"); null se não for um número ("TESTE I, Abb. 1"). */
+/**
+ * O número do catálogo de uma origem ("TESTE I: 2" → "2"); null se não for um número ("TESTE I: Abb. 1"). A origem é a
+ * que o APP gera (`origemDe`, decisão 39); a forma antiga ("TESTE I, 2") continua aceita. O texto do livro não passa
+ * por aqui: nele se procura só o número (veja `prioridadeDaRemissao`).
+ */
 export function numeroDoCatalogo(origem: string | null): string | null {
-  const m = origem ? /,\s*(\d+[a-z]?)$/.exec(origem) : null
+  const m = origem ? /[,:]\s*(\d+[a-z]?)$/.exec(origem) : null
   return m ? m[1]! : null
 }
 
-/** "TESTE I, 2" → "TESTE I" (a obra e o volume). */
-const obraDe = (origem: string) => origem.replace(/,\s*[^,]*$/, '')
+/** "TESTE I: 2" (ou "TESTE I, 2") → "TESTE I" (a obra e o volume). */
+const obraDe = (origem: string) => origem.replace(/[,:]\s*[^,:]*$/, '')
 
 const LETRA_OU_NUMERO = /[\p{L}\p{N}]/u
 

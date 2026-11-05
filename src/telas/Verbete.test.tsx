@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
+import { registrar } from '../usuario/estado'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 
@@ -23,6 +24,24 @@ function comAreaDeTransferencia() {
   return writeText
 }
 
+describe('revisão 4: o locator que não se lê fica como veio, sem a publicação colada com vírgula', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar("UPDATE pub_TESTE.hypothesis SET locator = 'Nr. 1' WHERE id = 'HY-900001'")
+    await executar("UPDATE pub_TESTE.hypothesis SET locator = 'S. 12' WHERE id = 'HY-900003'")
+  })
+  afterAll(async () => usarMotor(await bancoDeTeste()))
+
+  it('"Nr. 1" (sem a obra) e "S. 12" aparecem assim, nem "TESTE: 1" nem "TESTE, S. 12"', async () => {
+    renderizarRota('/verbete/GL-900001')
+    const hipoteses = await screen.findByRole('region', { name: 'Hipóteses com este termo' })
+    const linhas = within(hipoteses).getAllByRole('link')
+    expect(within(linhas[0]!).getByText(/iconográfico · afirmada/)).toHaveTextContent(/afirmada · Nr\. 1$/)
+    expect(within(linhas[1]!).getByText(/iconográfico · provável/)).toHaveTextContent(/provável · S\. 12$/)
+    expect(hipoteses).not.toHaveTextContent('TESTE')
+  })
+})
+
 describe('Verbete (celular)', () => {
   it('mostra o nome, o tipo, o estado e o código', async () => {
     renderizarRota('/verbete/GL-900001')
@@ -36,9 +55,10 @@ describe('Verbete (celular)', () => {
     renderizarRota('/verbete/GL-900003')
     expect(await screen.findByRole('heading', { level: 1, name: 'olhos (forma de botão)' })).toBeInTheDocument()
     const forma = screen.getByRole('region', { name: 'Forma em português' })
-    expect(within(forma).getByText('Forma em português')).toBeInTheDocument()
-    expect(within(forma).getByText('olhos (forma de botão)', { selector: 'dd' })).toBeInTheDocument()
-    expect(within(forma).getByText('Proposta original')).toBeInTheDocument()
+    // Tarefa 11: a forma em português é o campo editável; a proposta original, embaixo dele; a do tradutor, só se difere.
+    expect(within(forma).getByRole('textbox', { name: 'Forma em português' })).toHaveValue('olhos (forma de botão)')
+    expect(within(forma).getByText('Proposta original: olhos (forma de botão)')).toBeInTheDocument()
+    expect(within(forma).getByText('Proposta do tradutor')).toBeInTheDocument()
     expect(within(forma).getByText('olhos de botão', { selector: 'dd' })).toBeInTheDocument()
     expect(within(forma).getByText('No texto corrido')).toBeInTheDocument()
     expect(within(forma).getByText('olho em forma de botão', { selector: 'dd' })).toBeInTheDocument()
@@ -47,12 +67,21 @@ describe('Verbete (celular)', () => {
     expect(screen.getByText('test button eyes', { selector: 'dd' })).toBeInTheDocument()
   })
 
-  it('a edição é da 2B: nada é campo de entrada e não há Aprovar nem Salvar', async () => {
-    const { container } = renderizarRota('/verbete/GL-900003')
+  it('Tarefa 11: só a forma em português é campo de entrada (o resto é leitura); Aprovar nos a revisar, "Aprovado por você" nos aprovados; sem botão Salvar', async () => {
+    const { container, unmount } = renderizarRota('/verbete/GL-900003')
     await screen.findByRole('heading', { level: 1, name: 'olhos (forma de botão)' })
-    expect(container.querySelector('input, textarea, select, [contenteditable="true"]')).toBeNull()
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Aprovar|Salvar|Voltar à proposta/ })).not.toBeInTheDocument()
+    expect(container.querySelectorAll('input, textarea, select, [contenteditable="true"]')).toHaveLength(1)
+    expect(screen.getByRole('textbox', { name: 'Forma em português' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Salvar|Voltar à proposta/ })).not.toBeInTheDocument()
+    // aprovado no pacote
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument()
+    // T17-B-11: a aprovação veio do pacote e ninguém a tocou: não é «por você»
+    expect(screen.getByText('Aprovado')).toBeInTheDocument()
+    expect(screen.queryByText('Aprovado por você')).toBeNull()
+    unmount()
+    renderizarRota('/verbete/GL-900008')
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByRole('button', { name: 'Aprovar' })).toBeInTheDocument()
   })
 
   it('traz o pai (link), o Iconclass e o SSSL com os rótulos', async () => {
@@ -60,6 +89,14 @@ describe('Verbete (celular)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'filhote de leão-de-teste' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'leão-de-teste' })).toHaveAttribute('href', '/verbete/GL-900001')
     expect(screen.getByText('Conceito · a revisar')).toBeInTheDocument()
+  })
+
+  it('T17-B-12: o pai mostra o nome de agora (a forma em uso do pai)', async () => {
+    await registrar('verbete', 'GL-900001', 'alterar', { formaEmUso: 'cria-mãe de teste' })
+    renderizarRota('/verbete/GL-900007')
+    await screen.findByRole('heading', { level: 1, name: 'filhote de leão-de-teste' })
+    expect(await screen.findByRole('link', { name: 'cria-mãe de teste' })).toHaveAttribute('href', '/verbete/GL-900001')
+    await registrar('verbete', 'GL-900001', 'alterar', { formaEmUso: null })
   })
 
   it('Iconclass com a notação e o texto, SSSL com o código e o rótulo, definição e grafias', async () => {
@@ -88,6 +125,9 @@ describe('Verbete (celular)', () => {
     expect(within(linhas[0]!).getByText(/Testlöwen/)).toHaveAttribute('lang', 'de')
     expect(within(linhas[0]!).getByText(/iconográfico · afirmada/)).toBeInTheDocument()
     expect(within(linhas[1]!).getByText(/iconográfico · provável/)).toBeInTheDocument()
+    // Decisão 39: o locator do pacote ("TESTE I, Nr. 1") aparece no formato com dois pontos.
+    expect(within(linhas[0]!).getByText(/iconográfico · afirmada/)).toHaveTextContent(/· TESTE I: 1$/)
+    expect(hipoteses).not.toHaveTextContent('Nr.')
   })
 
   it('um verbete de sítio lista os objetos achados lá', async () => {
@@ -135,7 +175,7 @@ describe('Verbete: direção do texto e unidades', () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     await executar("UPDATE main.glossary_entry SET ar = 'مرد', he = 'מרדוך' WHERE id = 'GL-900004'")
     renderizarRota('/verbete/GL-900004')
-    await screen.findByRole('heading', { level: 1, name: 'Maḥraṣ Teste' })
+    await screen.findByRole('heading', { level: 1, name: 'Maḥteṣ Teste' })
     expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
     expect(screen.getByText('מרדוך', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
     expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('lang', 'ar')

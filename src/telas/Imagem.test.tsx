@@ -7,6 +7,7 @@ import { lerImagemAberta } from '../imagem/estado'
 import { transformDoGiro } from '../item/imagemComum'
 import { ImagemItem } from '../item/ImagemItem'
 import { urlImagem } from '../pacote/imagens'
+import { atalhoRegistrado } from '../app/atalhos'
 import { teclasNaoDeclaradas } from '../test/atalhosDeclarados'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
@@ -97,6 +98,8 @@ const palco = () => document.querySelector<HTMLElement>('.vis-palco')!
 const figura = () => document.querySelector<HTMLElement>('.vis-figura')!
 const imagemNaTela = async () => {
   await waitFor(() => expect(document.querySelector('.vis-figura img')).not.toBeNull())
+  // As teclas do visualizador são registradas num efeito: as que este arquivo aperta a seguir (userEvent) não passam por `waitFor`.
+  await waitFor(() => expect(atalhoRegistrado('i', 'visualizador')).toBe(true))
   return document.querySelector<HTMLImageElement>('.vis-figura img')!
 }
 const escala = () => screen.getByText(/^\d+ %$/).textContent
@@ -293,12 +296,12 @@ describe('Imagem: o visualizador', () => {
     it('aparecem por cima da imagem, no mesmo espaço dela, com o nome do elemento', async () => {
       abrir()
       await imagemNaTela()
-      await waitFor(() => expect(figura().querySelectorAll('svg polygon')).toHaveLength(2))
+      await waitFor(() => expect(figura().querySelectorAll('svg polygon.regiao-traco')).toHaveLength(2))
       const svg = figura().querySelector('svg')!
       expect(svg).toHaveAttribute('viewBox', '0 0 1 1')
       expect(svg).toHaveAttribute('preserveAspectRatio', 'none')
       expect(svg).toHaveAttribute('aria-hidden', 'true')
-      expect(svg.querySelector('polygon')).toHaveAttribute('points', '0.3,0.25 0.7,0.25 0.62,0.75')
+      expect(svg.querySelector('polygon.regiao-traco')).toHaveAttribute('points', '0.3,0.25 0.7,0.25 0.62,0.75')
       expect(within(figura()).getByText('figura denteada')).toBeInTheDocument()
       expect(within(figura()).getByText('asa')).toBeInTheDocument()
     })
@@ -319,7 +322,7 @@ describe('Imagem: o visualizador', () => {
       expect(figura().querySelector('svg')).toBeNull()
       await userEvent.keyboard('r')
       expect(botao).toHaveAttribute('aria-pressed', 'true')
-      expect(figura().querySelectorAll('svg polygon')).toHaveLength(2)
+      expect(figura().querySelectorAll('svg polygon.regiao-traco')).toHaveLength(2)
     })
 
     it('acompanham a ampliação e o giro da imagem (estão dentro da mesma figura)', async () => {
@@ -349,11 +352,11 @@ describe('Imagem: o visualizador', () => {
       instalarMatchMedia(1280)
       abrir()
       const painel = await screen.findByRole('complementary', { name: 'Elementos e regiões' })
-      await waitFor(() => expect(figura().querySelectorAll('svg polygon')).toHaveLength(2))
+      await waitFor(() => expect(figura().querySelectorAll('svg polygon.regiao-traco')).toHaveLength(2))
       const asa = within(painel).getByRole('button', { name: 'Ocultar a região asa' })
       expect(asa).toHaveAttribute('aria-pressed', 'true')
       await userEvent.click(asa)
-      expect(figura().querySelectorAll('svg polygon')).toHaveLength(1)
+      expect(figura().querySelectorAll('svg polygon.regiao-traco')).toHaveLength(1)
       expect(within(painel).getByRole('button', { name: 'Mostrar a região asa' })).toHaveAttribute('aria-pressed', 'false')
       expect(within(figura()).queryByText('asa')).toBeNull()
     })

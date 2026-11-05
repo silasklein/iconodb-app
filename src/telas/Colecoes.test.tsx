@@ -31,7 +31,8 @@ describe('Coleções', () => {
     expect(skc).toHaveAttribute('aria-current', 'page')
     expect(obra).toHaveTextContent('TESTE I')
     expect(obra).not.toHaveAttribute('aria-current')
-    expect(screen.getByText('Crie coleções na próxima versão')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Meus objetos' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Minhas coleções' })).toBeInTheDocument()
   })
 
   it('a aba da obra lista os grupos por período, na ordem do livro, com a contagem e o link', async () => {
@@ -44,7 +45,7 @@ describe('Coleções', () => {
     expect(g1.compareDocumentPosition(g2) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('heading', { level: 2, name: 'Calcolítico (fase de teste)' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Época de transição (fase de teste)' })).toBeInTheDocument()
-    expect(screen.queryByText('Crie coleções na próxima versão')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Minhas coleções' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'TESTE I' })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -53,7 +54,7 @@ describe('Coleções', () => {
     await userEvent.click(await screen.findByRole('link', { name: 'TESTE I' }))
     expect(await screen.findByRole('link', { name: /Animais de teste/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'SKC' }))
-    expect(screen.getByText('Crie coleções na próxima versão')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Minhas coleções' })).toBeInTheDocument()
   })
 
   it('uma só região principal (<main>) com o título da tela', async () => {
@@ -74,7 +75,7 @@ describe('Coleções', () => {
     try {
       abrir('/colecoes?obra=TESTE-I')
       expect(screen.getByRole('link', { name: 'SKC' })).not.toHaveAttribute('aria-current')
-      expect(screen.queryByText('Crie coleções na próxima versão')).not.toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Meus objetos' })).not.toBeInTheDocument()
       expect(screen.queryByRole('region', { name: 'Minhas coleções' })).not.toBeInTheDocument()
     } finally {
       usarMotor(await bancoDeTeste())
@@ -86,7 +87,7 @@ describe('Coleções', () => {
     try {
       abrir('/colecoes')
       expect(screen.getByRole('link', { name: 'SKC' })).toHaveAttribute('aria-current', 'page')
-      expect(screen.getByText('Crie coleções na próxima versão')).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Minhas coleções' })).toBeInTheDocument()
     } finally {
       usarMotor(await bancoDeTeste())
     }

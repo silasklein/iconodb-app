@@ -6,8 +6,25 @@
  *
  * Este e o `consultas.ts` são os únicos lugares com SQL; as telas só chamam funções.
  */
-import { executar, publicacoesAbertas, type PublicacaoAberta } from '../banco/cliente'
-import { resumosDosItens, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
+import { consultarUsuario, executar, publicacoesAbertas, type PublicacaoAberta } from '../banco/cliente'
+import { obrasDoPacote, resumosDosItens, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
+import type { Tipo } from '../usuario/eventos'
+import { estadoAtual, type Estado } from '../usuario/estado'
+import type { Registro } from '../usuario/fusao'
+import { garantirIndiceDoUsuario, numeroDeObjeto, SIGLA_SKC } from '../usuario/indice'
+import { chaveDaFonte, lerReferenciaDigitada } from '../banco/referencias'
+import { indiceDeNotas } from '../notas/indiceDeNotas'
+import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
+import { garantirOsDonosDosTrechos } from '../hipoteses/garantirDonos'
+import { lerAncora, objetoDaHipotese } from '../hipoteses/modelo'
+import { lerFicha, textoDaOrigem, tipoCurtoDe } from '../objetos-skc/modelo'
+import { edicoesDosVerbetes, formasEmUso } from '../glossario/doUsuario'
+import { eVerbeteSkc, situacaoDoVerbete, type EdicaoDoVerbete, type StatusDoVerbete } from '../glossario/modelo'
+import { numerosNoTexto } from '../objetos-skc/numeracao'
+import { nomeComMarcaDoSitio, nomeDeAgoraDoSitio, sitioDoObjetoDoPacote } from '../sitios/doUsuario'
+import { eSitioSkc } from '../sitios/modelo'
+import { destinoDe, redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
+import { sitiosDoPacote, type SitiosDoPacote } from '../sitios/pacote'
 import { fold, tabelaDoPacote, textoIndexado, type FoldTabela } from './fold'
 
 // ---------------------------------------------------------------------------
@@ -16,13 +33,20 @@ import { fold, tabelaDoPacote, textoIndexado, type FoldTabela } from './fold'
 
 export const ESCOPOS = ['tudo', 'termo', 'local', 'bibliografia', 'colecao'] as const
 /**
- * O que cada escopo procura (R3: na 2A a "Coleção" é só o grupo da obra, `author_group`;
- * as coleções do usuário vêm na 2B):
- * - tudo: o texto dos itens (campo 5, sítio, catálogo e trechos) e todos os outros escopos;
+ * O que cada escopo procura. Os do pacote (índice `busca`) e os do usuário (índice em memória, src/usuario/indice.ts,
+ * com a marca SKC) valem juntos:
+ * - tudo: o texto dos itens (campo 5, sítio, catálogo e trechos) e todos os outros escopos; do usuário, tudo o que
+ *   ele escreveu (notas, objetos SKC com número, ficha e leitura, coleções, sítios, hipóteses);
  * - termo: verbetes do glossário que casam, e os objetos com hipótese nesse termo ou achados no sítio de mesmo nome;
- * - local: sítios cujo nome casa, e os objetos achados neles;
- * - bibliografia: obras que casam (referência Chicago), e os objetos que as citam;
- * - colecao: grupos da obra cujo título casa, e os objetos do grupo.
+ *   do usuário, as hipóteses SKC (termos e justificativa) e as notas sobre verbetes;
+ * - local: sítios cujo nome casa, e os objetos achados neles; do usuário, os sítios SKC (nome e variantes), os
+ *   objetos SKC achados neles e as notas sobre sítios;
+ * - bibliografia: obras que casam (referência Chicago), e os objetos que as citam; do usuário, as notas sobre obras;
+ * - colecao (R3 encerrada na 2B): grupos da obra (`author_group`) cujo título casa, e os objetos do grupo; do
+ *   usuário, as coleções SKC cujo nome casa (a coleção e os objetos dela) e as notas sobre grupos.
+ *
+ * Os acertos do usuário contam para o objeto a que pertencem (uma nota num objeto, a leitura ou a hipótese dele); o
+ * que não é de nenhum objeto (nota sobre verbete, coleção, sítio, hipótese solta, rascunho) vem em `usuario`.
  */
 export type Escopo = (typeof ESCOPOS)[number]
 
@@ -66,6 +90,17 @@ export interface Faceta {
   opcoes: OpcaoDeFaceta[]
 }
 
+/** Um acerto da camada do usuário que não pertence a um objeto: aparece num grupo à parte, com a marca SKC. */
+export interface AcertoDoUsuario {
+  tipo: Tipo
+  /** O id do registro (NT-…, CO-…, SI-…, HY-…, OB-…). */
+  ref: string
+  rotulo: string
+  skc: true
+  /** O objeto a que o acerto se refere, quando não é resolvido (objeto excluído ou inexistente); senão, null. */
+  objeto: string | null
+}
+
 export interface OpcoesDaBusca {
   escopo: Escopo
   filtros: Filtros
@@ -94,6 +129,13 @@ export interface ResultadoDaBusca {
   /** Objetos de cada escopo, com os filtros (as abas). */
   contagens: Record<Escopo, number>
   facetas: Faceta[]
+  /**
+   * Acertos do usuário (SKC) do escopo escolhido que não são de um objeto, por rótulo. Filtros de objeto (período,
+   * tipo, sítio…) os escondem, porque eles não têm esses valores; só "Publicação: SKC" os mantém.
+   */
+  usuario: AcertoDoUsuario[]
+  /** Quantos `usuario` cada escopo teria (com os filtros), ao lado de `contagens`. */
+  contagensDoUsuario: Record<Escopo, number>
 }
 
 const LIMITE_PADRAO = 120
@@ -124,7 +166,7 @@ export function montarConsulta(digitado: string, tabela: FoldTabela): string | n
 }
 
 /** O texto (dobrado, com a forma colada) tem todas as palavras, a última como prefixo? É o que o FTS5 faz. */
-function casa(palavras: readonly string[], texto: string, tabela: FoldTabela): boolean {
+export function casa(palavras: readonly string[], texto: string, tabela: FoldTabela): boolean {
   const doTexto = textoIndexado(texto, tabela)
     .split(/[^\p{L}\p{N}]+/u)
     .filter((p) => p !== '')
@@ -259,12 +301,90 @@ async function itensDosGrupos(pubs: readonly PublicacaoAberta[], palavras: reado
   return itens
 }
 
+/**
+ * Os objetos dos sítios que a camada do usuário achou (Tarefa 12): num sítio do LIVRO corrigido, os itens que o livro acha
+ * lá; num sítio qualquer, os objetos do livro que a pessoa ligou a ele (`item-sitio`). Os objetos SKC dele saem do estado.
+ * A busca é aditiva: o nome do livro continua achando o objeto que o livro diz estar lá, mesmo trocado de sítio.
+ */
+async function objetosDosSitiosAchados(pubs: readonly PublicacaoAberta[], refs: readonly string[], estado: Estado): Promise<Map<string, string[]>> {
+  const saida = new Map<string, string[]>()
+  for (const ref of new Set(refs)) {
+    const numeros: string[] = []
+    for (const r of estado.registros.get('item-sitio')?.values() ?? []) if (r.campos.sitio === ref) numeros.push(r.id)
+    const partes = eSitioSkc(ref) ? null : /^(.+)-(\d+)$/.exec(ref)
+    const pub = partes && pubs.find((p) => p.sigla === partes[1])
+    if (partes && pub) {
+      const itens = await executar<L>(
+        `SELECT DISTINCT subject_id AS item_id FROM ${pub.esquema}.assertion WHERE site_id = $id AND subject_type = 'item' AND field = 'findspot'`,
+        { $id: Number(partes[2]) },
+      )
+      numeros.push(...(await numerosDosItens(itens.map((l) => s(l.item_id)!))))
+    }
+    saida.set(ref, unicos(numeros))
+  }
+  return saida
+}
+
 /** Números de objeto escritos na busca ("CA00001") que existem. */
 async function objetosCitados(digitado: string): Promise<string[]> {
-  const candidatos = unicos((digitado.match(/\b[A-Za-z]{2}\d{5}\b/g) ?? []).map((x) => x.toUpperCase()))
+  const candidatos = numerosNoTexto(digitado)
   if (candidatos.length === 0) return []
   const linhas = await executar<L>(`SELECT id FROM main.object WHERE id IN ${EM_IDS}`, { $ids: lista(candidatos) })
   return linhas.map((l) => s(l.id)!)
+}
+
+/**
+ * Uma referência de fonte digitada (decisões 38 e 39; `lerReferenciaDigitada`) responde EXATAMENTE, em `buscar` e em
+ * `sugerir`: os números dos objetos que ela aponta, e nada mais (nem prefixo, nem página, nem medida, nem nota que a
+ * cite). null quando o digitado não é uma referência de uma fonte conhecida: então é uma busca comum.
+ * - "SKC 12", "SKC: 12", "SKC, Nr. 12", "skc nr 12": o objeto SKC com esse SKC, Nr. (`porNrSkc`), se existe e não está
+ *   excluído; senão, nenhum.
+ * - "IPIAO I: 60", "IPIAO I, Nr. 60", "IPIAO 60", "IPIAO I: 95a", "IPIAO I: Abb. 1": se a sigla é de uma obra aberta,
+ *   o objeto de cada item com esse número (e volume, se dado; sem volume, todos os volumes da sigla); senão, null.
+ * O "skc" sozinho NÃO é uma referência: é uma palavra comum, e acha os objetos SKC com Nr. pelo termo indexado
+ * `skcnr<n>` (como "TESTE" acha os objetos do livro; veja src/usuario/indice.ts).
+ */
+export async function objetosDaReferencia(digitado: string, pubs: readonly PublicacaoAberta[], estado: Estado): Promise<string[] | null> {
+  const ref = lerReferenciaDigitada(digitado)
+  if (!ref) return null
+  if (ref.sigla === SIGLA_SKC) {
+    const numeracao = numeracaoDe(estado)
+    const id = numeracao.porNrSkc.get(ref.numero)
+    const numero = id ? (numeracao.porId.get(id)?.numero ?? null) : null
+    return numero && objetosSkc(estado).has(numero) ? [numero] : []
+  }
+  const daSigla = pubs.filter((p) => p.sigla.toUpperCase() === ref.sigla)
+  if (daSigla.length === 0) return null
+  const linhas = await porPublicacao(
+    daSigla,
+    (esq) => `
+      SELECT i.id FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
+      WHERE upper(i.publication) = $sigla AND i.kind = $tipo AND i.number = CAST($numero AS INTEGER) AND lower(i.suffix) = $sufixo
+        AND ($volume = '' OR upper(coalesce(i.volume, p.volume, '')) = $volume)`,
+    { $sigla: ref.sigla, $tipo: ref.abb ? 'intro_figure' : 'catalog', $numero: String(ref.numero), $sufixo: ref.sufixo, $volume: ref.volume ?? '' },
+  )
+  return unicos(await numerosDosItens(linhas.map((l) => s(l.id)!)))
+}
+
+/**
+ * Decisão 40: as notas que CITAM a referência digitada ("TESTE I: 1-3" é achada por "TESTE I: 2"), pelo índice dos
+ * links reversos (indiceDeNotas, chave da fonte), sem passar pelo FTS. Vão ao grupo da camada ("Na sua camada"), sem
+ * objeto e sem escopo (só na aba Tudo): os objetos da resposta continuam só os da referência. Sem volume ("TESTE 2"),
+ * vale cada volume aberto da sigla. O rótulo é o do índice da camada (o título ou a primeira linha da nota).
+ */
+async function notasQueCitam(digitado: string, estado: Estado): Promise<AcertoBruto[]> {
+  const ref = lerReferenciaDigitada(digitado)
+  if (!ref) return []
+  const obras =
+    ref.sigla === SIGLA_SKC
+      ? [SIGLA_SKC]
+      : (await obrasDoPacote()).filter((o) => (ref.volume ? o === `${ref.sigla} ${ref.volume}` : o === ref.sigla || o.startsWith(`${ref.sigla} `)))
+  const indice = indiceDeNotas(estado)
+  const ids = unicos(obras.flatMap((o) => indice.ligadasA('fonte', chaveDaFonte(o, ref.numero, ref.sufixo, ref.abb)).map((l) => l.nota.id)))
+  if (ids.length === 0) return []
+  const linhas = await consultarUsuario<L>(`SELECT ref, rotulo FROM doc WHERE tipo = 'nota' AND ref IN (SELECT value FROM json_each($ids))`, { $ids: lista(ids) })
+  const rotulos = new Map(linhas.map((l) => [s(l.ref)!, s(l.rotulo) ?? '']))
+  return ids.map((id) => ({ tipo: 'nota', ref: id, objeto: null, objetos: [], rotulo: rotulos.get(id) || id, escopo: null }))
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +524,95 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
 }
 
 // ---------------------------------------------------------------------------
+// A camada do usuário
+// ---------------------------------------------------------------------------
+
+interface AcertoBruto {
+  tipo: Tipo
+  ref: string
+  objeto: string | null
+  objetos: string[]
+  rotulo: string
+  escopo: Escopo | null
+}
+
+async function acertosDoUsuario(consulta: string): Promise<AcertoBruto[]> {
+  const linhas = await consultarUsuario<L>(
+    `SELECT d.tipo, d.ref, d.objeto, d.objetos, d.rotulo, d.escopo FROM fts AS f JOIN doc AS d ON d.rowid = f.rowid WHERE f.fts MATCH $q ORDER BY d.rowid`,
+    { $q: consulta },
+  )
+  return linhas.map((l) => {
+    let objetos: unknown = []
+    try {
+      objetos = JSON.parse(s(l.objetos) ?? '[]')
+    } catch {
+      /* lista ilegível: sem objetos */
+    }
+    const escopo = s(l.escopo)
+    return {
+      tipo: s(l.tipo) as Tipo,
+      ref: s(l.ref)!,
+      objeto: s(l.objeto),
+      objetos: Array.isArray(objetos) ? objetos.filter((o): o is string => typeof o === 'string') : [],
+      rotulo: s(l.rotulo) ?? '',
+      escopo: escopo !== null && (ESCOPOS as readonly string[]).includes(escopo) ? (escopo as Escopo) : null,
+    }
+  })
+}
+
+/** Os objetos SKC do estado que existem (não excluídos, não reservas, com número confirmado ou provisório), por número. */
+const objetosSkc = (estado: Estado): Map<string, Registro> => objetosComNumero(estado)
+
+const textoDe = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+
+/** Um objeto SKC como candidato da busca: publicação "SKC", período pelo prefixo do número, tipo e sítio da ficha. */
+function candidatoSkc(numero: string, r: Registro, estado: Estado, livro: SitiosDoPacote | null, redirecionamentos: Redirecionamentos): Candidato {
+  // Um sítio do usuário que o pacote publicou (Tarefa 16) é o sítio do livro: o id e o nome dele (a faceta Sítio os junta).
+  const sitioId = textoDe(r.campos.sitio) === null ? null : destinoDe(redirecionamentos, textoDe(r.campos.sitio)!)
+  // O nome de agora (corrigido → do livro → o guardado na ficha), e a marca «excluído» num sítio seu que se excluiu (Tarefa 12).
+  const guardado = textoDe(r.campos.sitioNome)
+  const sitioNome = (sitioId ? nomeDeAgoraDoSitio(estado, sitioId, livro, guardado, redirecionamentos) : null) ?? guardado ?? sitioId
+  const rotuloDoSitio = nomeComMarcaDoSitio(estado, sitioId, sitioNome, redirecionamentos)
+  const prefixo = numero.slice(0, 2)
+  const ficha = lerFicha(r.campos)
+  return {
+    numero,
+    resumo: {
+      numero,
+      itemId: r.id,
+      origem: textoDaOrigem(ficha),
+      tipo: tipoCurtoDe(ficha),
+      sitio: sitioNome,
+      sitioId,
+      miniatura: null,
+      display_mode: null,
+      skc: true,
+    },
+    publicacoes: new Map([[SIGLA_SKC, SIGLA_SKC]]),
+    periodo: prefixo in PERIODOS ? prefixo : null,
+    sitio: sitioId ? { id: sitioId, nome: rotuloDoSitio ?? sitioId } : null,
+    certeza: null,
+    niveis: new Set(),
+    modalidades: new Set(),
+  }
+}
+
+/** O sítio de um objeto do livro depois da troca da pessoa e com o nome corrigido: é o que a faceta Sítio conta e rotula. */
+function aplicarSitioDeAgora(c: Candidato, estado: Estado, livro: SitiosDoPacote | null, redirecionamentos: Redirecionamentos): void {
+  const s = sitioDoObjetoDoPacote(estado, c.numero, c.sitio?.id ?? null, redirecionamentos)
+  if (s.id === null) return
+  const guardado = s.trocado ? (textoDe(estado.registro('item-sitio', c.numero)?.campos.sitioNome) ?? c.sitio?.nome ?? null) : (c.sitio?.nome ?? null)
+  const id = destinoDe(redirecionamentos, s.id)
+  c.sitio = { id, nome: nomeDeAgoraDoSitio(estado, id, livro, guardado, redirecionamentos) ?? '—' }
+}
+
+/** Só filtros que um acerto solto do usuário pode cumprir: nenhum, ou apenas "Publicação: SKC". */
+function filtrosDeixamOsSoltos(filtros: Filtros): boolean {
+  const ativos = CHAVES_DE_FILTRO.filter((c) => (filtros[c]?.length ?? 0) > 0)
+  return ativos.length === 0 || (ativos.length === 1 && ativos[0] === 'publicacao' && filtros.publicacao!.includes(SIGLA_SKC))
+}
+
+// ---------------------------------------------------------------------------
 // Facetas
 // ---------------------------------------------------------------------------
 
@@ -461,7 +670,13 @@ function facetas(escopo: readonly Candidato[], filtros: Filtros): Faceta[] {
  * dobrada; se nenhum é igual e só um verbete casa, esse. Mais de um verbete casando sem nenhum
  * igual: sem destaque (a lista fica em "ver também").
  */
-async function escolherDestaque(refs: readonly string[], digitado: string, tabela: FoldTabela): Promise<string | null> {
+async function escolherDestaque(
+  refs: readonly string[],
+  digitado: string,
+  tabela: FoldTabela,
+  formas: ReadonlyMap<string, string> = new Map(),
+  edicoes: ReadonlyMap<string, EdicaoDoVerbete> = new Map(),
+): Promise<string | null> {
   if (refs.length === 0) return null
   const dobrado = fold(digitado, tabela)
   const linhas = await executar<L>(
@@ -475,11 +690,17 @@ async function escolherDestaque(refs: readonly string[], digitado: string, tabel
     } catch {
       /* variantes ilegíveis: vale o resto */
     }
-    const nomes = [l.pt, l.pt_text, l.de, l.en, ...(Array.isArray(variantes) ? variantes : [])].map(s).filter((x): x is string => !!x)
+    // A forma em uso do usuário (Tarefa 11) também é um nome do verbete.
+    const nomes = [formas.get(s(l.id) ?? ''), l.pt, l.pt_text, l.de, l.en, ...(Array.isArray(variantes) ? variantes : [])].map(s).filter((x): x is string => !!x)
     return nomes.some((nome) => fold(nome, tabela) === dobrado)
   })
   if (iguais.length > 0) {
-    iguais.sort((a, b) => Number(s(b.status) === 'approved') - Number(s(a.status) === 'approved') || refs.indexOf(s(a.id)!) - refs.indexOf(s(b.id)!))
+    // O desempate é pelo estado DE AGORA (derivado), não pelo `status` cru do pacote (T17-B-10).
+    const aprovado = (l: L) => {
+      const id = s(l.id)!
+      return Number(situacaoDoVerbete(edicoes.get(id) ?? null, s(l.pt) ?? s(l.de) ?? id, (s(l.status) as StatusDoVerbete | null) ?? 'proposed').status === 'approved')
+    }
+    iguais.sort((a, b) => aprovado(b) - aprovado(a) || refs.indexOf(s(a.id)!) - refs.indexOf(s(b.id)!))
     return s(iguais[0]!.id)
   }
   return refs.length === 1 ? refs[0]! : null
@@ -500,6 +721,8 @@ function vazio(curta = false): ResultadoDaBusca {
     totalSemFiltros: 0,
     contagens: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
     facetas: [],
+    usuario: [],
+    contagensDoUsuario: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
   }
 }
 
@@ -511,19 +734,40 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   if (palavras.join('').length < MINIMO_DE_CARACTERES) return vazio(true)
 
   const pubs = await publicacoesAbertas()
-  const docs = await documentos(consulta)
+  // A hipótese ancorada num trecho do livro conta para o objeto dele (T17-B-4). Os donos vêm ANTES do índice, para a entrada
+  // da hipótese sair com o mesmo objeto que a faceta Nível usa, esteja o cache cheio ou não (revisão 1, I1).
+  await garantirOsDonosDosTrechos(estadoAtual())
+  const estadoDoUsuario = await garantirIndiceDoUsuario(tabela)
+  // "SKC 12", "IPIAO I: 60"…: só os objetos da referência (veja `objetosDaReferencia`).
+  const exatos = await objetosDaReferencia(digitado, pubs, estadoDoUsuario)
+  const [docs, todosOsAcertosComPublicados, redirecionamentos] = await Promise.all([
+    exatos ? Promise.resolve([]) : documentos(consulta),
+    exatos ? notasQueCitam(digitado, estadoDoUsuario) : acertosDoUsuario(consulta),
+    redirecionamentosOuNenhum(),
+  ])
+  // O verbete ou sítio do usuário que o pacote publicou (Tarefa 16) é achado como o do livro (nos documentos do pacote), nunca aqui.
+  const todosOsAcertos = todosOsAcertosComPublicados.filter((a) => !redirecionamentos.has(a.ref))
+  // Um verbete do LIVRO achado pela forma em uso do usuário (Tarefa 11) é o verbete do livro, com os objetos dele, e não um
+  // acerto "na sua camada": entra entre os verbetes do pacote (uma vez só).
+  const doLivro = todosOsAcertos.filter((a) => a.tipo === 'verbete' && !eVerbeteSkc(a.ref))
+  const acertos = doLivro.length === 0 ? todosOsAcertos : todosOsAcertos.filter((a) => !doLivro.includes(a))
+  const formas = formasEmUso(estadoDoUsuario)
+  const skc = objetosSkc(estadoDoUsuario)
   const doTipo = (...tipos: string[]) => docs.filter((d) => tipos.includes(d.tipo))
-  const verbetes = doTipo('verbete')
+  const verbetes = [...doTipo('verbete')]
+  for (const a of doLivro) if (!verbetes.some((d) => d.ref === a.ref)) verbetes.push({ tipo: 'verbete', ref: a.ref, objeto: null, rotulo: a.rotulo })
 
   // Cada fonte vira um conjunto de números de objeto.
+  const nenhum = Promise.resolve<string[]>([])
   const [itensDeTexto, itensDeTermos, itensDeObras, itensDeSitios, itensDeGrupos, citados] = await Promise.all([
     numerosDosItens(doTipo('item').map((d) => d.ref)),
     itensDosTermos(pubs, verbetes.map((d) => d.ref)).then(numerosDosItens),
     itensDasObras(pubs, doTipo('obra').map((d) => d.ref)).then(numerosDosItens),
-    itensDosSitios(pubs, palavras, tabela).then(numerosDosItens),
-    itensDosGrupos(pubs, palavras, tabela).then(numerosDosItens),
-    objetosCitados(digitado),
+    exatos ? nenhum : itensDosSitios(pubs, palavras, tabela).then(numerosDosItens),
+    exatos ? nenhum : itensDosGrupos(pubs, palavras, tabela).then(numerosDosItens),
+    exatos ? Promise.resolve([...exatos]) : objetosCitados(digitado),
   ])
+  if (!exatos) for (const nr of numerosNoTexto(digitado)) if (skc.has(nr)) citados.push(nr)
   const doTexto = new Set([...itensDeTexto, ...doTipo('trecho', 'catalogo').flatMap((d) => (d.objeto ? [d.objeto] : []))])
   const porEscopo: Record<Escopo, Set<string>> = {
     termo: new Set(itensDeTermos),
@@ -533,11 +777,49 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     tudo: new Set([...doTexto, ...itensDeTermos, ...itensDeObras, ...itensDeSitios, ...itensDeGrupos, ...citados]),
   }
 
+  // Os sítios achados pela camada do usuário (Tarefa 12) e os objetos do livro deles.
+  const dosSitios = await objetosDosSitiosAchados(pubs, acertos.filter((a) => a.tipo === 'sitio').map((a) => a.ref), estadoDoUsuario)
+
+  // A camada do usuário: cada acerto vale para os objetos dele, no "tudo" e no escopo do registro.
+  const doUsuario = (a: AcertoBruto) => ['tudo' as Escopo, ...(a.escopo ? [a.escopo] : [])]
+  for (const a of acertos) {
+    const objetos = a.tipo === 'colecao' ? a.objetos : a.objeto ? [a.objeto] : []
+    if (a.tipo === 'sitio') {
+      for (const [nr, r] of skc) if (r.campos.sitio === a.ref) objetos.push(nr)
+      objetos.push(...(dosSitios.get(a.ref) ?? []))
+    }
+    for (const e of doUsuario(a)) for (const nr of objetos) porEscopo[e].add(nr)
+  }
+
   const todos = await candidatos(pubs, [...porEscopo.tudo])
+  const livro = await sitiosDoPacote().catch((): SitiosDoPacote | null => null)
+  for (const nr of porEscopo.tudo) {
+    const r = skc.get(nr)
+    if (r && !todos.has(nr)) todos.set(nr, candidatoSkc(nr, r, estadoDoUsuario, livro, redirecionamentos))
+  }
+  // O sítio de agora de cada objeto do livro (a faceta Sítio): o trocado pela pessoa, com o nome corrigido (Tarefa 12).
+  for (const c of todos.values()) if (!c.resumo.skc) aplicarSitioDeAgora(c, estadoDoUsuario, livro, redirecionamentos)
+  for (const h of estadoDoUsuario.registros.get('hipotese')?.values() ?? []) {
+    const alvo = (v: unknown) => numeroDeObjeto(v) ?? (typeof v === 'string' && v.startsWith('OB-') ? numeroDoObjeto(estadoDoUsuario, v) : null)
+    // Ancorada numa leitura SKC, a hipótese é do dono da leitura, como na tela (revisão 4 da Tarefa 10, m6; M13).
+    const dono = objetoDaHipotese({ objeto: typeof h.campos.objeto === 'string' ? h.campos.objeto : null, ancora: lerAncora(h.campos.ancora) })
+    const c = h.excluido ? undefined : todos.get(alvo(dono) ?? alvo(h.campos.alvo) ?? '')
+    if (!c) continue
+    if (typeof h.campos.nivel === 'string') c.niveis.add(h.campos.nivel)
+    if (typeof h.campos.modalidade === 'string') c.modalidades.add(h.campos.modalidade)
+  }
   const doEscopo = (escopo: Escopo) => [...porEscopo[escopo]].flatMap((nr) => todos.get(nr) ?? [])
   const contagens = Object.fromEntries(
     ESCOPOS.map((e) => [e, doEscopo(e).filter((c) => passa(c, opcoes.filtros)).length]),
   ) as Record<Escopo, number>
+
+  // O que não é de um objeto que existe vai para o grupo à parte.
+  const soltos = acertos.filter((a) => !(a.objeto && todos.has(a.objeto)))
+  const soltosDoEscopo = (e: Escopo) => (filtrosDeixamOsSoltos(opcoes.filtros) ? soltos.filter((a) => e === 'tudo' || a.escopo === e) : [])
+  const contagensDoUsuario = Object.fromEntries(ESCOPOS.map((e) => [e, soltosDoEscopo(e).length])) as Record<Escopo, number>
+  const usuario = soltosDoEscopo(opcoes.escopo)
+    .map((a): AcertoDoUsuario => ({ tipo: a.tipo, ref: a.ref, rotulo: a.rotulo, skc: true, objeto: a.objeto }))
+    .sort((a, b) => comparar(a.rotulo, b.rotulo) || comparar(a.ref, b.ref))
 
   const noEscopo = doEscopo(opcoes.escopo)
   const filtrados = noEscopo.filter((c) => passa(c, opcoes.filtros))
@@ -546,8 +828,16 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   let verbeteDestaque: Verbete | undefined
   let relacionados = verbetes
   if (opcoes.escopo === 'tudo' || opcoes.escopo === 'termo') {
-    const glId = await escolherDestaque(verbetes.map((d) => d.ref), digitado, tabela)
-    verbeteDestaque = glId ? ((await verbete(glId)) ?? undefined) : undefined
+    const glId = await escolherDestaque(
+      verbetes.map((d) => d.ref),
+      digitado,
+      tabela,
+      formas,
+      edicoesDosVerbetes(estadoDoUsuario),
+    )
+    const doPacote = glId ? ((await verbete(glId)) ?? undefined) : undefined
+    // O que o usuário fez no verbete (forma em uso e estado, Tarefa 11) vale sobre o do pacote.
+    verbeteDestaque = doPacote && { ...doPacote, pt: formas.get(doPacote.id) ?? doPacote.pt, status: situacaoDoVerbete(edicoesDosVerbetes(estadoDoUsuario).get(doPacote.id) ?? null, doPacote.pt ?? doPacote.de ?? doPacote.id, doPacote.status).status }
     relacionados = verbetes.filter((d) => d.ref !== glId)
   } else {
     relacionados = []
@@ -558,12 +848,14 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     vazia: false,
     curta: false,
     verbeteDestaque,
-    verbetesRelacionados: relacionados.slice(0, 12).map((d) => ({ id: d.ref, rotulo: d.rotulo })),
+    verbetesRelacionados: relacionados.slice(0, 12).map((d) => ({ id: d.ref, rotulo: formas.get(d.ref) ?? d.rotulo })),
     objetos: numeros.slice(0, opcoes.limite ?? LIMITE_PADRAO).map((nr) => porNumero.get(nr)!),
     numeros,
     total: numeros.length,
     totalSemFiltros: noEscopo.length,
     contagens,
     facetas: facetas(noEscopo, opcoes.filtros),
+    usuario,
+    contagensDoUsuario,
   }
 }

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Imagem } from '../banco/tipos'
+import type { ImagemExibida } from '../imagens-usuario/exibicao'
+import { useEsteAparelho } from '../imagens-usuario/exibicao'
+import { useUrlDoUsuario } from '../imagens-usuario/urls'
 import { caixaGirada, type Tamanho } from '../imagem/zoom'
 import { urlImagem } from '../pacote/imagens'
+import { MSG_IMAGEM_OFFLINE } from '../ui/Miniatura'
 
 /**
  * O que o item e o visualizador compartilham da imagem (decisão 10): o desenho de traço aparece
@@ -65,4 +69,34 @@ export function useUrlDaImagem(caminho: string | null): UrlDaImagem {
   }, [caminho])
   // Se a imagem não carrega (arquivo ruim ou sumido), some o <img> e fica o marcador.
   return { url: falhou ? null : url, falhou, aoFalhar: () => setFalhou(true) }
+}
+
+export const MSG_AINDA_NAO_ENVIADA = 'Imagem ainda não enviada pelo outro aparelho'
+export const MSG_SEM_ARQUIVO = 'Imagem não encontrada neste aparelho nem no Dropbox'
+
+export interface UrlDaImagemExibida extends UrlDaImagem {
+  /** O que mostrar no lugar quando não há imagem (null enquanto carrega). */
+  aviso: string | null
+}
+
+/**
+ * A URL de uma imagem do livro (pacote) ou do usuário (camada do usuário, `useUrlDoUsuario`). Do outro aparelho, o
+ * evento pode chegar antes dos arquivos: o aviso diz "ainda não enviada" e o hook tenta de novo sozinho.
+ */
+export function useUrlDaImagemExibida(img: ImagemExibida | undefined, versao: 'tela' | 'miniatura' = 'tela'): UrlDaImagemExibida {
+  const doLivro = useUrlDaImagem(img && !img.skc ? (versao === 'tela' ? (img.tela ?? img.miniatura) : img.miniatura) : null)
+  const doUsuario = useUrlDoUsuario(img?.skc ? img.id : null, versao)
+  const [quebrou, setQuebrou] = useState<string | null>(null)
+  const este = useEsteAparelho()
+  if (!img?.skc) return { ...doLivro, aviso: doLivro.falhou ? MSG_IMAGEM_OFFLINE : null }
+  const url = doUsuario.estado === 'ok' && quebrou !== doUsuario.url ? doUsuario.url : null
+  const aviso =
+    doUsuario.estado === 'ausente'
+      ? este && img.skc.aparelho === este
+        ? MSG_SEM_ARQUIVO
+        : MSG_AINDA_NAO_ENVIADA
+      : doUsuario.estado === 'indisponivel' || (doUsuario.estado === 'ok' && !url)
+        ? MSG_IMAGEM_OFFLINE
+        : null
+  return { url, falhou: aviso !== null, aoFalhar: () => setQuebrou(doUsuario.estado === 'ok' ? doUsuario.url : null), aviso }
 }

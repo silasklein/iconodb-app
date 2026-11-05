@@ -26,15 +26,17 @@ describe('Sítio (celular)', () => {
     expect(within(coord).getByText('Gazetteer')).toBeInTheDocument()
     expect(within(coord).getByText('https://example.org/gazetteer/tell-probe-teste')).toBeInTheDocument()
     expect(within(coord).getByText('coordenada inventada para os testes')).toBeInTheDocument()
-    const mapa = screen.getByRole('link', { name: 'Abrir no mapa' })
-    expect(mapa).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=31.9132&mlon=35.2071#map=12/31.9132/35.2071')
-    expect(mapa).toHaveAttribute('target', '_blank')
-    expect(mapa.getAttribute('rel')).toContain('noopener')
+    // «Abrir no mapa» (Tarefa 19) abre o mapa do app centrado no sítio; o link do OpenStreetMap continua, à parte
+    expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute('href', '/sitios?foco=TESTE-2')
+    const osm = screen.getByRole('link', { name: 'Abrir no OpenStreetMap' })
+    expect(osm).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=31.9132&mlon=35.2071#map=12/31.9132/35.2071')
+    expect(osm).toHaveAttribute('target', '_blank')
+    expect(osm.getAttribute('rel')).toContain('noopener')
   })
 
   it('coordenada vinda da grade mostra a grade impressa e a fonte', async () => {
     renderizarRota('/sitio/TESTE-1')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Maḥraṣ Teste' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Maḥteṣ Teste' })).toBeInTheDocument()
     const coord = screen.getByRole('region', { name: 'Coordenada' })
     expect(within(coord).getByText('160.120')).toHaveClass('codigo')
     expect(within(coord).getByText('Grade')).toBeInTheDocument()
@@ -54,11 +56,12 @@ describe('Sítio (celular)', () => {
     )
   })
 
-  it('é só leitura: não há Corrigir, campos de entrada nem edição', async () => {
+  it('lê sem campos de entrada até a pessoa tocar em "Corrigir" (Tarefa 12); não há escolha no mapa (2C)', async () => {
     const { container } = renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
     expect(container.querySelector('input, textarea, select')).toBeNull()
-    expect(screen.queryByRole('button', { name: /Corrigir|Salvar|Escolher no mapa/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Corrigir' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: /Escolher no mapa/ })).not.toBeInTheDocument()
   })
 
   it('sem coordenada: avisa e não oferece o mapa', async () => {
@@ -107,10 +110,10 @@ describe('Sítio (computador): lista e detalhe', () => {
     const lista = document.querySelector('.lista-rolagem')
     expect(screen.getByRole('link', { name: /^Tell Probe Teste/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: /^Maḥraṣ Teste/ }))
-    expect(await screen.findByRole('heading', { level: 2, name: 'Maḥraṣ Teste' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: /^Maḥteṣ Teste/ }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Maḥteṣ Teste' })).toBeInTheDocument()
     expect(document.querySelector('.lista-rolagem')).toBe(lista)
-    await waitFor(() => expect(screen.getByRole('link', { name: /^Maḥraṣ Teste/ })).toHaveAttribute('aria-current', 'page'))
+    await waitFor(() => expect(screen.getByRole('link', { name: /^Maḥteṣ Teste/ })).toHaveAttribute('aria-current', 'page'))
   })
 })
 
@@ -120,7 +123,8 @@ describe('Sítio: coordenada 0', () => {
     await executar('UPDATE pub_TESTE.site SET lat = 0, lon = 0 WHERE id = 2')
     renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
-    expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=0&mlon=0#map=12/0/0')
+    expect(screen.getByRole('link', { name: 'Abrir no OpenStreetMap' })).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=0&mlon=0#map=12/0/0')
+    expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toHaveAttribute('href', '/sitios?foco=TESTE-2')
     expect(screen.getByText('0,00000 N · 0,00000 E')).toBeInTheDocument()
     usarMotor(null)
   })
@@ -131,6 +135,7 @@ describe('Sítio: coordenada 0', () => {
     renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
     expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Abrir no OpenStreetMap' })).not.toBeInTheDocument()
     expect(screen.getByText('sem coordenada')).toBeInTheDocument()
     usarMotor(null)
   })

@@ -1,0 +1,520 @@
+/*
+ * Uma coleção SKC aberta como grupo: cabeçalho compacto das telas de consulta, lista ou grade de objetos na ordem
+ * do usuário, e o campo de códigos. Alvos de 44 px no toque (36 com mouse), nada abaixo de 12 px.
+ */
+.colecao {
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.colecao-aviso {
+  padding: 24px;
+}
+.colecao-aviso p {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.colecao-trilha {
+  padding: 24px 48px 0;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.colecao-trilha a {
+  color: inherit;
+}
+
+.colecao-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 24px 64px;
+  min-width: 0;
+}
+.colecao-etiqueta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.colecao-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+.colecao-titulo h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.colecao-contagens {
+  display: flex;
+  gap: 32px;
+  margin: 0;
+  padding: 10px 0;
+  border-top: 2px solid var(--texto);
+}
+.colecao-contagens dt {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.colecao-contagens dd {
+  margin: 0;
+  font-family: var(--fonte-codigo);
+  font-size: 20px;
+}
+
+/* botões de texto da tela: ações secundárias, sublinhadas como os links de nota */
+.colecao-acao {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: var(--alvo-toque);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle, currentColor);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .colecao-acao:hover {
+    text-decoration-color: currentColor;
+  }
+}
+@media (pointer: fine) {
+  .colecao-acao {
+    min-height: var(--alvo-mouse);
+  }
+}
+.colecao-acao-forte {
+  padding: 0 16px;
+  border: 1px solid var(--texto);
+  text-decoration: none;
+  font-weight: 600;
+}
+.colecao-acoes {
+  display: flex;
+  gap: 24px;
+}
+.colecao-excluida {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--texto);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.colecao-excluida .colecao-acao {
+  display: inline-flex;
+  margin-top: 4px;
+}
+.colecao-erro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.colecao-vazio {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+
+/* renomear no lugar: o campo ocupa a caixa do título e os botões a linha do «Renomear» (nada ao lado se move) */
+.colecao-renomear {
+  margin: 0;
+}
+.colecao-titulo-campo {
+  position: relative;
+  max-width: 100%;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+}
+.colecao-titulo-fantasma {
+  display: grid;
+  visibility: hidden;
+}
+/* o nome atual e o digitado ocupam o mesmo lugar: a caixa tem o tamanho do maior */
+.colecao-titulo-fantasma > * {
+  grid-area: 1 / 1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.colecao-titulo-campo textarea,
+.colecao-adicionar textarea {
+  box-sizing: border-box;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  letter-spacing: inherit;
+  border-radius: 0;
+}
+.colecao-titulo-campo textarea {
+  position: absolute;
+  inset: 0 0 -0.1em;
+  display: block;
+  width: 100%;
+  /* 0,1 em a mais embaixo: a caixa de texto da fonte passa um pouco da altura da linha (1,1), e sem essa folga a cauda de «g» e «ç» seria cortada. */
+  height: calc(100% + 0.1em);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* o sublinhado é um fio desenhado no fundo, na altura do título (não uma borda, que comeria altura do campo) */
+  background-image: linear-gradient(var(--texto), var(--texto));
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: 0 calc(100% - 0.1em);
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.colecao-titulo-campo textarea[aria-invalid='true'] {
+  background-size: 100% 3px;
+}
+.colecao-adicionar textarea[aria-invalid='true'] {
+  border-width: 2px;
+}
+.colecao-adicionar label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.colecao-adicionar textarea {
+  width: 100%;
+  max-width: 560px;
+  min-height: var(--alvo-toque);
+  padding: 8px 12px;
+  border: 1px solid var(--texto);
+  font-size: 16px;
+}
+/* A área dos botões tem a largura do estado mais largo («Salvar nome · Cancelar») nos dois estados: um mostra os botões, o outro só reserva o lugar. */
+.colecao-titulo-botoes {
+  display: grid;
+  justify-items: start;
+  align-items: start;
+  align-self: flex-start;
+}
+.colecao-titulo-botoes > * {
+  grid-area: 1 / 1;
+}
+.colecao-renomear-botoes,
+.colecao-titulo-reserva {
+  display: flex;
+  gap: 24px;
+  align-self: flex-start;
+}
+.colecao-titulo-reserva {
+  visibility: hidden;
+  pointer-events: none;
+}
+/* No celular o título e a linha de ações são sempre duas linhas, para o «Renomear» e o «Salvar nome · Cancelar» caírem no mesmo lugar. */
+@media (max-width: 640px) {
+  .colecao-titulo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ferramentas: modo de exibição */
+.colecao-ferramentas {
+  display: flex;
+  justify-content: flex-end;
+}
+.colecao-modo {
+  display: inline-flex;
+  border: 1px solid var(--texto);
+}
+.colecao-modo button {
+  min-height: var(--alvo-toque);
+  padding: 0 16px;
+  border: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.colecao-modo button + button {
+  border-left: 1px solid var(--texto);
+}
+.colecao-modo button[aria-pressed='true'] {
+  background: var(--texto);
+  color: var(--fundo);
+}
+@media (pointer: fine) {
+  .colecao-modo button {
+    min-height: var(--alvo-mouse);
+  }
+}
+
+.colecao-aviso-vivo {
+  min-height: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.colecao-aviso-vivo:empty {
+  display: none;
+}
+.colecao-desfazer {
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: var(--alvo-toque);
+  font: inherit;
+  font-weight: 600;
+  color: var(--texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: fine) {
+  .colecao-desfazer {
+    min-height: var(--alvo-mouse);
+  }
+}
+
+/* a lista */
+.colecao-lista,
+.colecao-grade {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.colecao-lista[data-arrastando],
+.colecao-grade[data-arrastando] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.colecao-lista {
+  display: flex;
+  flex-direction: column;
+}
+.colecao-item {
+  min-width: 0;
+  border-bottom: 1px solid var(--filete);
+  background: var(--fundo);
+}
+.colecao-item-topo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+}
+.colecao-puxador {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.colecao-puxador:active {
+  cursor: grabbing;
+}
+.colecao-objeto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  color: inherit;
+  text-decoration: none;
+}
+a.colecao-objeto:hover .colecao-numero {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.colecao-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.colecao-numero {
+  font-size: 15px;
+  font-weight: 600;
+}
+.colecao-skc {
+  font-weight: 400;
+  color: var(--secundario);
+}
+.colecao-tipo,
+.colecao-sitio {
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.colecao-sitio {
+  color: var(--secundario);
+}
+.colecao-objeto-ausente {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.colecao-passos {
+  display: inline-flex;
+}
+.colecao-item-pegado {
+  outline: 2px solid var(--texto);
+  outline-offset: -2px;
+}
+.colecao-item-arrastando {
+  opacity: 0.85;
+  outline: 2px dashed var(--texto);
+  outline-offset: -2px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.colecao-item .nota-do-item {
+  padding: 0 0 4px 44px;
+  gap: 12px;
+}
+@media (pointer: fine) {
+  .colecao-item .nota-do-item {
+    padding-left: 36px;
+  }
+}
+
+/* a grade de miniaturas */
+.colecao-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.colecao-grade .colecao-item {
+  position: relative;
+  border: 1px solid var(--filete);
+}
+.colecao-grade .colecao-item-topo {
+  display: block;
+  min-height: 0;
+}
+.colecao-grade .colecao-puxador {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  background: var(--fundo);
+}
+.colecao-grade .colecao-item-topo > .icon-button:not(.colecao-puxador) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  background: var(--fundo);
+}
+.colecao-grade .colecao-passos {
+  position: absolute;
+  top: 0;
+  left: 44px;
+  z-index: 2;
+  background: var(--fundo);
+}
+.colecao-grade .colecao-objeto {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0 0 10px;
+}
+.colecao-miniatura {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  padding: 6px;
+  background: var(--superficie);
+  overflow: hidden;
+}
+.colecao-miniatura .miniatura-imagem {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.colecao-grade .colecao-texto {
+  padding: 0 10px;
+}
+.colecao-marca-nota {
+  display: block;
+  padding: 0 10px 10px;
+  font-size: 12px;
+  color: var(--secundario);
+}
+
+/* adicionar por código */
+.colecao-adicionar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--filete);
+}
+.colecao-ajuda {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secundario);
+}
+
+@media (min-width: 768px) {
+  .colecao {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .colecao-corpo {
+    padding: 20px 48px 80px;
+    gap: 18px;
+    max-width: 1100px;
+  }
+  .colecao-titulo h1,
+  .colecao-titulo-campo {
+    font-size: 44px;
+    line-height: 1.12;
+  }
+  .colecao-grade {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* a descrição da coleção, sob o título */
+.colecao-descricao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.colecao-descricao label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.colecao-descricao textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 640px;
+  padding: 8px 12px;
+  border: 1px solid var(--filete);
+  border-radius: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.colecao-descricao textarea:focus {
+  border-color: var(--texto);
+}
+.colecao-descricao-adicionar {
+  color: var(--secundario);
+}

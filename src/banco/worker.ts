@@ -88,6 +88,10 @@ async function atender(pedido: Pedido): Promise<unknown> {
       return banco.reabrir()
     case 'executar':
       return banco.executar(pedido.sql, pedido.parametros)
+    case 'usuario-escrever':
+      return banco.escreverUsuario(pedido.lote)
+    case 'usuario-consultar':
+      return banco.consultarUsuario(pedido.sql, pedido.parametros)
   }
 }
 

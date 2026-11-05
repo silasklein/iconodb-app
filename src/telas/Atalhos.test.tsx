@@ -29,7 +29,7 @@ describe('Atalhos e convenções', () => {
   it('tem o título, os contextos e as convenções', () => {
     abrir()
     expect(screen.getByRole('heading', { level: 1, name: 'Atalhos e convenções' })).toBeInTheDocument()
-    for (const nome of ['Global', 'Lista', 'Item', 'Hipótese', 'Visualizador', 'Convenções']) {
+    for (const nome of ['Global', 'Lista', 'Item', 'Hipótese', 'Visualizador', 'Revisão', 'Comparar', 'Mapa dos sítios', 'Convenções']) {
       expect(screen.getByRole('heading', { level: 2, name: nome })).toBeInTheDocument()
     }
   })
@@ -38,7 +38,7 @@ describe('Atalhos e convenções', () => {
     abrir()
     let total = 0
     for (const c of CONTEXTOS) {
-      const nome = { global: 'Global', lista: 'Lista', item: 'Item', hipotese: 'Hipótese', visualizador: 'Visualizador' }[c]
+      const nome = { global: 'Global', lista: 'Lista', item: 'Item', hipotese: 'Hipótese', visualizador: 'Visualizador', revisao: 'Revisão', comparar: 'Comparar', mapa: 'Mapa dos sítios' }[c]
       const itens = within(secao(nome)).getAllByRole('listitem')
       const esperadas = CATALOGO.filter((d) => d.contexto === c)
       expect(itens).toHaveLength(esperadas.length)
@@ -65,10 +65,38 @@ describe('Atalhos e convenções', () => {
     for (const k of document.querySelectorAll('kbd')) if (/^[a-z]$/i.test(k.textContent!)) expect(k.textContent).toBe(k.textContent!.toUpperCase())
   })
 
-  it('as teclas seguem uma só grafia: uma letra ou símbolo, ou o nome "Esc" e "Enter"; e a folha não conta atalhos', () => {
+  it('as teclas do mapa levam o nome impresso no teclado de PC e de Mac (PgUp, PgDn, Home, End), não um símbolo que o leitor de tela lê mal', () => {
     abrir()
-    for (const k of document.querySelectorAll('kbd')) expect(k.textContent).toMatch(/^(.|Esc|Enter)$/)
+    const linhas = within(secao('Mapa dos sítios'))
+    const teclas = (texto: RegExp) => [...linhas.getByText(texto).closest('li')!.querySelectorAll('kbd')].map((k) => k.textContent)
+    expect(teclas(/ponto anterior ou ao próximo/)).toEqual(['PgUp', 'PgDn'])
+    expect(teclas(/primeiro ou ao último ponto/)).toEqual(['Home', 'End'])
+    for (const k of document.querySelectorAll('kbd')) expect(k.textContent).not.toMatch(/[⇞⇟↖↘]/)
+  })
+
+  // Regra: uma tecla é um caractere só quando esse caractere é o que está impresso nela (letra, dígito, seta, sinal); as teclas
+  // sem desenho de um caractere só levam o nome que o teclado traz: Esc, Enter, PgUp, PgDn, Home, End.
+  it('as teclas seguem uma só grafia: uma letra ou símbolo, o nome "Esc", "Enter", "PgUp", "PgDn", "Home" e "End", ou "Ctrl+S", "⌘S", "Ctrl+Enter", "⌘Enter", "Ctrl+Z", "⌘Z", "Shift+Delete", "Shift+H" e "Alt+↑" / "Alt+↓"; e a folha não conta atalhos', () => {
+    abrir()
+    for (const k of document.querySelectorAll('kbd')) expect(k.textContent).toMatch(/^(.|Esc|Enter|PgUp|PgDn|Home|End|Ctrl\+[SZ]|⌘[SZ]|Ctrl\+Enter|⌘Enter|Shift\+Delete|Shift\+[A-Z]|Alt\+[↑↓])$/)
     expect(screen.queryByText(/\d+ atalhos/)).toBeNull()
+  })
+
+  it('a busca: ↓ ↑ percorrem as sugestões e Shift+Delete tira uma busca recente, no Global', () => {
+    abrir()
+    const global = secao('Global')
+    const setas = within(global).getByText(/percorrer as sugestões/).closest('li')!
+    expect([...setas.querySelectorAll('kbd')].map((k) => k.textContent)).toEqual(['↓', '↑'])
+    const tirar = within(global).getByText(/tirar das buscas recentes/).closest('li')!
+    expect([...tirar.querySelectorAll('kbd')].map((k) => k.textContent)).toEqual(['Shift+Delete'])
+    expect(within(global).getByText(/fechar as sugestões, depois limpar o texto/)).toBeInTheDocument()
+  })
+
+  it('Salvar e sincronizar: Ctrl+S ou ⌘S, no Global', () => {
+    abrir()
+    const linha = within(secao('Global')).getByText(/^Salvar e sincronizar/).closest('li')!
+    expect([...linha.querySelectorAll('kbd')].map((k) => k.textContent)).toEqual(['Ctrl+S', '⌘S'])
+    expect(linha).toHaveTextContent(/Ctrl\+S\s*ou\s*⌘S/)
   })
 
   it('as convenções explicam os sublinhados, a imagem invertida e as siglas das fontes', () => {
@@ -87,6 +115,10 @@ describe('Atalhos e convenções', () => {
     expect(conv).toHaveTextContent(/GGG: Keel e Uehlinger, Göttinnen, Götter und Gottessymbole/)
     expect(conv).toHaveTextContent(/SKC: as suas próprias notas e leituras/)
     expect(conv).not.toHaveTextContent(/a sua voz/)
+    // T17-C-31: o limite dos pontos muito juntos no mapa
+    expect(conv).toHaveTextContent('Pontos muito juntos no mapa')
+    expect(conv).toHaveTextContent('No mapa dos sítios, pontos quase no mesmo lugar só se separam com mais zoom ou pelo teclado (Tab e as setas). O minimapa se atualiza quando você solta o mapa.')
+    expect(conv).not.toHaveTextContent(/\bpx\b|arrasto/) // sem jargão (revisão m4)
     // os títulos das obras em itálico
     expect([...conv.querySelectorAll('i')].map((i) => i.textContent)).toEqual([
       'Die Ikonographie Palästinas/Israels und der Alte Orient',

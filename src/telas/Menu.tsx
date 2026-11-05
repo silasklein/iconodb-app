@@ -2,9 +2,17 @@ import { useEffect, useRef, useState, type KeyboardEvent as TeclaDoReact, type R
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { useAtalhos } from '../app/useAtalhos'
+import { useBandeja } from '../comparar/useBandeja'
 import { sitios } from '../banco/consultas'
+import { useSitiosSkc } from '../sitios/doUsuario'
+import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
-import { numeroPtBr, usePendencias } from '../ui/usePendencias'
+import { IconeDeSincronizacao } from '../ui/IconeDeSincronizacao'
+import { numeroPtBr } from '../ui/numero'
+import { usePendencias } from '../ui/usePendencias'
+import { textoCurtoDaUltima, textosDoEstado } from '../usuario/textosDaSync'
+import { atalhoDeSalvar, useSincronizacao } from '../usuario/useSincronizacao'
+import { BotaoSalvar } from './Sincronizacao'
 import './Menu.css'
 
 export const MSG_PROXIMA_VERSAO = 'na próxima versão'
@@ -24,15 +32,43 @@ const FOCAVEIS = 'a[href], button:not([disabled]), input, select, textarea, [tab
  * Um diálogo modal: o foco começa nele e não sai (Tab dá a volta), Esc fecha, tocar no fundo fecha,
  * o resto da tela fica inerte e o foco volta ao gatilho ao fechar.
  *
- * Na 2A: Revisão (com a contagem), Minhas notas, Sítios e "Atalhos e convenções" funcionam;
- * Comparar, Sincronização e Ajustes aparecem desabilitados, "na próxima versão".
+ * Revisão (com a contagem), Comparar (com o contador "n/4"), Minhas notas, Sítios, Exportar e "Atalhos e convenções" funcionam; Ajustes
+ * aparece desabilitado, "na próxima versão". Embaixo, a seção Sincronização (2B).
  */
+/** A seção Sincronização do Menu (Menu.dc.html): o link para a tela, o estado e "Salvar e sincronizar". */
+function SecaoDeSincronizacao({ aoFechar }: { aoFechar: () => void }) {
+  const info = useSincronizacao()
+  const t = textosDoEstado(info, atalhoDeSalvar())
+  const ultima = textoCurtoDaUltima(info.ultimaEm)
+  return (
+    <section className="menu-sync" aria-labelledby="menu-sync-titulo">
+      <Link to="/sincronizacao" className="menu-sync-link" onClick={aoFechar}>
+        <span className="menu-sync-nome">
+          <IconeDeSincronizacao marca={t.marca} />
+          <span id="menu-sync-titulo">Sincronização</span>
+        </span>
+        <span className="menu-sync-detalhes">
+          Detalhes
+          <Icon name="detalhe" size={16} />
+        </span>
+      </Link>
+      <p className="menu-sync-estado">
+        <span role="status">{t.titulo}</span>
+        {ultima && ` · ${ultima}`}
+      </p>
+      <BotaoSalvar variante="menu" />
+    </section>
+  )
+}
+
 export function Menu({ variante, aoFechar, gatilho }: Props) {
   const raiz = useRef<HTMLDivElement>(null)
   const fechar = useRef(aoFechar)
   fechar.current = aoFechar
   const pend = usePendencias()
   const [totalDeSitios, setTotalDeSitios] = useState<number | null>(null)
+  const sitiosDoUsuario = useSitiosSkc()
+  const bandeja = useBandeja()
 
   useEffect(() => {
     let vivo = true
@@ -76,7 +112,8 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
     }
   }
 
-  const sitiosMeta = totalDeSitios === null ? null : `${numeroPtBr(totalDeSitios)} ${totalDeSitios === 1 ? 'sítio' : 'sítios'}`
+  const total = totalDeSitios === null ? null : totalDeSitios + sitiosDoUsuario.length
+  const sitiosMeta = total === null ? null : `${numeroPtBr(total)} ${total === 1 ? 'sítio' : 'sítios'}`
   const revisaoMeta = pend === null ? null : `${numeroPtBr(pend.total)} ${pend.total === 1 ? 'caso' : 'casos'}`
 
   const link = (to: string, rotulo: string, meta: ReactNode, opcoes: { forte?: boolean; atalho?: string } = {}) => (
@@ -115,13 +152,15 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
         </div>
         <nav aria-label="Menu" className="menu-lista">
           {link('/revisao', 'Revisão', revisaoMeta, { forte: true })}
-          {desabilitado('Comparar')}
+          {link('/objeto/novo', 'Novo objeto', 'SKC')}
+          {link('/comparar', 'Comparar', bandeja.contador)}
           {link('/notas', 'Minhas notas', null)}
           {link('/sitios', 'Sítios', sitiosMeta)}
           {desabilitado('Ajustes')}
+          {link('/exportar', 'Exportar', 'cópia de segurança')}
           {link('/atalhos', 'Atalhos e convenções', '?', { atalho: '?' })}
-          <div className="menu-secao">{desabilitado('Sincronização')}</div>
         </nav>
+        <SecaoDeSincronizacao aoFechar={aoFechar} />
       </div>
     </div>,
     document.body,

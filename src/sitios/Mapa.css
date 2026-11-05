@@ -1,0 +1,385 @@
+/*
+ * O mapa dos sítios (SitiosMapa.dc.html, PC-SitiosMapa.dc.html): terra cinza-claro, mar branco, fronteiras fracas, pontos pretos
+ * com borda branca. Claro mesmo em tema escuro (as telas de consulta são claras).
+ */
+.mapa,
+.mapa * {
+  -webkit-tap-highlight-color: transparent;
+}
+.mapa {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  overflow: clip;
+  background: #ffffff;
+  color: #111111;
+  color-scheme: light;
+  /* A terra num cinza intermediário (decisão 53, revisão 3: #c8c8c8 era escuro demais): contra o mar branco dá 1,48 : 1, e as ilhas
+     pequenas (Chipre, Creta) ainda se leem como terra. Sobre a terra: costa 3,6 : 1, limites das regiões 7,7 : 1, nomes 6,0 : 1,
+     pontos e anel de foco (#111) 12,7 : 1; a fronteira, decorativa, 2,2 : 1. */
+  --mapa-terra: #d4d4d4;
+  --mapa-costa: #6b6b6b;
+  --mapa-fronteira: #8f8f8f;
+  --mapa-regiao: #3a3a3a;
+  --mapa-nome: #4a4a4a;
+}
+.mapa-palco {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  overflow: clip;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  /* O contorno de foco (::after) fica acima do desenho da terra, e não embaixo dele. */
+  isolation: isolate;
+}
+.mapa-palco:active {
+  cursor: grabbing;
+}
+.mapa-palco:focus-visible {
+  outline: none;
+}
+/* O foco do palco: uma moldura escura com um fio branco por dentro, numa camada ACIMA do desenho: aparece sobre o mar e sobre a
+   terra (um contorno comum ficaria escondido embaixo do <svg>, que é posicionado). */
+.mapa-palco:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 3px solid #111111;
+  box-shadow: inset 0 0 0 1px #ffffff;
+  pointer-events: none;
+  z-index: 10;
+}
+/* A camada do mundo: tudo o que anda com o mapa. Ao arrastar, só ela se move (por transform), sem renderizar nada. */
+.mapa-mundo {
+  position: absolute;
+  inset: 0;
+}
+.mapa-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+.mapa-camada {
+  transform-origin: 0 0;
+}
+.mapa-terra {
+  fill: var(--mapa-terra);
+  stroke: none;
+}
+/* A costa: o contorno da terra, sem as arestas que correm sobre a borda do recorte. */
+.mapa-costa {
+  fill: none;
+  stroke: var(--mapa-costa);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.mapa-lago {
+  fill: #ffffff;
+  stroke: var(--mapa-costa);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.mapa-fronteira {
+  fill: none;
+  stroke: var(--mapa-fronteira);
+  stroke-width: 0.75;
+  vector-effect: non-scaling-stroke;
+}
+.mapa-regiao {
+  fill: none;
+  stroke: var(--mapa-regiao);
+  stroke-width: 1.25;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+.mapa-regiao-ativa {
+  stroke-width: 2.25;
+  stroke-dasharray: none;
+}
+
+/* Tudo o que se posiciona na tela sai de (0, 0) e anda por transform. */
+.mapa-ponto,
+.mapa-anel,
+.mapa-lugar,
+.mapa-rotulo,
+.mapa-rotulo-regiao {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.mapa-lugar,
+.mapa-rotulo,
+.mapa-rotulo-regiao {
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 3px #fff,
+    0 0 4px #fff,
+    0 0 5px #fff;
+}
+.mapa-lugar {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--mapa-nome);
+}
+.mapa-rotulo {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--mapa-nome);
+  overflow: visible;
+}
+.mapa-rotulo-forte {
+  font-weight: 600;
+  color: #111111;
+}
+.mapa-rotulo-regiao {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3a3a3a;
+}
+.mapa-ponto {
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  background: #111111;
+  cursor: pointer;
+}
+/* O alvo de toque de 44 px NÃO é um ::before do botão: os alvos de pontos vizinhos se sobreporiam e o clique iria ao ponto errado.
+   Quem escolhe o ponto é o palco, ao soltar o dedo ou o mouse: o ponto mais perto dentro de 22 px (10 px com o mouse). */
+.mapa-ponto:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 3px;
+}
+.mapa-anel {
+  box-sizing: border-box;
+  border: 1.5px solid #111111;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* O movimento: só nas ações (Ver tudo, aproximar, centrar), nunca ao arrastar; nada com movimento reduzido. */
+@media (prefers-reduced-motion: no-preference) {
+  .mapa[data-anima] .mapa-camada,
+  .mapa[data-anima] .mapa-ponto,
+  .mapa[data-anima] .mapa-anel,
+  .mapa[data-anima] .mapa-lugar,
+  .mapa[data-anima] .mapa-rotulo-regiao {
+    transition: transform 0.25s ease;
+  }
+}
+
+.mapa-vazio {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  max-width: 80%;
+  transform: translate(-50%, -50%);
+  padding: 10px 14px;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #3a3a3a;
+  text-align: center;
+}
+
+/* Controles */
+.mapa-botao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--controle);
+  background: #ffffff;
+  color: #111111;
+  font: inherit;
+  cursor: pointer;
+}
+.mapa-botao:focus-visible,
+.mapa-limites:has(input:focus-visible) {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+.mapa-controles {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.mapa-zoom-par {
+  display: flex;
+  flex-direction: column;
+}
+.mapa-zoom {
+  width: 44px;
+  height: 44px;
+}
+.mapa-zoom-cima {
+  border-radius: 8px 8px 0 0;
+}
+.mapa-zoom-baixo {
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+}
+.mapa-quadrado {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+.mapa-botao-ligado {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+.mapa-computador .mapa-controles {
+  top: 16px;
+  right: 16px;
+}
+.mapa-computador .mapa-zoom {
+  width: 40px;
+  height: 40px;
+}
+.mapa-ver-tudo {
+  height: 40px;
+  gap: 8px;
+  padding: 0 12px 0 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.mapa-limites {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.mapa-limites input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #111111;
+}
+.mapa-tecla {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: #5e5e5e;
+}
+
+/* Escala, crédito, dica */
+.mapa-escala {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #3a3a3a;
+  pointer-events: none;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 3px #fff,
+    0 0 4px #fff,
+    0 0 5px #fff;
+}
+.mapa-celular .mapa-escala {
+  bottom: auto;
+  top: 14px;
+}
+/* Com os limites ligados (celular) o nome das regiões ocupa o alto: a escala vai para cima da dica de baixo. */
+.mapa-celular .mapa-escala-acima {
+  top: auto;
+  bottom: 112px;
+}
+.mapa-escala-oculta {
+  display: none;
+}
+.mapa-escala-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mapa-escala-barra {
+  display: block;
+  height: 6px;
+  box-sizing: border-box;
+  border: 1.5px solid #111111;
+  border-top: 0;
+}
+.mapa-dica {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3a3a3a;
+}
+.mapa-dica-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #111111;
+}
+
+/* O minimapa (computador) */
+.mapa-mini {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 218px;
+  height: 154px;
+  box-sizing: border-box;
+  border: 1px solid var(--controle);
+  background: #ffffff;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+.mapa-mini svg {
+  display: block;
+}
+.mapa-mini .mapa-costa {
+  stroke-width: 0.75;
+}
+.mapa-mini-ponto {
+  fill: #111111;
+}
+.mapa-mini-visao {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 1.5;
+}

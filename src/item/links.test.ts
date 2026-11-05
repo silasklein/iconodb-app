@@ -19,11 +19,17 @@ function ref(parcial: Partial<ReferenciaBibliografica>): ReferenciaBibliografica
   }
 }
 const rem = (numero: string | null, origem: string | null, itemId = 'T-2'): Remissao => ({ itemId, numero, origem })
-const base = { fonte: 'TESTE I, 1', itemId: 'T-1' }
+const base = { fonte: 'TESTE I: 1', itemId: 'T-1' }
 const recorte = (texto: string, l: { inicio: number; fim: number }) => texto.slice(l.inicio, l.fim)
 
 describe('numeroDoCatalogo', () => {
-  it('é o número depois da última vírgula da origem', () => {
+  it('decisão 39: é o número depois dos dois pontos da origem ("TESTE I: 2")', () => {
+    expect(numeroDoCatalogo('TESTE I: 2')).toBe('2')
+    expect(numeroDoCatalogo('TESTE I: 58a')).toBe('58a')
+    expect(numeroDoCatalogo('TESTE I: Abb. 1')).toBeNull()
+  })
+
+  it('a forma antiga ("TESTE I, 2") continua aceita', () => {
     expect(numeroDoCatalogo('TESTE I, 2')).toBe('2')
     expect(numeroDoCatalogo('TESTE I, 58a')).toBe('58a')
     expect(numeroDoCatalogo('TESTE I, Abb. 1')).toBeNull()
@@ -80,14 +86,14 @@ describe('acharLinks', () => {
     const links = acharLinks(texto, [], {
       ...base,
       bibliografia: [],
-      remissoes: [rem('CA00002', 'TESTE I, 2'), rem('CA00005', 'TESTE I, 5', 'T-5'), rem('CA00012', 'TESTE I, 12', 'T-12')],
+      remissoes: [rem('CA00002', 'TESTE I: 2'), rem('CA00005', 'TESTE I: 5', 'T-5'), rem('CA00012', 'TESTE I: 12', 'T-12')],
     })
     expect(links.map((l) => [recorte(texto, l), l.destino])).toEqual([
       ['2', '/item/CA00002'],
       ['12', '/item/CA00012'],
       ['5', '/item/CA00005'],
     ])
-    expect(links[0]!.rotulo).toBe('Abrir CA00002, TESTE I, 2')
+    expect(links[0]!.rotulo).toBe('Abrir CA00002, TESTE I: 2')
   })
 
   it('o número de uma citação ("Autor 1999: 12 Nr. 3"), um ano ou um decimal não é remissão', () => {
@@ -95,26 +101,26 @@ describe('acharLinks', () => {
     const links = acharLinks(texto, [], {
       ...base,
       bibliografia: [],
-      remissoes: [rem('CA00003', 'TESTE I, 3'), rem('CA00012', 'TESTE I, 12'), rem('CA00004', 'TESTE I, 4'), rem('CA00099', 'TESTE I, 1999')],
+      remissoes: [rem('CA00003', 'TESTE I: 3'), rem('CA00012', 'TESTE I: 12'), rem('CA00004', 'TESTE I: 4'), rem('CA00099', 'TESTE I: 1999')],
     })
     expect(links).toEqual([])
   })
 
   it('a lista "(51.52)" liga os dois números', () => {
     const texto = 'outros objetos (51.52).'
-    const links = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem('CA00051', 'TESTE I, 51'), rem('CA00052', 'TESTE I, 52')] })
+    const links = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem('CA00051', 'TESTE I: 51'), rem('CA00052', 'TESTE I: 52')] })
     expect(links.map((l) => recorte(texto, l))).toEqual(['51', '52'])
   })
 
   it('remissão órfã (sem número no pacote) ou de outra obra não vira link', () => {
     const texto = 'veja (cf. 2) e (cf. 7).'
-    const links = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem(null, null), rem('BA00007', 'OUTRA I, 7')] })
+    const links = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem(null, null), rem('BA00007', 'OUTRA I: 7')] })
     expect(links).toEqual([])
   })
 
   it('os links saem em ordem e sem sobreposição entre si', () => {
     const texto = '(cf. 2) e Autor 1999.'
-    const links = acharLinks(texto, [], { ...base, bibliografia: [ref({})], remissoes: [rem('CA00002', 'TESTE I, 2')] })
+    const links = acharLinks(texto, [], { ...base, bibliografia: [ref({})], remissoes: [rem('CA00002', 'TESTE I: 2')] })
     expect(links.map((l) => recorte(texto, l))).toEqual(['2', 'Autor 1999'])
   })
 })
@@ -136,7 +142,7 @@ describe('acharLinks: correções do matcher (correção 2)', () => {
     const links = acharLinks(texto, [], {
       ...base,
       bibliografia: [],
-      remissoes: [rem('CA00003', 'TESTE I, 3'), rem('CA00004', 'TESTE I, 4'), rem('CA00012', 'TESTE I, 12'), rem('CA00005', 'TESTE I, 5')],
+      remissoes: [rem('CA00003', 'TESTE I: 3'), rem('CA00004', 'TESTE I: 4'), rem('CA00012', 'TESTE I: 12'), rem('CA00005', 'TESTE I: 5')],
     })
     expect(links).toEqual([])
   })
@@ -146,14 +152,14 @@ describe('acharLinks: correções do matcher (correção 2)', () => {
     const links = acharLinks(texto, [], {
       ...base,
       bibliografia: [],
-      remissoes: [rem('CA00002', 'TESTE I, 2'), rem('CA00005', 'TESTE I, 5'), rem('CA00012', 'TESTE I, 12'), rem('CA00007', 'TESTE I, 7')],
+      remissoes: [rem('CA00002', 'TESTE I: 2'), rem('CA00005', 'TESTE I: 5'), rem('CA00012', 'TESTE I: 12'), rem('CA00007', 'TESTE I: 7')],
     })
     expect(links.map((l) => recorte(texto, l))).toEqual(['2', '5', '12', '7'])
   })
 
   it('prefere o número depois de "cf." ou fechado por ")": em "Camada (3. fase) e (cf. 3)" o link vai em "(cf. 3)"', () => {
     const texto = 'Camada (3. fase) e (cf. 3).'
-    const [l, ...resto] = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem('CA00003', 'TESTE I, 3')] })
+    const [l, ...resto] = acharLinks(texto, [], { ...base, bibliografia: [], remissoes: [rem('CA00003', 'TESTE I: 3')] })
     expect(resto).toEqual([])
     expect(l!.inicio).toBe(texto.lastIndexOf('3'))
   })

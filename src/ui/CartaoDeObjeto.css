@@ -23,6 +23,14 @@
 .cartao-numero {
   font-size: 12px;
 }
+.cartao-skc {
+  color: var(--secundario);
+}
+.cartao-nr-skc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}
 .cartao-tipo,
 .cartao-sitio {
   font-size: 12px;

@@ -16,7 +16,7 @@ export type Peca =
   | { tipo: 'texto'; texto: string }
   | { tipo: 'termo'; texto: string; glId: string }
   | { tipo: 'link'; texto: string; destino: string; rotulo: string }
-  | { tipo: 'ancora'; hipoteses: string[]; nivel: Nivel; modalidade: Modalidade; partes: ParteDaAncora[] }
+  | { tipo: 'ancora'; hipoteses: string[]; nivel: Nivel | null; modalidade: Modalidade | null; partes: ParteDaAncora[] }
 
 interface Entrada {
   /** Em code points, como no banco. */
@@ -109,6 +109,38 @@ export function montarTrechos(texto: string, { termos = [], ancoras = [], links 
     chaveAnterior = chave
   }
   return pecas
+}
+
+/** Identifica um termo inteiro no texto guardado (UTF-16): `inicio:fim:glId`. */
+export const chaveDoTermo = (inicio: number, fim: number, glId: string): string => `${inicio}:${fim}:${glId}`
+
+/**
+ * Os termos do texto, cada um como `chaveDoTermo` (em UTF-16). Uma peça de termo só é "inteira" (e só então pode mostrar
+ * outra forma no lugar do texto) se começa e termina nas bordas de um termo: um termo cortado por uma âncora ou por um
+ * link vira duas peças, e nenhuma delas é o termo.
+ */
+export function chavesDosTermos(texto: string, termos: readonly Termo[]): Set<string> {
+  const mapa = mapaDeCodepoints(texto)
+  const chaves = new Set<string>()
+  for (const t of termos) {
+    const a = paraUtf16(mapa, t.inicio)
+    const b = paraUtf16(mapa, t.fim)
+    if (a !== null && b !== null && a < b) chaves.add(chaveDoTermo(a, b, t.glId))
+  }
+  return chaves
+}
+
+/**
+ * A forma em uso de um termo no lugar do texto guardado dele, no texto corrido: mantém a maiúscula do começo se o
+ * texto guardado a tem ("Selo de teste" no começo da frase vira "Selo de prova", não "selo de prova").
+ */
+export function formaNoTexto(guardado: string, forma: string): string {
+  const [g] = guardado
+  const [f] = forma
+  if (g === undefined || f === undefined) return forma
+  const maiuscula = g !== g.toLocaleLowerCase('pt') && g === g.toLocaleUpperCase('pt')
+  const minuscula = f !== f.toLocaleUpperCase('pt') && f === f.toLocaleLowerCase('pt')
+  return maiuscula && minuscula ? f.toLocaleUpperCase('pt') + forma.slice(f.length) : forma
 }
 
 export interface VerbeteDoTrecho {

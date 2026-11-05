@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Imagem, Regiao } from '../banco/tipos'
 import { urlImagem } from '../pacote/imagens'
@@ -222,5 +222,51 @@ describe('ImagemItem', () => {
   it('sem imagem: "Sem imagem"', () => {
     render(<ImagemItem numero="CA00001" imagens={[]} />)
     expect(screen.getByText('Sem imagem')).toBeInTheDocument()
+  })
+})
+
+describe('ImagemItem: a imagem à vista muda no meio do desenho (revisão 3, M14; I3)', () => {
+  const geometria = (camada: HTMLElement) => {
+    Object.defineProperty(camada, 'getBoundingClientRect', { value: () => ({ left: 0, top: 0, width: 200, height: 100, right: 200, bottom: 100, x: 0, y: 0 }) })
+    Object.defineProperty(camada, 'offsetWidth', { value: 200 })
+    Object.defineProperty(camada, 'offsetHeight', { value: 100 })
+  }
+  const tocar = (camada: HTMLElement, x: number, y: number) => {
+    fireEvent.pointerDown(camada, { clientX: x, clientY: y, pointerId: 1, button: 0, pointerType: 'mouse' })
+    fireEvent.pointerUp(camada, { clientX: x, clientY: y, pointerId: 1, button: 0, pointerType: 'mouse' })
+  }
+
+  it('os pontos da imagem 1 nunca vão para a imagem 2: o desenho recomeça vazio nela, e o concluir leva a imagem certa', async () => {
+    const marcar = { aoConcluir: vi.fn(), aoCancelar: vi.fn() }
+    const imagens = [img(1, 'traco'), img(2, 'traco')]
+    const { rerender } = render(<ImagemItem numero="CA00001" imagens={imagens} marcar={marcar} />)
+    await imagemNaTela()
+    let camada = screen.getByTestId('desenho-camada')
+    geometria(camada)
+    tocar(camada, 20, 10)
+    tocar(camada, 100, 10)
+    tocar(camada, 100, 50)
+    expect(document.querySelectorAll('.desenho-ponto')).toHaveLength(3)
+    // Uma imagem pedida agora (acabou de chegar, ou foi restaurada) muda a imagem à vista, mesmo marcando.
+    rerender(<ImagemItem numero="CA00001" imagens={imagens} marcar={marcar} mostrar={{ id: 'IMG-T-2', vez: 1 }} />)
+    await waitFor(() => expect(document.querySelector('.imagem-item-figura img')).toHaveAttribute('src', 'blob:imagens/T/T-1/screen-2.webp'))
+    expect(document.querySelectorAll('.desenho-ponto')).toHaveLength(0)
+    const barra = screen.getByRole('toolbar', { name: 'Marcar região' })
+    await userEvent.click(within(barra).getByRole('button', { name: 'Concluir a região' }))
+    expect(marcar.aoConcluir).not.toHaveBeenCalled()
+    expect(screen.getByText(/Ponha pelo menos 3 pontos/)).toBeInTheDocument()
+    // Desenhada na imagem 2, vai com a imagem 2.
+    camada = screen.getByTestId('desenho-camada')
+    geometria(camada)
+    tocar(camada, 40, 20)
+    tocar(camada, 120, 20)
+    tocar(camada, 120, 80)
+    await userEvent.click(within(barra).getByRole('button', { name: 'Concluir a região' }))
+    expect(marcar.aoConcluir).toHaveBeenCalledTimes(1)
+    expect(marcar.aoConcluir).toHaveBeenCalledWith('IMG-T-2', [
+      [0.2, 0.2],
+      [0.6, 0.2],
+      [0.6, 0.8],
+    ])
   })
 })

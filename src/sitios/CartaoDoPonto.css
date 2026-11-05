@@ -1,0 +1,245 @@
+/*
+ * O cartão de um ponto do mapa (PC-SitiosMapa.dc.html: cartão de 292 px fixo no canto; SitiosMapa.dc.html: folha de baixo).
+ */
+.cartao-ponto {
+  background: var(--fundo);
+  color: var(--texto);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  /* O cartão é sempre claro, como o mapa. */
+  color-scheme: light;
+}
+.cartao-ponto-flutuante {
+  /* Fixo no canto de cima à esquerda do mapa, abaixo de «Limites das regiões» (PC-SitiosMapa.dc.html). */
+  position: absolute;
+  left: 16px;
+  top: 68px;
+  width: 292px;
+  max-height: calc(100% - 68px - 76px);
+  overflow-y: auto;
+  padding: 14px 8px 14px 16px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  z-index: 5;
+}
+.cartao-ponto-folha {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 70%;
+  overflow-y: auto;
+  padding: 8px 0 24px;
+  gap: 12px;
+  border-top: 1px solid var(--controle);
+  border-radius: 16px 16px 0 0;
+  z-index: 5;
+}
+.cartao-ponto-alca {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+  flex-shrink: 0;
+}
+.cartao-ponto-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.cartao-ponto-folha .cartao-ponto-topo {
+  padding: 0 12px 0 24px;
+}
+.cartao-ponto-titulos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 2px;
+}
+.cartao-ponto-folha .cartao-ponto-titulos {
+  gap: 4px;
+  padding-top: 6px;
+}
+.cartao-ponto-nome {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+h2.cartao-ponto-nome {
+  font-family: var(--fonte-titulo);
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.cartao-ponto-coord {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario);
+}
+.cartao-ponto-sub {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.cartao-ponto-fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  cursor: pointer;
+}
+.cartao-ponto-folha .cartao-ponto-fechar {
+  width: 44px;
+  height: 44px;
+}
+.cartao-ponto-sitio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cartao-ponto-folha .cartao-ponto-sitio {
+  gap: 12px;
+}
+.cartao-ponto-sitio + .cartao-ponto-sitio {
+  padding-top: 10px;
+  border-top: 1px solid var(--filete);
+}
+.cartao-ponto-sitio-nome {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cartao-ponto-sitio-nome span {
+  font-weight: 400;
+  color: var(--secundario);
+}
+.cartao-ponto-folha .cartao-ponto-sitio-nome {
+  padding: 0 24px;
+}
+.cartao-ponto-miniaturas {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0 8px 0 0;
+  list-style: none;
+}
+.cartao-ponto-folha .cartao-ponto-miniaturas {
+  gap: 8px;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cartao-ponto-miniatura {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  color: var(--texto);
+  text-decoration: none;
+}
+.cartao-ponto-imagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  background: var(--superficie);
+  overflow: hidden;
+}
+.cartao-ponto-folha .cartao-ponto-imagem {
+  width: 72px;
+  height: 72px;
+}
+.cartao-ponto-imagem .miniatura-imagem {
+  max-width: 42px;
+  max-height: 42px;
+  display: block;
+  mix-blend-mode: multiply;
+}
+.cartao-ponto-folha .cartao-ponto-imagem .miniatura-imagem {
+  max-width: 66px;
+  max-height: 66px;
+}
+.cartao-ponto-imagem .miniatura-aviso {
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--secundario);
+  overflow: hidden;
+}
+/* O texto longo da miniatura ("Imagem disponível quando houver internet") não cabe em 46 px: só o ícone fica à mostra. */
+.cartao-ponto:not(.cartao-ponto-folha) .cartao-ponto-imagem .miniatura-aviso {
+  font-size: 0;
+}
+.cartao-ponto-codigo {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  text-align: center;
+}
+.cartao-ponto-mais {
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  box-sizing: border-box;
+  border: 1px solid var(--filete);
+  font-family: var(--fonte-codigo);
+  font-size: 13px;
+}
+.cartao-ponto-vazio {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.cartao-ponto-folha .cartao-ponto-vazio {
+  padding: 0 24px;
+}
+.cartao-ponto-abrir {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.cartao-ponto-folha .cartao-ponto-abrir {
+  align-self: stretch;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0 24px;
+  background: var(--texto);
+  color: var(--fundo);
+  border-radius: 8px;
+  font-size: 15px;
+  text-decoration: none;
+}
+.cartao-ponto-tecla {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario);
+  text-decoration: none;
+}
+.cartao-ponto a:focus-visible,
+.cartao-ponto button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}

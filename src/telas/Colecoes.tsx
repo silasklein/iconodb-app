@@ -1,16 +1,16 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { grupos, type Grupo } from '../banco/consultas'
+import { PainelSkc } from '../colecoes/PainelSkc'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Miniatura } from '../ui/Miniatura'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
-import { numeroPtBr } from '../ui/usePendencias'
+import { numeroPtBr } from '../ui/numero'
 import { chaveDaObra, rotuloDaObra } from './obras'
 import './Colecoes.css'
 
-export const MSG_SKC_VAZIA = 'Crie coleções na próxima versão'
 const SEM_PERIODO = 'Sem período'
 
 interface Obra {
@@ -45,7 +45,7 @@ const plural = (n: number, um: string, varios: string) => `${numeroPtBr(n)} ${n 
 
 /**
  * Coleções (Colecoes.dc.html e Grupos.dc.html no celular, PC-Grupos.dc.html no computador).
- * A aba SKC vem primeiro: são as coleções do usuário (a 2B as cria); depois, uma aba por obra do
+ * A aba SKC vem primeiro: os objetos e as coleções do usuário (`PainelSkc`); depois, uma aba por obra do
  * pacote, com os grupos da autora por período. A aba escolhida fica no endereço (?obra=…).
  */
 export function Colecoes() {
@@ -65,7 +65,7 @@ export function Colecoes() {
         <div className="colecoes-cabecalho">
           <h1>Coleções</h1>
           <span className="colecoes-apoio">
-            {computador ? 'As suas coleções e os grupos de cada obra, na ordem da autora' : aba ? 'Por obra, com os grupos da autora na ordem dela' : 'Por obra; em SKC, as minhas coleções'}
+            {computador ? 'As suas coleções e os grupos de cada obra, na ordem da autora' : aba ? 'Por obra, com os grupos da autora na ordem dela' : 'Por obra; em SKC, os meus objetos e as minhas coleções'}
           </span>
         </div>
 
@@ -83,16 +83,7 @@ export function Colecoes() {
         {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
 
         {aba === null ? (
-          carga.fase !== 'erro' &&
-          !esperandoObra && (
-            <section className="colecoes-corpo" aria-label="Minhas coleções">
-              <div className="colecoes-secao-titulo">
-                <h2>Minhas coleções</h2>
-                <span className="codigo">SKC</span>
-              </div>
-              <p className="colecoes-vazio">{MSG_SKC_VAZIA}</p>
-            </section>
-          )
+          carga.fase !== 'erro' && !esperandoObra && <PainelSkc />
         ) : (
           <section className="colecoes-corpo" aria-label={`Grupos de ${aba.rotulo}`}>
             {computador && (

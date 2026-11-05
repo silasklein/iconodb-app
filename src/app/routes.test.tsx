@@ -18,16 +18,22 @@ const CAMINHOS = [
   '/colecoes',
   '/grupo/:id',
   '/item/:numero',
+  '/objeto/novo',
   '/imagem/:id',
   '/glossario',
   '/verbete/:id',
   '/bibliografia',
   '/obra/:id',
   '/sitios',
+  '/sitios/novo',
   '/sitio/:id',
   '/revisao',
   '/atalhos',
   '/notas',
+  '/nota/:id',
+  '/sincronizacao',
+  '/comparar',
+  '/exportar',
 ]
 
 function abrir(url: string) {
@@ -62,7 +68,7 @@ describe('rotas', () => {
       instalarMatchMedia(1280)
       abrir('/busca')
       expect(await screen.findByRole('navigation', { name: 'Navegação' })).toBeInTheDocument()
-      expect(screen.getAllByRole('searchbox')).toHaveLength(1)
+      expect(screen.getAllByRole('combobox', { name: 'Buscar' })).toHaveLength(1)
       expect(document.querySelector('.campo-busca-barra')).not.toBeNull()
     })
 
@@ -71,13 +77,13 @@ describe('rotas', () => {
       abrir('/')
       expect(await screen.findByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Navegação' })).toBeInTheDocument()
-      expect(screen.getAllByRole('searchbox')).toHaveLength(1)
+      expect(screen.getAllByRole('combobox', { name: 'Buscar' })).toHaveLength(1)
       expect(document.querySelector('.campo-busca-inicio')).not.toBeNull()
     })
 
     it('no celular não há barra; a Busca traz o próprio campo', async () => {
       abrir('/busca')
-      expect(await screen.findByRole('searchbox', { name: 'Buscar' })).toBeInTheDocument()
+      expect(await screen.findByRole('combobox', { name: 'Buscar' })).toBeInTheDocument()
       expect(screen.queryByRole('navigation', { name: 'Navegação' })).not.toBeInTheDocument()
     })
 
@@ -122,22 +128,22 @@ describe('rotas', () => {
 
     it('/ foca a busca (a da Busca no celular; a da barra no computador)', async () => {
       abrir('/busca')
-      await screen.findByRole('searchbox', { name: 'Buscar' })
+      await screen.findByRole('combobox', { name: 'Buscar' })
       await userEvent.keyboard('/')
-      expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveFocus()
+      expect(screen.getByRole('combobox', { name: 'Buscar' })).toHaveFocus()
     })
 
     it('/ foca o campo da barra nas telas de consulta do computador', async () => {
       instalarMatchMedia(1280)
       abrir('/colecoes')
-      const campo = await screen.findByRole('searchbox', { name: 'Buscar' })
+      const campo = await screen.findByRole('combobox', { name: 'Buscar' })
       await userEvent.keyboard('/')
       expect(campo).toHaveFocus()
     })
 
     it('nada dispara dentro de um campo de texto: "gl" digitado na busca fica no campo', async () => {
       abrir('/busca')
-      const campo = await screen.findByRole('searchbox', { name: 'Buscar' })
+      const campo = await screen.findByRole('combobox', { name: 'Buscar' })
       await userEvent.click(campo)
       await userEvent.keyboard('gl?/')
       expect(campo).toHaveValue('gl?/')

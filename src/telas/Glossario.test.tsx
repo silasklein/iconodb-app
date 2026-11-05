@@ -24,7 +24,7 @@ describe('Glossário (celular)', () => {
     renderizarRota('/glossario')
     expect(screen.getByRole('heading', { level: 1, name: 'Glossário' })).toBeInTheDocument()
     await screen.findAllByRole('link', { name: /leão-de-teste/ })
-    expect(linhas()).toHaveLength(9)
+    expect(linhas()).toHaveLength(10)
     expect(nomes()).toEqual((await verbetes()).map((v) => v.pt))
     const leao = linha('GL-900001')
     expect(leao).toHaveAttribute('href', '/verbete/GL-900001')
@@ -39,7 +39,8 @@ describe('Glossário (celular)', () => {
   it('resume o total e quantos estão aprovados', async () => {
     renderizarRota('/glossario')
     const aprovados = (await verbetes()).filter((v) => v.status === 'approved').length
-    expect(await screen.findByText(`9 verbetes · ${aprovados} aprovados`)).toBeInTheDocument()
+    // 10: com o GL-900010, publicado da camada do usuário (Tarefa 16)
+    expect(await screen.findByText(`10 verbetes · ${aprovados} aprovados`)).toBeInTheDocument()
   })
 
   it('as abas são só por tipo (Todos, Conceitos, Nomes, Técnicos), sem aba de estado', async () => {
@@ -48,12 +49,12 @@ describe('Glossário (celular)', () => {
     expect(within(abas).getAllByRole('link').map((a) => a.textContent)).toEqual(['Todos', 'Conceitos', 'Nomes', 'Técnicos'])
     expect(within(abas).getByRole('link', { name: 'Todos' })).toHaveAttribute('aria-current', 'page')
     await userEvent.click(within(abas).getByRole('link', { name: 'Nomes' }))
-    await waitFor(() => expect(nomes()).toEqual(['Maḥraṣ Teste', 'Tell Probe Teste']))
+    await waitFor(() => expect(nomes()).toEqual(['Maḥteṣ Teste', 'Tell Probe Teste']))
     expect(within(abas).getByRole('link', { name: 'Nomes' })).toHaveAttribute('aria-current', 'page')
     await userEvent.click(within(abas).getByRole('link', { name: 'Técnicos' }))
     await waitFor(() => expect(nomes()).toEqual(['gravação de teste']))
     await userEvent.click(within(abas).getByRole('link', { name: 'Conceitos' }))
-    await waitFor(() => expect(linhas()).toHaveLength(6))
+    await waitFor(() => expect(linhas()).toHaveLength(7)) // com o GL-900010 (Tarefa 16)
   })
 
   it('o tipo vem do endereço (?tipo=nomes)', async () => {
@@ -72,9 +73,9 @@ describe('Glossário (celular)', () => {
     expect(nomes()).toEqual(proposta.map((v) => v.pt))
     expect(filtro).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Tirar o filtro Estado: a revisar' })).toBeInTheDocument()
-    expect(screen.getByText(`${proposta.length} a revisar · de 9 verbetes`)).toBeInTheDocument()
+    expect(screen.getByText(`${proposta.length} a revisar · de 10 verbetes`)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
-    await waitFor(() => expect(linhas()).toHaveLength(9))
+    await waitFor(() => expect(linhas()).toHaveLength(10))
     expect(screen.getByRole('button', { name: /Filtrar verbetes por estado/ })).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -87,11 +88,11 @@ describe('Glossário (celular)', () => {
     expect(within(linha('GL-900002')).queryByRole('img', { name: 'aprovado' })).not.toBeInTheDocument()
   })
 
-  it('o filtro de texto usa a dobra do pacote: "mahras" acha "Maḥraṣ", "testlowe" acha "Testlöwe"; sem acerto, avisa', async () => {
+  it('o filtro de texto usa a dobra do pacote: "mahtes" acha "Maḥteṣ", "testlowe" acha "Testlöwe"; sem acerto, avisa', async () => {
     renderizarRota('/glossario')
     const campo = await screen.findByRole('searchbox', { name: 'Buscar no glossário' })
-    await userEvent.type(campo, 'mahras')
-    await waitFor(() => expect(nomes()).toEqual(['Maḥraṣ Teste']))
+    await userEvent.type(campo, 'mahtes')
+    await waitFor(() => expect(nomes()).toEqual(['Maḥteṣ Teste']))
     await userEvent.clear(campo)
     await userEvent.type(campo, 'TESTLOWE')
     await waitFor(() => expect(nomes()).toEqual(['filhote de leão-de-teste', 'leão-de-teste']))
@@ -102,7 +103,7 @@ describe('Glossário (celular)', () => {
     await userEvent.type(campo, 'zzzz')
     expect(await screen.findByText('Nenhum verbete encontrado.')).toBeInTheDocument()
     await userEvent.clear(campo)
-    await waitFor(() => expect(linhas()).toHaveLength(9))
+    await waitFor(() => expect(linhas()).toHaveLength(10))
   })
 
   it('uma linha leva ao verbete, que no celular ocupa a tela (sem a lista) e volta ao glossário', async () => {
@@ -140,7 +141,7 @@ describe('Glossário (computador): lista e detalhe na mesma tela', () => {
     renderizarRota('/verbete/GL-900001')
     expect(await screen.findByRole('heading', { level: 2, name: 'leão-de-teste' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Glossário' })).toBeInTheDocument()
-    expect(linhas()).toHaveLength(9)
+    expect(linhas()).toHaveLength(10)
     const atual = linha('GL-900001')
     expect(atual).toHaveAttribute('aria-current', 'page')
     expect(linha('GL-900002')).not.toHaveAttribute('aria-current')
@@ -176,9 +177,9 @@ describe('Glossário (computador): lista e detalhe na mesma tela', () => {
 
 describe('Glossário: filtro de texto no endereço (?filtro=)', () => {
   it('o endereço traz o texto para o campo e para a lista', async () => {
-    renderizarRota('/glossario?filtro=mahras')
-    expect(await screen.findByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('mahras')
-    await waitFor(() => expect(nomes()).toEqual(['Maḥraṣ Teste']))
+    renderizarRota('/glossario?filtro=mahtes')
+    expect(await screen.findByRole('searchbox', { name: 'Buscar no glossário' })).toHaveValue('mahtes')
+    await waitFor(() => expect(nomes()).toEqual(['Maḥteṣ Teste']))
   })
 
   it('digitar grava ?filtro= (com replace) e limpar o tira', async () => {

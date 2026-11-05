@@ -1,0 +1,281 @@
+/* A tela do objeto SKC (ObjetoSKC.dc.html, PC-ObjetoSKC.dc.html): a do Item, com o número grande em mono. */
+.objeto-cabeca {
+  gap: 8px;
+}
+.objeto-numero {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+.objeto-marca {
+  padding: 2px 7px;
+  border: 1px solid var(--controle);
+  border-radius: 4px;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--secundario);
+}
+.objeto-skc-marca {
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+/* "Números nas fontes" (decisão 38), logo abaixo do número grande. */
+.objeto-fontes {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.objeto-cabeca .item-rotulo {
+  align-items: center;
+  gap: 4px 10px;
+}
+.objeto-cabeca .item-origem {
+  font-size: 13px;
+}
+.objeto-cabeca h1 {
+  margin-top: 8px;
+}
+.objeto-aviso {
+  margin: 0 24px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.objeto-aviso[hidden] {
+  display: none;
+}
+.objeto-cabeca .objeto-aviso {
+  margin: 4px 0 0;
+}
+.objeto-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.objeto-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .objeto-link {
+    min-height: 44px;
+  }
+}
+.objeto-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+@media (pointer: fine) {
+  .objeto-botao {
+    min-height: 40px;
+  }
+}
+.objeto-botao:focus-visible,
+.objeto-link:focus-visible,
+.leitura-skc-botao:focus-visible,
+.leitura-skc-bloco:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.objeto-rascunho {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.objeto-hipoteses-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+/* "Editar a ficha", no lugar da ficha. */
+.objeto-editar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 22px 24px 0;
+  padding: 16px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+}
+.objeto-editar-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.objeto-editar-duas {
+  display: grid;
+  gap: 14px;
+}
+.objeto-editar-medidas {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.objeto-editar .form-campo > label,
+.objeto-editar .form-legenda {
+  color: var(--texto);
+}
+
+/* A leitura SKC (decisão 37: lida limpa, editada com o código). */
+.leitura-skc-bloco {
+  cursor: text;
+  border-radius: 4px;
+}
+.leitura-skc-bloco .nota-texto a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: #8a8a8a;
+  text-underline-offset: 3px;
+}
+.leitura-skc-vazia {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--secundario);
+}
+.leitura-skc-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+}
+.leitura-skc-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secundario);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.leitura-skc-botao:hover {
+  color: var(--texto);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (pointer: coarse) {
+  .leitura-skc-botao {
+    min-height: 44px;
+  }
+}
+.leitura-skc-edicao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.leitura-skc-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+}
+.leitura-skc-ajuda {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+
+/* Ligações. */
+.objeto-ligacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 32px 24px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--filete);
+}
+.objeto-ligacoes-titulo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--secundario);
+}
+.objeto-ligadas {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.objeto-ligadas li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 16px;
+  font-size: 15px;
+}
+.objeto-ligar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+}
+.objeto-ligar-acoes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.objeto-ligar-abrir {
+  align-self: flex-start;
+  font-size: 15px;
+}
+
+@media (min-width: 768px) {
+  .objeto-numero {
+    font-size: 36px;
+  }
+  .objeto-aviso,
+  .objeto-ligacoes,
+  .objeto-editar {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .objeto-editar-duas {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}

@@ -1,4 +1,6 @@
 .campo-busca {
+  position: relative; /* a lista de sugestões se prende ao campo */
+  scroll-margin-top: 12px;
   margin: 0;
   display: flex;
   flex-direction: column;

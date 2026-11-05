@@ -18,7 +18,7 @@ import type { Armazem } from '../pacote/armazem'
 import { caminhoDoBlob, lerEstado } from '../pacote/local'
 import type { Manifesto } from '../pacote/manifesto'
 import { arquivosDoBanco, type ArquivoDoBanco } from './arquivos'
-import { ErroSemPacote, type EstadoBanco, type Linha, type Motor, type Parametros } from './protocolo'
+import { ErroSemPacote, type EstadoBanco, type Instrucao, type Linha, type Motor, type Parametros } from './protocolo'
 
 export { arquivosDoBanco, ESQUEMA_DA_BUSCA, esquemaDaPublicacao, type ArquivoDoBanco } from './arquivos'
 
@@ -78,6 +78,22 @@ async function lerArquivo(armazem: Armazem, arquivo: ArquivoDoBanco): Promise<Ui
   return bytes.constructor === Uint8Array ? bytes : new Uint8Array(bytes)
 }
 
+const ESQUEMA_DO_USUARIO = `
+  CREATE TABLE doc (
+    rowid INTEGER PRIMARY KEY,
+    chave TEXT NOT NULL UNIQUE,
+    tipo TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    publicacao TEXT,
+    objeto TEXT,
+    objetos TEXT,
+    rotulo TEXT NOT NULL,
+    escopo TEXT,
+    skc INTEGER NOT NULL DEFAULT 1
+  );
+  CREATE VIRTUAL TABLE fts USING fts5(texto, tokenize='unicode61 remove_diacritics 2');
+`
+
 /** O estado mudou enquanto o banco abria (outra janela trocou o pacote): vale tentar de novo. */
 class PacoteMudou extends Error {}
 
@@ -112,6 +128,44 @@ export class Banco implements Motor {
       if (!this.db) throw new ErroSemPacote()
       return this.db.selectObjects(sql, parametros as BindingSpec | undefined) as Linha[]
     })
+  }
+
+  /**
+   * O índice da camada do usuário: OUTRO banco, em memória, aberto na primeira vez que se usa e nunca fechado por
+   * abrir/reabrir (então a troca do pacote não o apaga). Mesma configuração do FTS5 do pacote (busca.sqlite:
+   * `unicode61 remove_diacritics 2`) e `doc` com o mesmo formato (rowid, tipo, ref, publicacao, objeto, rotulo),
+   * mais o que a camada do usuário precisa (chave, objetos, escopo, marca skc).
+   */
+  private usuario: Promise<Database> | null = null
+
+  private bancoDoUsuario(): Promise<Database> {
+    this.usuario ??= carregarSqlite().then((sqlite3) => {
+      const db = new sqlite3.oo1.DB(':memory:')
+      db.exec(ESQUEMA_DO_USUARIO)
+      return db
+    })
+    this.usuario.catch(() => {
+      this.usuario = null
+    })
+    return this.usuario
+  }
+
+  escreverUsuario(lote: readonly Instrucao[]): Promise<void> {
+    return this.emFila(async () => {
+      const db = await this.bancoDoUsuario()
+      db.exec('BEGIN')
+      try {
+        for (const { sql, parametros } of lote) db.exec({ sql, bind: parametros as BindingSpec | undefined })
+        db.exec('COMMIT')
+      } catch (erro) {
+        db.exec('ROLLBACK')
+        throw erro
+      }
+    })
+  }
+
+  consultarUsuario(sql: string, parametros?: Parametros): Promise<Linha[]> {
+    return this.emFila(async () => (await this.bancoDoUsuario()).selectObjects(sql, parametros as BindingSpec | undefined) as Linha[])
   }
 
   private fechar(): void {

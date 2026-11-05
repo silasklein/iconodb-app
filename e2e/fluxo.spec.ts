@@ -55,10 +55,10 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   // O service worker precisa estar ativo para o app abrir sem internet depois.
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined))
 
-  // Buscar "mahras" (acha "Maḥraṣ Teste") e abrir o item.
-  await page.getByRole('searchbox', { name: 'Buscar' }).fill('mahras')
+  // Buscar "mahtes" (acha "Maḥteṣ Teste") e abrir o item.
+  await page.getByRole('combobox', { name: 'Buscar' }).fill('mahtes')
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/#\/busca\?q=mahras/)
+  await expect(page).toHaveURL(/#\/busca\?q=mahtes/)
   const resultados = page.getByRole('region', { name: 'Resultados' })
   await expect(resultados.getByRole('link', { name: /CA00002/ })).toBeVisible()
   await semRolagemHorizontal(page, 'Busca')
@@ -81,7 +81,7 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
 
   // Voltar à busca: de volta à lista, com a consulta.
   await voltarParaOrigem(page, 'busca')
-  await expect(page).toHaveURL(/#\/busca\?q=mahras/)
+  await expect(page).toHaveURL(/#\/busca\?q=mahtes/)
   await expect(resultados.getByRole('link', { name: /CA00001/ })).toBeVisible()
 
   // Um item com duas imagens: a primeira é vista (e fica guardada no aparelho); a segunda, não.
@@ -130,7 +130,7 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   await page.goto('./')
   await expect(page.getByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeVisible()
   await semRolagemHorizontal(page, 'Início offline')
-  await page.getByRole('searchbox', { name: 'Buscar' }).fill('mahras')
+  await page.getByRole('combobox', { name: 'Buscar' }).fill('mahtes')
   await page.keyboard.press('Enter')
   await expect(resultados.getByRole('link', { name: /CA00001/ })).toBeVisible()
   await semRolagemHorizontal(page, 'Busca offline')

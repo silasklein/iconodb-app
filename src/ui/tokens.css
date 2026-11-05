@@ -15,6 +15,7 @@
   --texto-item: #ededed;
   --secundario-item: #a3a3a3;
   --filete-item: #3a3a3a;
+  --filete-fino: #2a2a2a; /* o filete entre as linhas de uma lista nas telas escuras (linhas de hipótese) */
   --painel-imagem: #000000;
 
   /* Comuns às duas */
@@ -109,7 +110,8 @@ a {
   *,
   *::before,
   *::after {
-    transition-duration: 0.01ms !important;
+    /* Sem transição nenhuma (não 0,01 ms): uma transição de 0,01 ms ainda cria o estado intermediário, e o código que muda um estilo e mede na hora lê o valor antigo (auditoria UX-1). */
+    transition: none !important;
     animation-duration: 0.01ms !important;
   }
 }

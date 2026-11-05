@@ -1,0 +1,259 @@
+/*
+ * (A camada, o fundo e a alça também são os da folha "Sítio deste objeto": src/sitios/Sitios.css não os repete.)
+ *
+ * Adicionar à coleção: folha branca de baixo no celular (ItemColecao.dc.html), painel branco de 340 px junto à
+ * barra do item no computador (PC-ItemColecao.dc.html). Cores das telas de consulta sobre a tela escura do item.
+ */
+.folha-colecao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font-family: var(--fonte-texto);
+  --texto: var(--texto-consulta);
+  --secundario: var(--secundario-consulta);
+  --filete: var(--filete-consulta);
+}
+.folha-colecao:focus {
+  outline: none;
+}
+.folha-colecao:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.folha-colecao-camada,
+.trocar-sitio-camada {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.folha-colecao-fundo,
+.trocar-sitio-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.folha-colecao-folha {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 86dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 24px max(32px, env(safe-area-inset-bottom));
+  gap: 14px;
+}
+.folha-colecao-alca,
+.trocar-sitio-alca {
+  align-self: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #c4c4c4;
+}
+.folha-colecao-folha .folha-colecao-topo .icon-button {
+  margin-right: -12px;
+}
+
+/* Computador: painel que sai da barra de ações, à direita da coluna de leitura. */
+.folha-colecao-painel {
+  position: absolute;
+  top: 56px;
+  right: 24px;
+  z-index: 6;
+  width: 340px;
+  max-width: calc(100% - 32px);
+  border-radius: 10px;
+  padding: 8px 16px 16px;
+  max-height: calc(100dvh - var(--barra-superior) - 72px);
+  overflow-y: auto;
+}
+
+.folha-colecao-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+.folha-colecao-etiqueta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.folha-colecao-vazio {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+
+.folha-colecao-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--filete);
+}
+.folha-colecao-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  border-top: 1px solid var(--filete);
+  font-size: 15px;
+}
+.folha-colecao-painel .folha-colecao-linha {
+  justify-content: flex-start;
+  min-height: 44px;
+}
+.folha-colecao-nome {
+  min-height: var(--alvo-toque);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.folha-colecao-marca {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--alvo-toque);
+  height: var(--alvo-toque);
+  margin-right: -12px;
+  cursor: pointer;
+}
+.folha-colecao-painel .folha-colecao-marca {
+  width: 28px;
+  margin: 0;
+}
+.folha-colecao-marca input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #111111;
+  cursor: pointer;
+}
+
+.folha-colecao-aviso {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.folha-colecao-aviso:empty {
+  display: none;
+}
+.folha-colecao-desfazer {
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .folha-colecao-desfazer {
+    min-height: var(--alvo-toque);
+  }
+}
+.folha-colecao-erro {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.folha-colecao-nova {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.folha-colecao-nova label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.folha-colecao-nova-campo {
+  display: flex;
+  gap: 12px;
+}
+.folha-colecao-painel .folha-colecao-nova-campo {
+  gap: 8px;
+}
+.folha-colecao-nova input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo-consulta);
+  color: var(--texto-consulta);
+  font: inherit;
+  font-size: 16px;
+}
+.folha-colecao-painel .folha-colecao-nova input {
+  height: 44px;
+  padding: 0 12px;
+}
+.folha-colecao-nova input[aria-invalid='true'] {
+  border-color: var(--texto-consulta);
+  border-width: 2px;
+}
+.folha-colecao-criar {
+  flex-shrink: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #111111;
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.folha-colecao-painel .folha-colecao-criar {
+  height: 44px;
+  padding: 0 14px;
+}
+.folha-colecao-criar::after {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+@media (pointer: fine) {
+  .folha-colecao-painel .folha-colecao-marca {
+    height: 40px;
+  }
+}
+
+/* a dica do painel do computador (PC-ItemColecao.dc.html) */
+.folha-colecao-dica {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}

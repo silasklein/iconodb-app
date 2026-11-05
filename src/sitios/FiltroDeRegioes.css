@@ -1,0 +1,70 @@
+/* Os chips de região (SitiosMapa.dc.html: faixa que rola na horizontal no celular; PC-SitiosMapa.dc.html: quebram em linhas). */
+.regioes-filtro {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 12px -24px 0;
+  padding: 4px 24px;
+  scrollbar-width: none;
+}
+.regioes-filtro::-webkit-scrollbar {
+  display: none;
+}
+.regiao-chip {
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 18px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* O alvo de toque de 44 px, maior que o chip de 36 (o chip fica como no design). */
+.regiao-chip::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+.regiao-chip-n {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario);
+}
+.regiao-chip[aria-pressed='true'] {
+  background: var(--texto);
+  border-color: var(--texto);
+  color: var(--fundo);
+}
+.regiao-chip[aria-pressed='true'] .regiao-chip-n {
+  color: #d4d4d4;
+}
+.regiao-chip-vazia {
+  border-style: dashed;
+}
+.regiao-chip:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .regioes-filtro {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    margin: 14px 0 0;
+    padding: 0;
+  }
+}

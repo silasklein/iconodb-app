@@ -70,7 +70,8 @@
  */
 .painel-hipotese-lateral {
   position: sticky;
-  top: 0;
+  /* Abaixo da barra superior, que fica presa no item (Item.css; Tarefa 10, revisão 1, M1). */
+  top: var(--barra-superior);
   grid-row: 1;
   grid-column: 3;
   justify-self: stretch;
@@ -101,6 +102,11 @@
   min-height: 44px;
 }
 .painel-hipotese-etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  --marcador-cheio: var(--texto);
+  --marcador-vazio: var(--controle);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;

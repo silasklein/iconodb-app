@@ -10,8 +10,8 @@ const entradas = (nomes: string[]) => indexar(nomes, tabela, nome, nome)
 
 describe('lista: índice dobrado', () => {
   it('ordena pela forma dobrada, de modo que as letras ficam contíguas (ʿ e diacríticos não dispersam a letra)', () => {
-    const ordem = entradas(['Zebra', 'ʿĒn Teste', 'Ábaco', 'abelha', '3 pontos', 'Maḥraṣ']).map((e) => e.item)
-    expect(ordem).toEqual(['3 pontos', 'Ábaco', 'abelha', 'ʿĒn Teste', 'Maḥraṣ', 'Zebra'])
+    const ordem = entradas(['Zebra', 'ʿĒn Teste', 'Ábaco', 'abelha', '3 pontos', 'Maḥteṣ']).map((e) => e.item)
+    expect(ordem).toEqual(['3 pontos', 'Ábaco', 'abelha', 'ʿĒn Teste', 'Maḥteṣ', 'Zebra'])
     expect(agrupar(entradas(['Zebra', 'ʿĒn Teste', 'Ábaco', 'abelha', '3 pontos']), (e) => inicialDe(e.ordem)).map((g) => [g.chave, g.entradas.length])).toEqual([
       ['#', 1],
       ['A', 2],
@@ -20,10 +20,10 @@ describe('lista: índice dobrado', () => {
     ])
   })
 
-  it('filtra pelas palavras dobradas, em qualquer ordem: "mahras", "MAHRAS", "tell probe"', () => {
-    const e = indexar(['Maḥraṣ Teste', 'Tell Probe Teste', "Marduk's"], tabela, nome, nome)
-    expect(filtrar(e, 'mahras', tabela).map((x) => x.item)).toEqual(['Maḥraṣ Teste'])
-    expect(filtrar(e, 'MAHRAS', tabela).map((x) => x.item)).toEqual(['Maḥraṣ Teste'])
+  it('filtra pelas palavras dobradas, em qualquer ordem: "mahtes", "MAHTES", "tell probe"', () => {
+    const e = indexar(['Maḥteṣ Teste', 'Tell Probe Teste', "Marduk's"], tabela, nome, nome)
+    expect(filtrar(e, 'mahtes', tabela).map((x) => x.item)).toEqual(['Maḥteṣ Teste'])
+    expect(filtrar(e, 'MAHTES', tabela).map((x) => x.item)).toEqual(['Maḥteṣ Teste'])
     expect(filtrar(e, 'probe tell', tabela).map((x) => x.item)).toEqual(['Tell Probe Teste'])
     expect(filtrar(e, 'marduk', tabela).map((x) => x.item)).toEqual(["Marduk's"])
     expect(filtrar(e, 'marduks', tabela).map((x) => x.item)).toEqual(["Marduk's"])
