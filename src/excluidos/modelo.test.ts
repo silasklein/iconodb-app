@@ -99,9 +99,11 @@ describe('gruposDeExcluidos: as linhas', () => {
       e('nota', 'NT-aaaaaaaa-1', 'criar', { texto: 'Comparar com o selo do TESTE I, que tem a mesma moldura e o mesmo leão', alvoTipo: 'objeto', alvo: 'CA00001' }),
       e('nota', 'NT-aaaaaaaa-1', 'excluir'),
     ])
-    const l = linha(gruposDeExcluidos(estado, ctx()), 'NT-aaaaaaaa-1')
+    // «agora» um minuto depois da marca: o mesmo dia em qualquer fuso (o GitHub roda em UTC; T0 + 10 h já é o dia seguinte lá).
+    const agora = T0 + 2000 + 60_000
+    const l = linha(gruposDeExcluidos(estado, ctx({ agora })), 'NT-aaaaaaaa-1')
     expect(l).toMatchObject({ tipo: 'nota', nome: '«Comparar com o selo do TESTE I, que tem a…»', onde: 'nota em CA00001', caminho: '/nota/NT-aaaaaaaa-1', publicado: false, alvoExcluido: null })
-    expect(l.quando).toBe(quando(T0 + 2000, AGORA))
+    expect(l.quando).toBe(quando(T0 + 2000, agora))
     expect(l.quando).toMatch(/^hoje, \d\d:\d\d$/)
   })
 
