@@ -32,7 +32,7 @@ const FOCAVEIS = 'a[href], button:not([disabled]), input, select, textarea, [tab
  * Um diálogo modal: o foco começa nele e não sai (Tab dá a volta), Esc fecha, tocar no fundo fecha,
  * o resto da tela fica inerte e o foco volta ao gatilho ao fechar.
  *
- * Revisão (com a contagem), Comparar (com o contador "n/4"), Minhas notas, Sítios, Exportar e "Atalhos e convenções" funcionam; Ajustes
+ * Revisão (com a contagem), Comparar (com o contador "n/4"), Minhas notas, Sítios, Cópias e exportação, Excluídos e "Atalhos e convenções" funcionam; Ajustes
  * aparece desabilitado, "na próxima versão". Embaixo, a seção Sincronização (2B).
  */
 /** A seção Sincronização do Menu (Menu.dc.html): o link para a tela, o estado e "Salvar e sincronizar". */
@@ -157,7 +157,8 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
           {link('/notas', 'Minhas notas', null)}
           {link('/sitios', 'Sítios', sitiosMeta)}
           {desabilitado('Ajustes')}
-          {link('/exportar', 'Exportar', 'cópia de segurança')}
+          {link('/copias', 'Cópias e exportação', 'cópias e arquivos')}
+          {link('/excluidos', 'Excluídos', 'restaurar o que foi excluído')}
           {link('/atalhos', 'Atalhos e convenções', '?', { atalho: '?' })}
         </nav>
         <SecaoDeSincronizacao aoFechar={aoFechar} />

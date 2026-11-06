@@ -1,11 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Download, Locator, Page, TestInfo } from '@playwright/test'
+import { lerZip } from '../src/copias/zip'
 import { expect, test } from './fixtures'
 import { escreverNota } from './notasNaTela'
 
 /**
- * Exportar (Tarefa 15) no navegador de verdade, nos dois tamanhos: o Menu e a Sincronização levam à tela; com a camada
+ * «Cópias e exportação» (Tarefa 15, «Exportar»; 2C, bloco 1: o nome novo, /copias e a cópia completa .zip) no navegador de verdade, nos dois tamanhos: o Menu e a Sincronização levam à tela; com a camada
  * vazia e sem internet os três botões baixam arquivos válidos e vazios; com dados (uma nota por enviar neste aparelho e,
  * de outro aparelho, uma região, um termo novo e uma hipótese SKC; e uma imagem que ainda não subiu), cada arquivo é
  * baixado (evento `download`) e lido. O app instalado (revisão 1): no Mac (sem toque) baixa pelo link; num aparelho de
@@ -144,7 +145,7 @@ const mensagem = (page: Page) => page.getByRole('status', { name: 'Mensagem da e
 
 /** Toca o botão, espera o download e devolve o nome sugerido e o conteúdo já lido como JSON. */
 async function baixar(page: Page, botao: string): Promise<{ nome: string; json: Record<string, unknown>; download: Download }> {
-  const alvo = page.getByRole('button', { name: botao })
+  const alvo = page.getByRole('button', { name: botao, exact: true })
   const [download] = await Promise.all([page.waitForEvent('download'), alvo.click()])
   const caminho = await download.path()
   return { nome: download.suggestedFilename(), json: JSON.parse(readFileSync(caminho, 'utf8')) as Record<string, unknown>, download }
@@ -153,30 +154,48 @@ async function baixar(page: Page, botao: string): Promise<{ nome: string; json: 
 test('a tela pelo Menu e pela Sincronização; camada vazia e sem internet: os três arquivos válidos e vazios', async ({ page, context }) => {
   await entrar(page)
 
-  // O Menu tem «Exportar» antes de «Atalhos e convenções».
+  // O Menu tem «Cópias e exportação» (antes «Exportar»), depois «Excluídos» e «Atalhos e convenções».
   const menu = await abrirMenu(page)
   const links = menu.getByRole('navigation', { name: 'Menu' }).getByRole('link')
   const nomes = await links.allTextContents()
-  const i = nomes.findIndex((t) => t.startsWith('Exportar'))
+  expect(nomes.some((t) => t.startsWith('Exportar'))).toBe(false)
+  const i = nomes.findIndex((t) => t.startsWith('Cópias e exportação'))
   expect(i).toBeGreaterThan(-1)
-  expect(nomes[i + 1]).toMatch(/^Atalhos e convenções/)
-  await foto(page, 'exportar-0-menu', links.nth(i))
+  expect(nomes[i]).toBe('Cópias e exportaçãocópias e arquivos')
+  expect(nomes[i + 1]).toMatch(/^Excluídos/)
+  expect(nomes[i + 2]).toMatch(/^Atalhos e convenções/)
+  // P8: o nome e a descrição cabem numa linha cada (também a 375)
+  for (const sel of ['.menu-item-nome', '.menu-item-meta']) {
+    const linhas = await links.nth(i).locator(sel).evaluate((el) => {
+      const r = document.createRange()
+      r.selectNodeContents(el)
+      return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size
+    })
+    expect(linhas, `${sel} numa linha`).toBe(1)
+  }
+  await foto(page, 'copias-0-menu', links.nth(i))
   await links.nth(i).click()
-  await expect(page).toHaveURL(/#\/exportar$/)
-  await expect(page.getByRole('heading', { level: 1, name: 'Exportar' })).toBeVisible()
+  await expect(page).toHaveURL(/#\/copias$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Cópias e exportação' })).toBeVisible()
 
   // A Sincronização também leva a ela (o link abre a tela; o nome diz isso).
   await page.goto('#/sincronizacao')
-  const paraCopia = page.getByRole('link', { name: 'Cópia de segurança e exportações' })
+  const paraCopia = page.getByRole('link', { name: 'Cópias e exportação' })
   await foto(page, 'exportar-7-link-na-sincronizacao', paraCopia)
   await paraCopia.click()
-  await expect(page).toHaveURL(/#\/exportar$/)
+  await expect(page).toHaveURL(/#\/copias$/)
+
+  // O endereço antigo leva à tela nova.
+  await page.goto('#/exportar')
+  await expect(page).toHaveURL(/#\/copias$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Cópias e exportação' })).toBeVisible()
 
   // Sem internet: tudo é local.
   await context.setOffline(true)
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   await expect(numeros(page, 'Regiões (W3C Web Annotation)')).toHaveText('suas: nada ainda · 1 dos livros')
   await expect(numeros(page, 'Hipóteses para o MEDIATION')).toHaveText('nada ainda')
+  await expect(numeros(page, 'Cópia completa, com fotos')).toHaveText('nenhuma foto ainda')
   await semRolagemHorizontal(page, 'Exportar vazia')
   await foto(page, 'exportar-1-vazia')
   await fotoEscura(page, 'exportar-2-vazia-escuro')
@@ -196,6 +215,14 @@ test('a tela pelo Menu e pela Sincronização; camada vazia e sem internet: os t
   const hipoteses = await baixar(page, 'Exportar hipóteses para o MEDIATION')
   expect(hipoteses.nome).toMatch(/^iconodb-hipoteses-mediation-.*\.json$/)
   expect(hipoteses.json).toMatchObject({ formato: 'iconodb-mediation', alvoEsquema: 'MEDIATION v0.6', versao: 1, hipoteses: [] })
+
+  // A cópia completa sem internet e sem fotos: o .zip com o copia.json e o LEIA-ME.
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar cópia completa' }).click()])
+  expect(download.suggestedFilename()).toMatch(/^iconodb-copia-completa-\d{4}-\d{2}-\d{2}-\d{4}\.zip$/)
+  const zip = await lerZip(new Blob([readFileSync(await download.path())]))
+  expect([...zip.keys()].sort()).toEqual(['LEIA-ME.txt', 'copia.json'])
+  expect(JSON.parse(await (await zip.get('copia.json')!()).text())).toMatchObject({ formato: 'iconodb-copia', versao: 1, eventos: [], imagens: [] })
+  await expect(mensagem(page)).toHaveText(`Pronto: ${download.suggestedFilename()} foi baixado.`)
   await context.setOffline(false)
 })
 
@@ -212,7 +239,7 @@ test('com dados de dois aparelhos (um por enviar): os números e os três arquiv
   await entrar(page)
 
   // A sincronização ao abrir traz os 3 eventos do outro aparelho.
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('3 eventos de 1 aparelho', { timeout: 30_000 })
   await expect(numeros(page, 'Regiões (W3C Web Annotation)')).toHaveText('2 regiões: 1 sua, 1 dos livros')
   await expect(numeros(page, 'Hipóteses para o MEDIATION')).toHaveText('1 hipótese SKC')
@@ -228,7 +255,7 @@ test('com dados de dois aparelhos (um por enviar): os números e os três arquiv
   await page.goto('#/item/CA00001')
   await expect(page.getByRole('button', { name: 'Mostrar o original alemão' })).toBeVisible()
   await escreverNota(page, 'Nota inventada para a cópia.')
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText(/^\d+ eventos de 2 aparelhos · \d+ por enviar · 1 imagem ainda só neste aparelho$/)
   await foto(page, 'imagens-so-neste-aparelho', numeros(page, 'Cópia de segurança'))
   await semRolagemHorizontal(page, 'Exportar com dados')
@@ -293,7 +320,7 @@ test('com dados de dois aparelhos (um por enviar): os números e os três arquiv
 test('app instalado no Mac (o do Dock: standalone, sem toque): baixa pelo link; a folha de compartilhar não abre', async ({ page }) => {
   await appInstalado(page, false)
   await entrar(page)
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   const copia = await baixar(page, 'Baixar cópia')
   expect(copia.json).toMatchObject({ formato: 'iconodb-copia', versao: 1 })
@@ -304,7 +331,7 @@ test('app instalado no Mac (o do Dock: standalone, sem toque): baixa pelo link; 
 test('app instalado num aparelho de toque: a folha de compartilhar; recusada sem um toque recente, «Salvar o arquivo» entrega o mesmo arquivo', async ({ page }) => {
   await appInstalado(page, true)
   await entrar(page)
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   const downloads: string[] = []
   page.on('download', (d) => downloads.push(d.suggestedFilename()))
@@ -329,7 +356,7 @@ test('app instalado num aparelho de toque: a folha de compartilhar; recusada sem
 
   // 2. A folha recusada (o toque já não era recente): nada de «foi baixado», nada de link; o arquivo fica pronto.
   await page.evaluate(() => void ((window as unknown as { __folha: Folha }).__folha.recusar = true))
-  await page.getByRole('button', { name: 'Baixar cópia' }).click()
+  await page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()
   const salvar = mensagem(page).getByRole('button', { name: 'Salvar o arquivo' })
   await expect(salvar).toBeVisible()
   await expect(mensagem(page)).toContainText(/^O arquivo iconodb-copia-.*\.json está pronto\. Toque em «Salvar o arquivo» para guardá-lo\./)
@@ -348,7 +375,7 @@ test('app instalado num aparelho de toque: a folha de compartilhar; recusada sem
   expect(recebido.nome).toMatch(/^iconodb-copia-\d{4}-\d{2}-\d{2}-\d{4}\.json$/)
   expect(recebido.tipo).toBe('application/json')
   expect(JSON.parse(recebido.texto)).toMatchObject({ formato: 'iconodb-copia', versao: 1, eventos: [] })
-  await expect(page.getByRole('button', { name: 'Baixar cópia' })).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Baixar cópia', exact: true })).toBeFocused()
   await foto(page, 'salvar-o-arquivo-pronto')
   expect(downloads).toEqual([])
 })
@@ -356,11 +383,11 @@ test('app instalado num aparelho de toque: a folha de compartilhar; recusada sem
 test('E-9: a folha recusada também no segundo toque: o link «Baixar o arquivo» baixa o mesmo arquivo (sem violar a CSP)', async ({ page }) => {
   await appInstalado(page, true)
   await entrar(page)
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   const recusarDeNovo = () => page.evaluate(() => void ((window as unknown as { __folha: Folha }).__folha.recusar = true))
   await recusarDeNovo()
-  await page.getByRole('button', { name: 'Baixar cópia' }).click()
+  await page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()
   const salvar = mensagem(page).getByRole('button', { name: 'Salvar o arquivo' })
   await expect(salvar).toBeVisible()
   await expect(mensagem(page).getByRole('link', { name: 'Baixar o arquivo' })).toHaveCount(0)
@@ -379,11 +406,11 @@ test('E-9: a folha recusada também no segundo toque: o link «Baixar o arquivo�
 test('E-9 (adendo): a folha de compartilhar falha por outro motivo: o arquivo está pronto, a mensagem diz que a folha não abriu e o link já baixa o mesmo arquivo (sem violar a CSP)', async ({ page }) => {
   await appInstalado(page, true)
   await entrar(page)
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   const falharDeNovo = () => page.evaluate(() => void ((window as unknown as { __folha: Folha }).__folha.falhar = true))
   await falharDeNovo()
-  await page.getByRole('button', { name: 'Baixar cópia' }).click()
+  await page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()
   const salvar = mensagem(page).getByRole('button', { name: 'Salvar o arquivo' })
   await expect(salvar).toBeVisible()
   const texto = /^O arquivo (iconodb-copia-\d{4}-\d{2}-\d{2}-\d{4}\.json) está pronto, mas a folha de compartilhar não abriu\. Toque em «Salvar o arquivo» para tentar de novo ou use o link abaixo para baixar o arquivo\./
@@ -411,16 +438,16 @@ type EstadoDaMensagem = 'folha-falhou' | 'segundo-toque-recusado'
 async function abrirComMensagemAlta(page: Page, estado: EstadoDaMensagem) {
   await appInstalado(page, true)
   await entrar(page)
-  await page.goto('#/exportar')
+  await page.goto('#/copias')
   await expect(numeros(page, 'Cópia de segurança')).toHaveText('nada ainda')
   const marcar = (campo: 'recusar' | 'falhar') => page.evaluate((c) => void ((window as unknown as { __folha: Folha }).__folha[c] = true), campo)
   if (estado === 'folha-falhou') {
     await marcar('falhar')
-    await page.getByRole('button', { name: 'Baixar cópia' }).click()
+    await page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()
     await expect(mensagem(page).getByRole('link', { name: 'Baixar o arquivo' })).toBeVisible()
   } else {
     await marcar('recusar')
-    await page.getByRole('button', { name: 'Baixar cópia' }).click()
+    await page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()
     // Só depois da primeira recusa (o botão aparece): marcar antes a perderia, e o segundo toque seria aceito.
     await expect(mensagem(page).getByRole('button', { name: 'Salvar o arquivo' })).toBeVisible()
     await marcar('recusar')
@@ -507,4 +534,159 @@ test('O-3: a 320×568 com o texto a 200%, a mensagem não passa da tela e rola p
   await salvar.scrollIntoViewIfNeeded()
   await salvar.click({ trial: true })
   await semRolagemHorizontal(page, 'Exportar a 320 px com o texto grande')
+})
+
+/**
+ * A cópia completa (2C, bloco 1): imagens de outro aparelho chegam pela sincronização. `comArquivos`: os três arquivos
+ * dela estão no Dropbox (bytes sintéticos); as outras só têm o evento (os arquivos não chegaram: ficam de fora). Uma
+ * excluída nunca entra. Todas no CA00003 (o CA00001 recebe a foto feita neste aparelho).
+ */
+type FotoDoOutro = { n: number; nome: string; bytes: number; comArquivos?: boolean; excluida?: boolean }
+function fotosDoOutroAparelho(dropbox: { enviados: Map<string, Buffer> }, fotos: FotoDoOutro[]) {
+  const hlc = (n: number) => `${String(Date.now() - 60_000 + n).padStart(13, '0')}-0000-zzzzzzzz`
+  const linhas: unknown[] = []
+  let seq = 0
+  for (const f of fotos) {
+    const reg = `IM-zzzzzzzz-${f.n}`
+    seq++
+    linhas.push({ v: 1, id: `zzzzzzzz-${seq}-0`, hlc: hlc(seq), aparelho: 'zzzzzzzz', tipo: 'imagem', reg, op: 'criar', campos: { alvoTipo: 'objeto', alvo: 'CA00003', tipo: 'tons', tipoDetectado: 'tons', legenda: '', credito: 'TESTE', principal: false, formato: 'webp', extensao: 'heic', nome: f.nome, bytes: f.bytes } })
+    if (f.excluida) {
+      seq++
+      linhas.push({ v: 1, id: `zzzzzzzz-${seq}-0`, hlc: hlc(seq), aparelho: 'zzzzzzzz', tipo: 'imagem', reg, op: 'excluir', campos: {} })
+    }
+    if (f.comArquivos) {
+      for (const [arq, byte] of [['tela.webp', 1], ['miniatura.webp', 2], ['original.heic', 3]] as const) {
+        dropbox.enviados.set(`usuario/imagens/${reg}/${arq}`, Buffer.from([byte, f.n, byte, f.n]))
+      }
+    }
+  }
+  dropbox.enviados.set('usuario/diario/zzzzzzzz/000001.jsonl', Buffer.from(linhas.map((l) => `${JSON.stringify(l)}\n`).join('')))
+}
+
+const botaoDaCompleta = (page: Page) => secao(page, 'Cópia completa, com fotos').getByRole('button')
+
+test('cópia completa: as fotos do Dropbox e a da fila deste aparelho, uma que não chegou fica de fora; o .zip aberto com lerZip', async ({ page, context, dropbox }, info) => {
+  dropbox.usuarioReal = true
+  fotosDoOutroAparelho(dropbox, [
+    { n: 1, nome: 'IMG_1000.HEIC', bytes: 3_200_000, comArquivos: true },
+    { n: 2, nome: 'IMG_2041.HEIC', bytes: 2_100_000 },
+    { n: 3, nome: 'IMG_3000.HEIC', bytes: 9_000_000, comArquivos: true, excluida: true },
+  ])
+  await entrar(page)
+  // Uma foto feita aqui que não consegue subir (a rede falha só para o envio de usuario/imagens/): fica na fila (OPFS).
+  await context.route('https://content.dropboxapi.com/2/files/upload**', (route) =>
+    (route.request().headers()['dropbox-api-arg'] ?? '').includes('/usuario/imagens/') ? route.abort('internetdisconnected') : route.fallback(),
+  )
+  await adicionarImagem(page, info)
+
+  await page.goto('#/copias')
+  const s = secao(page, 'Cópia completa, com fotos')
+  await expect(s.getByText('Tudo o que está na cópia de segurança, mais as suas fotos, num arquivo .zip. Use-a para guardar fora do Dropbox.')).toBeVisible()
+  await expect(numeros(page, 'Cópia completa, com fotos')).toHaveText('3 fotos, cerca de 5 MB', { timeout: 30_000 })
+  await expect(secao(page, 'Cópia de segurança').getByText('As fotos não vão dentro: para levá-las junto, use a cópia completa.', { exact: false })).toBeVisible()
+  await semRolagemHorizontal(page, 'Cópias e exportação')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await foto(page, 'copias-1-topo')
+
+  // Segura a miniatura da foto do outro aparelho: a tela mostra o progresso.
+  let soltar!: () => void
+  const solta = new Promise<void>((ok) => (soltar = ok))
+  await context.route('https://content.dropboxapi.com/2/files/download', async (route) => {
+    if ((route.request().headers()['dropbox-api-arg'] ?? '').includes('IM-zzzzzzzz-1/miniatura')) await solta
+    await route.fallback()
+  })
+  const baixando = page.waitForEvent('download')
+  const botao = botaoDaCompleta(page)
+  await botao.click()
+  await expect(botao).toHaveAccessibleName('Juntando…')
+  await expect(botao).toHaveAttribute('aria-disabled', 'true')
+  await expect(mensagem(page)).toHaveText(/^Juntando as fotos: [0-2] de 3…$/)
+  await expect(mensagem(page).locator('.exp-barra')).toBeVisible()
+  await semRolagemHorizontal(page, 'Cópias e exportação juntando')
+  await foto(page, 'copias-2-juntando')
+  soltar()
+  const download = await baixando
+  const nome = download.suggestedFilename()
+  expect(nome).toMatch(/^iconodb-copia-completa-\d{4}-\d{2}-\d{2}-\d{4}\.zip$/)
+  await expect(mensagem(page)).toHaveText(`Pronto: ${nome} foi baixado. 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde.`)
+  await expect(botao).toHaveAccessibleName('Baixar cópia completa')
+  await semRolagemHorizontal(page, 'Cópias e exportação com faltas')
+  await foto(page, 'copias-3-pronto-com-faltas')
+
+  // O .zip: lido em partes pelo mesmo lerZip do app.
+  const zip = await lerZip(new Blob([readFileSync(await download.path())]))
+  const nomes = [...zip.keys()]
+  const locais = nomes.filter((n) => n.startsWith('imagens/') && !n.startsWith('imagens/IM-zzzzzzzz-'))
+  expect(locais.map((n) => n.replace(/^imagens\/IM-[a-z0-9]{8}-\d+\//, '')).sort()).toEqual(['miniatura.webp', 'original.jpg', 'tela.webp'])
+  expect(nomes.filter((n) => n.startsWith('imagens/IM-zzzzzzzz-')).sort()).toEqual([
+    'imagens/IM-zzzzzzzz-1/miniatura.webp',
+    'imagens/IM-zzzzzzzz-1/original.heic',
+    'imagens/IM-zzzzzzzz-1/tela.webp',
+  ])
+  expect([...new Uint8Array(await (await zip.get('imagens/IM-zzzzzzzz-1/original.heic')!()).arrayBuffer())]).toEqual([3, 1, 3, 1])
+  // A foto local é a mesma JPEG que foi escolhida (o original guardado na fila).
+  const original = locais.find((n) => n.endsWith('/original.jpg'))!
+  const jpeg = new Uint8Array(await (await zip.get(original)!()).arrayBuffer())
+  expect([jpeg[0], jpeg[1]]).toEqual([0xff, 0xd8])
+  const leiaMe = await (await zip.get('LEIA-ME.txt')!()).text()
+  expect(leiaMe).toContain('copia.json: a cópia de segurança')
+  expect(leiaMe).toContain('«Cópias e exportação»')
+  expect(leiaMe).toContain('«Restaurar a partir de uma cópia»')
+
+  // copia.json é a cópia de segurança: a mesma do botão de cima (a menos da hora em que foi gerada).
+  const dentro = JSON.parse(await (await zip.get('copia.json')!()).text()) as Record<string, unknown>
+  expect(dentro).toMatchObject({ formato: 'iconodb-copia', versao: 1 })
+  expect((dentro.imagens as { id: string }[]).map((i) => i.id)).toEqual(expect.arrayContaining(['IM-zzzzzzzz-1', 'IM-zzzzzzzz-2', 'IM-zzzzzzzz-3']))
+  const avulsa = await baixar(page, 'Baixar cópia')
+  const semHora = (j: Record<string, unknown>) => ({ ...j, geradoEm: null })
+  expect(semHora(dentro)).toEqual(semHora(avulsa.json))
+})
+
+test('cópia completa no iPhone (app instalado): a folha recusada diz as fotos que faltaram antes de «Toque em «Salvar o arquivo»…»; o link de reserva baixa o .zip', async ({ page, dropbox }, info) => {
+  dropbox.usuarioReal = true
+  fotosDoOutroAparelho(dropbox, [
+    { n: 1, nome: 'IMG_2041.HEIC', bytes: 4_000_000 },
+    { n: 2, nome: 'IMG_2050.HEIC', bytes: 4_000_000 },
+  ])
+  await appInstalado(page, true)
+  await entrar(page)
+  await page.goto('#/copias')
+  await expect(numeros(page, 'Cópia completa, com fotos')).toHaveText('2 fotos, cerca de 8 MB', { timeout: 30_000 })
+  const marcar = () => page.evaluate(() => void ((window as unknown as { __folha: Folha }).__folha.recusar = true))
+  await marcar()
+  await botaoDaCompleta(page).click()
+  const salvar = mensagem(page).getByRole('button', { name: 'Salvar o arquivo' })
+  await expect(salvar).toBeVisible()
+  await expect(mensagem(page).locator('> span')).toHaveText(
+    /^O arquivo iconodb-copia-completa-\d{4}-\d{2}-\d{2}-\d{4}\.zip está pronto, mas 2 fotos ficaram de fora \(IMG_2041\.HEIC, IMG_2050\.HEIC\): tente de novo mais tarde\. Toque em «Salvar o arquivo» para guardá-lo\.$/,
+  )
+  await semRolagemHorizontal(page, 'Cópias e exportação com «Salvar o arquivo»')
+  await foto(page, 'copias-4-faltas-salvar-o-arquivo')
+  // m-2: escolher uma cópia para restaurar (aqui, um arquivo que não é cópia) não descarta a cópia pronta: as duas mensagens
+  // ficam na mesma caixa, a da restauração embaixo.
+  // (um caminho só com ASCII: o do título do teste, com acentos e «», o Chromium não abre)
+  const pasta = join(info.project.outputDir, 'arquivos-sinteticos', info.testId)
+  mkdirSync(pasta, { recursive: true })
+  const outro = join(pasta, 'outro.json')
+  writeFileSync(outro, JSON.stringify({ formato: 'outra-coisa TESTE', versao: 1 }))
+  const [seletor] = await Promise.all([page.waitForEvent('filechooser'), secao(page, 'Restaurar a partir de uma cópia').getByRole('button', { name: 'Escolher a cópia' }).click()])
+  await seletor.setFiles(outro)
+  await expect(mensagem(page).locator('.exp-mensagem-mais')).toHaveText('Este arquivo não é uma cópia do IconoDB.')
+  await expect(mensagem(page)).toContainText('Toque em «Salvar o arquivo» para guardá-lo.')
+  await expect(salvar).toBeVisible()
+  await semRolagemHorizontal(page, 'Cópias e exportação com a mensagem combinada')
+  await foto(page, 'copias-5-mensagem-combinada')
+  // Recusada de novo: o link de reserva (decisão 54), que baixa o mesmo .zip.
+  await marcar()
+  await salvar.click()
+  const link = mensagem(page).getByRole('link', { name: 'Baixar o arquivo' })
+  await expect(link).toBeVisible()
+  await expect(mensagem(page)).toContainText('Toque em «Salvar o arquivo» para guardá-lo. Se a folha de compartilhar não abrir, use o link abaixo para baixar o arquivo.')
+  const [download] = await Promise.all([page.waitForEvent('download'), link.click()])
+  expect(download.suggestedFilename()).toMatch(/^iconodb-copia-completa-.*\.zip$/)
+  const zip = await lerZip(new Blob([readFileSync(await download.path())]))
+  expect([...zip.keys()].sort()).toEqual(['LEIA-ME.txt', 'copia.json'])
+  const f = await folha(page)
+  expect(f.chamadas).toBe(2)
+  expect(f.recebidos).toEqual([])
 })

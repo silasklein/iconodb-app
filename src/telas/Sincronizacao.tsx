@@ -352,7 +352,7 @@ export function Sincronizacao() {
         )}
 
         <p className="sync-copia">
-          <Link to="/exportar">Cópia de segurança e exportações</Link>
+          <Link to="/copias">Cópias e exportação</Link>
           <span className="sync-nota">Um arquivo com tudo o que é seu, e as regiões e hipóteses para outros programas, gerados neste aparelho, sem internet.</span>
         </p>
       </main>

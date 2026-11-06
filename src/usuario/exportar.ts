@@ -64,7 +64,8 @@
  *    pacote não pôde ser lido; o trecho marcado (o id `PA-…`/`OB-…`) fica em `trecho.fonte`. Um termo do usuário que o
  *    pacote publicou (Tarefa 16) sai com o id do livro, `termoDoUsuario: false` e `publicadoDe` = o id do app.
  */
-import { eHipoteseSkc, lerHipotese, lerRegiao, RE_ELEMENTO_DO_LIVRO } from '../hipoteses/modelo'
+import { refsDeObjetosExcluidos } from '../colecoes/visiveis'
+import { eHipoteseSkc, lerHipotese, lerRegiao, objetoDaHipotese, RE_ELEMENTO_DO_LIVRO, type HipoteseSkc, type RegiaoSkc } from '../hipoteses/modelo'
 import { arquivosDaImagem, lerImagem } from '../imagens-usuario/registro'
 import { eVerbeteSkc, lerVerbeteSkc } from '../glossario/modelo'
 import { destinoDe, SEM_REDIRECIONAMENTOS, type Redirecionamentos } from '../pacote/redirecionamentos'
@@ -358,10 +359,26 @@ function tamanhoDaImagem(e: EntradaDasRegioes, imagem: string): Tamanho | undefi
   return original ?? tela
 }
 
+/** m-5: a hipótese ou a região é de um objeto SKC excluído (fica fora das exportações e dos números; a cópia leva tudo). */
+function doObjetoExcluido(estado: Estado): { hipotese: (h: HipoteseSkc) => boolean; regiao: (g: RegiaoSkc) => boolean } {
+  const fora = refsDeObjetosExcluidos(estado)
+  return {
+    hipotese: (h) => {
+      const o = fora.size === 0 ? null : objetoDaHipotese(h)
+      return o !== null && fora.has(o)
+    },
+    regiao: (g) => g.objeto !== null && fora.has(g.objeto),
+  }
+}
+
 /** Os verbetes das hipóteses SKC vivas sobre cada elemento (do livro ou do usuário), na ordem de criação, sem repetir. */
 function termosSkcPorElemento(estado: Estado, redirecionamentos: Redirecionamentos): Map<string, string[]> {
   const mapa = new Map<string, string[]>()
-  const skc = [...(estado.registros.get('hipotese')?.values() ?? [])].filter((r) => !r.excluido && eHipoteseSkc(r.id)).map(lerHipotese)
+  const fora = doObjetoExcluido(estado)
+  const skc = [...(estado.registros.get('hipotese')?.values() ?? [])]
+    .filter((r) => !r.excluido && eHipoteseSkc(r.id))
+    .map(lerHipotese)
+    .filter((h) => !fora.hipotese(h))
   skc.sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : compararPorPontoDeCodigo(a.id, b.id)))
   for (const h of skc) {
     if (h.sobre.tipo !== 'elemento') continue
@@ -415,10 +432,11 @@ const alvo = (e: EntradaDasRegioes, imagem: string, pontos: readonly (readonly [
 export function montarRegioes(e: EntradaDasRegioes): ColecaoDeAnotacoes {
   const termosSkc = termosSkcPorElemento(e.estado, e.redirecionamentos ?? SEM_REDIRECIONAMENTOS)
   const itens: Anotacao[] = []
+  const fora = doObjetoExcluido(e.estado)
   const regs = [...(e.estado.registros.get('regiao')?.values() ?? [])].filter((r) => !r.excluido).sort((a, b) => compararPorPontoDeCodigo(a.id, b.id))
   for (const r of regs) {
     const g = lerRegiao(r)
-    if (g.pontos.length < 3) continue
+    if (g.pontos.length < 3 || fora.regiao(g)) continue
     const body: Anotacao['body'] = []
     if (RE_ELEMENTO_DO_LIVRO.test(g.elementoId)) {
       // Sobre um elemento do livro: o polígono é do usuário; o rótulo e os termos do livro, dos autores (decisão 46).
@@ -475,7 +493,12 @@ function pontosDoSeletorLivre(seletor: string): [number, number][] {
 /** Quantas regiões a exportação leva: as do usuário e as dos livros. */
 export function resumoDasRegioes(e: Pick<EntradaDasRegioes, 'estado' | 'doLivro'>): { suas: number; doLivro: number } {
   let suas = 0
-  for (const r of e.estado.registros.get('regiao')?.values() ?? []) if (!r.excluido && lerRegiao(r).pontos.length >= 3) suas++
+  const fora = doObjetoExcluido(e.estado)
+  for (const r of e.estado.registros.get('regiao')?.values() ?? []) {
+    if (r.excluido) continue
+    const g = lerRegiao(r)
+    if (g.pontos.length >= 3 && !fora.regiao(g)) suas++
+  }
   return { suas, doLivro: e.doLivro.filter((l) => pontosDoSeletorLivre(l.seletor).length >= 3).length }
 }
 
@@ -524,8 +547,9 @@ export interface ArquivoMediation {
 }
 
 function hipotesesProprias(estado: Estado) {
+  const fora = doObjetoExcluido(estado)
   return [...(estado.registros.get('hipotese')?.values() ?? [])]
-    .filter((r) => !r.excluido && eHipoteseSkc(r.id))
+    .filter((r) => !r.excluido && eHipoteseSkc(r.id) && !fora.hipotese(lerHipotese(r)))
     .sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : compararPorPontoDeCodigo(a.id, b.id)))
 }
 

@@ -203,7 +203,9 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
         <LinhasDeHipoteseSkc hipoteses={hipotesesSkc} />
       </section>
 
-      <VeioDeVoce tipo="verbete" id={v.id} />
+      {/* key: no computador a tela fica montada entre um verbete e outro; o estado do bloco é de cada entrada (NB-1). O nome é o
+          dos livros (o do pacote), nunca a forma corrigida nem o id: é o que fica guardado para «Excluídos» (m-1) */}
+      <VeioDeVoce key={v.id} tipo="verbete" id={v.id} nomeDoLivro={v.pt ?? undefined} />
 
       <NotasDoAlvo tipo="verbete" ref_={v.id} variante="secao" />
     </MolduraDoDetalhe>

@@ -68,6 +68,14 @@ export function criarArquivo(nome: string, conteudo: string, tipo: string): File
   return new File([conteudo], nome, { type: tipo })
 }
 
+/**
+ * O mesmo, com o conteúdo já num Blob (a cópia completa, .zip, montada em partes): o File aponta para as partes do Blob,
+ * sem juntá-las num só buffer.
+ */
+export function criarArquivoDeBlob(nome: string, conteudo: Blob, tipo: string): File {
+  return new File([conteudo], nome, { type: tipo })
+}
+
 function baixarPorLink(arquivo: File, amb: AmbienteDaEntrega): Entrega {
   const url = amb.criarUrl(arquivo)
   const a = document.createElement('a')

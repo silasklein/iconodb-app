@@ -1,10 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { usarMotor } from '../banco/cliente'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { AppRoutes, ROTAS } from './routes'
+
+function Onde() {
+  return <span data-testid="onde">{useLocation().pathname}</span>
+}
 
 // A guarda de "/" tem teste próprio (RotaInicial.test.tsx): aqui há pacote e o Início abre.
 vi.mock('./RotaInicial', () => ({ RotaInicial: ({ children }: { children: React.ReactNode }) => children }))
@@ -33,7 +37,9 @@ const CAMINHOS = [
   '/nota/:id',
   '/sincronizacao',
   '/comparar',
+  '/copias',
   '/exportar',
+  '/excluidos',
 ]
 
 function abrir(url: string) {
@@ -56,6 +62,17 @@ describe('rotas', () => {
   it.each(CAMINHOS)('%s mostra uma tela com título', async (caminho) => {
     abrir(caminho.replace(':id', caminho === '/grupo/:id' ? 'GR-TESTE-I-01' : 'x1').replace(':numero', 'CA00001'))
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+  })
+
+  it('/exportar (o endereço antigo) leva a /copias, a tela «Cópias e exportação»', async () => {
+    render(
+      <MemoryRouter initialEntries={['/exportar']}>
+        <AppRoutes />
+        <Onde />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cópias e exportação' })).toBeInTheDocument()
+    expect(screen.getByTestId('onde')).toHaveTextContent(/^\/copias$/)
   })
 
   it('caminho desconhecido volta ao Início', async () => {

@@ -18,9 +18,17 @@ import { entregarArquivo } from '../ui/entregarArquivo'
 import { aparelhoAtual } from '../usuario/aparelho'
 import { carregarEstado, receberEventos, registrar, registrarVarios } from '../usuario/estado'
 import { esquecerPendentes, registrarPendente } from '../usuario/pendentes'
-import { Exportar, textoDaCopia } from './Exportar'
+import { montarCopiaCompleta } from '../copias/copiaCompleta'
+import { esquecerCopiaCompleta, progressoDaCopiaCompleta } from '../copias/montagemDaCopiaCompleta'
+import { escritaDropbox } from '../dropbox/escrita'
+import { avisoDasFaltas, Exportar, textoDaCopia, textoDaCopiaCompleta } from './Exportar'
 
 vi.mock('../ui/entregarArquivo', async (original) => ({ ...(await original<typeof import('../ui/entregarArquivo')>()), entregarArquivo: vi.fn() }))
+vi.mock('../dropbox/escrita', async (original) => ({ ...(await original<typeof import('../dropbox/escrita')>()), escritaDropbox: vi.fn(async () => null) }))
+vi.mock('../copias/copiaCompleta', async (original) => {
+  const m = await original<typeof import('../copias/copiaCompleta')>()
+  return { ...m, montarCopiaCompleta: vi.fn(m.montarCopiaCompleta) }
+})
 
 function apagarBanco() {
   return new Promise<void>((ok) => {
@@ -56,7 +64,11 @@ beforeEach(async () => {
   vi.mocked(entregarArquivo).mockReset()
   vi.mocked(entregarArquivo).mockResolvedValue('baixado')
 })
-afterEach(() => instalarMatchMedia(375))
+afterEach(() => {
+  instalarMatchMedia(375)
+  // a montagem da cópia completa vive no módulo: nada dela passa de um teste para o outro
+  esquecerCopiaCompleta()
+})
 
 /** Uma camada com dados inventados: uma nota local por enviar, e do outro aparelho uma hipótese SKC e uma região. */
 async function comDados() {
@@ -69,12 +81,13 @@ async function comDados() {
 }
 
 describe('Exportar', () => {
-  it('título, três seções com explicação, números e um botão cada; a mensagem numa região viva', async () => {
+  it('título, as seções com explicação, números e um botão cada; a mensagem numa região viva', async () => {
     await comDados()
     abrir()
-    expect(screen.getByRole('heading', { level: 1, name: 'Exportar' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Cópias e exportação' })).toBeInTheDocument()
+    expect(screen.getByText('Os arquivos são gerados neste aparelho, com o que está gravado nele.')).toBeInTheDocument()
     const copia = secao('Cópia de segurança')
-    expect(copia).toHaveTextContent('usuario/imagens/')
+    expect(within(copia).getByText('Tudo o que é seu, num arquivo JSON: notas, coleções, hipóteses, regiões, objetos SKC, sítios e verbetes. As fotos não vão dentro: para levá-las junto, use a cópia completa.')).toBeInTheDocument()
     expect(await within(copia).findByText('4 eventos de 2 aparelhos · 1 por enviar')).toBeInTheDocument()
     expect(within(copia).getByRole('button', { name: 'Baixar cópia' })).toHaveAccessibleDescription('4 eventos de 2 aparelhos · 1 por enviar')
 
@@ -552,5 +565,351 @@ describe('Exportar', () => {
     instalarMatchMedia(1280)
     abrir()
     expect(screen.queryByRole('link', { name: 'Voltar' })).toBeNull()
+  })
+})
+
+describe('Cópia completa, com fotos (2C, bloco 1)', () => {
+  const NOME = 'iconodb-copia-completa-2026-11-05-1712.zip'
+  const zipFalso = () => new File([new Uint8Array([80, 75, 5, 6])], NOME, { type: 'application/zip' })
+  const completa = () => secao('Cópia completa, com fotos')
+  const baixarCompleta = () => within(completa()).getByRole('button', { name: /Baixar cópia completa|Juntando…/ })
+
+  beforeEach(() => {
+    esquecerCopiaCompleta()
+    vi.mocked(montarCopiaCompleta).mockClear()
+    vi.mocked(escritaDropbox).mockReset()
+    vi.mocked(escritaDropbox).mockResolvedValue(null)
+  })
+  afterEach(() => {
+    usarArmazemDasImagens(undefined)
+    usarCacheDasImagens(undefined)
+  })
+
+  /** Segura a montagem: `avancar` chama o aoAvancar da tela; `terminar` resolve com as faltas. */
+  function montagemSegura() {
+    const c = { avancar: (_f: number, _t: number) => undefined as void, terminar: (_faltaram: string[]) => undefined as void, dep: null as Parameters<typeof montarCopiaCompleta>[0] | null }
+    vi.mocked(montarCopiaCompleta).mockImplementationOnce(
+      (dep) =>
+        new Promise((ok) => {
+          c.dep = dep
+          c.avancar = (f, t) => act(() => dep.aoAvancar(f, t))
+          c.terminar = (faltaram) => ok({ arquivo: zipFalso(), faltaram })
+        }),
+    )
+    return c
+  }
+
+  it('a seção logo depois da cópia de segurança, com o texto, «nenhuma foto ainda» e «Baixar cópia completa»', async () => {
+    abrir()
+    const s = completa()
+    const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(titulos.slice(0, 2)).toEqual(['Cópia de segurança', 'Cópia completa, com fotos'])
+    expect(within(s).getByText('Tudo o que está na cópia de segurança, mais as suas fotos, num arquivo .zip. Use-a para guardar fora do Dropbox.')).toBeInTheDocument()
+    expect(within(s).getByText('nenhuma foto ainda')).toBeInTheDocument()
+    const botao = within(s).getByRole('button', { name: 'Baixar cópia completa' })
+    expect(botao).toHaveAccessibleDescription('nenhuma foto ainda')
+    expect(botao).not.toHaveClass('exp-botao-principal')
+  })
+
+  it('com fotos: «N fotos, cerca de M MB», acompanhando o que muda', async () => {
+    usarArmazemDasImagens(armazemMemoria())
+    usarCacheDasImagens(cacheMemoria())
+    abrir()
+    await within(completa()).findByText('nenhuma foto ainda')
+    await act(async () => {
+      await adicionarImagem({ objeto: 'CA00001' }, processadaFalsa({ original: new File([new Uint8Array(2_600_000)], 'IMG_2041.HEIC') }), { tipo: 'tons', legenda: '', credito: 'x', principal: false })
+    })
+    expect(await within(completa()).findByText('1 foto, cerca de 3 MB')).toBeInTheDocument()
+  })
+
+  it('textoDaCopiaCompleta: MB arredondado (1 MB = 1.000.000 bytes, nunca «0 MB»); sem tamanho conhecido, só as fotos', () => {
+    expect(textoDaCopiaCompleta({ fotos: 40, bytes: 180_400_000 })).toBe('40 fotos, cerca de 180 MB')
+    expect(textoDaCopiaCompleta({ fotos: 40, bytes: 179_500_000 })).toBe('40 fotos, cerca de 180 MB')
+    expect(textoDaCopiaCompleta({ fotos: 1, bytes: 300_000 })).toBe('1 foto, cerca de 1 MB')
+    expect(textoDaCopiaCompleta({ fotos: 1500, bytes: 7_250_000_000 })).toBe('1.500 fotos, cerca de 7.250 MB')
+    expect(textoDaCopiaCompleta({ fotos: 3, bytes: 0 })).toBe('3 fotos')
+    expect(textoDaCopiaCompleta({ fotos: 0, bytes: 0 })).toBe('nenhuma foto ainda')
+  })
+
+  it('avisoDasFaltas: quantas e quais (até 5 nomes, depois «e mais N»)', () => {
+    expect(avisoDasFaltas([])).toBeNull()
+    expect(avisoDasFaltas(['IMG_2041.HEIC'])).toBe('1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde.')
+    expect(avisoDasFaltas(['IMG_2041.HEIC', 'IMG_2050.HEIC'])).toBe('2 fotos ficaram de fora (IMG_2041.HEIC, IMG_2050.HEIC): tente de novo mais tarde.')
+    expect(avisoDasFaltas(['a', 'b', 'c', 'd', 'e', 'f', 'g'])).toBe('7 fotos ficaram de fora (a, b, c, d, e e mais 2): tente de novo mais tarde.')
+  })
+
+  it('durante: «Juntando…» desabilitado e «Juntando as fotos: 12 de 40…» com a barra; no fim, pronto com as faltas antes de «Toque em «Salvar o arquivo»…»', async () => {
+    const escrita = { baixar: vi.fn() } as unknown as NonNullable<Awaited<ReturnType<typeof escritaDropbox>>>
+    vi.mocked(escritaDropbox).mockResolvedValue(escrita)
+    vi.mocked(entregarArquivo).mockResolvedValueOnce('precisa-tocar').mockResolvedValueOnce('compartilhado')
+    const m = montagemSegura()
+    abrir()
+    const botao = baixarCompleta()
+    await userEvent.click(botao)
+    await waitFor(() => expect(m.dep).not.toBeNull())
+    expect(m.dep!.escrita).toBe(escrita)
+    m.avancar(0, 40)
+    m.avancar(12, 40)
+    expect(botao).toHaveAccessibleName('Juntando…')
+    expect(botao).toHaveAttribute('aria-disabled', 'true')
+    expect(botao).toHaveAttribute('aria-busy', 'true')
+    expect(mensagem()).toHaveTextContent(/^Juntando as fotos: 12 de 40…$/)
+    const barra = mensagem().querySelector('.exp-barra > span') as HTMLElement
+    expect(barra.style.width).toBe('30%')
+    // Outro toque enquanto junta não monta outro .zip.
+    await userEvent.click(botao)
+    expect(montarCopiaCompleta).toHaveBeenCalledTimes(1)
+
+    m.avancar(40, 40)
+    m.terminar(['IMG_2041.HEIC', 'IMG_2050.HEIC'])
+    const salvar = await within(mensagem()).findByRole('button', { name: 'Salvar o arquivo' })
+    expect(mensagem()).toHaveTextContent(`O arquivo ${NOME} está pronto, mas 2 fotos ficaram de fora (IMG_2041.HEIC, IMG_2050.HEIC): tente de novo mais tarde. Toque em «Salvar o arquivo» para guardá-lo.`)
+    expect(mensagem().querySelector('.exp-barra')).toBeNull()
+    expect(botao).toHaveAccessibleName('Baixar cópia completa')
+    expect(botao).not.toHaveAttribute('aria-disabled')
+    const [entregue1] = vi.mocked(entregarArquivo).mock.calls[0]!
+    expect(entregue1.name).toBe(NOME)
+    await userEvent.click(salvar)
+    expect(vi.mocked(entregarArquivo).mock.calls[1]![0]).toBe(entregue1)
+    expect(await screen.findByText(`Pronto: ${NOME} foi enviado pela folha de compartilhar. 2 fotos ficaram de fora (IMG_2041.HEIC, IMG_2050.HEIC): tente de novo mais tarde.`)).toBeInTheDocument()
+    expect(botao).toHaveFocus()
+  })
+
+  it('baixado sem faltas: «Pronto: … foi baixado.»; com faltas, a frase das faltas depois', async () => {
+    const m = montagemSegura()
+    abrir()
+    await userEvent.click(baixarCompleta())
+    await waitFor(() => expect(m.dep).not.toBeNull())
+    m.terminar([])
+    expect(await screen.findByText(`Pronto: ${NOME} foi baixado.`)).toBeInTheDocument()
+    const m2 = montagemSegura()
+    await userEvent.click(baixarCompleta())
+    await waitFor(() => expect(m2.dep).not.toBeNull())
+    m2.terminar(['IMG_2041.HEIC'])
+    expect(await screen.findByText(`Pronto: ${NOME} foi baixado. 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde.`)).toBeInTheDocument()
+  })
+
+  it('a folha que falha (decisão 54, adendo): as faltas antes de «Toque em…», com «Salvar o arquivo» e o link; recusada de novo: a frase do link', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { value: vi.fn(() => 'blob:copia/1'), configurable: true })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
+    vi.mocked(entregarArquivo).mockResolvedValueOnce('folha-falhou').mockResolvedValueOnce('precisa-tocar')
+    const m = montagemSegura()
+    abrir()
+    await userEvent.click(baixarCompleta())
+    await waitFor(() => expect(m.dep).not.toBeNull())
+    m.terminar(['IMG_2041.HEIC'])
+    const link = await within(mensagem()).findByRole('link', { name: 'Baixar o arquivo' })
+    expect(link).toHaveAttribute('download', NOME)
+    expect(mensagem()).toHaveTextContent(
+      `O arquivo ${NOME} está pronto, mas a folha de compartilhar não abriu. 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde. Toque em «Salvar o arquivo» para tentar de novo ou use o link abaixo para baixar o arquivo.`,
+    )
+    expect(mensagem()).not.toHaveClass('exp-mensagem-erro')
+    await userEvent.click(within(mensagem()).getByRole('button', { name: 'Salvar o arquivo' }))
+    await waitFor(() =>
+      expect(mensagem()).toHaveTextContent(
+        `O arquivo ${NOME} está pronto, mas 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde. Toque em «Salvar o arquivo» para guardá-lo. Se a folha de compartilhar não abrir, use o link abaixo para baixar o arquivo.`,
+      ),
+    )
+    expect(await within(mensagem()).findByRole('link', { name: 'Baixar o arquivo' })).toBeInTheDocument()
+  })
+
+  it('sem internet: nem pede o Dropbox; a mensagem diz, antes de começar, que só entram as fotos deste aparelho', async () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      const m = montagemSegura()
+      abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      expect(m.dep!.escrita).toBeNull()
+      expect(escritaDropbox).not.toHaveBeenCalled()
+      expect(mensagem()).toHaveTextContent(/^Sem acesso ao Dropbox agora: só entram as fotos que estão neste aparelho\.$/)
+      m.avancar(0, 3)
+      expect(mensagem()).toHaveTextContent(/^Sem acesso ao Dropbox agora: só entram as fotos que estão neste aparelho\. Juntando as fotos: 0 de 3…$/)
+      m.terminar([])
+      await screen.findByText(`Pronto: ${NOME} foi baixado.`)
+    } finally {
+      online.mockRestore()
+    }
+  })
+
+  it('sem login (escritaDropbox dá null): o mesmo aviso; um erro ao montar: a mensagem de erro de sempre', async () => {
+    const m = montagemSegura()
+    abrir()
+    await userEvent.click(baixarCompleta())
+    await waitFor(() => expect(m.dep).not.toBeNull())
+    expect(m.dep!.escrita).toBeNull()
+    expect(mensagem()).toHaveTextContent('Sem acesso ao Dropbox agora: só entram as fotos que estão neste aparelho.')
+    m.terminar([])
+    await screen.findByText(`Pronto: ${NOME} foi baixado.`)
+
+    vi.mocked(montarCopiaCompleta).mockRejectedValueOnce(new DOMException('cheio', 'QuotaExceededError'))
+    await userEvent.click(baixarCompleta())
+    expect(await screen.findByText('Não há espaço livre no aparelho para gerar o arquivo. Libere espaço e tente de novo.')).toBeInTheDocument()
+    expect(mensagem()).toHaveClass('exp-mensagem-erro')
+    expect(baixarCompleta()).toHaveAccessibleName('Baixar cópia completa')
+  })
+
+  describe('revisão 1: sair da tela durante «Juntando…» não perde a cópia (uma montagem por vez, no app inteiro)', () => {
+    it('saiu e voltou durante a montagem: a tela mostra «Juntando…» e o progresso; um toque não começa outra; no fim, a entrega de sempre', async () => {
+      vi.mocked(escritaDropbox).mockResolvedValue({ baixar: vi.fn() } as unknown as NonNullable<Awaited<ReturnType<typeof escritaDropbox>>>)
+      const m = montagemSegura()
+      const primeira = abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      m.avancar(12, 40)
+      primeira.unmount()
+      m.avancar(13, 40)
+
+      abrir()
+      const botao = baixarCompleta()
+      expect(botao).toHaveAccessibleName('Juntando…')
+      expect(botao).toHaveAttribute('aria-disabled', 'true')
+      expect(mensagem()).toHaveTextContent(/^Juntando as fotos: 13 de 40…$/)
+      await userEvent.click(botao)
+      // Nem os outros botões entram enquanto junta (como antes, na mesma tela).
+      await userEvent.click(screen.getByRole('button', { name: 'Exportar regiões' }))
+      expect(montarCopiaCompleta).toHaveBeenCalledTimes(1)
+      expect(entregarArquivo).not.toHaveBeenCalled()
+      m.avancar(14, 40)
+      expect(mensagem()).toHaveTextContent(/^Juntando as fotos: 14 de 40…$/)
+
+      m.terminar([])
+      expect(await screen.findByText(`Pronto: ${NOME} foi baixado.`)).toBeInTheDocument()
+      expect(entregarArquivo).toHaveBeenCalledTimes(1)
+      expect(baixarCompleta()).toHaveAccessibleName('Baixar cópia completa')
+    })
+
+    it('terminou longe da tela: nada é entregue sem um toque; ao voltar, a mensagem de pronto com as faltas e «Salvar o arquivo», que entrega o .zip', async () => {
+      const m = montagemSegura()
+      const primeira = abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      primeira.unmount()
+      m.terminar(['IMG_2041.HEIC'])
+      await waitFor(() => expect(progressoDaCopiaCompleta()).toBeNull())
+      expect(entregarArquivo).not.toHaveBeenCalled()
+
+      const segunda = abrir()
+      const salvar = await within(mensagem()).findByRole('button', { name: 'Salvar o arquivo' })
+      expect(mensagem()).toHaveTextContent(`O arquivo ${NOME} está pronto, mas 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde. Toque em «Salvar o arquivo» para guardá-lo.`)
+      expect(baixarCompleta()).toHaveAccessibleName('Baixar cópia completa')
+      expect(entregarArquivo).not.toHaveBeenCalled()
+      await userEvent.click(salvar)
+      await waitFor(() => expect(entregarArquivo).toHaveBeenCalledTimes(1))
+      expect(vi.mocked(entregarArquivo).mock.calls[0]![0].name).toBe(NOME)
+      expect(await screen.findByText(`Pronto: ${NOME} foi baixado. 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde.`)).toBeInTheDocument()
+
+      // O resultado é entregue uma vez só: outra visita não o mostra de novo.
+      segunda.unmount()
+      abrir()
+      expect(mensagem()).toBeEmptyDOMElement()
+    })
+
+    // m-2 (revisão final): escolher uma cópia para restaurar não descarta a cópia completa pronta nem esconde o progresso
+    const escolherParaRestaurar = async (arquivo: File) => {
+      const restaurar = screen.getByRole('region', { name: 'Restaurar a partir de uma cópia' })
+      await userEvent.click(within(restaurar).getByRole('button', { name: 'Escolher a cópia' }))
+      fireEvent.change(restaurar.querySelector<HTMLInputElement>('input[type="file"]')!, { target: { files: [arquivo] } })
+    }
+    const NAO_E_COPIA = 'Este arquivo não é uma cópia do IconoDB.'
+
+    it('m-2: a cópia completa esperando «Salvar o arquivo» continua lá depois de escolher uma cópia para restaurar', async () => {
+      const m = montagemSegura()
+      const primeira = abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      primeira.unmount()
+      m.terminar(['IMG_2041.HEIC'])
+      await waitFor(() => expect(progressoDaCopiaCompleta()).toBeNull())
+      abrir()
+      await within(mensagem()).findByRole('button', { name: 'Salvar o arquivo' })
+
+      await escolherParaRestaurar(new File(['não é json'], 'outra-coisa.txt'))
+      await within(mensagem()).findByText(NAO_E_COPIA)
+      // a mensagem de pronto e o botão continuam, junto da mensagem da restauração
+      expect(mensagem()).toHaveTextContent(`O arquivo ${NOME} está pronto, mas 1 foto ficou de fora (IMG_2041.HEIC): tente de novo mais tarde. Toque em «Salvar o arquivo» para guardá-lo.`)
+      await userEvent.click(within(mensagem()).getByRole('button', { name: 'Salvar o arquivo' }))
+      await waitFor(() => expect(entregarArquivo).toHaveBeenCalledTimes(1))
+      expect(vi.mocked(entregarArquivo).mock.calls[0]![0].name).toBe(NOME)
+    })
+
+    it('NB-2: a cópia completa fica pronta enquanto a restauração ainda lê o arquivo: o fim da restauração não a descarta', async () => {
+      vi.mocked(entregarArquivo).mockResolvedValueOnce('precisa-tocar')
+      const m = montagemSegura()
+      abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      // um arquivo cuja leitura o teste segura
+      let soltar!: () => void
+      const lido = new Promise<void>((ok) => (soltar = ok))
+      const real = new File(['não é json'], 'outra-coisa.txt')
+      const lento = {
+        name: real.name,
+        size: real.size,
+        type: '',
+        slice: (de?: number, ate?: number) => {
+          const fatia = real.slice(de, ate)
+          return { arrayBuffer: async () => (await lido, fatia.arrayBuffer()), text: () => fatia.text(), size: fatia.size }
+        },
+        text: () => real.text(),
+        arrayBuffer: () => real.arrayBuffer(),
+      } as unknown as File
+      await escolherParaRestaurar(lento)
+      // a cópia termina e a folha pede um toque novo: pronta, com «Salvar o arquivo»
+      m.terminar([])
+      await within(mensagem()).findByRole('button', { name: 'Salvar o arquivo' })
+      // só agora a restauração termina (com um erro)
+      await act(async () => soltar())
+      await within(mensagem()).findByText(NAO_E_COPIA)
+      expect(mensagem()).toHaveTextContent(`O arquivo ${NOME} está pronto. Toque em «Salvar o arquivo» para guardá-lo.`)
+      expect(within(mensagem()).getByRole('button', { name: 'Salvar o arquivo' })).toBeInTheDocument()
+    })
+
+    it('m-2: durante «Juntando…», a mensagem da restauração não esconde o progresso', async () => {
+      const m = montagemSegura()
+      abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(m.dep).not.toBeNull())
+      m.avancar(12, 40)
+      await escolherParaRestaurar(new File(['não é json'], 'outra-coisa.txt'))
+      await within(mensagem()).findByText(NAO_E_COPIA)
+      expect(within(mensagem()).getByText(/Juntando as fotos: 12 de 40…$/)).toBeInTheDocument()
+      expect(mensagem().querySelector('.exp-barra')).not.toBeNull()
+      m.avancar(13, 40)
+      expect(within(mensagem()).getByText(/Juntando as fotos: 13 de 40…$/)).toBeInTheDocument()
+      // no fim, a entrega de sempre
+      m.terminar([])
+      expect(await screen.findByText(`Pronto: ${NOME} foi baixado.`)).toBeInTheDocument()
+    })
+
+    it('um erro longe da tela aparece ao voltar, com a mensagem de erro de sempre', async () => {
+      let falhar!: (e: unknown) => void
+      vi.mocked(montarCopiaCompleta).mockImplementationOnce(() => new Promise((_ok, erro) => (falhar = erro)))
+      const primeira = abrir()
+      await userEvent.click(baixarCompleta())
+      await waitFor(() => expect(montarCopiaCompleta).toHaveBeenCalledTimes(1))
+      primeira.unmount()
+      falhar(new DOMException('cheio', 'QuotaExceededError'))
+      await waitFor(() => expect(progressoDaCopiaCompleta()).toBeNull())
+      abrir()
+      expect(await screen.findByText('Não há espaço livre no aparelho para gerar o arquivo. Libere espaço e tente de novo.')).toBeInTheDocument()
+      expect(mensagem()).toHaveClass('exp-mensagem-erro')
+    })
+  })
+
+  it('de ponta a ponta (sem simular a montagem): o .zip entregue tem copia.json, a foto local e o LEIA-ME', async () => {
+    usarArmazemDasImagens(armazemMemoria())
+    usarCacheDasImagens(cacheMemoria())
+    const id = await adicionarImagem({ objeto: 'CA00001' }, processadaFalsa(), { tipo: 'tons', legenda: '', credito: 'x', principal: false })
+    abrir()
+    await within(completa()).findByText('1 foto, cerca de 1 MB')
+    await userEvent.click(baixarCompleta())
+    await waitFor(() => expect(entregarArquivo).toHaveBeenCalledTimes(1))
+    const [arquivo] = vi.mocked(entregarArquivo).mock.calls[0]!
+    expect(arquivo.name).toMatch(/^iconodb-copia-completa-\d{4}-\d{2}-\d{2}-\d{4}\.zip$/)
+    expect(arquivo.type).toBe('application/zip')
+    const { lerZip } = await import('../copias/zip')
+    expect([...(await lerZip(arquivo)).keys()].sort()).toEqual(['LEIA-ME.txt', 'copia.json', `imagens/${id}/miniatura.webp`, `imagens/${id}/original.jpg`, `imagens/${id}/tela.webp`])
+    expect(await screen.findByText(`Pronto: ${arquivo.name} foi baixado.`)).toBeInTheDocument()
   })
 })

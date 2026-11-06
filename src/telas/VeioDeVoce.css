@@ -36,6 +36,17 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+/* N-3: «Restaurar» e «Retirar dos livros mesmo assim» lado a lado, com 8 px entre eles (12 px quando quebram); a confirmação
+   da retirada abre embaixo, com 12 px sob «Restaurar». */
+.veio-de-voce-excluido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 8px;
+}
+.veio-de-voce-excluido + .veio-de-voce-confirmar {
+  margin-top: 12px;
+}
 .veio-de-voce-falha {
   margin-top: 12px;
 }

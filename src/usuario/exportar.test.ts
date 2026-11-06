@@ -655,3 +655,60 @@ describe('hipóteses SKC para o MEDIATION', () => {
     expect(doc.hipoteses[0]!.criadoEm).toBe(new Date(T0).toISOString())
   })
 })
+
+describe('m-5 (revisão final): o que é de um objeto SKC excluído fica fora das exportações, não da cópia', () => {
+  const OB = 'OB-aaaaaaaa-9'
+  const objeto = ev({ ap: A, seq: 1, tipo: 'objeto', reg: OB, op: 'criar', campos: { origemTipo: 'publicacao', periodo: 'CA', titulo: 'Selo sintético TESTE.' } })
+  const excluirObjeto = ev({ ap: A, seq: 9, tipo: 'objeto', reg: OB, op: 'excluir', campos: {} })
+  const hipDoObjeto = ev({
+    ap: A,
+    seq: 2,
+    tipo: 'hipotese',
+    reg: 'HY-aaaaaaaa-1',
+    op: 'criar',
+    campos: { objeto: OB, sobre: 'elemento', elemento: 'EL-900001', elementoRotulo: 'figura denteada', termos: ['GL-900099'], termosRotulos: ['termo TESTE'], nivel: 'iconographic', modalidade: 'probable', justificativa: 'TESTE', ancora: null },
+  })
+  const hipDeOutro = ev({
+    ap: A,
+    seq: 3,
+    tipo: 'hipotese',
+    reg: 'HY-aaaaaaaa-2',
+    op: 'criar',
+    campos: { objeto: 'CA00003', sobre: 'objeto', elemento: null, elementoRotulo: '', termos: ['GL-900002'], termosRotulos: ['figura denteada'], nivel: 'iconographic', modalidade: 'probable', justificativa: 'TESTE', ancora: null },
+  })
+  const regiaoDoObjeto = regiaoUsuario(4, 'RG-aaaaaaaa-1', { imagem: 'IM-aaaaaaaa-1', objeto: OB, elemento: 'leão TESTE', seletor: '<polygon points="0,0 1,0 1,1"/>' })
+  // uma região sua sobre o elemento do livro EL-900001: leva os termos das suas hipóteses sobre ele
+  const regiaoDeOutro = regiaoUsuario(5, 'RG-aaaaaaaa-2', { elementoId: 'EL-900001', elemento: 'figura denteada', seletor: '<polygon points="0,0 1,0 1,1"/>' })
+  const todos = [objeto, hipDoObjeto, hipDeOutro, regiaoDoObjeto, regiaoDeOutro]
+
+  it('MEDIATION e o número da tela: só as hipóteses de objetos vivos; restaurado o objeto, voltam', () => {
+    const excluido = fundir([...todos, excluirObjeto])
+    expect(montarHipoteses(excluido, AGORA).hipoteses.map((h) => h.id)).toEqual(['HY-aaaaaaaa-2'])
+    expect(resumoDasHipoteses(excluido).hipoteses).toBe(1)
+    const vivo = fundir(todos)
+    expect(montarHipoteses(vivo, AGORA).hipoteses.map((h) => h.id)).toEqual(['HY-aaaaaaaa-1', 'HY-aaaaaaaa-2'])
+    expect(resumoDasHipoteses(vivo).hipoteses).toBe(2)
+  })
+
+  it('regiões W3C e o número da tela: sem as regiões do objeto excluído, e sem os termos das hipóteses dele nos corpos', () => {
+    const doc = montarRegioes(entrada([...todos, excluirObjeto]))
+    const ids = doc.first!.items.map((a) => a.id)
+    expect(ids).toContain('urn:iconodb:regiao:RG-aaaaaaaa-2')
+    expect(ids).not.toContain('urn:iconodb:regiao:RG-aaaaaaaa-1')
+    // o termo da hipótese do objeto excluído (sobre EL-900001) não entra na sua região sobre esse elemento
+    expect(JSON.stringify(doc)).not.toContain('GL-900099')
+    expect(resumoDasRegioes({ estado: fundir([...todos, excluirObjeto]), doLivro: [DO_LIVRO] })).toEqual({ suas: 1, doLivro: 1 })
+    // com o objeto vivo, tudo
+    const vivo = montarRegioes(entrada(todos))
+    expect(vivo.first!.items.map((a) => a.id)).toContain('urn:iconodb:regiao:RG-aaaaaaaa-1')
+    expect(JSON.stringify(vivo)).toContain('GL-900099')
+    expect(resumoDasRegioes({ estado: fundir(todos), doLivro: [DO_LIVRO] })).toEqual({ suas: 2, doLivro: 1 })
+  })
+
+  it('a cópia de segurança leva tudo (o objeto excluído, as hipóteses e as regiões dele)', () => {
+    const copia = montarCopia(instantaneo([...todos, excluirObjeto].map(enviado)), AGORA, new Set())
+    const ids = copia.estado.registros.map((r) => r.id)
+    expect(ids).toEqual(expect.arrayContaining([OB, 'HY-aaaaaaaa-1', 'RG-aaaaaaaa-1']))
+    expect(copia.eventos).toHaveLength(6)
+  })
+})

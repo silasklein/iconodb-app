@@ -99,7 +99,7 @@ const APARELHO = /^[a-z0-9]{8}$/
 const RE_SEGMENTO = /^usuario\/diario\/([a-z0-9]{8})\/(\d{6})\.jsonl$/
 const RE_NOME = /^usuario\/aparelhos\/([a-z0-9]{8})\.json$/
 
-export type Motivo = 'abrir' | 'mudanca' | 'rede' | 'visivel' | 'manual' | 'atalho' | 'preparando' | 'tentar-de-novo'
+export type Motivo = 'abrir' | 'mudanca' | 'rede' | 'visivel' | 'manual' | 'atalho' | 'preparando' | 'tentar-de-novo' | 'restauracao'
 
 export const caminhoDoSegmento = (aparelho: string, seg: number) => `usuario/diario/${aparelho}/${String(seg).padStart(6, '0')}.jsonl`
 export const caminhoDoNome = (aparelho: string) => `usuario/aparelhos/${aparelho}.json`

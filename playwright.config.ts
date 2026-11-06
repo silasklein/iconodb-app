@@ -5,7 +5,7 @@ const PORTA = 4173
 // A mesma base do build (VITE_ENDERECO ou o padrão): /iconodb-app/ no GitHub Pages, / no domínio próprio.
 const BASE = baseDoEndereco(enderecoPublicado(process.env.VITE_ENDERECO))
 
-const SPECS_DE_MOVIMENTO_REDUZIDO = /(busca-sugestoes|busca-camada-usuario|mapa|imagens|comparar|sitios|colecoes)\.spec\.ts/
+const SPECS_DE_MOVIMENTO_REDUZIDO = /(busca-sugestoes|busca-camada-usuario|mapa|imagens|comparar|sitios|colecoes|objeto-excluir|excluidos)\.spec\.ts/
 
 // Serve o resultado de `npm run build` com `vite preview`, na base do endereço publicado.
 // O Chromium usado é o que já está instalado no ambiente (PLAYWRIGHT_BROWSERS_PATH); nunca `playwright install`.

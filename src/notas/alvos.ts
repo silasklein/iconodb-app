@@ -12,6 +12,7 @@ import { alvosDoPacote, type AlvoDoPacote } from '../banco/consultas'
 import { rotaDoAcertoDoUsuario } from '../busca/rotasDoUsuario'
 import type { Estado } from '../usuario/estado'
 import { partesDoAlvoDoItem } from '../colecoes/notas'
+import { numeracaoDe } from '../objetos-skc/atual'
 import { formasEmUso } from '../glossario/doUsuario'
 import { formasDoPacote, nomeVivo } from '../glossario/formasDoPacote'
 import { eVerbeteSkc, lerVerbeteSkc } from '../glossario/modelo'
@@ -145,6 +146,16 @@ const nomeCorrigidoDoSitio = (estado: Estado, id: string): string | null => {
   return r ? lerDadosDoSitio(r).nome : null
 }
 
+/** «CA00005 (excluído)» (ou o título, se não tem número) para o id de um objeto SKC excluído; null para os demais. */
+function rotuloDoObjetoSkcExcluido(estado: Estado, ref: string): string | null {
+  if (!/^OB-/i.test(ref)) return null
+  const quem = ref.toUpperCase()
+  const r = [...(estado.registros.get('objeto')?.values() ?? [])].find((x) => x.id.toUpperCase() === quem)
+  if (!r?.excluido) return null
+  const nome = numeracaoDe(estado).porId.get(r.id)?.numero ?? (typeof r.campos.titulo === 'string' && r.campos.titulo.trim() !== '' ? r.campos.titulo.trim() : null)
+  return `${nome ?? 'Objeto'} (excluído)`
+}
+
 /** Resolve os alvos (o mapa é pela `chaveDoAlvo`). */
 export async function resolverAlvos(alvos: readonly { tipo: TipoDeRef; ref: string }[], estado: Estado): Promise<Map<string, AlvoResolvido>> {
   // Um verbete ou sítio do usuário que o pacote publicou (Tarefa 16) é o do livro: resolve-se o destino; a chave fica a do texto.
@@ -172,6 +183,8 @@ export async function resolverAlvos(alvos: readonly { tipo: TipoDeRef; ref: stri
         if (a.tipo === 'verbete' && achado) rotulo = formas.get(a.ref) ?? rotulo
         // Um sítio do livro corrigido: o nome de agora (Tarefa 12).
         if (a.tipo === 'sitio' && achado) rotulo = nomeCorrigidoDoSitio(estado, a.ref) ?? rotulo
+        // Um objeto SKC seu excluído (a nota guarda o id `OB-…`, canonizado em maiúsculas): o alvo diz que está excluído.
+        if (a.tipo === 'objeto') rotulo = rotuloDoObjetoSkcExcluido(estado, a.ref) ?? rotulo
       }
     } else {
       const r = noEstado(estado, a.tipo, a.ref, nomeDe)
@@ -196,6 +209,8 @@ export function alvosDosTextos(textos: readonly string[]): { tipo: TipoDeRef; re
 /** Como uma lista chama o alvo de uma nota ("em CA00023 · Peça de teste", "em leão-de-teste"). */
 export function descreverAlvo(tipo: TipoDeRef, ref: string, alvo: AlvoResolvido | undefined): string {
   const nome = alvo?.rotulo
+  // O objeto SKC excluído já vem com o número (ou o título) e a marca: o id `OB-…` não diz nada a quem lê.
+  if (tipo === 'objeto' && /^OB-/i.test(ref) && nome?.endsWith('(excluído)')) return nome
   if (tipo === 'objeto') return nome && nome !== ref ? `${ref} · ${nome}` : ref
   if (tipo === 'colecao-item') {
     const partes = partesDoAlvoDoItem(ref)

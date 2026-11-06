@@ -274,6 +274,22 @@ describe('sugerir(): a camada do usuário (SKC)', () => {
     expect((await sugerir('excluido')).objetos).toEqual([])
   })
 
+  it('2C: um objeto excluído sai da sugestão e da contagem da coleção; restaurar devolve os dois', async () => {
+    await receber(
+      e('objeto', 'OB-aaaaaaaa-1', { numero: 'CA00005', titulo: 'Selo cilíndrico.' }),
+      e('objeto', 'OB-aaaaaaaa-2', { numero: 'CA00006', titulo: 'Selo estampado.' }),
+      e('colecao', 'CO-aaaaaaaa-1', { nome: 'Selos de prova', 'm:OB-aaaaaaaa-1': true, 'i:OB-aaaaaaaa-1': 1024, 'm:OB-aaaaaaaa-2': true, 'i:OB-aaaaaaaa-2': 2048 }),
+    )
+    expect((await sugerir('selo')).colecoes?.[0]!.complemento).toBe('2 objetos')
+    expect((await sugerir('cilindrico')).objetos.map((o) => o.codigo)).toEqual(['CA00005'])
+    await receber(ev({ ap: A, seq: 98, tipo: 'objeto', reg: 'OB-aaaaaaaa-1', op: 'excluir', campos: {}, ms: T0 + 98_000 }))
+    expect((await sugerir('selo')).colecoes?.[0]!.complemento).toBe('1 objeto')
+    expect((await sugerir('cilindrico')).objetos).toEqual([])
+    await receber(ev({ ap: A, seq: 99, tipo: 'objeto', reg: 'OB-aaaaaaaa-1', op: 'restaurar', campos: {}, ms: T0 + 99_000 }))
+    expect((await sugerir('selo')).colecoes?.[0]!.complemento).toBe('2 objetos')
+    expect((await sugerir('cilindrico')).objetos.map((o) => o.codigo)).toEqual(['CA00005'])
+  })
+
   it('uma edição nova aparece na hora (o índice é posto em dia antes de sugerir)', async () => {
     await receber(e('colecao', 'CO-aaaaaaaa-1', { nome: 'Sinetes de teste' }))
     expect(rotulos((await sugerir('sinet')).colecoes ?? [])).toEqual(['Sinetes de teste'])

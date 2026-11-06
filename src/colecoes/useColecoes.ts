@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { useEstado, type Registro } from '../usuario/estado'
+import { estadoAtual, useEstado, type Registro } from '../usuario/estado'
 import { lerColecao, type ColecaoVista } from './modelo'
+import { semMembrosExcluidos } from './visiveis'
 
 const SEM_REGISTROS: ReadonlyMap<string, Registro> = new Map()
 const porCriacao = (a: ColecaoVista, b: ColecaoVista) => (a.criadaEm < b.criadaEm ? -1 : a.criadaEm > b.criadaEm ? 1 : a.id < b.id ? -1 : 1)
@@ -15,16 +16,20 @@ export interface Colecoes {
 /** As coleções SKC do estado: lidas uma vez por registro (cache) e refeitas só quando o mapa de coleções muda. */
 export function useColecoes(): Colecoes {
   const registros = useEstado((e) => e.registros.get('colecao')) ?? SEM_REGISTROS
+  // Os objetos excluídos saem das coleções (e voltam, no mesmo lugar, ao restaurar).
+  const objetos = useEstado((e) => e.registros.get('objeto'))
   return useMemo(() => {
-    const todas = [...registros.values()].map(lerColecao).sort(porCriacao)
+    const estado = estadoAtual()
+    const todas = [...registros.values()].map((r) => semMembrosExcluidos(lerColecao(r), estado)).sort(porCriacao)
     return { vivas: todas.filter((c) => !c.excluida), excluidas: todas.filter((c) => c.excluida) }
-  }, [registros])
+  }, [registros, objetos])
 }
 
 /** Uma coleção pelo id (inclusive a excluída); `null` se o id não existe. */
 export function useColecao(id: string): ColecaoVista | null {
   const registro = useEstado((e) => e.registro('colecao', id)) ?? null
-  return useMemo(() => (registro ? lerColecao(registro) : null), [registro])
+  const objetos = useEstado((e) => e.registros.get('objeto'))
+  return useMemo(() => (registro ? semMembrosExcluidos(lerColecao(registro), estadoAtual()) : null), [registro, objetos])
 }
 
 /** Em quais coleções vivas o objeto está. */

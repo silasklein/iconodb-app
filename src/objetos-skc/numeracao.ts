@@ -565,28 +565,50 @@ export function testemunhasDoLivro(numeracao: Pick<Numeracao, 'porId'>): { id: s
  * diário, um `alterar` por objeto com os campos que faltam. O número novo da decisão 48 (`LIVRO:<id>`) vale mais que o
  * do mapa (o tomado): falta a testemunha dele se o registro não tem nenhuma ou tem a do número tomado.
  */
-export function testemunhasFaltando(estado: Estado, confirmados: Confirmados): { id: string; campos: { numero?: string; nrSkc?: string; numeroTomadoPeloLivro?: string } }[] {
+export function testemunhasFaltando(estado: Estado, confirmados: Confirmados): { id: string; campos: CamposDaTestemunha }[] {
   const objetos = objetosDe(estado)
-  const faltam = new Map<string, { numero?: string; nrSkc?: string; numeroTomadoPeloLivro?: string }>()
-  for (const [chave, valor] of Object.entries(confirmados)) {
-    const idNr = idDaChaveDoNrSkc(chave)
-    const idNovo = idDaChaveDoNumeroNovo(chave)
-    const id = idNr ?? idNovo ?? chave
-    const r = objetos.get(id)
-    if (!r) continue
-    if (idNovo) {
-      const tomado = confirmados[id]
-      if (!lerNumero(valor) || !lerNumero(tomado) || tomado === valor || reservaDe(r) !== null) continue
-      if (lerNumero(r.campos.numero) && r.campos.numero !== tomado) continue
-      // Vale sobre o `numero` do mapa (o tomado), em qualquer ordem das chaves: o ramo do mapa não sobrescreve.
-      faltam.set(id, { ...faltam.get(id), numero: valor, numeroTomadoPeloLivro: tomado! })
-    } else if (idNr) {
-      if (lerNrSkc(valor) === null || lerNrSkc(r.campos.nrSkc) !== null) continue
-      faltam.set(id, { ...faltam.get(id), nrSkc: valor })
-    } else {
-      if (!idDeObjetoSkc(chave) || !lerNumero(valor) || lerNumero(r.campos.numero)) continue
-      faltam.set(id, { numero: valor, ...faltam.get(id) })
-    }
+  const ids = new Set<string>()
+  for (const chave of Object.keys(confirmados)) {
+    const id = idDaChaveDoMapa(chave)
+    if (objetos.has(id)) ids.add(id)
   }
-  return [...faltam].sort((a, b) => comparar(a[0], b[0])).map(([id, campos]) => ({ id, campos }))
+  const faltam: { id: string; campos: CamposDaTestemunha }[] = []
+  for (const id of [...ids].sort(comparar)) {
+    const campos = testemunhaDoObjeto(objetos.get(id)!, confirmados)
+    if (Object.keys(campos).length > 0) faltam.push({ id, campos })
+  }
+  return faltam
+}
+
+/** Os campos de uma testemunha do número (veja `testemunhaDoObjeto`). */
+export type CamposDaTestemunha = {
+  numero?: string
+  numeroTomadoPeloLivro?: string
+  nrSkc?: string
+}
+
+/**
+ * A regra da testemunha de UM objeto, com um dono só (`testemunhasFaltando` e a restauração de uma cópia,
+ * src/copias/restaurar.ts): dado o registro (os valores que ele tem, ou terá) e o mapa de confirmados, os campos que faltam.
+ * - `numero`: o confirmado (`<id>`), se o registro não tem um número válido;
+ * - o número novo da decisão 48 (`LIVRO:<id>`, diferente do tomado, num objeto que não é reserva) vale mais que o do mapa:
+ *   `numero` = o novo e `numeroTomadoPeloLivro` = o tomado, se o registro não tem número ou tem o tomado;
+ * - `nrSkc`: o confirmado (`SKC:<id>`), se o registro não tem um válido.
+ * Vazio para um id que não é de objeto SKC.
+ */
+export function testemunhaDoObjeto(r: { id: string; campos: Readonly<Record<string, Json>> }, confirmados: Confirmados): CamposDaTestemunha {
+  const t: CamposDaTestemunha = {}
+  if (!idDeObjetoSkc(r.id)) return t
+  const tomado = confirmados[r.id]
+  const novo = confirmados[chaveDoNumeroNovo(r.id)]
+  const temNumero = lerNumero(r.campos.numero) !== null
+  if (lerNumero(novo) && lerNumero(tomado) && tomado !== novo && reservaDe(r) === null && (!temNumero || r.campos.numero === tomado)) {
+    t.numero = novo
+    t.numeroTomadoPeloLivro = tomado
+  } else if (lerNumero(tomado) && !temNumero) {
+    t.numero = tomado
+  }
+  const nr = confirmados[chaveDoNrSkc(r.id)]
+  if (lerNrSkc(nr) !== null && lerNrSkc(r.campos.nrSkc) === null) t.nrSkc = nr
+  return t
 }

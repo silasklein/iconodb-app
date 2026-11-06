@@ -264,7 +264,36 @@
   font-size: 15px;
 }
 
+/* Excluir o objeto: a mesma caixa de «Excluir o sítio» (.sitio-confirmar, src/sitios/Sitios.css). */
+.objeto-excluir {
+  margin: 32px 24px 0;
+  padding-bottom: 8px;
+}
+.objeto-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.objeto-confirmar p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.objeto-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (min-width: 768px) {
+  .objeto-excluir {
+    margin-left: 0;
+    margin-right: 0;
+  }
   .objeto-numero {
     font-size: 36px;
   }

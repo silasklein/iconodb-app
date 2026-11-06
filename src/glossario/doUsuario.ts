@@ -8,6 +8,7 @@ import { useDonosDosTrechos } from '../hipoteses/garantirDonos'
 import { lerHipotese, objetoDaHipotese, type HipoteseSkc } from '../hipoteses/modelo'
 import { destinoDe, origensDe, useDestinosCriados, useRedirecionamentos, type Redirecionamentos } from '../pacote/redirecionamentos'
 import type { Estado } from '../usuario/estado'
+import { refsDeObjetosExcluidos } from '../colecoes/visiveis'
 import { useLido } from '../usuario/useLido'
 import { nomeVivo, useFormasDoPacote } from './formasDoPacote'
 import { chaveDaForma, eVerbeteSkc, lerEdicaoDoVerbete, lerVerbeteSkc, type EdicaoDoVerbete, type VerbeteSkc } from './modelo'
@@ -54,10 +55,14 @@ export function usosDoVerbete(estado: Estado, id: string, exceto: string | null 
 export function hipotesesDoVerbete(estado: Estado, id: string, origens: readonly string[] = []): HipoteseSkc[] {
   const saida: HipoteseSkc[] = []
   const ids = [id, ...origens]
+  const foraDeVista = refsDeObjetosExcluidos(estado) // as hipóteses de um objeto excluído ficam guardadas, escondidas
   for (const r of estado.registros.get('hipotese')?.values() ?? []) {
     const termos = r.campos.termos
     if (r.excluido || !Array.isArray(termos) || !ids.some((x) => termos.includes(x))) continue
-    saida.push(lerHipotese(r))
+    const h = lerHipotese(r)
+    const dono = objetoDaHipotese(h)
+    if (dono !== null && foraDeVista.has(dono)) continue
+    saida.push(h)
   }
   return saida.sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : a.id < b.id ? -1 : 1))
 }
@@ -174,7 +179,7 @@ export const useVerbeteSkc = (id: string): VerbeteSkc | null =>
 export function useHipotesesDoVerbete(id: string): HipoteseSkc[] {
   const origens = origensDe(useRedirecionamentos(), id)
   const chave = [id, ...origens].join('|')
-  return useLido(['hipotese'], chave, (e) => hipotesesDoVerbete(e, id, origens))
+  return useLido(['hipotese', 'objeto'], chave, (e) => hipotesesDoVerbete(e, id, origens))
 }
 
 /**
@@ -184,11 +189,12 @@ export function useHipotesesDoVerbete(id: string): HipoteseSkc[] {
  */
 export function objetosPorVerbeteSkc(estado: Estado, criados: Redirecionamentos = new Map()): Map<string, number> {
   const objetos = new Map<string, Set<string>>()
+  const foraDeVista = refsDeObjetosExcluidos(estado)
   for (const r of estado.registros.get('hipotese')?.values() ?? []) {
     if (r.excluido || !Array.isArray(r.campos.termos)) continue
     const h = lerHipotese(r)
     const objeto = objetoDaHipotese(h)
-    if (!objeto) continue
+    if (!objeto || foraDeVista.has(objeto)) continue
     for (const t of h.termos) {
       if (!eVerbeteSkc(t.id)) continue
       const id = destinoDe(criados, t.id)
@@ -203,7 +209,7 @@ export function useObjetosPorVerbeteSkc(): Map<string, number> {
   const criados = useDestinosCriados()
   const donos = useDonosDosTrechos() // o objeto de uma hipótese ancorada num trecho do livro é o do trecho (T17-B-4)
   const chave = `${[...criados].map(([de, para]) => `${de}>${para}`).join('|')}#${donos}`
-  return useLido(['hipotese'], chave, (e) => objetosPorVerbeteSkc(e, criados))
+  return useLido(['hipotese', 'objeto'], chave, (e) => objetosPorVerbeteSkc(e, criados))
 }
 
 /**

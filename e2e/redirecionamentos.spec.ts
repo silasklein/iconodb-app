@@ -34,6 +34,14 @@ async function alvosEFontes(page: Page, bloco: Locator) {
   const menor = await bloco.evaluate((el) => Math.min(...[el, ...el.querySelectorAll('*')].filter((x) => (x.textContent ?? '').trim() && !(x instanceof SVGElement)).map((x) => parseFloat(getComputedStyle(x).fontSize))))
   expect(menor).toBeGreaterThanOrEqual(12)
 }
+/** N-3: entre dois elementos do bloco, ao menos 8 px: lado a lado (na mesma linha) ou um embaixo do outro (quebrou). */
+async function comEspaco(a: Locator, b: Locator, rotulo: string) {
+  const x = (await a.boundingBox())!
+  const y = (await b.boundingBox())!
+  const mesmaLinha = y.y < x.y + x.height && x.y < y.y + y.height
+  if (mesmaLinha) expect(y.x - (x.x + x.width), `${rotulo}: espaço horizontal`).toBeGreaterThanOrEqual(8 - 0.5)
+  else expect(y.y - (x.y + x.height), `${rotulo}: espaço vertical`).toBeGreaterThanOrEqual(8 - 0.5)
+}
 /** m-UI1: a caixa de confirmação tem a borda e o texto da de «Excluir o sítio» (`.sitio-confirmar`). */
 async function mesmaCaixaDoSitio(confirmar: Locator) {
   const { borda, controle, fonte, largura } = await confirmar.evaluate((el) => {
@@ -210,7 +218,7 @@ const DOIS_TIPOS = [
   { url: '#/sitio/TESTE-3', titulo: 'Este sítio veio de você', singular: 'sítio', plural: 'sítios', oSeu: 'sitio', este: 'este sítio', nome: 'Tell Usuário Teste', nomeB: 'Tell Usuário', reg: 'SI-teste123-1', tipo: 'sitio' },
 ] as const
 
-test('T17-C-20: uma origem ainda não chegou a este aparelho: o texto diz para sincronizar e não oferece Excluir', async ({ page, dropbox }, info) => {
+test('T17-C-20: uma origem ainda não chegou e a sincronização está em dia: o texto e «Retirar dos livros mesmo assim» (2C, bloco 1, Tarefa 4); sem Excluir', async ({ page, dropbox }, info) => {
   pacoteComSegundaOrigem(dropbox, info)
   diarioDe(dropbox, 'teste123') // o diário de teste456 não existe neste aparelho
   await entrar(page)
@@ -218,11 +226,23 @@ test('T17-C-20: uma origem ainda não chegou a este aparelho: o texto diz para s
     await page.goto(t.url)
     const bloco = page.getByRole('region', { name: t.titulo })
     await expect(bloco).toBeVisible({ timeout: 30_000 })
-    await expect(bloco).toContainText(`Publicado a partir do seu ${t.singular} «${t.nome}» e de mais 1 ${t.singular} seu que ainda não chegou a este aparelho. Sincronize para ver todos; enquanto um deles existir, ${t.este} continua nos livros.`)
-    await expect(bloco.getByRole('button')).toHaveCount(0) // sem Excluir
+    await expect(bloco).toContainText(
+      `Falta neste aparelho 1 ${t.singular} seu que leva a esta entrada. Se ele não chegou depois de sincronizar, pode ter se perdido. Você pode retirar a entrada dos livros mesmo assim: os seus ${t.plural} que levam a ela vão para Excluídos, e ela sai dos livros na próxima importação.`,
+    )
+    await expect(bloco.getByRole('button', { name: /Excluir/ })).toHaveCount(0) // sem Excluir
     await alvosEFontes(page, bloco)
     await semRolagemHorizontal(page, `${t.oSeu}: origem que não chegou`)
-    await foto(page, `E-1-${t.oSeu}-origem-ausente-antes`, bloco)
+    await foto(page, `t4-${t.oSeu}-1-texto`, bloco)
+    await bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' }).click()
+    const confirmar = bloco.getByRole('group', { name: 'Retirar dos livros mesmo assim?' })
+    await expect(confirmar.getByRole('button', { name: 'Cancelar' })).toBeFocused()
+    await expect(confirmar.getByRole('button', { name: 'Retirar', exact: true })).toBeVisible()
+    await alvosEFontes(page, bloco)
+    await semRolagemHorizontal(page, `${t.oSeu}: confirmação de retirar`)
+    await mesmaCaixaDoSitio(confirmar)
+    await foto(page, `t4-${t.oSeu}-2-confirmar`, bloco)
+    await confirmar.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' })).toBeFocused()
   }
 })
 
@@ -237,13 +257,67 @@ test('T17-C-20: a única origem presente já foi excluída e outra ainda não ch
     await page.goto(t.url)
     const bloco = page.getByRole('region', { name: t.titulo })
     await expect(bloco).toBeVisible({ timeout: 30_000 })
-    await expect(bloco.getByRole('status')).toHaveText(`Você excluiu o seu ${t.singular} «${t.nome}». Mais 1 ${t.singular} seu leva a ${t.este} e ainda não chegou a este aparelho: enquanto ele existir, ${t.este} continua nos livros. Sincronize para vê-lo.`)
+    // revisão 1 da Tarefa 4: com a sincronização em dia, o aviso é o texto da §5 (estado sem desenho aprovado), com Restaurar e a retirada
+    await expect(bloco.getByRole('status')).toHaveText(
+      `Falta neste aparelho 1 ${t.singular} seu que leva a esta entrada. Se ele não chegou depois de sincronizar, pode ter se perdido. Você pode retirar a entrada dos livros mesmo assim: os seus ${t.plural} que levam a ela vão para Excluídos, e ela sai dos livros na próxima importação.`,
+    )
+    await expect(bloco).not.toContainText('Sincronize para vê-lo')
     await expect(bloco.getByRole('button', { name: 'Restaurar' })).toBeVisible()
     await expect(bloco.getByRole('button', { name: /Excluir/ })).toHaveCount(0)
+    await expect(bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' })).toBeVisible()
+    await comEspaco(bloco.getByRole('button', { name: 'Restaurar' }), bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' }), `${t.oSeu}: Restaurar e Retirar`)
     await alvosEFontes(page, bloco)
     await semRolagemHorizontal(page, `${t.oSeu}: excluída, outra por chegar`)
-    await foto(page, `E-1-${t.oSeu}-origem-ausente-depois`, bloco)
+    await foto(page, `t4-r1-${t.oSeu}-excluida-faltando-1-texto`, bloco)
+    await bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' }).click()
+    const confirmar = bloco.getByRole('group', { name: 'Retirar dos livros mesmo assim?' })
+    await expect(confirmar.getByRole('button', { name: 'Cancelar' })).toBeFocused()
+    // a caixa fica embaixo de «Restaurar», com espaço
+    const restaurar = (await bloco.getByRole('button', { name: 'Restaurar' }).boundingBox())!
+    expect((await confirmar.boundingBox())!.y - (restaurar.y + restaurar.height), `${t.oSeu}: espaço sob Restaurar`).toBeGreaterThanOrEqual(8 - 0.5)
+    await alvosEFontes(page, bloco)
+    await semRolagemHorizontal(page, `${t.oSeu}: excluída, outra por chegar, confirmação`)
+    await foto(page, `t4-r1-${t.oSeu}-excluida-faltando-2-confirmar`, bloco)
+    await confirmar.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' })).toBeFocused()
   }
+})
+
+test('N-1 (revisão final): nenhuma origem chegou; retirar e depois restaurar: o bloco fica, pede para sincronizar, e o foco vai ao texto', async ({ page, dropbox }, info) => {
+  pacoteComSegundaOrigem(dropbox, info) // nenhum diário: as duas origens de GL-900010 faltam neste aparelho
+  await entrar(page)
+  await page.goto('#/verbete/GL-900010')
+  const bloco = page.getByRole('region', { name: 'Este verbete veio de você' })
+  await bloco.getByRole('button', { name: 'Retirar dos livros mesmo assim' }).click({ timeout: 30_000 })
+  await bloco.getByRole('group', { name: 'Retirar dos livros mesmo assim?' }).getByRole('button', { name: 'Retirar', exact: true }).click()
+  await expect(bloco.getByRole('status')).toHaveText('Você excluiu os seus 2 verbetes. Sai dos livros na próxima importação. Até lá, «Restaurar» fica aqui.')
+  await bloco.getByRole('button', { name: 'Restaurar' }).click()
+  // o restaurar está por enviar: o bloco não some; diz o que falta e pede para sincronizar, com o foco no texto
+  const texto = bloco.getByText(/^Faltam neste aparelho 2 verbetes seus/)
+  await expect(texto).toHaveText('Faltam neste aparelho 2 verbetes seus que levam a esta entrada. Sincronize para vê-los; enquanto um deles existir, este verbete continua nos livros.')
+  await expect(texto).toBeFocused()
+  await semRolagemHorizontal(page, 'N-1 depois de restaurar')
+  await foto(page, 't4-n1-depois-de-restaurar', bloco)
+})
+
+test('P7 (aprovação): duas origens com o mesmo nome: o nome aparece uma vez («de 2 verbetes seus («amuleto de prova»)»)', async ({ page, dropbox }, info) => {
+  pacoteComSegundaOrigem(dropbox, info)
+  for (const ap of ['teste123', 'teste456'] as const) {
+    const linha = { v: 1, id: `${ap}-1-0`, hlc: hlcDe(ap === 'teste123' ? 1 : 2, ap), aparelho: ap, tipo: 'verbete', reg: `GL-${ap}-1`, op: 'criar', campos: { forma: 'amuleto de prova', status: 'proposed' } }
+    dropbox.enviados.set(`usuario/diario/${ap}/000001.jsonl`, Buffer.from(`${JSON.stringify(linha)}\n`))
+  }
+  await entrar(page)
+  await page.goto('#/verbete/GL-900010')
+  const bloco = page.getByRole('region', { name: 'Este verbete veio de você' })
+  await expect(bloco.getByText(/^Publicado a partir/)).toHaveText(
+    'Publicado a partir de 2 verbetes seus («amuleto de prova»). Se você os excluir, ele sai dos livros na próxima importação.',
+    { timeout: 30_000 },
+  )
+  await bloco.getByRole('button', { name: 'Excluir os seus 2 verbetes' }).click()
+  const confirmar = bloco.getByRole('group', { name: 'Excluir os seus 2 verbetes?' })
+  await expect(confirmar).toContainText('Os 2 verbetes seus («amuleto de prova») são excluídos juntos')
+  await semRolagemHorizontal(page, 'P7: nome único')
+  await foto(page, 't4-p7-nome-unico', bloco)
 })
 
 test('T17-C-20: duas origens presentes, uma já excluída: o texto diz qual, e «Excluir o seu …» exclui só a viva', async ({ page, dropbox }, info) => {

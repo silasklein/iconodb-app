@@ -48,13 +48,13 @@ describe('Sincronização (Sincronizacao.dc.html)', () => {
   })
   afterEach(() => instalarMatchMedia(375))
 
-  it('um link «Cópia de segurança e exportações» leva à tela Exportar (Tarefa 15; ele abre a tela, não baixa)', async () => {
+  it('um link «Cópias e exportação» leva à tela «Cópias e exportação» (Tarefa 15; 2C: /copias; ele abre a tela, não baixa)', async () => {
     abrir()
     expect(screen.queryByRole('link', { name: 'Baixar cópia de segurança' })).toBeNull()
-    const link = screen.getByRole('link', { name: 'Cópia de segurança e exportações' })
-    expect(link).toHaveAttribute('href', '/exportar')
+    const link = screen.getByRole('link', { name: 'Cópias e exportação' })
+    expect(link).toHaveAttribute('href', '/copias')
     await userEvent.click(link)
-    expect(screen.getByTestId('onde')).toHaveTextContent('/exportar')
+    expect(screen.getByTestId('onde')).toHaveTextContent('/copias')
   })
 
   it('o título, o estado (role=status) com a última sincronização, o botão e a chave do automático', async () => {

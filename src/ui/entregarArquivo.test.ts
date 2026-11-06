@@ -3,7 +3,7 @@
  * aparelho de toque (iPhone, iPad: onde o link com blob não é confiável), a folha de compartilhar com o arquivo; se o
  * navegador a recusa por falta de um toque recente, o arquivo fica pronto para um toque novo (nunca cai no link).
  */
-import { comToque, criarArquivo, emModoApp, entregarArquivo, mensagemDoErro, type AmbienteDaEntrega } from './entregarArquivo'
+import { comToque, criarArquivo, criarArquivoDeBlob, emModoApp, entregarArquivo, mensagemDoErro, type AmbienteDaEntrega } from './entregarArquivo'
 
 interface Falso extends AmbienteDaEntrega {
   criadas: Blob[]
@@ -54,6 +54,14 @@ describe('entregarArquivo', () => {
     expect(f.name).toBe('iconodb-copia-x.json')
     expect(f.type).toBe('application/json')
     expect(await f.text()).toBe('{"a":1}')
+  })
+
+  it('criarArquivoDeBlob: um File com o nome, o tipo e os bytes do Blob (a cópia completa, .zip)', async () => {
+    const f = criarArquivoDeBlob('iconodb-copia-completa-x.zip', new Blob([new Uint8Array([80, 75, 5, 6]), new Uint8Array([0, 255])]), 'application/zip')
+    expect(f).toBeInstanceOf(File)
+    expect(f.name).toBe('iconodb-copia-completa-x.zip')
+    expect(f.type).toBe('application/zip')
+    expect([...new Uint8Array(await f.arrayBuffer())]).toEqual([80, 75, 5, 6, 0, 255])
   })
 
   it('no navegador: um link com download (o arquivo como Blob) clicado e tirado, a URL revogada depois', async () => {

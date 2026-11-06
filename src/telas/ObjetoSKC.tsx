@@ -34,7 +34,8 @@ import { LeituraSkc } from '../objetos-skc/LeituraSkc'
 import { lerObjeto, textoDaOrigem, textoDasMedidas, tituloDe } from '../objetos-skc/modelo'
 import { nomeDoPeriodo, textoDoNrSkc, type CodigoDePeriodo, type NumeroDoObjeto } from '../objetos-skc/numeracao'
 import { textoDosNumerosNasFontes } from '../objetos-skc/numerosNasFontes'
-import { desfazerLigacao, ErroDeLigacao, escolherPeriodo, ligarObjetos, restaurarObjeto } from '../objetos-skc/operacoes'
+import { desfazerLigacao, ErroDeLigacao, escolherPeriodo, excluirObjeto, ligarObjetos, restaurarObjeto } from '../objetos-skc/operacoes'
+import { juncaoNoPlural, oQueVaiJunto, textoDaJuncao } from '../objetos-skc/oQueVaiJunto'
 import { useSitiosVivos } from '../sitios/doUsuario'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
@@ -43,6 +44,7 @@ import { useBreakpoint, useLarguraMinima } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { useTema } from '../ui/useTema'
 import { estadoAtual, useEstado } from '../usuario/estado'
+import { useLido } from '../usuario/useLido'
 import { AdicionarImagem, EditarImagem } from './AdicionarImagem'
 import '../objetos-skc/ObjetoSkc.css'
 import '../imagens-usuario/MarcaSkc.css'
@@ -242,6 +244,24 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
     document.title = `${info?.numero ?? 'Objeto sem número'} · IconoDB`
   }, [info?.numero])
 
+  // «Excluir o objeto» (2C, bloco 1): depois de excluir aqui, o foco vai a «Restaurar», no aviso que ocupa o lugar do botão.
+  const restaurarRef = useRef<HTMLButtonElement>(null)
+  const [excluidoAqui, setExcluidoAqui] = useState(false)
+  const excluido = registro?.excluido ?? false
+  useEffect(() => {
+    if (excluidoAqui && excluido) {
+      restaurarRef.current?.focus()
+      setExcluidoAqui(false)
+    }
+  }, [excluidoAqui, excluido])
+  // P1 + m-3: o aviso «Objeto salvo.» (do `location.state`) some ao excluir e não volta ao restaurar na mesma visita
+  // (por objeto: a tela pode ficar montada de um objeto para outro)
+  const [salvoEncerradoEm, setSalvoEncerradoEm] = useState<string | null>(null)
+  useEffect(() => {
+    if (excluido) setSalvoEncerradoEm(id)
+  }, [excluido, id])
+  const salvoEncerrado = salvoEncerradoEm === id
+
   if (!registro) {
     return (
       <div className="item">
@@ -338,7 +358,8 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
           {numeroAntigo} era o número provisório deste objeto; ficou {info?.numero ?? 'outro'} porque outro aparelho o usou antes.
         </p>
       )}
-      {novo && (
+      {/* P1 (aprovação do bloco 1): excluído, fica só «Objeto excluído. Restaurar»; restaurado, o aviso não volta (m-3) */}
+      {novo && !o.excluido && !salvoEncerrado && (
         <p className="objeto-aviso" role="status">
           Objeto salvo{info?.situacao === 'provisorio' ? `: o número ${info.numero} fica provisório até sincronizar` : info?.situacao === 'rascunho' ? ': rascunho sem número, na Revisão até ganhar período' : ''}.
           {novo.imagensComErro > 0 && ` ${novo.imagensComErro === 1 ? 'Uma imagem não' : `${novo.imagensComErro} imagens não`} pôde ser guardada neste aparelho; adicione de novo.`}
@@ -347,7 +368,7 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
       {o.excluido && (
         <p className="objeto-aviso" role="status">
           Objeto excluído.{' '}
-          <button type="button" className="objeto-link" onClick={() => void restaurarObjeto(id)}>
+          <button ref={restaurarRef} type="button" className="objeto-link" onClick={() => void restaurarObjeto(id)}>
             Restaurar
           </button>
         </p>
@@ -413,6 +434,7 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
         </Secao>
       </div>
       <Ligacoes id={id} membros={membros} />
+      {!o.excluido && <ExcluirOObjeto id={id} titulo={tituloDe(o)} numero={info?.situacao === 'confirmado' ? info.numero : null} aoExcluir={() => setExcluidoAqui(true)} />}
     </>
   )
 
@@ -906,5 +928,79 @@ function Ligacoes({ id, membros }: { id: string; membros: readonly string[] }) {
         </p>
       )}
     </section>
+  )
+}
+
+/**
+ * «Excluir o objeto», no fim da página (2C, bloco 1, §3): a confirmação abre no lugar, como «Excluir o sítio», com o foco em
+ * «Cancelar»; fechar devolve o foco ao botão. Escreve só o `excluir` do objeto: as fotos, regiões, hipóteses, notas, ligações e
+ * participações em coleções ficam como estão (escondidas enquanto ele estiver excluído) e voltam com «Restaurar».
+ */
+function ExcluirOObjeto({ id, titulo, numero, aoExcluir }: { id: string; titulo: string; numero: string | null; aoExcluir: () => void }) {
+  const [aberta, setAberta] = useState(false)
+  const [falhou, setFalhou] = useState(false)
+  const gatilhoRef = useRef<HTMLButtonElement>(null)
+  const cancelarRef = useRef<HTMLButtonElement>(null)
+  const jaAbriu = useRef(false)
+  const junto = useLido(['imagem', 'nota', 'hipotese', 'regiao'], id, (e) => oQueVaiJunto(e, id))
+  useEffect(() => {
+    if (aberta) {
+      jaAbriu.current = true
+      cancelarRef.current?.focus()
+    } else if (jaAbriu.current) {
+      jaAbriu.current = false
+      gatilhoRef.current?.focus()
+    }
+  }, [aberta])
+  const nome = numero ?? `«${titulo}»`
+  const pergunta = `Excluir o objeto ${nome}?`
+  const guardado = textoDaJuncao(junto)
+  const plural = juncaoNoPlural(junto)
+  const frases = [
+    guardado ? `${guardado} ${plural ? 'ficam guardadas e voltam' : 'fica guardada e volta'} se você restaurar.` : null,
+    numero ? `O número ${numero} fica reservado para ele.` : null,
+    !guardado && !numero ? 'Dá para restaurar depois.' : null,
+  ].filter(Boolean)
+  return (
+    <div className="objeto-excluir">
+      {aberta ? (
+        <div role="group" aria-label={pergunta} className="objeto-confirmar">
+          <p>{[pergunta, ...frases].join(' ')}</p>
+          {falhou && (
+            <p className="form-erro" role="alert">
+              <Icon name="aviso" size={16} />
+              Não foi possível excluir; tente de novo.
+            </p>
+          )}
+          <div className="objeto-confirmar-botoes">
+            <button ref={cancelarRef} type="button" className="form-botao" onClick={() => setAberta(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="form-botao form-botao-forte"
+              onClick={() => {
+                setFalhou(false)
+                jaAbriu.current = false
+                excluirObjeto(id).then(
+                  () => {
+                    aoExcluir()
+                    setAberta(false)
+                  },
+                  () => setFalhou(true),
+                )
+              }}
+            >
+              Excluir
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button ref={gatilhoRef} type="button" className="objeto-link" onClick={() => setAberta(true)}>
+          <Icon name="excluir" size={18} />
+          Excluir o objeto
+        </button>
+      )}
+    </div>
   )
 }

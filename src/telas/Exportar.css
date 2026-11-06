@@ -1,5 +1,5 @@
 /*
- * Exportar (Tarefa 15). Sem desenho aprovado: a mesma linguagem de Sincronizacao.dc.html (título grande, seções com o
+ * Cópias e exportação (Tarefa 15, «Exportar»; 2C, bloco 1: a cópia completa, desenho 2C-bloco1-desenhos.html §4). Antes sem desenho aprovado: a mesma linguagem de Sincronizacao.dc.html (título grande, seções com o
  * título em caixa alta sobre um filete de 2 px, texto de apoio cinza) e os botões do app. Fundo claro das telas de consulta.
  */
 .exp-pagina {
@@ -108,6 +108,13 @@
 .exp-botao[aria-busy='true'] {
   cursor: progress;
 }
+/* «Juntando…» (a cópia completa): desabilitado, como no desenho (texto secundário, contorno de filete). aria-disabled e não
+   disabled, para o foco continuar no botão enquanto junta. */
+.exp-botao[aria-disabled='true'] {
+  border-color: var(--filete-consulta);
+  color: var(--secundario-consulta);
+  cursor: not-allowed;
+}
 /* O nome e «Gerando…» no mesmo lugar: o botão não muda de largura enquanto gera. */
 .exp-botao > span {
   grid-area: 1 / 1;
@@ -158,6 +165,35 @@
 }
 .exp-mensagem svg {
   margin-top: 1px;
+}
+/* O progresso da cópia completa: o texto e, embaixo, uma barra fina (o desenho: 4 px, trilho escuro, parte feita clara). */
+.exp-mensagem:has(.exp-barra) {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.exp-barra {
+  flex: 1 1 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--filete-item);
+  overflow: hidden;
+}
+.exp-barra > span {
+  display: block;
+  height: 100%;
+  background: var(--tip-texto);
+}
+/* m-2: a mensagem da restauração junto do progresso ou da cópia completa pronta: numa linha própria, embaixo. */
+.exp-mensagem:has(.exp-mensagem-mais) {
+  flex-wrap: wrap;
+}
+.exp-mensagem-mais {
+  flex: 1 1 100%;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-top: 10px;
+  border-top: 1px solid var(--filete-item);
 }
 /* «Salvar o arquivo» (a folha de compartilhar recusada): o arquivo já montado, num toque novo. Inteiro no celular. */
 .exp-mensagem:has(.exp-salvar) {
@@ -213,4 +249,35 @@
 .exp-baixar:focus-visible {
   outline: 2px solid var(--tip-texto);
   outline-offset: 2px;
+}
+
+/* «Restaurar a partir de uma cópia» (Tarefa 7; desenho §4, terceiro quadro): o resumo numa caixa no lugar do botão, com
+   «Cancelar» e «Restaurar» (cheio), como a confirmação de «Excluir o sítio». */
+.exp-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.exp-confirmar p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--texto-consulta);
+  overflow-wrap: anywhere;
+}
+.exp-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.exp-confirmar-botoes .exp-botao {
+  margin-top: 0;
+}
+@media (max-width: 767px) {
+  .exp-confirmar-botoes .exp-botao {
+    flex: 1 1 0;
+  }
 }

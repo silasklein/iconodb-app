@@ -5,6 +5,7 @@ import { Bibliografia } from '../telas/Bibliografia'
 import { Colecoes } from '../telas/Colecoes'
 import { Comparar } from '../telas/Comparar'
 import { Entrar } from '../telas/Entrar'
+import { Excluidos } from '../excluidos/Excluidos'
 import { Exportar } from '../telas/Exportar'
 import { Glossario } from '../telas/Glossario'
 import { Grupo } from '../telas/Grupo'
@@ -66,8 +67,12 @@ export const ROTAS: Rota[] = [
   { path: '/sincronizacao', elemento: <Sincronizacao /> },
   // A bandeja de comparação (Tarefa 14): até 4 objetos lado a lado.
   { path: '/comparar', elemento: <Comparar /> },
-  // As exportações (Tarefa 15): a cópia de segurança, as regiões (W3C Web Annotation) e as hipóteses para o MEDIATION.
-  { path: '/exportar', elemento: <Exportar /> },
+  // «Cópias e exportação» (Tarefa 15; 2C, bloco 1): a cópia de segurança, a cópia completa com fotos (.zip), as regiões
+  // (W3C Web Annotation) e as hipóteses para o MEDIATION. /exportar é o endereço antigo (Menu de antes, links guardados).
+  { path: '/copias', elemento: <Exportar /> },
+  { path: '/exportar', elemento: <Navigate to="/copias" replace /> },
+  // O que a pessoa excluiu, para restaurar com aprovação (2C, bloco 1).
+  { path: '/excluidos', elemento: <Excluidos /> },
 ]
 
 /**

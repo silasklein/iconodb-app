@@ -14,6 +14,7 @@
 import { consultarUsuario, executar, geracaoDoBanco, publicacoesAbertas } from '../banco/cliente'
 import { resumosDosItens, sitios as listaDosSitios } from '../banco/consultas'
 import { lerColecao } from '../colecoes/modelo'
+import { semMembrosExcluidos } from '../colecoes/visiveis'
 import { formasEmUso } from '../glossario/doUsuario'
 import { eVerbeteSkc, lerVerbeteSkc, ROTULO_DO_STATUS } from '../glossario/modelo'
 import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
@@ -393,7 +394,7 @@ async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise
     // A correção de um sítio do LIVRO já está na lista do pacote (`sitios()`, com o nome de agora): só os sítios novos entram aqui.
     sitios: comRegistro('sitio', linhasSitio.filter((l) => eSitioSkc(s(l.ref))), 'sitios', (r) => [texto(r.campos.regiao), texto(r.campos.pais)].filter(Boolean).join(' · ') || null),
     colecoes: comRegistro('colecao', linhasColecao, 'colecoes', (r) => {
-      const quantos = lerColecao(r).membros.length
+      const quantos = semMembrosExcluidos(lerColecao(r), estado).membros.length
       return quantos > 0 ? plural(quantos, 'objeto', 'objetos') : null
     }),
   }

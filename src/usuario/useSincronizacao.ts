@@ -211,7 +211,11 @@ let novaTentativa: ReturnType<typeof setTimeout> | undefined
 let falhasSeguidas = 0
 let semInternetDesde: number | null = null
 
-function comTrava<T>(fazer: () => Promise<T>): Promise<T> {
+/**
+ * Roda `fazer` com a trava da sincronização (o Web Lock `iconodb-usuario`; sem Web Locks, direto). Também a restauração
+ * (src/copias/restaurar.ts) a usa para pôr fotos na fila sem que a rodada as veja pela metade.
+ */
+export function comTrava<T>(fazer: () => Promise<T>): Promise<T> {
   const locks = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { locks?: LockManager }).locks
   if (locks?.request) return locks.request(TRAVA, fazer) as Promise<T>
   return fazer()

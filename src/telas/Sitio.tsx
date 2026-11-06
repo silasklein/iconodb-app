@@ -361,7 +361,7 @@ function Pagina({ id, livro, ehNovo, pagina, voltar, voltarPara, computador }: P
         </div>
       )}
 
-      {!ehNovo && <VeioDeVoce tipo="sitio" id={id} />}
+      {!ehNovo && <VeioDeVoce key={id} tipo="sitio" id={id} nomeDoLivro={nomeDoLivro ?? undefined} />}
 
       <NotasDoAlvo tipo="sitio" ref_={id} variante="secao" />
     </MolduraDoDetalhe>

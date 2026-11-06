@@ -86,16 +86,31 @@ describe('Menu', () => {
     })
   })
 
-  it('"Exportar" leva a /exportar, logo antes de "Atalhos e convenções", e fecha o menu como as outras entradas', async () => {
+  it('"Cópias e exportação" (2C, bloco 1; antes "Exportar") leva a /copias, com «cópias e arquivos» (P8), logo antes de "Excluídos", e fecha o menu como as outras entradas', async () => {
     const { aoFechar } = abrir()
     const nav = screen.getByRole('navigation', { name: 'Menu' })
-    const exportar = within(nav).getByRole('link', { name: /Exportar/ })
-    expect(exportar).toHaveAttribute('href', '/exportar')
+    const copias = within(nav).getByRole('link', { name: /Cópias e exportação/ })
+    expect(copias).toHaveAttribute('href', '/copias')
+    expect(copias).toHaveTextContent(/^Cópias e exportaçãocópias e arquivos$/)
+    expect(within(nav).queryByRole('link', { name: /^Exportar/ })).toBeNull()
     const links = within(nav).getAllByRole('link').map((l) => l.getAttribute('href'))
-    expect(links.indexOf('/exportar')).toBe(links.indexOf('/atalhos') - 1)
+    expect(links.indexOf('/copias')).toBe(links.indexOf('/excluidos') - 1)
     // O teclado: Tab chega a ela, e Enter a abre (fecha o menu), como nas outras.
-    exportar.focus()
+    copias.focus()
     await userEvent.keyboard('{Enter}')
+    expect(aoFechar).toHaveBeenCalled()
+  })
+
+  it('"Excluídos" (2C, bloco 1) leva a /excluidos, com «restaurar o que foi excluído», ao lado de "Cópias e exportação" e antes de "Atalhos e convenções"', async () => {
+    const { aoFechar } = abrir()
+    const nav = screen.getByRole('navigation', { name: 'Menu' })
+    const excluidos = within(nav).getByRole('link', { name: /Excluídos/ })
+    expect(excluidos).toHaveAttribute('href', '/excluidos')
+    expect(excluidos).toHaveTextContent(/^Excluídosrestaurar o que foi excluído$/)
+    const links = within(nav).getAllByRole('link').map((l) => l.getAttribute('href'))
+    expect(links.indexOf('/excluidos')).toBe(links.indexOf('/copias') + 1)
+    expect(links.indexOf('/excluidos')).toBe(links.indexOf('/atalhos') - 1)
+    await userEvent.click(excluidos)
     expect(aoFechar).toHaveBeenCalled()
   })
 

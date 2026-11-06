@@ -1,0 +1,252 @@
+/*
+ * A tela «Excluídos» (2C, bloco 1; desenhos aprovados, seção 2): a linguagem de Exportar e Sincronização (título grande, seções
+ * com o título em caixa alta sobre um filete de 2 px e a contagem à direita), linhas com o nome, a linha de apoio cinza e
+ * «Restaurar» à direita; a aprovação abre no lugar, numa caixa como a de «Excluir o sítio». Fundo claro das telas de consulta.
+ */
+.exc-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  /* Embaixo, folga para a mensagem presa ao pé da tela não cobrir a última linha. */
+  padding: 8px 24px 160px;
+  max-width: 640px;
+}
+@media (min-width: 768px) {
+  .exc-corpo {
+    padding: 28px 48px 120px;
+  }
+}
+.exc-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exc-corpo h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.exc-corpo h1:focus {
+  outline: none;
+}
+.exc-corpo h1:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 4px;
+}
+.exc-intro,
+.exc-vazio {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+}
+.exc-intro {
+  font-size: 14px;
+}
+
+.exc-secao {
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid var(--texto);
+  padding-top: 12px;
+}
+.exc-secao-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.exc-secao h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.exc-secao-n {
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  color: var(--secundario);
+}
+.exc-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exc-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--filete);
+}
+.exc-linha:last-child {
+  border-bottom: 0;
+}
+.exc-linha-aberta {
+  grid-template-columns: minmax(0, 1fr);
+}
+.exc-linha-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.exc-nome {
+  align-self: flex-start;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--texto);
+  overflow-wrap: anywhere;
+}
+a.exc-nome {
+  text-decoration: underline;
+  text-decoration-color: var(--filete);
+  text-underline-offset: 3px;
+}
+a.exc-nome:hover {
+  text-decoration-color: currentColor;
+}
+a.exc-nome:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.exc-nome-codigo {
+  font-family: var(--fonte-codigo);
+}
+.exc-meta {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.exc-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.exc-restaurar,
+.exc-restaurar-objeto {
+  min-height: var(--alvo-toque);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.exc-restaurar {
+  padding: 0 14px;
+  border: 1px solid var(--controle);
+  border-radius: 6px;
+  background: var(--fundo);
+}
+.exc-restaurar-objeto {
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.exc-restaurar:focus-visible,
+.exc-restaurar-objeto:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .exc-restaurar,
+  .exc-restaurar-objeto {
+    min-height: 36px;
+  }
+}
+
+/* A aprovação: a mesma caixa de «Excluir o sítio» e «Excluir o objeto», embaixo do nome. */
+.exc-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+}
+.exc-confirmar p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+/* T3-e: o número dos livros («TESTE-3», «GL-000023») não quebra no hífen */
+.exc-sem-quebra {
+  white-space: nowrap;
+}
+.exc-confirmar .exc-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 14px;
+}
+.exc-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* A mensagem viva, presa ao pé da tela (como a de Exportar); vazia, não ocupa nada. */
+.exc-mensagem {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 20;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 10px;
+  background: var(--tip-fundo);
+  color: var(--tip-texto);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.exc-mensagem:empty {
+  padding: 0;
+  background: none;
+}
+.exc-mensagem > span {
+  padding: 6px 0;
+}
+.exc-mensagem-ver {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  padding: 0 8px;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.exc-mensagem-ver:focus-visible {
+  outline: 2px solid var(--tip-texto);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) {
+  .exc-mensagem {
+    left: auto;
+    right: 24px;
+    width: min(480px, calc(100vw - 48px));
+    margin: 0;
+  }
+  .exc-mensagem-ver {
+    min-height: 36px;
+  }
+}

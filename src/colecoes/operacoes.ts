@@ -8,6 +8,7 @@
 import { estadoAtual, proximoId, registrar } from '../usuario/estado'
 import type { Campos } from '../usuario/eventos'
 import { campoDaOrdem, campoDaPresenca, lerColecao, planejarAcrescentar, planejarDevolver, planejarMover, refDeObjeto, type ColecaoVista, type Lugar, type Plano } from './modelo'
+import { semMembrosExcluidos } from './visiveis'
 
 export const TAMANHO_MAXIMO_DO_NOME = 120
 
@@ -36,7 +37,8 @@ function refsValidas(refs: readonly string[]): string[] {
 function colecaoAtual(id: string): ColecaoVista {
   const r = estadoAtual().registro('colecao', id)
   if (!r) throw new Error(`Coleção não encontrada: ${id}`)
-  return lerColecao(r)
+  // Sem os objetos excluídos: as posições (vizinhos, mover) são as da lista que a pessoa vê.
+  return semMembrosExcluidos(lerColecao(r), estadoAtual())
 }
 
 /** Cria a coleção (opcionalmente já com objetos, no mesmo evento). Devolve o id `CO-<aparelho>-<n>`. */

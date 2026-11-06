@@ -271,10 +271,10 @@ async function subir(page: Page, numero: string, vezes: number) {
   }
 }
 
-/** Baixa a cópia de segurança (Exportar) e devolve o JSON. */
+/** Baixa a cópia de segurança («Cópias e exportação») e devolve o JSON. */
 async function copiaDeSeguranca(page: Page): Promise<{ estado: { registros: { tipo: string; id: string; campos: Record<string, { valor: unknown }[]> }[] } }> {
-  await page.goto('#/exportar')
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar cópia' }).click()])
+  await page.goto('#/copias')
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar cópia', exact: true }).click()])
   return JSON.parse(readFileSync(await download.path(), 'utf8'))
 }
 
