@@ -45,9 +45,10 @@ const EXTRAS: [string, string, string, string][] = [
   ['item', 'TESTE-0001', 'sitio_nao_resolvido', "candidato 'Tell Inventado' (vermutlich)"], // o motivo e o formato reais do pacote
   ['item', 'TESTE-0002', 'sitio_nao_normalizado', 'Tell?'],
 ]
-// De fábrica: 1 citação + 1 tradução com termo alterado = 2; +4 extras = 6; + 4 verbetes a revisar = 10; + 1 elemento sem região = 11.
+// De fábrica: 1 citação + 1 tradução com termo alterado = 2; +4 extras = 6; + 4 verbetes a revisar = 10; + 1 elemento sem região = 11;
+// + 2 pares de sítios que podem ser o mesmo (`sitio_par_sugerido`: TESTE-1 ~ TESTE-7, TESTE-1 ~ TESTE-8; Tarefa 15) = 13.
 // As 26 traduções de máquina ficam fora: «Traduções não revisadas» é só consulta.
-const TOTAL = 11
+const TOTAL = 13
 const CHAVE_MEDIDA = chaveDoCaso({ tipo: 'medidas_nao_normalizadas', entidade: 'item', entidadeId: 'TESTE-0004', detalhe: '5 cm?' })
 
 async function limpar() {
@@ -72,6 +73,7 @@ describe('a lista dos tipos', () => {
     const grupos = [...screen.getByRole('list', { name: 'Casos por tipo' }).querySelectorAll<HTMLElement>(':scope > li')]
     expect(grupos.map((li) => li.dataset.grupo)).toEqual([
       'verbetes-a-revisar',
+      'sitios-que-podem-ser-o-mesmo', // Tarefa 15: logo antes de «Sítios não resolvidos»
       'sitios-nao-resolvidos',
       'citacoes-nao-resolvidas',
       'medidas-nao-organizadas',
@@ -80,7 +82,7 @@ describe('a lista dos tipos', () => {
       'traducoes-desatualizadas',
       'traducoes-nao-revisadas', // só consulta: por último, e fora do total
     ])
-    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '2', '1', '1', '1', '1', '1', '26'])
+    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '2', '2', '1', '1', '1', '1', '1', '26'])
   })
 
   it('os grupos abrem e fecham pelo botão, e o que está aberto fica no endereço', async () => {
@@ -576,5 +578,216 @@ describe('uma conta só: página, Menu e ponto da barra', () => {
     await registrar('item-sitio', 'CA00001', 'alterar', { sitio: null, sitioNome: null })
     await registrar('item-sitio', 'CA00002', 'alterar', { sitio: null, sitioNome: null })
     await registrar('verbete', 'GL-900002', 'alterar', { status: 'proposed' })
+  })
+})
+
+describe('Tarefa 15 (2C, bloco 2): «Sítios que podem ser o mesmo»', () => {
+  // Os pares do pacote sintético: TESTE-1 (Maḥteṣ Teste) ~ TESTE-7 (Maḥtiṣ Teste), nome; TESTE-1 ~ TESTE-8 (Ḫirbet Vizinha Teste), coordenada.
+  const GRUPO = 'sitios-que-podem-ser-o-mesmo'
+  const PAR_NOME = 'par_TESTE-1_TESTE-7'
+  const tecla = (key: string, alvo: Element = document.body) => fireEvent.keyDown(alvo, { key })
+  const campo = (id: string, nome: string) => estadoAtual().registro('sitio', id)?.campos[nome]
+  const cabecaDoPar = (nomes: RegExp) => screen.getByRole('button', { name: nomes })
+  const linhasDoLado = (lado: HTMLElement) => [...lado.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling!.textContent])
+
+  afterEach(async () => {
+    // volta os sítios do pacote ao que eram (sem decisões)
+    for (const id of ['TESTE-1', 'TESTE-7', 'TESTE-8']) {
+      const r = estadoAtual().registro('sitio', id)
+      if (!r) continue
+      const campos: Record<string, null> = {}
+      for (const c of ['diferentesDe', 'parteDe', 'mescladoEm']) if (r.campos[c] != null) campos[c] = null
+      if (Object.keys(campos).length > 0) await registrar('sitio', id, 'alterar', campos)
+    }
+  })
+
+  it('o grupo, com o apoio e a contagem dos abertos; cada par fechado diz o motivo e os nomes; aberto, os dois lados lado a lado', async () => {
+    abrir(`/revisao?abrir=${GRUPO}`)
+    const cab = await screen.findByRole('button', { name: /^Sítios que podem ser o mesmo/ })
+    expect(cab).toHaveAttribute('aria-expanded', 'true')
+    expect(cab).toHaveTextContent('pares de sítios com a mesma coordenada ou nome parecido')
+    expect(cab.querySelector('.revisao-grupo-quantidade')).toHaveTextContent('2')
+    const lista = screen.getByRole('list', { name: 'Pares de Sítios que podem ser o mesmo' })
+    const pares = within(lista).getAllByRole('listitem')
+    expect(pares.map((li) => li.dataset.chave)).toEqual([PAR_NOME, 'par_TESTE-1_TESTE-8'])
+    // fechados
+    const nome = within(pares[0]!).getByRole('button')
+    expect(nome).toHaveAttribute('aria-expanded', 'false')
+    expect(nome).toHaveTextContent(/^Estes dois podem ser o mesmo lugarNome parecidoMaḥteṣ Teste e Maḥtiṣ Teste$/)
+    expect(within(pares[1]!).getByRole('button')).toHaveTextContent(/^Estes dois podem ser o mesmo lugarMesma coordenadaMaḥteṣ Teste e Ḫirbet Vizinha Teste$/)
+    // aberto: o motivo com os nomes, os dois lados com as linhas, os três botões; fica no endereço
+    await userEvent.click(nome)
+    expect(nome).toHaveAttribute('aria-expanded', 'true')
+    expect(onde()).toBe(`/revisao?abrir=${GRUPO}%2C${PAR_NOME}`)
+    expect(nome).toHaveTextContent(/^Estes dois podem ser o mesmo lugarNome parecido: Maḥteṣ Teste ~ Maḥtiṣ Teste$/)
+    const lados = within(pares[0]!).getAllByRole('group')
+    expect(lados.map((l) => l.getAttribute('aria-label'))).toEqual(['Maḥteṣ Teste', 'Maḥtiṣ Teste'])
+    expect(within(lados[0]!).getByRole('link', { name: 'Maḥteṣ Teste' })).toHaveAttribute('href', '/sitio/TESTE-1')
+    expect(within(lados[1]!).getByRole('link', { name: 'Maḥtiṣ Teste' })).toHaveAttribute('href', '/sitio/TESTE-7')
+    expect(linhasDoLado(lados[0]!)).toEqual([
+      ['De onde', 'dos livrosTESTE-1'],
+      ['Grafias', 'al-Maḥṭaṣ Teste'],
+      ['Coordenada', '31,67245 N35,10473 E'],
+      ['Objetos', '3'],
+    ])
+    expect(linhasDoLado(lados[1]!)).toEqual([
+      ['De onde', 'dos livrosTESTE-7'],
+      ['Grafias', 'nenhuma'],
+      ['Coordenada', '32,50000 N35,50000 E'],
+      ['Objetos', '0'],
+    ])
+    expect(within(pares[0]!).getAllByRole('button').slice(1).map((b) => b.textContent)).toEqual(['São lugares diferentes', 'Um é parte do outro…'])
+    expect(within(pares[0]!).getByRole('link', { name: 'Mesclar…' })).toBeInTheDocument()
+  })
+
+  it('«Mesclar…» leva à página do sugerido para ficar, já na caixa «Qual fica?» com o outro', async () => {
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    await userEvent.click(await screen.findByRole('link', { name: 'Mesclar…' }))
+    expect(onde()).toBe('/sitio/TESTE-1?mesclar=TESTE-7')
+  })
+
+  it('«São lugares diferentes» grava diferentesDe no de menor id, leva o par a «Resolvidos por você · 1» e mostra o aviso; U devolve', async () => {
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    await screen.findByText(`${TOTAL} casos · o que o processamento não decidiu sozinho`)
+    await userEvent.click(await screen.findByRole('button', { name: 'São lugares diferentes' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-1', 'diferentesDe')).toEqual(['TESTE-7'])
+    expect(campo('TESTE-7', 'diferentesDe')).toBeUndefined()
+    expect(screen.getByRole('button', { name: /^Sítios que podem ser o mesmo/ }).querySelector('.revisao-grupo-quantidade')).toHaveTextContent('1')
+    expect(within(screen.getByRole('list', { name: 'Pares de Sítios que podem ser o mesmo' })).getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('heading', { level: 3, name: 'Resolvidos por você · 1' })).toBeInTheDocument()
+    const resolvidos = screen.getByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })
+    const linha = within(resolvidos).getByRole('listitem')
+    expect(linha).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ Testelugares diferentesDesfazer$/)
+    expect(await screen.findByRole('status')).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ Teste: lugares diferentes\.Desfazer$/)
+    expect(within(screen.getByRole('status')).getByRole('button', { name: 'Desfazer' })).toHaveAttribute('aria-keyshortcuts', 'U')
+    tecla('u')
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-1', 'diferentesDe')).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })).toBeNull()
+    // o par voltou aos abertos, e o foco vai a ele
+    await waitFor(() => expect(cabecaDoPar(/Nome parecido/)).toHaveFocus())
+  })
+
+  it('revisão 1, I1 / revisão 2: «diferentes» com um lado mesclado grava só nos ids do par; desfazer a mescla depois não reabre o par; U a tira', async () => {
+    // TESTE-7 mesclado em TESTE-2: o par mostra TESTE-1 | TESTE-2
+    await registrar('sitio', 'TESTE-7', 'alterar', { mescladoEm: 'TESTE-2' })
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    await screen.findByText(`${TOTAL} casos · o que o processamento não decidiu sozinho`)
+    expect(cabecaDoPar(/Nome parecido/)).toHaveTextContent('Nome parecido: Maḥteṣ Teste ~ Tell Probe Teste')
+    await userEvent.click(screen.getByRole('button', { name: 'São lugares diferentes' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`))
+    // revisão 2: só nos ids do par (TESTE-1 ~ TESTE-7), no de menor id; nada nos lados de agora
+    expect(campo('TESTE-1', 'diferentesDe')).toEqual(['TESTE-7'])
+    expect(campo('TESTE-2', 'diferentesDe')).toBeUndefined()
+    expect(await screen.findByRole('status')).toHaveTextContent('Maḥteṣ Teste e Tell Probe Teste: lugares diferentes.')
+    // desfazer a mescla (na página do sítio): o par continua decidido
+    await act(() => registrar('sitio', 'TESTE-7', 'alterar', { mescladoEm: null }))
+    await new Promise((r) => setTimeout(r, 30))
+    expect(apoio()).toBe(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`)
+    expect(within(screen.getByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })).getByRole('listitem')).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ Testelugares diferentesDesfazer$/)
+    // U a tira
+    tecla('u')
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-1', 'diferentesDe')).toBeNull()
+  })
+
+  it('«Desfazer» na linha do resolvido também devolve o par (e o aviso também, pelo botão)', async () => {
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    await userEvent.click(await screen.findByRole('button', { name: 'São lugares diferentes' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desfazer: Maḥteṣ Teste e Maḥtiṣ Teste' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-1', 'diferentesDe')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'São lugares diferentes' }))
+    await userEvent.click(within(await screen.findByRole('status')).getByRole('button', { name: 'Desfazer' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+  })
+
+  it('«Um é parte do outro…»: a escolha no lugar dos botões, a sugestão marcada e o foco em «Cancelar»; «Cancelar» devolve o foco', async () => {
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    const gatilho = await screen.findByRole('button', { name: 'Um é parte do outro…' })
+    await userEvent.click(gatilho)
+    const caixa = screen.getByRole('group', { name: 'Qual é a parte?' })
+    await waitFor(() => expect(within(caixa).getByRole('button', { name: 'Cancelar' })).toHaveFocus())
+    const opcoes = within(caixa).getAllByRole('radio')
+    expect(opcoes.map((o) => o.closest('label')!.textContent)).toEqual(['Maḥtiṣ Teste é parte de Maḥteṣ Teste', 'Maḥteṣ Teste é parte de Maḥtiṣ Teste'])
+    expect(opcoes[0]).toBeChecked()
+    expect(within(caixa).getByRole('button', { name: 'Marcar como parte' })).toBeInTheDocument()
+    // os três botões saem enquanto a escolha está aberta
+    expect(screen.queryByRole('button', { name: 'São lugares diferentes' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Mesclar…' })).toBeNull()
+    await userEvent.click(within(caixa).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('group', { name: 'Qual é a parte?' })).toBeNull()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Um é parte do outro…' })).toHaveFocus())
+  })
+
+  it('«Marcar como parte» grava parteDe; F14: o «Desfazer» grava de volta o parteDe de antes (não null)', async () => {
+    // TESTE-7 já era parte de TESTE-2: o par continua aberto (TESTE-1 não está acima dele)
+    await registrar('sitio', 'TESTE-7', 'alterar', { parteDe: 'TESTE-2' })
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`)
+    await screen.findByText(`${TOTAL} casos · o que o processamento não decidiu sozinho`)
+    await userEvent.click(await screen.findByRole('button', { name: 'Um é parte do outro…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar como parte' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-7', 'parteDe')).toBe('TESTE-1')
+    const resolvidos = screen.getByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })
+    expect(within(resolvidos).getByRole('listitem')).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ Testeum é parte do outroDesfazer$/)
+    expect(await screen.findByRole('status')).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ Teste: um é parte do outro\.Desfazer$/)
+    tecla('u')
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-7', 'parteDe')).toBe('TESTE-2')
+    // a outra opção, e o «Desfazer» da linha (depois de recarregar a tela: vem do histórico)
+    await userEvent.click(screen.getByRole('button', { name: 'Um é parte do outro…' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Maḥteṣ Teste é parte de Maḥtiṣ Teste' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar como parte' }))
+    await waitFor(() => expect(campo('TESTE-1', 'parteDe')).toBe('TESTE-7'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desfazer: Maḥteṣ Teste e Maḥtiṣ Teste' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-1', 'parteDe')).toBeNull()
+    expect(campo('TESTE-7', 'parteDe')).toBe('TESTE-2')
+  })
+
+  it('F14 depois de recarregar: o «Desfazer» da linha lê o parteDe de antes do histórico', async () => {
+    await registrar('sitio', 'TESTE-8', 'alterar', { parteDe: 'TESTE-2' })
+    await registrar('sitio', 'TESTE-8', 'alterar', { parteDe: 'TESTE-1' })
+    await act(async () => {
+      await carregarEstado()
+    })
+    abrir(`/revisao?abrir=${GRUPO}`)
+    await screen.findByText(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`)
+    const resolvidos = screen.getByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })
+    expect(within(resolvidos).getByRole('listitem')).toHaveTextContent(/^Maḥteṣ Teste e Ḫirbet Vizinha Testeum é parte do outroDesfazer$/)
+    await userEvent.click(within(resolvidos).getByRole('button', { name: 'Desfazer: Maḥteṣ Teste e Ḫirbet Vizinha Teste' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-8', 'parteDe')).toBe('TESTE-2')
+  })
+
+  it('mesclados (na página do sítio) aparece em «Resolvidos por você»; «Desfazer» desfaz a mescla do absorvido', async () => {
+    await registrar('sitio', 'TESTE-7', 'alterar', { mescladoEm: 'TESTE-1' })
+    abrir(`/revisao?abrir=${GRUPO}`)
+    await screen.findByText(`${TOTAL - 1} casos · o que o processamento não decidiu sozinho`)
+    const resolvidos = screen.getByRole('list', { name: 'Resolvidos de Sítios que podem ser o mesmo' })
+    expect(within(resolvidos).getByRole('listitem')).toHaveTextContent(/^Maḥteṣ Teste e Maḥtiṣ TestemescladosDesfazer$/)
+    await userEvent.click(within(resolvidos).getByRole('button', { name: 'Desfazer: Maḥteṣ Teste e Maḥtiṣ Teste' }))
+    await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
+    expect(campo('TESTE-7', 'mescladoEm')).toBeNull()
+  })
+
+  it('o Menu e o ponto da barra contam os pares abertos, e baixam junto com a página', async () => {
+    instalarMatchMedia(1280)
+    abrir(`/revisao?abrir=${GRUPO},${PAR_NOME}`, (
+      <>
+        <BarraSuperior busca={false} />
+        <Menu variante="popover" aoFechar={() => undefined} />
+      </>
+    ))
+    const menu = () => within(screen.getByRole('navigation', { name: 'Menu' })).getByRole('link', { name: /Revisão/ }).textContent
+    const barra = () => screen.getByRole('link', { name: /^Revisão, / }).getAttribute('aria-label')
+    await waitFor(() => expect(menu()).toContain(`${TOTAL} casos`))
+    expect(barra()).toBe(`Revisão, ${TOTAL} pendências`)
+    await userEvent.click(screen.getByRole('button', { name: 'São lugares diferentes' }))
+    await waitFor(() => expect(apoio()).toContain(`${TOTAL - 1} casos`))
+    expect(menu()).toContain(`${TOTAL - 1} casos`)
+    expect(barra()).toBe(`Revisão, ${TOTAL - 1} pendências`)
   })
 })

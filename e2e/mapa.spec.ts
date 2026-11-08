@@ -164,7 +164,8 @@ test('computador: lista | mapa, região, cartão, mouse e teclado', async ({ pag
 
   // as etiquetas de região
   const grupo = page.getByRole('group', { name: 'Filtrar por região' })
-  await expect(grupo.getByRole('button', { name: 'Todas, 7 sítios' })).toHaveAttribute('aria-pressed', 'true')
+  // pacote 8: os 3 de antes, TESTE-5 a TESTE-8 e os 4 criados aqui (TESTE-4, mesclado em TESTE-2, não aparece)
+  await expect(grupo.getByRole('button', { name: 'Todas, 11 sítios' })).toHaveAttribute('aria-pressed', 'true')
   for (const b of await grupo.getByRole('button').all()) await alvoOk(b, 36, 'uma etiqueta de região')
 
   // passar o mouse numa linha acende o ponto (anel)
@@ -226,7 +227,7 @@ test('computador: lista | mapa, região, cartão, mouse e teclado', async ({ pag
   await expect(page.getByRole('status').filter({ hasText: '2 sítios' })).toBeVisible()
   await foto(page, 'mapa-5-filtro-de-regiao')
   await page.getByRole('button', { name: 'Limpar filtro' }).click()
-  await expect(page.locator('[data-sitio]')).toHaveCount(7)
+  await expect(page.locator('[data-sitio]')).toHaveCount(11)
 
   // limites das regiões (R)
   await page.keyboard.press('r')

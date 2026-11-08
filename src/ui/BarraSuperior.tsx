@@ -88,6 +88,12 @@ export function BarraSuperior({ busca = true }: Props) {
     if (naBusca) gravar.current(enviado)
     else navegar(caminhoDaBusca(enviado))
   }
+  // Escolher uma sugestão sai da Busca: a espera pendente da digitação não pode mais gravar ?q=. (A navegação vai numa
+  // transição; se a espera vencer antes de a tela trocar, o ?q= levaria de volta à Busca.)
+  const irPara = (caminho: string) => {
+    clearTimeout(espera.current)
+    navegar(caminho)
+  }
 
   const rotuloDaRevisao = pend && pend.total > 0 ? `Revisão, ${textoDePendencias(pend.total)}` : 'Revisão'
   const secoes: { icone: 'colecoes' | 'glossario' | 'sitios' | 'bibliografia'; rotulo: string; chave: Secao; atalho: string }[] = [
@@ -112,7 +118,7 @@ export function BarraSuperior({ busca = true }: Props) {
             valor={texto}
             aoMudar={aoMudar}
             aoEnviar={aoEnviar}
-            navegar={navegar}
+            navegar={irPara}
             placeholder={PLACEHOLDER_DA_BUSCA}
             atalho
           />

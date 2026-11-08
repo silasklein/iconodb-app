@@ -14,9 +14,20 @@
  * Campos (os mesmos nos dois tipos; `alterar` com UM campo por evento, salvo os pares):
  * - `nome`: texto normalizado ou `null`. Num sítio do livro, `null` ou ausente = o nome do livro ("Voltar ao valor do livro").
  *   Num sítio novo nunca é vazio (o app não grava vazio).
- * - `variantes`: lista de textos (as "outras grafias"), cada um normalizado, sem vazios e sem repetidos pela dobra
- *   (`chaveDoNome`); a lista inteira é um valor (a última escrita vence; as anteriores ficam no histórico). Num sítio do livro
- *   são grafias a MAIS: as do livro continuam valendo. `null` = nenhuma.
+ * - `grafias` (Parte 2C, bloco 2): lista de `{texto, tradicao?, livro?}` (as "outras grafias", com a origem). `texto`
+ *   normalizado e nunca vazio; `tradicao` uma das `TRADICOES` (ausente = «sem origem»); `livro` a sigla de um livro do
+ *   pacote. Sem repetir `(chaveDaGrafia(texto), livro)`. A lista inteira é um valor (a última escrita vence; as anteriores
+ *   ficam no histórico). Num sítio do livro são grafias a MAIS: as do livro continuam valendo (e a tradição que a pessoa dá a
+ *   uma grafia do livro fica aqui, com o mesmo `texto` e `livro`). `null` = nenhuma.
+ * - `variantes` (o formato de antes; o app não a escreve mais, mas a lê): lista de textos, as grafias sem origem. Leitura
+ *   (`lerGrafias`, a mesma da resolução e do processamento): sem `grafias` escrito, valem as `variantes`; com os dois, se a
+ *   escrita de `variantes` tem hlc MAIOR (um aparelho com o app antigo escreveu depois), juntam-se às `grafias` as
+ *   `variantes` cuja `chaveDaGrafia` ainda não está lá. A primeira edição grava `grafias` com as antigas incluídas.
+ * - `mescladoEm` (Parte 2C, bloco 2): o id do sítio em que este foi mesclado (`<SIGLA>-<n>` ou `SI-…`) ou `null` (desfeito;
+ *   vence também a mescla que o pacote traz). Nunca escrito: vale a do pacote, se há.
+ * - `parteDe`: o id do sítio de que este é parte, ou `null` (solto; vence a parte do pacote). Nunca escrito: a do pacote.
+ * - `diferentesDe`: lista de ids, os pares que a pessoa decidiu «São lugares diferentes», guardados no registro do id MENOR
+ *   do par (por ponto de código). A resolução (src/sitios/resolucao.ts) une as listas de todos os registros.
  * - `regiao`: texto ("Região ou país") ou `null` (num sítio do livro, `null` = a região do livro, o verbete-pai do nome).
  * - `pais`: texto ou `null`. O app não o escreve (a tela tem um campo só, "Região ou país"); a leitura e o índice o aceitam.
  * - `lat`, `lon`: números (graus decimais, norte e leste positivos; latitude −90 a 90, longitude −180 a 180) ou `null`,
@@ -47,8 +58,8 @@
  * `chaveDaForma` do glossário (src/glossario/modelo.ts).
  */
 import { chaveDaForma, normalizarForma } from '../glossario/modelo'
-import type { Campos } from '../usuario/eventos'
-import type { Registro } from '../usuario/fusao'
+import type { Campos, Json } from '../usuario/eventos'
+import type { Estado, Registro } from '../usuario/fusao'
 
 export const RE_SITIO_SKC = /^SI-[a-z0-9]{8}-[1-9][0-9]*$/
 export const eSitioSkc = (id: unknown): boolean => typeof id === 'string' && RE_SITIO_SKC.test(id)
@@ -63,7 +74,7 @@ export const MAX_DE_LONGITUDE = 180
 const textoNaoVazio = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? normalizarForma(v) : null)
 const numero = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-/** A lista de grafias: textos normalizados, sem vazios e sem repetidos pela dobra (a primeira vence). */
+/** Uma lista de textos (as `variantes` de antes): normalizados, sem vazios e sem repetidos pela dobra (a primeira vence). */
 export function normalizarVariantes(lista: readonly unknown[]): string[] {
   const vistos = new Set<string>()
   const saida: string[] = []
@@ -73,6 +84,141 @@ export function normalizarVariantes(lista: readonly unknown[]): string[] {
     if (t === '' || vistos.has(k)) continue
     vistos.add(k)
     saida.push(t)
+  }
+  return saida
+}
+
+// ---------------------------------------------------------------- grafias (Parte 2C, bloco 2)
+
+/** As tradições de uma grafia (a mesma lista do processamento, `iconodb/sitios_relacoes.py`). */
+export const TRADICOES = ['arabe', 'hebraica-moderna', 'biblica', 'grega-latina', 'alema', 'inglesa', 'francesa', 'portuguesa', 'outra'] as const
+export type Tradicao = (typeof TRADICOES)[number]
+const CONJUNTO_DE_TRADICOES: ReadonlySet<string> = new Set(TRADICOES)
+export const tradicaoValida = (t: unknown): t is Tradicao => typeof t === 'string' && CONJUNTO_DE_TRADICOES.has(t)
+
+/** O rótulo de uma tradição (o campo de escolha). */
+export const ROTULO_DA_TRADICAO: Record<Tradicao, string> = {
+  arabe: 'Árabe',
+  'hebraica-moderna': 'Hebraica moderna',
+  biblica: 'Bíblica',
+  'grega-latina': 'Grega/latina',
+  alema: 'Alemã',
+  inglesa: 'Inglesa',
+  francesa: 'Francesa',
+  portuguesa: 'Portuguesa',
+  outra: 'Outra',
+}
+
+/** O nome do grupo de uma tradição, na lista das grafias («árabe», «hebraica moderna»…). */
+export const GRUPO_DA_TRADICAO: Record<Tradicao, string> = {
+  arabe: 'árabe',
+  'hebraica-moderna': 'hebraica moderna',
+  biblica: 'bíblica',
+  'grega-latina': 'grega/latina',
+  alema: 'alemã',
+  inglesa: 'inglesa',
+  francesa: 'francesa',
+  portuguesa: 'portuguesa',
+  outra: 'outra',
+}
+
+/** Uma grafia que a pessoa deu a um sítio (o campo `grafias`). */
+export interface GrafiaDoUsuario {
+  texto: string
+  tradicao?: Tradicao
+  livro?: string
+}
+
+/** A chave que diz se duas grafias são a mesma: a dobra de sempre (`chaveDoNome`), com U+2010 e U+2011 como hífen. */
+export const chaveDaGrafia = (t: string): string => chaveDoNome(t.replace(/[\u2010\u2011]/g, '-'))
+
+/** Uma grafia como a camada a guarda, ou null se não vale (texto ausente ou vazio). A tradição desconhecida e o livro vazio saem. */
+export function lerGrafia(x: unknown): GrafiaDoUsuario | null {
+  if (typeof x !== 'object' || x === null || Array.isArray(x)) return null
+  const o = x as { [chave: string]: unknown }
+  if (typeof o.texto !== 'string') return null
+  const texto = normalizarForma(o.texto)
+  if (texto === '') return null
+  const g: GrafiaDoUsuario = { texto }
+  if (tradicaoValida(o.tradicao)) g.tradicao = o.tradicao
+  if (typeof o.livro === 'string' && o.livro !== '') g.livro = o.livro
+  return g
+}
+
+/** As grafias das listas, em ordem, sem repetir `(chaveDaGrafia(texto), livro)` (a primeira fica). */
+export function juntarGrafias(listas: Iterable<readonly GrafiaDoUsuario[]>): GrafiaDoUsuario[] {
+  const vistas = new Set<string>()
+  const saida: GrafiaDoUsuario[] = []
+  for (const lista of listas) {
+    for (const g of lista) {
+      const k = JSON.stringify([chaveDaGrafia(g.texto), g.livro ?? null])
+      if (vistas.has(k)) continue
+      vistas.add(k)
+      saida.push(g)
+    }
+  }
+  return saida
+}
+
+const naoNulo = <T>(x: T | null): x is T => x !== null
+
+/** A lista de grafias para gravar: as que valem (`lerGrafia`), sem repetir texto (pela `chaveDaGrafia`) e livro. */
+export function normalizarGrafias(lista: readonly unknown[]): GrafiaDoUsuario[] {
+  return juntarGrafias([lista.map(lerGrafia).filter(naoNulo)])
+}
+
+/** A grafia como valor JSON da camada (só as chaves que têm valor). */
+export const grafiaComoJson = (g: GrafiaDoUsuario): { [chave: string]: Json } => ({
+  texto: g.texto,
+  ...(g.tradicao ? { tradicao: g.tradicao } : {}),
+  ...(g.livro ? { livro: g.livro } : {}),
+})
+
+/** A escrita que vale num campo: o valor e o hlc dela (`''` quando não se sabe o hlc). */
+export interface EscritaDoCampo {
+  valor: Json
+  hlc: string
+}
+
+const deVariantes = (v: Json): GrafiaDoUsuario[] => (Array.isArray(v) ? v.map((t) => (typeof t === 'string' ? lerGrafia({ texto: t }) : null)).filter(naoNulo) : [])
+
+/**
+ * As grafias de um sítio a partir das escritas de `grafias` e de `variantes` (null = o campo nunca foi escrito): sem `grafias`,
+ * as `variantes` como grafias sem origem; com os dois, se o hlc das `variantes` é maior, juntam-se as que faltam (pela
+ * `chaveDaGrafia`). O passo 2 da resolução (src/sitios/resolucao.ts; `_ler_grafias` no processamento).
+ */
+export function lerGrafias(grafias: EscritaDoCampo | null, variantes: EscritaDoCampo | null): GrafiaDoUsuario[] {
+  if (grafias === null) return variantes === null ? [] : juntarGrafias([deVariantes(variantes.valor)])
+  let lista = juntarGrafias([(Array.isArray(grafias.valor) ? grafias.valor : []).map(lerGrafia).filter(naoNulo)])
+  if (variantes !== null && variantes.hlc > grafias.hlc) {
+    const ja = new Set(lista.map((g) => chaveDaGrafia(g.texto)))
+    lista = juntarGrafias([lista, deVariantes(variantes.valor).filter((g) => !ja.has(chaveDaGrafia(g.texto)))])
+  }
+  return lista
+}
+
+/** O hlc da escrita que vale em cada campo de um registro `sitio` (para `lerDadosDoSitio` e `grafiasDoRegistro`). */
+export type HlcDoCampo = (campo: string) => string | null
+export const hlcDoSitio = (estado: Estado, id: string): HlcDoCampo => (campo) => estado.hlcDoCampo('sitio', id, campo)
+
+/**
+ * As grafias de UM registro (`lerGrafias`). Sem `hlc` (o hlc de cada campo), um registro com `grafias` ignora as `variantes`
+ * (não dá para saber se vieram depois); quem tem o `Estado` passa `hlcDoSitio(estado, id)`.
+ */
+export function grafiasDoRegistro(r: Registro, hlc?: HlcDoCampo): GrafiaDoUsuario[] {
+  const escrita = (campo: string): EscritaDoCampo | null => (campo in r.campos ? { valor: r.campos[campo]!, hlc: hlc?.(campo) ?? '' } : null)
+  return lerGrafias(escrita('grafias'), escrita('variantes'))
+}
+
+/** Os textos das grafias, sem repetir texto (pela `chaveDaGrafia`): a lista «Outras grafias» de antes (`DadosDoSitio.variantes`). */
+export function textosDasGrafias(grafias: readonly GrafiaDoUsuario[]): string[] {
+  const vistos = new Set<string>()
+  const saida: string[] = []
+  for (const g of grafias) {
+    const k = chaveDaGrafia(g.texto)
+    if (vistos.has(k)) continue
+    vistos.add(k)
+    saida.push(g.texto)
   }
   return saida
 }
@@ -93,6 +239,7 @@ export function coordenadaValida(lat: unknown, lon: unknown): Coordenada | null 
 /** O que a pessoa escreveu num registro `sitio` (o de um sítio novo, ou a correção de um do livro). */
 export interface DadosDoSitio {
   nome: string | null
+  /** Os textos das outras grafias (`grafias`, com as `variantes` antigas pela regra de `lerGrafias`), sem repetir. */
   variantes: string[]
   regiao: string | null
   pais: string | null
@@ -100,11 +247,12 @@ export interface DadosDoSitio {
   nota: string | null
 }
 
-export function lerDadosDoSitio(r: Registro): DadosDoSitio {
+/** `hlc`: o hlc de cada campo (`hlcDoSitio`), para juntar `variantes` escritas depois das `grafias` (veja `grafiasDoRegistro`). */
+export function lerDadosDoSitio(r: Registro, hlc?: HlcDoCampo): DadosDoSitio {
   const c = r.campos
   return {
     nome: textoNaoVazio(c.nome),
-    variantes: Array.isArray(c.variantes) ? normalizarVariantes(c.variantes) : [],
+    variantes: textosDasGrafias(grafiasDoRegistro(r, hlc)),
     regiao: textoNaoVazio(c.regiao),
     pais: textoNaoVazio(c.pais),
     coordenada: coordenadaValida(c.lat, c.lon),
@@ -121,14 +269,15 @@ export interface SitioSkc extends DadosDoSitio {
   excluido: boolean
 }
 
-export function lerSitioSkc(r: Registro): SitioSkc {
-  const d = lerDadosDoSitio(r)
+export function lerSitioSkc(r: Registro, hlc?: HlcDoCampo): SitioSkc {
+  const d = lerDadosDoSitio(r, hlc)
   return { ...d, id: r.id, nomeDeAgora: d.nome ?? r.id, criadoEm: r.criadoEm, excluido: r.excluido }
 }
 
 /** Os dados de um sítio novo (a tela NovoSitio). Nome, no mínimo. */
 export interface EntradaDeSitio {
   nome: string
+  /** As outras grafias digitadas (sem origem): gravadas em `grafias`. */
   variantes?: readonly string[]
   regiao?: string
   coordenada?: Coordenada | null
@@ -140,8 +289,8 @@ export function camposDoSitioNovo(e: EntradaDeSitio): Campos {
   const nome = normalizarForma(e.nome)
   if (nome === '') throw new Error('sítio sem nome')
   const campos: Campos = { nome }
-  const variantes = normalizarVariantes(e.variantes ?? [])
-  if (variantes.length > 0) campos.variantes = variantes
+  const grafias = normalizarGrafias((e.variantes ?? []).map((texto) => ({ texto })))
+  if (grafias.length > 0) campos.grafias = grafias.map(grafiaComoJson)
   const regiao = normalizarForma(e.regiao ?? '')
   if (regiao !== '') campos.regiao = regiao
   if (e.coordenada) {

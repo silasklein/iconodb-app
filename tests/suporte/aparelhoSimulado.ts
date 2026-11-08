@@ -25,6 +25,8 @@ export interface AparelhoSimulado {
   numeros: typeof import('../../src/objetos-skc/confirmados')
   /** A fonte dos números do pacote (cada aparelho liga a sua). */
   pacote: typeof import('../../src/objetos-skc/pacote')
+  /** As operações dos sítios (mesclar, partes, grafias…), gravando no IndexedDB deste aparelho. */
+  sitios: typeof import('../../src/sitios/operacoes')
   escrita: Escrita
   /** O app fechado e aberto de novo: módulos novos, o mesmo IndexedDB (já carregado em memória). */
   reabrir(): Promise<AparelhoSimulado>
@@ -43,6 +45,7 @@ async function carregar(fabrica: IDBFactory, nuvem: DropboxEmMemoria, nome?: str
     const fusao = await import('../../src/usuario/fusao')
     const numeros = await import('../../src/objetos-skc/confirmados')
     const pacote = await import('../../src/objetos-skc/pacote')
+    const sitios = await import('../../src/sitios/operacoes')
     const escritaMod = await import('../../src/dropbox/escrita')
     const manifesto = await import('../../src/pacote/manifesto')
     if (nome) await aparelho.renomearAparelho(nome)
@@ -66,6 +69,7 @@ async function carregar(fabrica: IDBFactory, nuvem: DropboxEmMemoria, nome?: str
       fusao,
       numeros,
       pacote,
+      sitios,
       escrita: nuvem.escrita(classes, id),
       reabrir: () => carregar(fabrica, nuvem),
     }

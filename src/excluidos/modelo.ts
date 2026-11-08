@@ -20,6 +20,7 @@ import { eObjetoSkc, lerObjeto, tituloDe } from '../objetos-skc/modelo'
 import { juncaoNoPlural, oQueVaiJunto, textoDaJuncao } from '../objetos-skc/oQueVaiJunto'
 import { destinoDe, type Redirecionamentos } from '../pacote/redirecionamentos'
 import { lerDadosDoSitio } from '../sitios/modelo'
+import type { Resolucao } from '../sitios/resolucao'
 import { resumoDaNota } from '../notas/formato'
 import type { Tipo } from '../usuario/eventos'
 import type { Estado, Registro } from '../usuario/fusao'
@@ -82,6 +83,11 @@ export interface ContextoDosExcluidos {
    */
   nomeGuardado?: (idDaOrigem: string) => string | null
   agora: number
+  /**
+   * Parte 2C, bloco 2: a resolução dos sítios de agora (sem os excluídos). Um `SI-…` excluído cujo `mescladoEm` dá num sítio que
+   * existe volta mesclado nele (a aprovação diz em qual). Sem ela (ainda não chegou), a aprovação de sempre.
+   */
+  resolucao?: Resolucao | null
 }
 
 export const SAI_DOS_LIVROS = 'sai dos livros na próxima importação'
@@ -313,6 +319,16 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
         return `Restaurar os seus ${origens.length} ${t.plural} ${listaComE(origens.map((o) => o.nome))}? Eles continuam nos livros, com o mesmo ${numero}, e ${t.ligados} a eles voltam a se ligar a eles.`
       }
       return `${pergunta(`Restaurar ${p.descricao}`)} Ele continua nos livros, com o mesmo ${numero}, e ${t.ligados} a ele voltam a se ligar a ele.`
+    }
+    if (r.tipo === 'sitio') {
+      // Um sítio seu que estava mesclado em outro (texto proposto): volta mesclado no destino de agora daquele.
+      const alvo = texto(r.campos.mescladoEm)
+      const res = ctx.resolucao
+      if (alvo && res && res.existe(alvo) && res.canonico(alvo) !== res.canonico(r.id)) {
+        const destinoDoAlvo = res.destino(alvo)
+        const nome = nomeDoSitio(destinoDoAlvo) ?? destinoDoAlvo
+        return `${pergunta(`Restaurar ${p.descricao}`)} Ele volta mesclado em ${aspas(nome)}, como estava.`
+      }
     }
     if (ficaEscondida) return `${pergunta(`Restaurar ${p.descricao}`)} Ela fica escondida até o objeto voltar.`
     return pergunta(`Restaurar ${p.descricao}`)

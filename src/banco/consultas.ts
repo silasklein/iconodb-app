@@ -8,6 +8,8 @@
  */
 import { executar, publicacoesAbertas, type Parametro, type PublicacaoAberta } from './cliente'
 import { chaveDaFonte, formatarReferencias, type ReferenciaDeFonte } from './referencias'
+import { tradicaoValida } from '../sitios/modelo'
+import type { GrafiaDoPacote, ParSugerido } from '../sitios/resolucao'
 import {
   NIVEIS,
   type Ancora,
@@ -866,6 +868,48 @@ export async function redirecionamentos(): Promise<{ de: string; para: string; t
   return linhas.map((l) => ({ de: s(l.de) ?? '', para: s(l.para) ?? '', tipo: s(l.tipo) ?? '', verbeteExiste: !!n(l.existe), criado: n(l.criado) === 1 }))
 }
 
+/** A tabela existe no comum.sqlite? (As do schema 8 faltam num pacote 5–7: quem lê dá a lista vazia, F11.) */
+async function tabelaDoComum(nome: string): Promise<boolean> {
+  const [t] = await executar<L>("SELECT count(*) AS n FROM main.sqlite_master WHERE type = 'table' AND name = $nome", { $nome: nome })
+  return !!n(t?.n)
+}
+
+/** As partes dos sítios gravadas pelo processamento (`sitio_parte`, schema 8): parte → todo. [] num pacote 5–7. */
+export async function partesDoPacote(): Promise<{ parte: string; todo: string }[]> {
+  if (!(await tabelaDoComum('sitio_parte'))) return []
+  const linhas = await executar<L>('SELECT parte, todo FROM main.sitio_parte ORDER BY parte')
+  return linhas.flatMap((l) => (s(l.parte) && s(l.todo) ? [{ parte: s(l.parte)!, todo: s(l.todo)! }] : []))
+}
+
+/**
+ * As grafias dos sítios (`sitio_grafia`, schema 8): as dos livros (`origem = 'livro'`, com sigla e página) e as que a pessoa
+ * deu e o processamento publicou (`'usuario'`; o app lê as da pessoa só da camada, F12). Uma tradição fora da lista vira
+ * null. [] num pacote 5–7.
+ */
+export async function grafiasDoPacote(): Promise<GrafiaDoPacote[]> {
+  if (!(await tabelaDoComum('sitio_grafia'))) return []
+  const linhas = await executar<L>('SELECT sitio, texto, tradicao, sigla, pagina, origem FROM main.sitio_grafia ORDER BY rowid')
+  return linhas.flatMap((l): GrafiaDoPacote[] => {
+    const sitio = s(l.sitio)
+    const texto = s(l.texto)
+    const origem = s(l.origem)
+    if (!sitio || !texto || (origem !== 'livro' && origem !== 'usuario')) return []
+    const tradicao = s(l.tradicao)
+    return [{ sitio, texto, tradicao: tradicao !== null && tradicaoValida(tradicao) ? tradicao : null, sigla: s(l.sigla), pagina: s(l.pagina), origem }]
+  })
+}
+
+/** Os pares de sítios que podem ser o mesmo lugar (`sitio_par_sugerido`, schema 8; `a < b`), na ordem do pacote. [] num pacote 5–7. */
+export async function paresSugeridos(): Promise<ParSugerido[]> {
+  if (!(await tabelaDoComum('sitio_par_sugerido'))) return []
+  const linhas = await executar<L>('SELECT a, b, motivo FROM main.sitio_par_sugerido ORDER BY a, b')
+  return linhas.flatMap((l): ParSugerido[] => {
+    const motivo = s(l.motivo)
+    if (!s(l.a) || !s(l.b) || (motivo !== 'coordenada' && motivo !== 'nome' && motivo !== 'variante')) return []
+    return [{ a: s(l.a)!, b: s(l.b)!, motivo }]
+  })
+}
+
 /**
  * O `pt` (a forma de verbete, a etiqueta, que pode levar glosa) e o `pt_text` (a de texto corrido, quando há) de cada
  * verbete do pacote. A forma em uso do usuário (Tarefa 11) compara-se com estas (src/glossario/exibirTermo.ts).
@@ -1018,6 +1062,53 @@ export async function sitio(id: string): Promise<Sitio | null> {
     nota: s(l.note),
     objetos: await resumosDosItens(itens.map((x) => s(x.item_id)!), 'fonte'),
   }
+}
+
+/**
+ * Os objetos do livro achados em cada um destes sítios (`<SIGLA>-<n>`; um `SI-…` ou um id estranho fica vazio), uma consulta
+ * por publicação (`site_id IN (…)`). Cada objeto aparece uma vez, no primeiro sítio da lista em que o livro o põe (a lista vem
+ * do topo para baixo: o todo, depois as partes; ou o destino, depois os absorvidos). Cada sítio pedido tem a sua entrada, na
+ * ordem pedida; os objetos de cada um na ordem das fontes.
+ */
+export async function objetosDosSitios(idsDosSitios: readonly string[]): Promise<Map<string, ObjetoResumo[]>> {
+  const saida = new Map<string, ObjetoResumo[]>(idsDosSitios.map((id) => [id, []]))
+  const pubs = await publicacoesAbertas()
+  const posicao = new Map<string, number>()
+  idsDosSitios.forEach((id, i) => {
+    if (!posicao.has(id)) posicao.set(id, i)
+  })
+  // item → o sítio pedido mais perto do topo em que ele está
+  const sitioDoItem = new Map<string, string>()
+  for (const p of pubs) {
+    const numeros = idsDosSitios.flatMap((id) => {
+      const partes = /^(.+)-(\d+)$/.exec(id)
+      return partes && partes[1] === p.sigla ? [Number(partes[2])] : []
+    })
+    if (numeros.length === 0) continue
+    const linhas = await executar<L>(
+      `SELECT DISTINCT subject_id AS item_id, site_id FROM ${p.esquema}.assertion
+       WHERE site_id IN ${EM_IDS} AND subject_type = 'item' AND field = 'findspot'`,
+      { $ids: JSON.stringify(numeros) },
+    )
+    for (const l of linhas) {
+      const item = s(l.item_id)!
+      const sitio = `${p.sigla}-${n(l.site_id)}`
+      const atual = sitioDoItem.get(item)
+      if (atual === undefined || posicao.get(sitio)! < posicao.get(atual)!) sitioDoItem.set(item, sitio)
+    }
+  }
+  if (sitioDoItem.size === 0) return saida
+  const resumos = await resumosDosItens([...sitioDoItem.keys()], 'fonte')
+  // Um objeto de vários itens: vale o sítio mais perto do topo entre os dos itens dele.
+  const sitioDoObjeto = new Map<string, string>()
+  const numeros = await numerosDosItens([...sitioDoItem.keys()])
+  for (const [item, sitio] of sitioDoItem) {
+    const numero = numeros.get(item)!
+    const atual = sitioDoObjeto.get(numero)
+    if (atual === undefined || posicao.get(sitio)! < posicao.get(atual)!) sitioDoObjeto.set(numero, sitio)
+  }
+  for (const r of resumos) saida.get(sitioDoObjeto.get(r.numero)!)?.push(r)
+  return saida
 }
 
 /** `<polygon points="x,y x,y …"/>` → [[x, y], …]; vazio se o formato não é esse. */

@@ -1,0 +1,92 @@
+/*
+ * «Mesclar com outro sítio…» (Parte 2C, bloco 2; telas aprovadas §1): a caixa no lugar é a `.sitio-confirmar` de «Excluir o
+ * sítio» (src/sitios/Sitios.css), um pouco mais larga para as duas opções lado a lado.
+ */
+.sitio-mesclar {
+  gap: 14px;
+  max-width: 520px;
+}
+.sitio-mesclar-titulo {
+  font-weight: 600;
+}
+.sitio-mesclar .form-escolha {
+  max-width: none;
+}
+.sitio-mesclar-qual {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.sitio-mesclar-qual legend {
+  padding: 0;
+  margin-bottom: 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sitio-mesclar .sitio-mesclar-sugestao {
+  font-size: 13px;
+}
+.sitio-mesclar-dois {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.sitio-mesclar-opcao {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.sitio-mesclar-opcao:has(input:checked) {
+  padding: 9px;
+  border: 2px solid var(--texto);
+  background: var(--superficie);
+}
+.sitio-mesclar-opcao:has(input:focus-visible) {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.sitio-mesclar-opcao-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sitio-mesclar-opcao input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--texto);
+}
+.sitio-mesclar-opcao input:focus-visible {
+  outline: none;
+}
+.sitio-mesclar-nome {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sitio-mesclar-apoio {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.sitio-mesclar-lista {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}

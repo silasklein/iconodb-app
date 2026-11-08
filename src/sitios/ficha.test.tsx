@@ -187,6 +187,68 @@ describe('"Sítio deste objeto": trocar o sítio na ficha', () => {
     expect(within(d).queryByRole('button', { name: /^Novo sítio «/ })).toBeNull()
   })
 
+  it('Tarefa 14: a lista em árvore («Sítios 7»), a busca «túmulo» («Resultado 1», com o caminho) e a troca para a parte', async () => {
+    // O pacote sintético traz Tell Probe Teste (TESTE-2, o sítio de CA00003 no livro) › Área Probe Teste (TESTE-5) › Túmulo Probe
+    // Teste (TESTE-6), e Tel Probe Teste (TESTE-4) mesclado em TESTE-2; com Tell Inventado (o SKC deste teste), 8 sítios valem
+    // como opção. O atual sai: 7 linhas. CA00001 ligado ao túmulo conta nele e na área (as contagens somam as partes de baixo;
+    // Maḥteṣ Teste continua com os 3 do livro, `contagemDoSitio` como está). Os sítios que outros testes criaram saem antes.
+    for (const s of estadoAtual().registros.get('sitio')?.values() ?? []) if (/^SI-/.test(s.id) && s.id !== 'SI-aaaaaaaa-1' && !s.excluido) await registrar('sitio', s.id, 'excluir')
+    await registrar('item-sitio', 'CA00001', 'alterar', { sitio: 'TESTE-6', sitioNome: 'Túmulo Probe Teste' })
+    const d = await abrirFolha()
+    const grupo = within(d).getByRole('radiogroup', { name: 'Escolher o novo sítio' })
+    const linhas = () =>
+      within(grupo)
+        .getAllByRole('radio')
+        .map((b) => [b.querySelector('.trocar-sitio-opcao-nome')!.textContent, b.getAttribute('data-nivel'), b.querySelector('.trocar-sitio-opcao-apoio')!.textContent])
+    await waitFor(() => expect(grupo.querySelector('.trocar-sitio-lista-topo')).toHaveTextContent(/^Sítios7$/))
+    await waitFor(() =>
+      // as partes do atual primeiro (fix round 1), depois a árvore dos outros
+      expect(linhas()).toEqual([
+        ['Área Probe Teste', '1', 'parte de Tell Probe Teste · 1 objeto'],
+        ['Túmulo Probe Teste', '2', 'parte de Área Probe Teste · 1 objeto'],
+        ['Ḫirbet Vizinha Teste', '0', '0 objetos'],
+        ['Maḥteṣ Teste', '0', '3 objetos'],
+        ['Maḥtiṣ Teste', '0', '0 objetos'],
+        ['Tell InventadoSKC', '0', 'Negev · 0 objetos'],
+        ['Tell Usuário Teste', '0', '0 objetos'],
+      ]),
+    )
+    await userEvent.type(within(d).getByRole('searchbox', { name: 'Buscar entre os sítios' }), 'túmulo')
+    expect(grupo.querySelector('.trocar-sitio-lista-topo')).toHaveTextContent(/^Resultado1$/)
+    expect(linhas()).toEqual([['Túmulo Probe Teste', '0', 'Tell Probe Teste › Área Probe Teste · 1 objeto']])
+    await userEvent.click(within(grupo).getByRole('radio'))
+    await userEvent.click(within(d).getByRole('button', { name: 'Trocar' }))
+    await waitFor(() => expect(trocaDe('CA00003')).toEqual({ sitio: 'TESTE-6', sitioNome: 'Túmulo Probe Teste' }))
+    expect(screen.queryByRole('dialog', { name: 'Sítio deste objeto' })).toBeNull()
+    expect(await within(ficha()).findByRole('link', { name: 'Túmulo Probe Teste' })).toHaveAttribute('href', '/sitio/TESTE-6')
+  })
+
+  it('fix round 1 (M1): do nível 7 para baixo, o recuo para no 6 (data-nivel 6), como em «Partes»', async () => {
+    // uma cadeia de 5 partes suas sob Túmulo Probe Teste (nível 2): Nível 3 … Nível 7
+    for (const s of estadoAtual().registros.get('sitio')?.values() ?? []) if (/^SI-/.test(s.id) && s.id !== 'SI-aaaaaaaa-1' && !s.excluido) await registrar('sitio', s.id, 'excluir')
+    const ids = [3, 4, 5, 6, 7].map((n) => `SI-bbbbbbbb-${n}`)
+    for (const [i, id] of ids.entries()) await registrar('sitio', id, 'criar', { nome: `Nível ${i + 3} Teste`, parteDe: i === 0 ? 'TESTE-6' : ids[i - 1]! })
+    try {
+      const d = await abrirFolha()
+      const grupo = within(d).getByRole('radiogroup', { name: 'Escolher o novo sítio' })
+      const niveis = () => within(grupo).getAllByRole('radio').map((b) => [b.querySelector('.trocar-sitio-opcao-nome')!.textContent, b.getAttribute('data-nivel')])
+      await waitFor(() =>
+        expect(niveis().slice(0, 7)).toEqual([
+          ['Área Probe Teste', '1'],
+          ['Túmulo Probe Teste', '2'],
+          ['Nível 3 TesteSKC', '3'],
+          ['Nível 4 TesteSKC', '4'],
+          ['Nível 5 TesteSKC', '5'],
+          ['Nível 6 TesteSKC', '6'],
+          ['Nível 7 TesteSKC', '6'],
+        ]),
+      )
+      expect(within(grupo).getByRole('radio', { name: /Nível 7 Teste/ })).toHaveTextContent('parte de Nível 6 Teste · 0 objetos')
+    } finally {
+      for (const id of ids) await registrar('sitio', id, 'excluir')
+    }
+  })
+
   it('no computador é um diálogo', async () => {
     instalarMatchMedia(1280)
     const d = await abrirFolha()
@@ -380,8 +442,9 @@ describe('a Revisão: "sítios não resolvidos" desconta o que a pessoa ligou e 
     await waitFor(() => expect(linha()).toMatch(/Sítios não resolvidos1/))
     expect(screen.getByText(/2 resolvidos por você/)).toBeInTheDocument()
     // as duas linhas do pacote que não são de sítio, mais o sítio que sobrou
-    // (e os 4 verbetes do pacote ainda a revisar, e o elemento do pacote sem região)
-    expect(screen.getByText(/^8 casos · /)).toBeInTheDocument()
+    // (e os 4 verbetes do pacote ainda a revisar, o elemento do pacote sem região e os 2 pares de sítios que podem ser o mesmo,
+    // Tarefa 15)
+    expect(screen.getByText(/^10 casos · /)).toBeInTheDocument()
   })
 
   it('objetos SKC com nome livre (ou com o sítio excluído) contam e aparecem na lista, com o nome de agora, até serem ligados', async () => {

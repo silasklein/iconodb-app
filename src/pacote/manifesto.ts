@@ -5,11 +5,17 @@
 import { arquivosDoBanco } from '../banco/arquivos'
 
 /**
- * O schema que o pipeline gera agora (6: a tabela `redirecionamento`, Tarefa 16) e os que o app abre. Um pacote do schema 5
- * (sem a tabela) continua aberto: o app só não tem redirecionamentos (src/pacote/redirecionamentos.ts).
+ * O schema que o pipeline gera agora e os que o app abre:
+ * - 5: o de antes da Tarefa 16 (sem `redirecionamento`): o app só não tem redirecionamentos (src/pacote/redirecionamentos.ts);
+ * - 6: com a tabela `redirecionamento` (Tarefa 16); é o pacote que está no Dropbox até a pessoa copiar o 8 (F11);
+ * - 7: a base para vários livros (Fase 4, etapa 1: `volume`, `item.volume` obrigatório, `item.series`, `item.kind` 'figura',
+ *   `item_alias`, `passage_ref`, `dating_ebw`). O app ainda não lê nada disso: com o IPIAO I sozinho, nenhuma coluna que ele
+ *   lê muda de sentido (`coalesce(i.volume, p.volume)` continua certo);
+ * - 8: as tabelas dos sítios (Parte 2C, bloco 2: `sitio_parte`, `sitio_grafia`, `sitio_par_sugerido`) e o redirecionamento
+ *   de um sítio do livro para outro (a mescla). Num pacote 5–7 elas faltam e as consultas dão listas vazias: só a camada.
  */
-export const SCHEMA_ESPERADO = 6
-export const SCHEMAS_ACEITOS: readonly number[] = [5, 6]
+export const SCHEMA_ESPERADO = 8
+export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8]
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
 export const MSG_SCHEMA = 'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.'
 

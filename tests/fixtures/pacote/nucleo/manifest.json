@@ -1,11 +1,18 @@
 {
- "schema": 6,
- "gerado_em": "2026-11-04T20:33:10+00:00",
+ "schema": 8,
+ "gerado_em": "2026-11-07T16:10:34+00:00",
  "publicacoes": [
   {
    "sigla": "TESTE",
    "volume": "I",
-   "rotulo": "TESTE I"
+   "rotulo": "TESTE I",
+   "volumes": [
+    {
+     "volume": "I",
+     "rotulo": "TESTE I",
+     "ano": 2020
+    }
+   ]
   }
  ],
  "arquivos": {
@@ -66,20 +73,20 @@
    "bytes": 1080
   },
   "nucleo/busca.sqlite": {
-   "sha256": "d9793df2b89cf083715f4811c5b7685329f6c4c02d1836c3d4c1c0b2551d880c",
+   "sha256": "ada9980c7bfe972ad630a3f327bdb84bea6fe145ebb072cfbf29c4b4d7f2f138",
    "bytes": 32768
   },
   "nucleo/comum.sqlite": {
-   "sha256": "a6251fec6d9fd7a089a71ba1bef8ccdcd28a0991f214f1e8c924a2476c2359b1",
-   "bytes": 311296
+   "sha256": "71da64e1c1f6cbfc2de0ca38602e4d64433903a65bb067ae7de287a9d3ae15be",
+   "bytes": 364544
   },
   "nucleo/fold.json": {
    "sha256": "a30ac717837f964699d1bc79cb47ac1610e415b3577859d133e5a1d096f42822",
    "bytes": 1194
   },
   "nucleo/pub-TESTE.sqlite": {
-   "sha256": "2ccf98a162267bf5d0dfa0c2517275be03221aa10dfd3489ed42d2e889c717e6",
-   "bytes": 319488
+   "sha256": "2f40c59e56d35430a45dd94e8253bf4d47281db04518b55d5864443ada7445e1",
+   "bytes": 372736
   }
  }
 }

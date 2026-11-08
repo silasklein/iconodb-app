@@ -195,3 +195,210 @@
     width: 520px;
   }
 }
+
+/* Parte 2C, bloco 2 (Tarefa 15): «Sítios que podem ser o mesmo» (telas aprovadas §6). Cada par abre e fecha; aberto, os dois
+   sítios lado a lado (também no celular), o motivo e as três saídas (em coluna no celular, numa linha no computador). */
+.revisao-par {
+  display: grid;
+  gap: 12px;
+  padding: 6px 0 12px;
+  border-top: 1px dashed var(--filete);
+}
+.revisao-par-cabeca {
+  box-sizing: border-box;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  min-height: var(--alvo-toque);
+  padding: 6px 0 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.revisao-par-cabeca:focus-visible,
+.revisao-lado-nome:focus-visible,
+.revisao-par .form-botao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.revisao-par-cabeca > svg {
+  margin-top: 2px;
+}
+.revisao-par-cabeca-texto {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.revisao-par-o-que {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.revisao-par-motivo {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--corpo-consulta);
+  overflow-wrap: anywhere;
+}
+.revisao-par-nomes {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.revisao-par-corpo {
+  display: grid;
+  gap: 12px;
+}
+.revisao-par-lados {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.revisao-lado {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--superficie);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.revisao-lado-nome {
+  justify-self: start;
+  /* o nome abre a página do sítio: um alvo de 44 px no toque e 40 com o mouse, não só o texto (Tarefa 16) */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  font-size: 15px;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+@media (pointer: fine) {
+  .revisao-lado-nome {
+    min-height: var(--alvo-mouse);
+  }
+}
+.revisao-lado dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.revisao-lado dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.revisao-lado dl > div {
+  display: grid;
+  min-width: 0;
+}
+.revisao-lado dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.revisao-lado .codigo {
+  font-size: 12px;
+}
+.revisao-par-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.revisao-par-botoes > .form-botao {
+  flex: 1 1 100%;
+}
+.revisao-par-parte {
+  max-width: none;
+}
+.revisao-par-parte .revisao-par-parte-titulo {
+  font-size: 13px;
+  font-weight: 600;
+}
+.revisao-par-opcoes {
+  display: grid;
+  gap: 8px;
+}
+.revisao-par-opcao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--alvo-toque);
+  padding: 0 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.revisao-par-opcao:has(input:checked) {
+  padding: 0 11px;
+  border: 2px solid var(--texto);
+  background: var(--superficie);
+}
+.revisao-par-opcao:has(input:focus-visible) {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.revisao-par-opcao input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--texto);
+}
+.revisao-par-opcao input:focus-visible {
+  outline: none;
+}
+.revisao-par-parte .sitio-confirmar-botoes > .form-botao {
+  flex: 1 1 0;
+}
+.revisao-par-resolvido {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px dashed var(--filete);
+}
+.revisao-par-resolvido-texto {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.revisao-par-resolvido-texto small {
+  display: block;
+  font-size: 12px;
+}
+@media (min-width: 768px) {
+  .revisao-lado {
+    gap: 8px;
+    padding: 14px;
+    font-size: 14px;
+  }
+  .revisao-lado-nome {
+    font-size: 17px;
+  }
+  .revisao-par-botoes > .form-botao,
+  .revisao-par-parte .sitio-confirmar-botoes > .form-botao {
+    flex: 0 0 auto;
+  }
+  .revisao-par-parte {
+    max-width: 520px;
+  }
+}

@@ -21,7 +21,9 @@ import { lerFicha, textoDaOrigem, tipoCurtoDe } from '../objetos-skc/modelo'
 import { edicoesDosVerbetes, formasEmUso } from '../glossario/doUsuario'
 import { eVerbeteSkc, situacaoDoVerbete, type EdicaoDoVerbete, type StatusDoVerbete } from '../glossario/modelo'
 import { numerosNoTexto } from '../objetos-skc/numeracao'
-import { nomeComMarcaDoSitio, nomeDeAgoraDoSitio, sitioDoObjetoDoPacote } from '../sitios/doUsuario'
+import { nomeComMarcaDoSitio, nomeDeAgoraDoSitio, nomesQueAchamODestino, sitioDoObjetoDoPacote } from '../sitios/doUsuario'
+import type { Resolucao } from '../sitios/resolucao'
+import { destinosDosSitios, pacoteDeSitiosOuVazio, resolucaoDeSitios } from '../sitios/useResolucao'
 import { eSitioSkc } from '../sitios/modelo'
 import { destinoDe, redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
 import { sitiosDoPacote, type SitiosDoPacote } from '../sitios/pacote'
@@ -263,24 +265,60 @@ async function itensDasObras(pubs: readonly PublicacaoAberta[], bibIds: readonly
   return linhas.map((l) => s(l.item_id)!)
 }
 
-/** Itens achados num sítio cujo nome (impresso ou do glossário) casa com a consulta. */
-async function itensDosSitios(pubs: readonly PublicacaoAberta[], palavras: readonly string[], tabela: FoldTabela): Promise<string[]> {
-  const itens: string[] = []
+/**
+ * Parte 2C, bloco 2: o que a busca sabe dos sítios mesclados: a resolução, os destinos (os `SI-…` publicados e os absorvidos →
+ * o destino) e os nomes a mais que acham cada destino (as grafias da pessoa, os nomes dos absorvidos, as grafias dos livros).
+ */
+interface SitiosDaBusca {
+  resolucao: Resolucao
+  destinos: Redirecionamentos
+  nomesAMais: (id: string) => readonly string[]
+}
+
+/** O sítio e os absorvidos nele (um sítio mesclado é um só com o destino). */
+const doGrupo = (b: SitiosDaBusca | null, id: string): string[] => (b ? [b.resolucao.destino(id), ...b.resolucao.absorvidos(id)] : [id])
+
+/** `<SIGLA>-<n>` desta publicação → n; os outros ids, nada. */
+const numerosDaPublicacao = (pub: PublicacaoAberta, ids: Iterable<string>): number[] =>
+  [...ids].flatMap((id) => {
+    const partes = /^(.+)-(\d+)$/.exec(id)
+    return partes && partes[1] === pub.sigla ? [Number(partes[2])] : []
+  })
+
+/**
+ * Itens achados num sítio cujo nome (impresso ou do glossário) casa com a consulta. Com `sitios` (Parte 2C, bloco 2): também o
+ * destino achado pelos nomes a mais (o de um absorvido, uma grafia da pessoa ou de um livro), e um sítio achado vale pelo
+ * destino dele, com os itens do destino e de todos os absorvidos.
+ */
+async function itensDosSitios(pubs: readonly PublicacaoAberta[], palavras: readonly string[], tabela: FoldTabela, sitios: SitiosDaBusca | null = null): Promise<string[]> {
+  const achados = new Set<string>()
   for (const pub of pubs) {
-    const sitios = await executar<L>(
+    const linhas = await executar<L>(
       `SELECT st.id, st.literal_name, g.pt, g.pt_text, g.de, g.variants
        FROM ${pub.esquema}.site st LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id`,
     )
-    const ids = sitios
-      .filter((l) => casa(palavras, [l.literal_name, l.pt, l.pt_text, l.de, l.variants].map(s).filter(Boolean).join(' '), tabela))
-      .map((l) => n(l.id)!)
-    if (ids.length === 0) continue
-    const achados = await executar<L>(
+    for (const l of linhas) {
+      const id = `${pub.sigla}-${n(l.id)}`
+      if (casa(palavras, [l.literal_name, l.pt, l.pt_text, l.de, l.variants].map(s).filter(Boolean).join(' '), tabela)) achados.add(id)
+    }
+  }
+  if (sitios) {
+    for (const k of sitios.resolucao.sitios) {
+      const mais = sitios.nomesAMais(k)
+      if (mais.length > 0 && casa(palavras, mais.join(' '), tabela)) achados.add(k)
+    }
+  }
+  const ids = new Set([...achados].flatMap((id) => doGrupo(sitios, id)))
+  const itens: string[] = []
+  for (const pub of pubs) {
+    const numeros = numerosDaPublicacao(pub, ids)
+    if (numeros.length === 0) continue
+    const doPub = await executar<L>(
       `SELECT DISTINCT subject_id FROM ${pub.esquema}.assertion
        WHERE subject_type = 'item' AND field = 'findspot' AND site_id IN (SELECT value FROM json_each($ids))`,
-      { $ids: lista(ids) },
+      { $ids: lista(numeros) },
     )
-    itens.push(...achados.map((l) => s(l.subject_id)!))
+    itens.push(...doPub.map((l) => s(l.subject_id)!))
   }
   return itens
 }
@@ -306,17 +344,20 @@ async function itensDosGrupos(pubs: readonly PublicacaoAberta[], palavras: reado
  * lá; num sítio qualquer, os objetos do livro que a pessoa ligou a ele (`item-sitio`). Os objetos SKC dele saem do estado.
  * A busca é aditiva: o nome do livro continua achando o objeto que o livro diz estar lá, mesmo trocado de sítio.
  */
-async function objetosDosSitiosAchados(pubs: readonly PublicacaoAberta[], refs: readonly string[], estado: Estado): Promise<Map<string, string[]>> {
+async function objetosDosSitiosAchados(pubs: readonly PublicacaoAberta[], refs: readonly string[], estado: Estado, sitios: SitiosDaBusca | null = null): Promise<Map<string, string[]>> {
   const saida = new Map<string, string[]>()
   for (const ref of new Set(refs)) {
+    // Parte 2C, bloco 2: o sítio vale pelo destino, com os absorvidos (os objetos trocados para qualquer um deles e os do livro).
+    const grupo = new Set(doGrupo(sitios, ref))
+    const doSitio = (v: unknown) => typeof v === 'string' && (v === ref || grupo.has(sitios ? destinoDe(sitios.destinos, v) : v))
     const numeros: string[] = []
-    for (const r of estado.registros.get('item-sitio')?.values() ?? []) if (r.campos.sitio === ref) numeros.push(r.id)
-    const partes = eSitioSkc(ref) ? null : /^(.+)-(\d+)$/.exec(ref)
-    const pub = partes && pubs.find((p) => p.sigla === partes[1])
-    if (partes && pub) {
+    for (const r of estado.registros.get('item-sitio')?.values() ?? []) if (doSitio(r.campos.sitio)) numeros.push(r.id)
+    for (const pub of pubs) {
+      const ids = numerosDaPublicacao(pub, [...grupo].filter((x) => !eSitioSkc(x)))
+      if (ids.length === 0) continue
       const itens = await executar<L>(
-        `SELECT DISTINCT subject_id AS item_id FROM ${pub.esquema}.assertion WHERE site_id = $id AND subject_type = 'item' AND field = 'findspot'`,
-        { $id: Number(partes[2]) },
+        `SELECT DISTINCT subject_id AS item_id FROM ${pub.esquema}.assertion WHERE site_id IN (SELECT value FROM json_each($ids)) AND subject_type = 'item' AND field = 'findspot'`,
+        { $ids: lista(ids) },
       )
       numeros.push(...(await numerosDosItens(itens.map((l) => s(l.item_id)!))))
     }
@@ -567,7 +608,8 @@ const textoDe = (v: unknown): string | null => (typeof v === 'string' && v.trim(
 
 /** Um objeto SKC como candidato da busca: publicação "SKC", período pelo prefixo do número, tipo e sítio da ficha. */
 function candidatoSkc(numero: string, r: Registro, estado: Estado, livro: SitiosDoPacote | null, redirecionamentos: Redirecionamentos): Candidato {
-  // Um sítio do usuário que o pacote publicou (Tarefa 16) é o sítio do livro: o id e o nome dele (a faceta Sítio os junta).
+  // Um sítio do usuário que o pacote publicou (Tarefa 16) é o sítio do livro: o id e o nome dele (a faceta Sítio os junta). Com
+  // `destinosDosSitios` (Parte 2C, bloco 2), um sítio mesclado é o destino.
   const sitioId = textoDe(r.campos.sitio) === null ? null : destinoDe(redirecionamentos, textoDe(r.campos.sitio)!)
   // O nome de agora (corrigido → do livro → o guardado na ficha), e a marca «excluído» num sítio seu que se excluiu (Tarefa 12).
   const guardado = textoDe(r.campos.sitioNome)
@@ -745,8 +787,22 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     exatos ? notasQueCitam(digitado, estadoDoUsuario) : acertosDoUsuario(consulta),
     redirecionamentosOuNenhum(),
   ])
+  // Parte 2C, bloco 2: os sítios valem pelo destino (a resolução sobre este estado e o pacote).
+  const [resolucao, pacoteDosSitios, livro] = await Promise.all([
+    resolucaoDeSitios(estadoDoUsuario),
+    pacoteDeSitiosOuVazio(),
+    sitiosDoPacote().catch((): SitiosDoPacote | null => null),
+  ])
+  const destinos = destinosDosSitios(resolucao, redirecionamentos)
+  const sitiosDaBusca: SitiosDaBusca = {
+    resolucao,
+    destinos,
+    nomesAMais: (id) => nomesQueAchamODestino(estadoDoUsuario, resolucao, id, livro, pacoteDosSitios.grafias),
+  }
   // O verbete ou sítio do usuário que o pacote publicou (Tarefa 16) é achado como o do livro (nos documentos do pacote), nunca aqui.
-  const todosOsAcertos = todosOsAcertosComPublicados.filter((a) => !redirecionamentos.has(a.ref))
+  // Um sítio mesclado em outro também não aparece como acerto seu: os objetos dele contam no destino (abaixo).
+  const absorvidosAchados = todosOsAcertosComPublicados.filter((a) => a.tipo === 'sitio' && !redirecionamentos.has(a.ref) && destinos.has(a.ref))
+  const todosOsAcertos = todosOsAcertosComPublicados.filter((a) => !redirecionamentos.has(a.ref) && !absorvidosAchados.includes(a))
   // Um verbete do LIVRO achado pela forma em uso do usuário (Tarefa 11) é o verbete do livro, com os objetos dele, e não um
   // acerto "na sua camada": entra entre os verbetes do pacote (uma vez só).
   const doLivro = todosOsAcertos.filter((a) => a.tipo === 'verbete' && !eVerbeteSkc(a.ref))
@@ -763,7 +819,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     numerosDosItens(doTipo('item').map((d) => d.ref)),
     itensDosTermos(pubs, verbetes.map((d) => d.ref)).then(numerosDosItens),
     itensDasObras(pubs, doTipo('obra').map((d) => d.ref)).then(numerosDosItens),
-    exatos ? nenhum : itensDosSitios(pubs, palavras, tabela).then(numerosDosItens),
+    exatos ? nenhum : itensDosSitios(pubs, palavras, tabela, sitiosDaBusca).then(numerosDosItens),
     exatos ? nenhum : itensDosGrupos(pubs, palavras, tabela).then(numerosDosItens),
     exatos ? Promise.resolve([...exatos]) : objetosCitados(digitado),
   ])
@@ -778,27 +834,29 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   }
 
   // Os sítios achados pela camada do usuário (Tarefa 12) e os objetos do livro deles.
-  const dosSitios = await objetosDosSitiosAchados(pubs, acertos.filter((a) => a.tipo === 'sitio').map((a) => a.ref), estadoDoUsuario)
+  const dosSitios = await objetosDosSitiosAchados(pubs, [...acertos, ...absorvidosAchados].filter((a) => a.tipo === 'sitio').map((a) => a.ref), estadoDoUsuario, sitiosDaBusca)
 
-  // A camada do usuário: cada acerto vale para os objetos dele, no "tudo" e no escopo do registro.
+  // A camada do usuário: cada acerto vale para os objetos dele, no "tudo" e no escopo do registro. Um sítio vale pelo destino,
+  // com os absorvidos (os objetos SKC cuja ficha escolheu qualquer um deles), também o absorvido achado (que não aparece).
   const doUsuario = (a: AcertoBruto) => ['tudo' as Escopo, ...(a.escopo ? [a.escopo] : [])]
-  for (const a of acertos) {
+  for (const a of [...acertos, ...absorvidosAchados]) {
     const objetos = a.tipo === 'colecao' ? a.objetos : a.objeto ? [a.objeto] : []
     if (a.tipo === 'sitio') {
-      for (const [nr, r] of skc) if (r.campos.sitio === a.ref) objetos.push(nr)
+      const grupo = new Set(doGrupo(sitiosDaBusca, a.ref))
+      for (const [nr, r] of skc) if (r.campos.sitio === a.ref || (typeof r.campos.sitio === 'string' && grupo.has(destinoDe(destinos, r.campos.sitio)))) objetos.push(nr)
       objetos.push(...(dosSitios.get(a.ref) ?? []))
     }
     for (const e of doUsuario(a)) for (const nr of objetos) porEscopo[e].add(nr)
   }
 
   const todos = await candidatos(pubs, [...porEscopo.tudo])
-  const livro = await sitiosDoPacote().catch((): SitiosDoPacote | null => null)
   for (const nr of porEscopo.tudo) {
     const r = skc.get(nr)
-    if (r && !todos.has(nr)) todos.set(nr, candidatoSkc(nr, r, estadoDoUsuario, livro, redirecionamentos))
+    if (r && !todos.has(nr)) todos.set(nr, candidatoSkc(nr, r, estadoDoUsuario, livro, destinos))
   }
-  // O sítio de agora de cada objeto do livro (a faceta Sítio): o trocado pela pessoa, com o nome corrigido (Tarefa 12).
-  for (const c of todos.values()) if (!c.resumo.skc) aplicarSitioDeAgora(c, estadoDoUsuario, livro, redirecionamentos)
+  // O sítio de agora de cada objeto do livro (a faceta Sítio): o trocado pela pessoa, com o nome corrigido (Tarefa 12), e o
+  // destino de um sítio mesclado (Parte 2C, bloco 2: a faceta nunca mostra o absorvido como valor próprio).
+  for (const c of todos.values()) if (!c.resumo.skc) aplicarSitioDeAgora(c, estadoDoUsuario, livro, destinos)
   for (const h of estadoDoUsuario.registros.get('hipotese')?.values() ?? []) {
     const alvo = (v: unknown) => numeroDeObjeto(v) ?? (typeof v === 'string' && v.startsWith('OB-') ? numeroDoObjeto(estadoDoUsuario, v) : null)
     // Ancorada numa leitura SKC, a hipótese é do dono da leitura, como na tela (revisão 4 da Tarefa 10, m6; M13).

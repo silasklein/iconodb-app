@@ -1,0 +1,85 @@
+{
+ "schema": 6,
+ "gerado_em": "2026-11-04T20:33:10+00:00",
+ "publicacoes": [
+  {
+   "sigla": "TESTE",
+   "volume": "I",
+   "rotulo": "TESTE I"
+  }
+ ],
+ "arquivos": {
+  "imagens/TESTE/TESTE-0001/screen-1.webp": {
+   "sha256": "fc4bd2fdfc06e084fafe418fc3548d75bdeaf39b708904cb85d0134e32705762",
+   "bytes": 22954
+  },
+  "imagens/TESTE/TESTE-0001/screen-2.webp": {
+   "sha256": "51514b404dae5c4e0281bcae931d2b6828e50c327eaba48ee9a56e994b8c858f",
+   "bytes": 4892
+  },
+  "imagens/TESTE/TESTE-0001/thumb-1.webp": {
+   "sha256": "69d925684a18fccd97bac7b420783a4a118c653bd8e816ca0b85e4e24f48679f",
+   "bytes": 5102
+  },
+  "imagens/TESTE/TESTE-0001/thumb-2.webp": {
+   "sha256": "396ed0d879675c20708b0c9a00e2419b343cf55ac40bc60207454a919691c808",
+   "bytes": 938
+  },
+  "imagens/TESTE/TESTE-0002/screen-1.webp": {
+   "sha256": "290793b6153c9aed3b0d5489e15f3dac7189cc629ae1896b147e848b5ce160f6",
+   "bytes": 24834
+  },
+  "imagens/TESTE/TESTE-0002/thumb-1.webp": {
+   "sha256": "b794c0b4b9223707f95be754549e09e35a143cac5a12ceebd43cba0de1dab342",
+   "bytes": 4872
+  },
+  "imagens/TESTE/TESTE-0003/screen-1.webp": {
+   "sha256": "3808cb7e86fe85730e88383e6dfa9172ad2a37f584e1828fd778bd419b61e846",
+   "bytes": 23396
+  },
+  "imagens/TESTE/TESTE-0003/thumb-1.webp": {
+   "sha256": "3e099a903d44e85c92804a2c9769e48d6127c7c2862faba9663364737d547ef0",
+   "bytes": 5410
+  },
+  "imagens/TESTE/TESTE-0004/screen-1.webp": {
+   "sha256": "b0749485987ce6a46f9ab49a852a1af0f004ee264f8df134c84dfa10247dd712",
+   "bytes": 25802
+  },
+  "imagens/TESTE/TESTE-0004/thumb-1.webp": {
+   "sha256": "13e70723825886a216f1ad63fa71d56e16a7cdd22fcabfa111716df1a0b0bb9a",
+   "bytes": 5424
+  },
+  "imagens/TESTE/TESTE-0005/screen-1.webp": {
+   "sha256": "bea85a1fa54ddf6cc20f66bffdb77b7bf4b2e77f8bb7c64c9e072531c6ea10c1",
+   "bytes": 4934
+  },
+  "imagens/TESTE/TESTE-0005/thumb-1.webp": {
+   "sha256": "a65939b2fa87a4838b5ccdf29d916d07f07a7c65923bc223957c2c5dea60d907",
+   "bytes": 972
+  },
+  "imagens/TESTE/TESTE-0006/screen-1.webp": {
+   "sha256": "03e68d3af699066cc47e5d47637891153486084ad9b94ef8ea0a07bda7e516b3",
+   "bytes": 5240
+  },
+  "imagens/TESTE/TESTE-0006/thumb-1.webp": {
+   "sha256": "d6c888948645572d931bc159cc03372e3166c76880ed82a19421c11c5d0c0242",
+   "bytes": 1080
+  },
+  "nucleo/busca.sqlite": {
+   "sha256": "d9793df2b89cf083715f4811c5b7685329f6c4c02d1836c3d4c1c0b2551d880c",
+   "bytes": 32768
+  },
+  "nucleo/comum.sqlite": {
+   "sha256": "a6251fec6d9fd7a089a71ba1bef8ccdcd28a0991f214f1e8c924a2476c2359b1",
+   "bytes": 311296
+  },
+  "nucleo/fold.json": {
+   "sha256": "a30ac717837f964699d1bc79cb47ac1610e415b3577859d133e5a1d096f42822",
+   "bytes": 1194
+  },
+  "nucleo/pub-TESTE.sqlite": {
+   "sha256": "2ccf98a162267bf5d0dfa0c2517275be03221aa10dfd3489ed42d2e889c717e6",
+   "bytes": 319488
+  }
+ }
+}

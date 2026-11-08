@@ -20,6 +20,9 @@ import { escreverNota } from './notasNaTela'
  *    nenhum número repetido; o mais antigo pelo hlc fica com o número, o outro recebe o seguinte e vê o aviso.
  * 4. A rede cai no meio do envio de um segmento (o arquivo chega e a resposta se perde): nada se perde nem se duplica.
  * 5. Só com a permissão de leitura: a Sincronização diz que faltam permissões e lista as três.
+ * 6. Parte 2C, bloco 2: os dois sem internet mesclam o mesmo par de sítios ao contrário (A primeiro, B depois); ao sincronizar
+ *    os dois mostram o mesmo sítio que ficou (o de B, a decisão mais recente), e só A vê o aviso de conflito, que «Entendi»
+ *    esconde para sempre neste aparelho e «Ver no histórico» leva à Sincronização, no histórico recente.
  *
  * Em todos: nenhuma rolagem horizontal nas telas vistas (375 e 1280), nenhuma violação de CSP, nenhum pedido para fora.
  * Só dados sintéticos (TESTE). Com SHOTS_DIR definido, guarda capturas.
@@ -626,4 +629,116 @@ test('só com a permissão de leitura: a Sincronização diz que faltam permiss�
   await semRolagemHorizontal(page, 'Sincronização sem permissão')
   // Nada foi escrito (sem a permissão de escrita, o Dropbox recusou antes).
   expect(dropbox.enviados.size).toBe(0)
+})
+
+/** Mescla, pela página do sítio `id`, com o sítio que `busca` acha (`outro`); fica `fica` (marcado se não é o sugerido). */
+async function mesclarNaTela(page: Page, id: string, nome: string, busca: string, outro: string, fica: string) {
+  await page.goto(`#/sitio/${id}`)
+  await expect(page.getByRole('heading', { level: celular(page) ? 1 : 2, name: nome, exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Mesclar com outro sítio…' }).click()
+  const caixa = page.getByRole('group', { name: `Mesclar ${nome} com outro sítio` })
+  await caixa.getByRole('combobox', { name: 'Com qual sítio?' }).fill(busca)
+  await caixa.getByRole('listbox', { name: 'Com qual sítio?' }).getByRole('option', { name: new RegExp(outro) }).click()
+  const qual = page.getByRole('group', { name: `Mesclar ${nome} e ${outro}` })
+  const radio = qual.getByRole('radio', { name: new RegExp(fica) })
+  await radio.check()
+  await expect(radio).toBeChecked()
+  await qual.getByRole('button', { name: 'Mesclar' }).click()
+  await expect(qual).toHaveCount(0)
+}
+
+test('Parte 2C, bloco 2: sem internet, A mescla Maḥtiṣ em Maḥteṣ e B, depois, Maḥteṣ em Maḥtiṣ; os dois mostram o mesmo e só A vê o aviso', async ({ browser }, info) => {
+  test.setTimeout(240_000)
+  const dropbox = dropboxDeDois()
+  const A = await aparelho(browser, info, dropbox, 'A')
+  const B = await aparelho(browser, info, dropbox, 'B')
+  const titulo = (page: Page, nome: string) => page.getByRole('heading', { level: celular(page) ? 1 : 2, name: nome, exact: true })
+  const conflito = (page: Page) => page.locator('.sitio-conflito')
+  const TEXTO_DO_CONFLITO = 'Neste aparelho você mesclou Maḥtiṣ Teste em Maḥteṣ Teste, mas outro aparelho mesclou Maḥteṣ Teste em Maḥtiṣ Teste depois; ficou a mais recente.'
+  try {
+    for (const x of [A, B]) {
+      await entrar(x.page)
+      await semNadaPorEnviar(x.page)
+    }
+
+    // 1. Os dois sem internet. A mescla Maḥtiṣ Teste (TESTE-7) em Maḥteṣ Teste (TESTE-1), o sugerido; B, depois, o contrário.
+    await A.context.setOffline(true)
+    await B.context.setOffline(true)
+    const antesDoOffline = pedidosAoDropbox(dropbox)
+    await mesclarNaTela(A.page, 'TESTE-7', 'Maḥtiṣ Teste', 'mahtes', 'Maḥteṣ Teste', 'Maḥteṣ Teste')
+    await expect(A.page).toHaveURL(/#\/sitio\/TESTE-1$/)
+    await expect(A.page.getByRole('status').filter({ hasText: 'Maḥteṣ Teste e Maḥtiṣ Teste agora são um só.' })).toBeVisible()
+    await mesclarNaTela(B.page, 'TESTE-1', 'Maḥteṣ Teste', 'mahtis', 'Maḥtiṣ Teste', 'Maḥtiṣ Teste')
+    await expect(B.page).toHaveURL(/#\/sitio\/TESTE-7$/)
+    await expect(B.page.getByRole('status').filter({ hasText: 'Maḥtiṣ Teste e Maḥteṣ Teste agora são um só.' })).toBeVisible()
+    await semRolagemHorizontal(B.page, 'o sítio que ficou em B, sem internet')
+    // Nada chegou ao Dropbox enquanto os dois estavam sem internet (nem a mescla de A nem a de B).
+    expect(pedidosAoDropbox(dropbox)).toEqual(antesDoOffline)
+
+    // 2. A volta e sincroniza; depois B; depois A de novo (recebe a de B).
+    await A.context.setOffline(false)
+    await sincronizar(A.page)
+    await semNadaPorEnviar(A.page)
+    await B.context.setOffline(false)
+    await sincronizar(B.page)
+    await semNadaPorEnviar(B.page)
+    await sincronizar(A.page)
+    await semNadaPorEnviar(A.page)
+
+    // 3. Os dois mostram o mesmo sítio que ficou: Maḥtiṣ Teste (a decisão de B, a mais recente), com Maḥteṣ Teste mesclado nele.
+    for (const x of [A, B]) {
+      await x.page.goto('#/sitio/TESTE-1')
+      await expect(x.page).toHaveURL(/#\/sitio\/TESTE-7$/, { timeout: 30_000 })
+      await expect(titulo(x.page, 'Maḥtiṣ Teste')).toBeVisible()
+      await expect(x.page.locator('dt:text-is("Mesclado aqui") + dd')).toHaveText(/^Maḥteṣ Teste\s*\(dos livros\)\s*desfazer$/)
+      await x.page.goto('#/sitios')
+      await expect(x.page.locator('a.lista-linha').filter({ hasText: 'Maḥtiṣ Teste' })).toHaveCount(1)
+      await expect(x.page.locator('a.lista-linha').filter({ hasText: /Maḥteṣ Teste/ })).toHaveCount(0)
+      await semRolagemHorizontal(x.page, `a lista de sítios em ${x.nome}`)
+    }
+
+    // 4. Só A (a decisão que ficou de fora) vê o aviso de conflito, na página do sítio que ficou.
+    await B.page.goto('#/sitio/TESTE-7')
+    await expect(titulo(B.page, 'Maḥtiṣ Teste')).toBeVisible()
+    await expect(B.page.locator('dt:text-is("Mesclado aqui") + dd')).toBeVisible()
+    await expect(conflito(B.page)).toHaveCount(0)
+    await A.page.goto('#/sitio/TESTE-7')
+    await expect(conflito(A.page)).toHaveText(new RegExp(`^${TEXTO_DO_CONFLITO.replace(/[.;]/g, '\\$&')}\\s*Ver no histórico\\s*Entendi$`))
+    for (const [alvo, nome] of [
+      [conflito(A.page).getByRole('link', { name: 'Ver no histórico' }), '«Ver no histórico»'],
+      [conflito(A.page).getByRole('button', { name: 'Entendi' }), '«Entendi»'],
+    ] as const) {
+      const caixa = (await alvo.boundingBox())!
+      expect(Math.min(caixa.width, caixa.height), `alvo de ${nome}`).toBeGreaterThanOrEqual((celular(A.page) ? 44 : 36) - 0.5)
+    }
+    await semRolagemHorizontal(A.page, 'o aviso de conflito em A')
+    await foto(A.page, '8-a-conflito-de-mescla', conflito(A.page))
+
+    // 5. «Ver no histórico» abre a Sincronização no histórico recente.
+    await conflito(A.page).getByRole('link', { name: 'Ver no histórico' }).click()
+    await expect(A.page).toHaveURL(/#\/sincronizacao#sync-hist$/)
+    await expect(A.page.getByRole('heading', { level: 2, name: 'Histórico recente' })).toBeInViewport()
+    await foto(A.page, '9-a-historico')
+
+    // 6. «Entendi» esconde o aviso (o foco vai ao título) e fica guardado neste aparelho; ele não volta depois de recarregar.
+    const chavesDoConflito = () =>
+      A.page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('iconodb:conflito-sitio:')))
+    await A.page.goto('#/sitio/TESTE-7')
+    await conflito(A.page).getByRole('button', { name: 'Entendi' }).click()
+    await expect(conflito(A.page)).toHaveCount(0)
+    await expect(titulo(A.page, 'Maḥtiṣ Teste')).toBeFocused()
+    await expect.poll(async () => (await chavesDoConflito()).length).toBe(1)
+    await A.page.reload()
+    await expect(titulo(A.page, 'Maḥtiṣ Teste')).toBeVisible()
+    await expect(A.page.locator('dt:text-is("Mesclado aqui") + dd')).toBeVisible()
+    await expect(conflito(A.page)).toHaveCount(0)
+    // O controle: sem a marca do «Entendi», o mesmo recarregar mostra o aviso (então a falta dele acima vem do «Entendi»).
+    const [chave] = await chavesDoConflito()
+    await A.page.evaluate((k) => localStorage.removeItem(k), chave!)
+    await A.page.reload()
+    await expect(conflito(A.page)).toBeVisible()
+    await expect(conflito(A.page)).toContainText(TEXTO_DO_CONFLITO)
+  } finally {
+    await encerrar(dropbox, A, B)
+  }
 })

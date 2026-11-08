@@ -6,11 +6,15 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { armazemComPacote, bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
+import { RAIZ_DO_PACOTE_6 } from '../../tests/suporte/fonteDeTeste'
+import { mesclasDoPacote } from '../pacote/redirecionamentos'
+import { pacoteDeSitios } from '../sitios/pacote'
 import { armazemMemoria } from '../pacote/armazem'
 import { abrirBanco, aoReabrir, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
 import {
   contagens,
   elementosSemRegiaoNoPacote,
+  grafiasDoPacote,
   grupo,
   grupos,
   hipotese,
@@ -20,8 +24,12 @@ import {
   localizadoresDosObjetos,
   lugaresDosCasos,
   numerosDosTrechos,
+  objetosDosSitios,
   obra,
   obras,
+  paresSugeridos,
+  partesDoPacote,
+  redirecionamentos,
   regioes,
   regioesDoLivro,
   regioesDoLivroParaExportar,
@@ -285,10 +293,16 @@ describe('consultas sobre o pacote sintético', () => {
     ])
 
     const ss = await sitios()
+    // Pacote 8 (Parte 2C, bloco 2): os sítios TESTE-4 a TESTE-8, sem objetos, entram na lista (a consulta não sabe de mescla).
     expect(ss.map((s) => [s.id, s.nome, s.objetos])).toEqual([
+      ['TESTE-5', 'Área Probe Teste', 0],
+      ['TESTE-8', 'Ḫirbet Vizinha Teste', 0],
       ['TESTE-1', 'Maḥteṣ Teste', 3],
+      ['TESTE-7', 'Maḥtiṣ Teste', 0],
+      ['TESTE-4', 'Tel Probe Teste', 0],
       ['TESTE-2', 'Tell Probe Teste', 3],
       ['TESTE-3', 'Tell Usuário Teste', 0], // o sítio do usuário publicado (Tarefa 16)
+      ['TESTE-6', 'Túmulo Probe Teste', 0],
     ])
     const s = await sitio('TESTE-2')
     expect(s).toMatchObject({ id: 'TESTE-2', literal: 'Tell Probe Teste', metodo: 'gazetteer', lat: 31.9132, lon: 35.2071 })
@@ -308,7 +322,7 @@ describe('consultas sobre o pacote sintético', () => {
   })
 
   it('sitios() e sitio() trazem a região: o verbete-pai do verbete do nome, ou null', async () => {
-    expect((await sitios()).map((x) => x.regiao)).toEqual([null, null, null])
+    expect((await sitios()).map((x) => x.regiao)).toEqual(Array(8).fill(null)) // pacote 8: oito sítios
     expect((await sitio('TESTE-1'))!.regiao).toBeNull()
   })
 
@@ -529,11 +543,12 @@ describe('nomes dos esquemas e plano de importação no pool', () => {
   it('a região do sítio é o verbete-pai do nome do sítio (glossary_entry.parent_id)', async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     await executar("UPDATE main.glossary_entry SET parent_id = 'GL-900001' WHERE id = 'GL-900004'")
-    expect((await sitios()).map((x) => [x.id, x.regiao])).toEqual([
+    expect((await sitios()).filter((x) => ['TESTE-1', 'TESTE-2', 'TESTE-3'].includes(x.id)).map((x) => [x.id, x.regiao])).toEqual([
       ['TESTE-1', { id: 'GL-900001', nome: 'leão-de-teste' }],
       ['TESTE-2', null],
       ['TESTE-3', null],
     ])
+    expect((await sitios()).filter((x) => x.regiao !== null)).toHaveLength(1) // pacote 8: os outros sítios sem região
     expect((await sitio('TESTE-1'))!.regiao).toEqual({ id: 'GL-900001', nome: 'leão-de-teste' })
   })
 })
@@ -607,5 +622,127 @@ describe('numerosDosTrechos(): de que objeto do livro é cada trecho (T17-B-4)',
       ['PA-TESTE-0005-cat-1', ['BA00001']],
     ])
     expect((await numerosDosTrechos([])).size).toBe(0)
+  })
+})
+
+describe('Parte 2C, bloco 2: as tabelas dos sítios do pacote 8', () => {
+  afterAll(() => usarMotor(null))
+
+  it('partesDoPacote(), grafiasDoPacote() e paresSugeridos() dão as linhas do pacote sintético (Tarefa 7)', async () => {
+    usarMotor(await bancoDeTeste())
+    expect(await partesDoPacote()).toEqual([
+      { parte: 'TESTE-5', todo: 'TESTE-2' },
+      { parte: 'TESTE-6', todo: 'TESTE-5' },
+    ])
+    const grafias = await grafiasDoPacote()
+    expect(grafias).toHaveLength(9)
+    expect(grafias).toContainEqual({ sitio: 'TESTE-1', texto: 'al-Maḥṭaṣ Teste', tradicao: null, sigla: 'TESTE', pagina: '4', origem: 'livro' })
+    expect(grafias).toContainEqual({ sitio: 'TESTE-4', texto: 'Tel Probe Teste', tradicao: null, sigla: 'TESTE', pagina: '7', origem: 'livro' })
+    expect(grafias).toContainEqual({ sitio: 'TESTE-2', texto: 'Probetal Teste', tradicao: 'alema', sigla: null, pagina: null, origem: 'usuario' })
+    expect(await paresSugeridos()).toEqual([
+      { a: 'TESTE-1', b: 'TESTE-7', motivo: 'nome' },
+      { a: 'TESTE-1', b: 'TESTE-8', motivo: 'coordenada' },
+    ])
+  })
+
+  it('Foco da revisão 1: o mesmo pacote sem as três tabelas novas dá listas vazias, não erro', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    for (const t of ['sitio_parte', 'sitio_grafia', 'sitio_par_sugerido']) await executar(`DROP TABLE main.${t}`)
+    expect(await partesDoPacote()).toEqual([])
+    expect(await grafiasDoPacote()).toEqual([])
+    expect(await paresSugeridos()).toEqual([])
+  })
+
+  it('uma tradição ou um motivo fora da lista não chega às telas', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar("INSERT INTO main.sitio_grafia VALUES ('TESTE-1', 'Grafia Teste', 'klingon', 'TESTE', '3', 'livro')")
+    expect((await grafiasDoPacote()).find((g) => g.texto === 'Grafia Teste')).toMatchObject({ tradicao: null })
+  })
+
+  it('objetosDosSitios(): os objetos de cada sítio; um objeto em dois sítios fica no primeiro da lista (o mais perto do topo)', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    const antes = await objetosDosSitios(['TESTE-2', 'TESTE-4'])
+    expect([...antes].map(([id, os]) => [id, os.map((o) => o.numero)])).toEqual([
+      ['TESTE-2', ['CA00003', 'CA00004', 'BA00002']],
+      ['TESTE-4', []],
+    ])
+    // TESTE-0003 (CA00003) também em TESTE-4 e TESTE-0001 (CA00001) só em TESTE-4.
+    await executar(`INSERT INTO pub_TESTE.assertion (subject_type, subject_id, field, value, site_id, publication) VALUES
+                      ('item', 'TESTE-0003', 'findspot', 'Tel Probe Teste', 4, 'TESTE'), ('item', 'TESTE-0001', 'findspot', 'Tel Probe Teste', 4, 'TESTE')`)
+    const depois = await objetosDosSitios(['TESTE-2', 'TESTE-4'])
+    expect([...depois].map(([id, os]) => [id, os.map((o) => o.numero)])).toEqual([
+      ['TESTE-2', ['CA00003', 'CA00004', 'BA00002']],
+      ['TESTE-4', ['CA00001']],
+    ])
+    const invertido = await objetosDosSitios(['TESTE-4', 'TESTE-2'])
+    expect([...invertido].map(([id, os]) => [id, os.map((o) => o.numero)])).toEqual([
+      ['TESTE-4', ['CA00001', 'CA00003']],
+      ['TESTE-2', ['CA00004', 'BA00002']],
+    ])
+    expect((await objetosDosSitios([])).size).toBe(0)
+    expect([...(await objetosDosSitios(['lixo', 'OUTRA-1', 'SI-abcdefgh-1']))]).toEqual([
+      ['lixo', []],
+      ['OUTRA-1', []],
+      ['SI-abcdefgh-1', []],
+    ])
+  })
+})
+
+describe('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6) continua a abrir com as consultas de hoje', () => {
+  let v8: Record<string, unknown>
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste())
+    v8 = await doPacote()
+    usarMotor(await bancoDeTeste({ raiz: RAIZ_DO_PACOTE_6 }))
+  })
+  afterAll(() => usarMotor(null))
+
+  /** O que as telas de antes leem do pacote: itens, publicação, grupos, verbetes, obras e os sítios TESTE-1 a TESTE-3. */
+  async function doPacote(): Promise<Record<string, unknown>> {
+    return {
+      item: await item('CA00001'),
+      item2: await item('BA00002'),
+      grupos: await grupos(),
+      grupo: await grupo('GR-TESTE-I-01'),
+      verbete: await verbete('GL-900004'),
+      obras: await obras(),
+      sitios: (await sitios()).filter((s) => ['TESTE-1', 'TESTE-2', 'TESTE-3'].includes(s.id)),
+      sitio: await sitio('TESTE-2'),
+      fila: await linhasDaFila(),
+    }
+  }
+
+  it('abre: o schema é o 6, sem as tabelas novas', async () => {
+    expect(await abrirBanco()).toMatchObject({ estado: 'aberto', publicacoes: [{ sigla: 'TESTE', esquema: 'pub_TESTE' }] })
+    const [t] = await executar<{ n: number }>("SELECT count(*) AS n FROM main.sqlite_master WHERE name IN ('volume', 'item_alias', 'sitio_parte', 'sitio_grafia', 'sitio_par_sugerido')")
+    expect(t!.n).toBe(0)
+  })
+
+  it('itens, publicação, grupos, verbetes, obras e sítios dão o mesmo que no pacote 8', async () => {
+    expect(await doPacote()).toEqual(v8)
+    expect(await sitios()).toHaveLength(3)
+  })
+
+  it('as consultas dos sítios do pacote 8 dão listas vazias', async () => {
+    expect(await partesDoPacote()).toEqual([])
+    expect(await grafiasDoPacote()).toEqual([])
+    expect(await paresSugeridos()).toEqual([])
+    expect((await redirecionamentos()).filter((r) => r.tipo === 'sitio').map((r) => [r.de, r.para])).toEqual([
+      ['SI-teste123-1', 'TESTE-3'],
+      ['SI-teste123-2', 'TESTE-2'],
+    ])
+    expect([...(await objetosDosSitios(['TESTE-1']))].map(([id, os]) => [id, os.map((o) => o.numero)])).toEqual([['TESTE-1', ['CA00001', 'CA00002', 'BA00001']]])
+  })
+
+  it('pacoteDeSitios() e mesclasDoPacote() abrem sem erro: só os sítios e os publicados, nada do schema 8', async () => {
+    expect((await mesclasDoPacote()).size).toBe(0)
+    const p = await pacoteDeSitios()
+    expect([...p.sitios].sort()).toEqual(['TESTE-1', 'TESTE-2', 'TESTE-3'])
+    expect(Object.fromEntries(p.publicados)).toEqual({ 'SI-teste123-1': 'TESTE-3', 'SI-teste123-2': 'TESTE-2' })
+    expect([...p.criados]).toEqual(['TESTE-3']) // M-1: TESTE-3 foi criado do sítio do usuário; a TESTE-2 ele só leva
+    expect(p.mesclas.size).toBe(0)
+    expect(p.partes.size).toBe(0)
+    expect(p.grafias).toEqual([])
+    expect(p.pares).toEqual([])
   })
 })

@@ -14,6 +14,7 @@ import { Icon } from '../ui/Icon'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { registrar, registrarVarios, useEstado } from '../usuario/estado'
 import type { Tipo } from '../usuario/eventos'
+import { useResolucaoDeSitios } from '../sitios/useResolucao'
 import { gruposDeExcluidos, textoDoRestaurado, type GrupoDeExcluidos, type LinhaExcluida } from './modelo'
 import { guardarNomes, useNomesGuardados } from './nomesGuardados'
 import '../telas/Estado.css'
@@ -112,10 +113,12 @@ export function Excluidos() {
     }
     void guardarNomes(novos).catch(() => undefined)
   }, [estado, redirecionamentos, nomeNoLivro])
+  // Parte 2C, bloco 2: um sítio seu excluído que estava mesclado em outro volta mesclado nele (a aprovação diz em qual).
+  const resolucao = useResolucaoDeSitios()
   const grupos = useMemo(
-    () => gruposDeExcluidos(estado, { redirecionamentos, nomeNoLivro, nomeGuardado, agora: Date.now() }),
+    () => gruposDeExcluidos(estado, { redirecionamentos, nomeNoLivro, nomeGuardado, agora: Date.now(), resolucao }),
     // A numeração muda com os números confirmados (que não estão no estado).
-    [estado, numeracao, redirecionamentos, nomeNoLivro, nomeGuardado], // eslint-disable-line react-hooks/exhaustive-deps
+    [estado, numeracao, redirecionamentos, nomeNoLivro, nomeGuardado, resolucao], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const linhas = useMemo(() => grupos.flatMap((g) => g.linhas), [grupos])
   const porChave = useMemo(() => new Map(linhas.map((l) => [chaveDe(l), l] as const)), [linhas])

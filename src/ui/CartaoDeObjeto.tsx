@@ -11,13 +11,15 @@ interface Props {
   state?: unknown
   /** Cartão grande das telas de computador (mostra também a origem). */
   grande?: boolean
+  /** O sítio de onde o objeto vem, quando a grade é a de outro (uma parte do sítio da página): a linha do sítio diz «em …». */
+  em?: string
 }
 
 /** Um objeto na grade: miniatura (a principal do usuário, se houver), número (o identificador principal), tipo e sítio. Leva a /item/<número>. */
-export function CartaoDeObjeto({ objeto, state, grande = false }: Props) {
+export function CartaoDeObjeto({ objeto, state, grande = false, em }: Props) {
   // O sítio de agora (Tarefa 12): o nome corrigido, o sítio que a pessoa escolheu para o objeto; excluído, com a marca.
   const s = useSitiosVivos(false).doResumo(objeto)
-  const sitio = [s.nome, s.marca].filter(Boolean).join(' · ')
+  const sitio = em !== undefined ? `em ${em}` : [s.nome, s.marca].filter(Boolean).join(' · ')
   return (
     <Link className={`cartao-objeto${grande ? ' cartao-grande' : ''}`} to={`/item/${encodeURIComponent(objeto.numero)}`} state={state}>
       <span className="cartao-imagem">

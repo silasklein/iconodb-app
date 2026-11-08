@@ -23,14 +23,17 @@ describe('Sítios sem região no pacote (R18: uma lista alfabética com letras)'
     expect(screen.getByRole('heading', { level: 1, name: 'Sítios' })).toBeInTheDocument()
     await screen.findAllByRole('link', { name: /^Tell Probe Teste/ })
     // TESTE-3: o sítio do usuário publicado pelo pipeline (Tarefa 16)
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/sitio/TESTE-1', '/sitio/TESTE-2', '/sitio/TESTE-3'])
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['M', 'T'])
+    // Pacote 8: TESTE-5 a TESTE-8 a mais; TESTE-4, mesclado em TESTE-2, não aparece.
+    await waitFor(() =>
+      expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/sitio/TESTE-5', '/sitio/TESTE-8', '/sitio/TESTE-1', '/sitio/TESTE-7', '/sitio/TESTE-2', '/sitio/TESTE-3', '/sitio/TESTE-6']),
+    )
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['A', 'H', 'M', 'T'])
     const tell = screen.getByRole('link', { name: /^Tell Probe Teste/ })
     expect(within(tell).getByText('31,913 N · 35,207 E · Levante Sul')).toBeInTheDocument()
     // o número leva a unidade em texto escondido, para o leitor de tela ("3 objetos")
     expect(tell.closest('.sitio-linha')).toHaveTextContent('3 objetos')
     expect(within(screen.getByRole('link', { name: /^Maḥteṣ Teste/ })).getByText(/^\d+,\d{3} N · \d+,\d{3} E · Levante Sul$/)).toBeInTheDocument()
-    expect(screen.getByText('3 sítios · 3 com coordenada')).toBeInTheDocument()
+    expect(screen.getByText('7 sítios · 5 com coordenada')).toBeInTheDocument()
     // «Mostrar no mapa» é um botão (o mapa é do app, sem link externo): leva ao ponto do sítio
     expect(screen.getByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /no mapa$/ })).not.toBeInTheDocument()
@@ -161,14 +164,33 @@ describe('Sítios: coordenada 0', () => {
     renderizarRota('/sitios')
     await screen.findByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })
     expect(screen.getByText('0,000 N · 0,000 E')).toBeInTheDocument()
-    expect(screen.getByText(/3 com coordenada/)).toBeInTheDocument()
+    expect(screen.getByText(/5 com coordenada/)).toBeInTheDocument() // pacote 8: 7 sítios na lista, TESTE-5 e TESTE-6 sem coordenada
   })
 
   it('só uma das duas em 0 e a outra ausente: sem mapa', async () => {
-    await executar('UPDATE pub_TESTE.site SET lat = 0, lon = NULL WHERE id = 2')
+    // Pacote 8: em TESTE-1 (TESTE-2 herdaria a coordenada de TESTE-4, mesclado nele: regra 4 do §5).
+    await executar('UPDATE pub_TESTE.site SET lat = 0, lon = NULL WHERE id = 1')
+    renderizarRota('/sitios')
+    const linha = await screen.findByRole('link', { name: /^Maḥteṣ Teste/ })
+    expect(screen.queryByRole('button', { name: 'Mostrar Maḥteṣ Teste no mapa' })).not.toBeInTheDocument()
+    expect(within(linha).getByText('sem coordenada')).toBeInTheDocument()
+  })
+
+  it('Parte 2C, bloco 2: um objeto que o livro põe no destino e num absorvido conta uma vez (como na página)', async () => {
+    // CA00003 (TESTE-0003) também em TESTE-4, mesclado em TESTE-2; CA00001 (TESTE-0001) também, e só ele é novo para TESTE-2.
+    await executar(`INSERT INTO pub_TESTE.assertion (subject_type, subject_id, field, value, site_id, publication) VALUES
+                      ('item', 'TESTE-0003', 'findspot', 'Tel Probe Teste', 4, 'TESTE'), ('item', 'TESTE-0001', 'findspot', 'Tel Probe Teste', 4, 'TESTE')`)
     renderizarRota('/sitios')
     await screen.findByRole('link', { name: /^Tell Probe Teste/ })
-    expect(screen.queryByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })).not.toBeInTheDocument()
-    expect(screen.getByText('sem coordenada')).toBeInTheDocument()
+    const linha = () => document.querySelector('.sitio-linha[data-sitio="TESTE-2"]')
+    await waitFor(() => expect(linha()).toHaveTextContent('4 objetos'))
+  })
+
+  it('Parte 2C, bloco 2: o destino sem coordenada mostra a do absorvido (TESTE-4, mesclado em TESTE-2) e vai ao mapa com ela', async () => {
+    await executar('UPDATE pub_TESTE.site SET lat = NULL, lon = NULL WHERE id = 2')
+    renderizarRota('/sitios')
+    const linha = await screen.findByRole('link', { name: /^Tell Probe Teste/ })
+    await waitFor(() => expect(within(linha).getByText('31,913 N · 35,207 E · Levante Sul')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })).toBeInTheDocument()
   })
 })

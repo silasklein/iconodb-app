@@ -90,7 +90,8 @@ describe('sugerir(): o pacote', () => {
 
   it('sítios pelo nome (dobrado), com a região e a contagem de objetos', async () => {
     const r = await sugerir('mah')
-    expect(r.sitios).toHaveLength(1)
+    // pacote 8: também TESTE-7 «Maḥtiṣ Teste» (sem objetos), depois
+    expect(r.sitios.map((x) => x.ref)).toEqual(['TESTE-1', 'TESTE-7'])
     expect(r.sitios[0]).toMatchObject({ categoria: 'sitios', alvoTipo: 'sitio', rotulo: 'Maḥteṣ Teste', destino: '/sitio/TESTE-1', skc: false })
     expect(r.sitios[0]!.complemento).toMatch(/3 objetos/)
     expect(r.sitios[0]!.trechos).toEqual([

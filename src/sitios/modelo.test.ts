@@ -15,8 +15,21 @@ import {
   skcComSitioNaoResolvido,
   trocasDeSitio,
 } from './doUsuario'
-import { camposDoSitioNovo, coordenadaValida, eSitioSkc, lerDadosDoSitio, lerSitioSkc, normalizarVariantes } from './modelo'
-import { corrigirCoordenada, corrigirTexto, corrigirVariantes, criarSitio, ErroDeSitio, excluirSitio, restaurarSitio, trocarSitioDoObjeto, voltarAoLivro, pedidoDeFicha } from './operacoes'
+import {
+  camposDoSitioNovo,
+  chaveDaGrafia,
+  coordenadaValida,
+  eSitioSkc,
+  GRUPO_DA_TRADICAO,
+  hlcDoSitio,
+  lerDadosDoSitio,
+  lerSitioSkc,
+  normalizarGrafias,
+  normalizarVariantes,
+  ROTULO_DA_TRADICAO,
+  TRADICOES,
+} from './modelo'
+import { corrigirCoordenada, corrigirTexto, criarSitio, ErroDeSitio, excluirSitio, restaurarSitio, trocarSitioDoObjeto, voltarAoLivro, pedidoDeFicha } from './operacoes'
 import type { SitioResumo } from '../banco/tipos'
 
 const sit = (ap: string, seq: number, reg: string, op: 'criar' | 'alterar' | 'excluir' | 'restaurar', campos: Record<string, unknown> = {}, ms?: number, c?: number) =>
@@ -39,7 +52,7 @@ describe('ids e leitura', () => {
     expect(camposDoSitioNovo({ nome: '  Tell   Novo ' })).toEqual({ nome: 'Tell Novo' })
     expect(
       camposDoSitioNovo({ nome: 'Tell Novo', variantes: ['Tall Naw', ' tall  naw ', '', 'Tell Nuovo'], regiao: ' Negev ', coordenada: { lat: 31.77, lon: 35.21 }, nota: ' da grade  ' }),
-    ).toEqual({ nome: 'Tell Novo', variantes: ['Tall Naw', 'Tell Nuovo'], regiao: 'Negev', lat: 31.77, lon: 35.21, nota: 'da grade' })
+    ).toEqual({ nome: 'Tell Novo', grafias: [{ texto: 'Tall Naw' }, { texto: 'Tell Nuovo' }], regiao: 'Negev', lat: 31.77, lon: 35.21, nota: 'da grade' })
     expect(() => camposDoSitioNovo({ nome: '   ' })).toThrow('sítio sem nome')
     expect(() => camposDoSitioNovo({ nome: 'X', coordenada: { lat: 131, lon: 35 } })).toThrow('fora da faixa')
   })
@@ -69,6 +82,58 @@ describe('ids e leitura', () => {
     expect(sitiosSkc(est).map((s) => s.id)).toEqual(['SI-aaaaaaaa-1', 'SI-bbbbbbbb-1'])
     expect(lerSitioSkc(est.registro('sitio', 'SI-aaaaaaaa-2')!)).toMatchObject({ excluido: true, nomeDeAgora: 'Apagado' })
     expect([...correcoesDosSitios(est).keys()]).toEqual(['TESTE-2'])
+  })
+})
+
+describe('grafias (Parte 2C, bloco 2): {texto, tradicao?, livro?} no lugar das variantes', () => {
+  it('as nove tradições, com o rótulo e o grupo', () => {
+    expect(TRADICOES).toEqual(['arabe', 'hebraica-moderna', 'biblica', 'grega-latina', 'alema', 'inglesa', 'francesa', 'portuguesa', 'outra'])
+    expect(TRADICOES.map((t) => ROTULO_DA_TRADICAO[t])).toEqual(['Árabe', 'Hebraica moderna', 'Bíblica', 'Grega/latina', 'Alemã', 'Inglesa', 'Francesa', 'Portuguesa', 'Outra'])
+    expect(TRADICOES.map((t) => GRUPO_DA_TRADICAO[t])).toEqual(['árabe', 'hebraica moderna', 'bíblica', 'grega/latina', 'alemã', 'inglesa', 'francesa', 'portuguesa', 'outra'])
+  })
+
+  it('camposDoSitioNovo grava grafias (nunca mais variantes)', () => {
+    expect(camposDoSitioNovo({ nome: 'Tell X', variantes: ['Tel X'] })).toEqual({ nome: 'Tell X', grafias: [{ texto: 'Tel X' }] })
+    expect(camposDoSitioNovo({ nome: 'Tell X', variantes: ['  '] })).toEqual({ nome: 'Tell X' })
+  })
+
+  it('chaveDaGrafia: a dobra de sempre, com U+2010 e U+2011 como hífen', () => {
+    expect(chaveDaGrafia('Tell‑X')).toBe(chaveDaGrafia('Tell-X'))
+    expect(chaveDaGrafia('Tell‐X')).toBe(chaveDaGrafia('Tell-X'))
+    expect(chaveDaGrafia('Tell ʿX')).toBe(chaveDaGrafia('tell x'))
+    expect(chaveDaGrafia('Tell X')).not.toBe(chaveDaGrafia('Tell-X'))
+  })
+
+  it('normalizarGrafias tira vazios, repetidos (Tell‑X/Tell-X, pelo texto e o livro) e a tradição desconhecida', () => {
+    expect(
+      normalizarGrafias([
+        { texto: ' Tell‑X ', tradicao: 'arabe' },
+        { texto: 'Tell-X' },
+        { texto: 'Tell-X', livro: 'TESTE' },
+        { texto: 'tell-x', livro: 'TESTE', tradicao: 'biblica' },
+        { texto: '   ' },
+        { texto: 'Tal  Y', tradicao: 'klingon', livro: '' },
+        'texto solto',
+        { texto: 3 },
+        null,
+      ]),
+    ).toEqual([{ texto: 'Tell‑X', tradicao: 'arabe' }, { texto: 'Tell-X', livro: 'TESTE' }, { texto: 'Tal Y' }])
+  })
+
+  it('lerDadosDoSitio lê as grafias (F10): sem o hlc dos campos, grafias escritas ignoram as variantes; com ele, variantes mais novas somam as que faltam', () => {
+    const est = fundir([
+      sit(A, 1, 'TESTE-7', 'alterar', { grafias: [{ texto: 'Tel B', tradicao: 'arabe' }] }),
+      sit(B, 2, 'TESTE-7', 'alterar', { variantes: ['tel b', 'Tell B'] }),
+      sit(A, 3, 'TESTE-8', 'alterar', { variantes: ['Tel C'] }),
+      sit(A, 4, 'TESTE-8', 'alterar', { grafias: [{ texto: 'Tal C' }] }),
+    ])
+    const t7 = est.registro('sitio', 'TESTE-7')!
+    const t8 = est.registro('sitio', 'TESTE-8')!
+    expect(lerDadosDoSitio(t7).variantes).toEqual(['Tel B'])
+    expect(lerDadosDoSitio(t7, hlcDoSitio(est, 'TESTE-7')).variantes).toEqual(['Tel B', 'Tell B'])
+    expect(lerDadosDoSitio(t8, hlcDoSitio(est, 'TESTE-8')).variantes).toEqual(['Tal C'])
+    // os que já chamavam lerDadosDoSitio recebem os textos juntos
+    expect(correcoesDosSitios(est).get('TESTE-7')!.variantes).toEqual(['Tel B', 'Tell B'])
   })
 })
 
@@ -250,8 +315,6 @@ describe('as operações gravam o que o formato diz', () => {
     expect((await corrigirTexto('TESTE-2', 'nome', 'Tell Probe Teste', 'Tell Probe Teste')).campos).toEqual({ nome: null })
     expect((await corrigirTexto('TESTE-2', 'regiao', '')).campos).toEqual({ regiao: null })
     expect((await corrigirTexto('TESTE-2', 'nota', ' dúvida\ncom linha ')).campos).toEqual({ nota: 'dúvida\ncom linha' })
-    expect((await corrigirVariantes('TESTE-2', ['a', 'A', 'b'])).campos).toEqual({ variantes: ['a', 'b'] })
-    expect((await corrigirVariantes('TESTE-2', [])).campos).toEqual({ variantes: null })
     expect((await corrigirCoordenada('TESTE-2', { lat: 1.5, lon: 2.5 })).campos).toEqual({ lat: 1.5, lon: 2.5 })
     await expect(corrigirCoordenada('TESTE-2', { lat: 99, lon: 2 })).rejects.toBeInstanceOf(ErroDeSitio)
     expect((await voltarAoLivro('TESTE-2', ['lat', 'lon'])).campos).toEqual({ lat: null, lon: null })

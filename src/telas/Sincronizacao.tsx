@@ -1,6 +1,6 @@
 import { ImagensComProblema } from '../imagens-usuario/ImagensComProblema'
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { sair } from '../dropbox/auth'
 import { IconButton } from '../ui/IconButton'
 import { IconeDeSincronizacao } from '../ui/IconeDeSincronizacao'
@@ -277,6 +277,11 @@ export function Sincronizacao() {
   const celular = useBreakpoint() !== 'computador'
   const avisos = info.avisos
   const onde = `Dropbox · ${info.nomeDoAparelho || 'este aparelho'}`
+  // «Ver no histórico» (o aviso de conflito de um sítio, Parte 2C, bloco 2) chega com `#sync-hist`: vai ao histórico recente.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (hash.length > 1) document.getElementById(hash.slice(1))?.scrollIntoView?.({ block: 'start' })
+  }, [hash])
   return (
     <div className="pagina-consulta sync-pagina">
       {celular && (

@@ -1,7 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useNavigationType, useParams } from 'react-router'
 import { sitios, type SitioResumo } from '../banco/consultas'
-import { useCorrecoesDosSitios, useObjetosPorSitio, useSitiosSkc } from '../sitios/doUsuario'
+import { dadosDoDestino, totalDeObjetos } from '../sitios/contagem'
+import { useCorrecoesDosSitios, useObjetosPorSitio, useResolucaoDaLista, useSitiosSkc, useTodosOsSitiosSkc, useTrocasDeSitio } from '../sitios/doUsuario'
 import type { DadosDoSitio, SitioSkc } from '../sitios/modelo'
 import { restaurarSitio } from '../sitios/operacoes'
 import { fold, tabelaDoPacote } from '../busca/fold'
@@ -22,6 +23,7 @@ import { Sitio } from './Sitio'
 import { useParametrosNaUrl } from './useParametrosNaUrl'
 import { FiltroDeRegioes } from '../sitios/FiltroDeRegioes'
 import { agruparPontos, chaveDaCoordenada, type SitioNoMapa } from '../sitios/mapa'
+import { useObjetosDoPacoteSemRepetir } from '../sitios/useResolucao'
 import { CHAVE_FORA, CHAVE_SEM_COORDENADA, REGIOES, nomeDaRegiao, regiaoDe } from '../sitios/regioes'
 import '../imagens-usuario/MarcaSkc.css'
 import '../sitios/Sitios.css'
@@ -65,41 +67,81 @@ async function carregar() {
 /**
  * Os sítios do livro com o nome, as grafias, a região e a coordenada corrigidos, e os sítios novos do usuário. A busca da lista
  * acha pelo nome de agora e pelo do livro (e pelas grafias).
+ *
+ * Parte 2C, bloco 2 (`daLista`, a resolução): um sítio mesclado em outro não aparece; o nome dele e as grafias novas acham o
+ * destino (`nomes`), os objetos dele, os do destino e os das partes somam na contagem (`totalDeObjetos`, cada objeto do pacote uma vez), e a coordenada e a
+ * região que faltam ao destino vêm do absorvido de menor id (`dadosDoDestino`). Enquanto a resolução não chega, como antes.
  */
-function juntar(lista: readonly SitioResumo[], correcoes: ReadonlyMap<string, DadosDoSitio>, novos: readonly SitioSkc[], contagem: ReadonlyMap<string, number>): { itens: SitioDaLista[]; busca: Map<string, string> } {
+function juntar(
+  lista: readonly SitioResumo[],
+  correcoes: ReadonlyMap<string, DadosDoSitio>,
+  novos: readonly SitioSkc[],
+  contagem: ReadonlyMap<string, number>,
+  daLista: ReturnType<typeof useResolucaoDaLista>,
+  todosSkc: readonly SitioSkc[],
+  distintos: ReadonlyMap<string, number> | null,
+): { itens: SitioDaLista[]; busca: Map<string, string> } {
   const busca = new Map<string, string>()
   const itens: SitioDaLista[] = []
+  const doLivro = new Map(lista.map((s) => [s.id, s] as const))
+  const skc = new Map(todosSkc.map((s) => [s.id, s] as const))
+  const doPacote = (id: string) => doLivro.get(id)?.objetos ?? 0
+  const daPessoaNoSitio = (id: string) => contagem.get(id) ?? 0
+  // A coordenada (e se é a da pessoa) e a região de um sítio só, como a lista as mostrava antes. A região leva o id e o nome
+  // da mesma fonte: a do livro (o verbete-pai), ou o texto da pessoa (sem id).
+  const dadosDe = (id: string) => {
+    const s = doLivro.get(id)
+    const c = s ? correcoes.get(id) : skc.get(id)
+    const livro = s && s.lat !== null && s.lon !== null ? { lat: s.lat, lon: s.lon } : null
+    const regiaoObjeto: SitioResumo['regiao'] = c?.regiao ? { id: '', nome: c.regiao } : (s?.regiao ?? null)
+    return { coordenada: c?.coordenada ?? livro, regiao: regiaoObjeto?.nome ?? null, regiaoObjeto, pais: null, nota: null, daPessoa: !s || !!c?.coordenada }
+  }
+  /**
+   * O que a linha mostra de um sítio: com a resolução, os campos que faltam vêm do absorvido de menor id, e a contagem soma os
+   * absorvidos e as partes (cada objeto do pacote uma vez: `distintos`).
+   */
+  const linha = (id: string) => {
+    if (!daLista) {
+      const d = dadosDe(id)
+      return { coordenada: d.coordenada, regiao: d.regiaoObjeto, daPessoa: d.daPessoa, objetos: doPacote(id) + daPessoaNoSitio(id) }
+    }
+    const d = dadosDoDestino(daLista.resolucao, id, dadosDe)
+    const daPessoa = d.origem.coordenada !== undefined && dadosDe(d.origem.coordenada).daPessoa
+    const regiao = d.origem.regiao !== undefined ? dadosDe(d.origem.regiao).regiaoObjeto : null
+    return { coordenada: d.coordenada, regiao, daPessoa, objetos: totalDeObjetos(daLista.resolucao, id, doPacote, daPessoaNoSitio, distintos) }
+  }
   for (const s of lista) {
+    if (daLista?.destinos.has(s.id)) continue
     const c = correcoes.get(s.id)
-    const lat = c?.coordenada?.lat ?? s.lat
-    const lon = c?.coordenada?.lon ?? s.lon
-    busca.set(s.id, [s.nome, s.literal, s.id, c?.nome, ...(c?.variantes ?? []), c?.regiao, c?.pais].filter(Boolean).join(' '))
+    const l = linha(s.id)
+    busca.set(s.id, [s.nome, s.literal, s.id, c?.nome, ...(c?.variantes ?? []), c?.regiao, c?.pais, ...(daLista?.nomes.get(s.id) ?? [])].filter(Boolean).join(' '))
     itens.push({
       ...s,
       nome: c?.nome ?? s.nome,
-      regiao: c?.regiao ? { id: s.regiao?.id ?? '', nome: c.regiao } : s.regiao,
-      lat,
-      lon,
-      objetos: s.objetos + (contagem.get(s.id) ?? 0),
+      regiao: l.regiao,
+      lat: l.coordenada?.lat ?? null,
+      lon: l.coordenada?.lon ?? null,
+      objetos: l.objetos,
       doUsuario: false,
-      coordenadaDoUsuario: !!c?.coordenada,
-      regiaoGeo: regiaoDe(lat, lon),
+      coordenadaDoUsuario: l.daPessoa,
+      regiaoGeo: regiaoDe(l.coordenada?.lat, l.coordenada?.lon),
     })
   }
   for (const s of novos) {
-    busca.set(s.id, [s.nomeDeAgora, s.id, ...s.variantes, s.regiao, s.pais, s.nota].filter(Boolean).join(' '))
+    const l = linha(s.id)
+    busca.set(s.id, [s.nomeDeAgora, s.id, ...s.variantes, s.regiao, s.pais, s.nota, ...(daLista?.nomes.get(s.id) ?? [])].filter(Boolean).join(' '))
     itens.push({
       id: s.id,
       nome: s.nomeDeAgora,
       literal: s.nomeDeAgora,
       glId: null,
-      lat: s.coordenada?.lat ?? null,
-      lon: s.coordenada?.lon ?? null,
-      regiao: s.regiao ? { id: '', nome: s.regiao } : null,
-      objetos: contagem.get(s.id) ?? 0,
+      lat: l.coordenada?.lat ?? null,
+      lon: l.coordenada?.lon ?? null,
+      regiao: l.regiao,
+      objetos: l.objetos,
       doUsuario: true,
-      coordenadaDoUsuario: true,
-      regiaoGeo: regiaoDe(s.coordenada?.lat, s.coordenada?.lon),
+      coordenadaDoUsuario: l.coordenada === null || l.daPessoa,
+      regiaoGeo: regiaoDe(l.coordenada?.lat, l.coordenada?.lon),
     })
   }
   return { itens, busca }
@@ -211,7 +253,11 @@ export function Sitios() {
   const carga = useCarregar(carregar)
   const correcoes = useCorrecoesDosSitios()
   const novos = useSitiosSkc()
+  const todosSkc = useTodosOsSitiosSkc()
   const contagem = useObjetosPorSitio()
+  const daLista = useResolucaoDaLista()
+  const trocas = useTrocasDeSitio()
+  const distintos = useObjetosDoPacoteSemRepetir(daLista?.resolucao ?? null, trocas)
   const rolagem = useRef<HTMLDivElement>(null)
   const { state } = useLocation() as { state: { sitioExcluido?: { id: string; nome: string } } | null }
   const [restaurando, setRestaurando] = useState<{ id: string; nome: string } | null>(state?.sitioExcluido ?? null)
@@ -234,13 +280,13 @@ export function Sitios() {
 
   const dados = useMemo(() => {
     if (carga.fase !== 'ok') return null
-    const { itens, busca } = juntar(carga.dados.lista, correcoes, novos, contagem)
+    const { itens, busca } = juntar(carga.dados.lista, correcoes, novos, contagem, daLista, todosSkc, distintos)
     const entradas = indexar(itens, carga.dados.tabela, (s) => s.nome, (s) => busca.get(s.id) ?? s.nome)
     const porRegiao = new Map<string, number>()
     for (const s of itens) porRegiao.set(s.regiaoGeo, (porRegiao.get(s.regiaoGeo) ?? 0) + 1)
     return { itens, entradas, tabela: carga.dados.tabela, porRegiao, // As regiões agrupam a lista só quando o PACOTE as tem (R18); o texto de região do usuário não muda o modo da lista.
       comRegiao: carga.dados.lista.some((s) => s.regiao !== null), comCoordenada: itens.filter((s) => s.lat !== null && s.lon !== null).length }
-  }, [carga, correcoes, novos, contagem])
+  }, [carga, correcoes, novos, contagem, daLista, todosSkc, distintos])
   const visiveis = useMemo(() => {
     const porTexto = dados ? filtrar(dados.entradas, consulta, dados.tabela) : []
     return regioesAtivas.size === 0 ? porTexto : porTexto.filter((e) => regioesAtivas.has(e.item.regiaoGeo))
@@ -300,11 +346,12 @@ export function Sitios() {
     if (focoDaUrl && tipoDeNavegacao !== 'REPLACE') pendente.current = focoDaUrl
   }, [chaveDoEndereco])
   useEffect(() => {
-    if (!pendente.current || !dados) return
+    // Espera a resolução dos sítios: o foco num sítio mesclado vai ao destino (Parte 2C, bloco 2).
+    if (!pendente.current || !dados || !daLista) return
     const alvo = pendente.current
     pendente.current = null
-    mostrarRef.current(alvo, true)
-  }, [chaveDoEndereco, focoDaUrl, dados])
+    mostrarRef.current(daLista.destinos.get(alvo) ?? alvo, true)
+  }, [chaveDoEndereco, focoDaUrl, dados, daLista])
 
   if (!computador && id) return <Sitio id={id} pagina voltarPara="/sitios" computador={false} />
 

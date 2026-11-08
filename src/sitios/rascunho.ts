@@ -148,6 +148,12 @@ export function comecarAGravarACoordenada(id: string): () => void {
   }
 }
 
+/**
+ * Há uma gravação da coordenada deste sítio em andamento? (Para os testes: fechar «Corrigir» ou sair da página com um par válido
+ * no campo grava ao desmontar, e um teste espera essa gravação terminar antes de seguir; I-2.)
+ */
+export const coordenadaSendoGravada = (id: string): boolean => gravando.has(id)
+
 const PREFIXO = chaveDoRascunhoDaCoordenada('')
 
 /** O `storage` de OUTRA aba: o rascunho dela também é uma escrita (conta na versão) e os assinantes releem. */

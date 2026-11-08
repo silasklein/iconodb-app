@@ -2,6 +2,12 @@
  * O que as telas leem dos sítios do usuário (Tarefa 12): os sítios novos, as correções dos sítios do livro, o sítio de cada
  * objeto (a troca `item-sitio` ou o da ficha de um objeto SKC), o nome de agora, o aviso de nome repetido e os "sítios não
  * resolvidos". Puro sobre o `Estado`, mais os hooks. O formato está em src/sitios/modelo.ts.
+ *
+ * Parte 2C, bloco 2: onde se lista, se conta ou se dá nome a um sítio, vale o DESTINO (src/sitios/useResolucao.ts). As funções
+ * que recebem `redirecionados` para isso (`sitiosSkc`, `objetosPorSitio`, o nome de agora, a situação, os não resolvidos)
+ * recebem dos hooks `destinosDosSitios` (os `SI-…` publicados e os absorvidos → o destino); as que leem os dados de um sítio
+ * (`dadosDoSitioComOrigens`, `correcoesDosSitios`) continuam com os redirecionamentos das publicações e leem as grafias da
+ * resolução (`resolucao`), para a página e a resolução dizerem o mesmo.
  */
 import { useMemo } from 'react'
 import type { ObjetoResumo } from '../banco/tipos'
@@ -10,18 +16,22 @@ import { useEstado, type Estado } from '../usuario/estado'
 import { useLido } from '../usuario/useLido'
 import type { Registro } from '../usuario/fusao'
 import { destinoDe, origensDe, useRedirecionamentos, type Redirecionamentos } from '../pacote/redirecionamentos'
-import { chaveDoNome, eSitioSkc, lerDadosDoSitio, lerSitioSkc, lerTrocaDeSitio, type DadosDoSitio, type SitioSkc, type TrocaDeSitio } from './modelo'
+import { totalDeObjetos } from './contagem'
+import { chaveDaGrafia, chaveDoNome, eSitioSkc, hlcDoSitio, lerDadosDoSitio, lerSitioSkc, lerTrocaDeSitio, textosDasGrafias, type DadosDoSitio, type SitioSkc, type TrocaDeSitio } from './modelo'
 import { useSitiosDoPacote, type SitiosDoPacote } from './pacote'
+import type { GrafiaDoPacote, Resolucao } from './resolucao'
+import { chaveDoObjeto, destinosDosSitios, useDestinosDosSitios, useObjetosDoPacoteSemRepetir, usePacoteDeSitios, useResolucaoDeSitios } from './useResolucao'
 
 const porCriacao = (a: SitioSkc, b: SitioSkc) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 
 /**
  * Os sítios novos do usuário vivos, na ordem em que foram criados. Os que o pacote publicou como sítio do livro
- * (`redirecionados`, Tarefa 16) não entram: quem aparece é o sítio do livro.
+ * (`redirecionados`, Tarefa 16) não entram: quem aparece é o sítio do livro. Com `destinosDosSitios`, também os mesclados
+ * em outro sítio.
  */
 export function sitiosSkc(estado: Estado, redirecionados?: Redirecionamentos | null): SitioSkc[] {
   const saida: SitioSkc[] = []
-  for (const r of estado.registros.get('sitio')?.values() ?? []) if (!r.excluido && eSitioSkc(r.id) && !redirecionados?.has(r.id)) saida.push(lerSitioSkc(r))
+  for (const r of estado.registros.get('sitio')?.values() ?? []) if (!r.excluido && eSitioSkc(r.id) && !redirecionados?.has(r.id)) saida.push(lerSitioSkc(r, hlcDoSitio(estado, r.id)))
   return saida.sort(porCriacao)
 }
 
@@ -37,9 +47,20 @@ const SEM_DADOS: DadosDoSitio = { nome: null, variantes: [], regiao: null, pais:
  * `SI-…` publicados como o mesmo sítio, o de menor id. O nome, a coordenada e a nota do `SI-…` já estão no pacote. null se
  * não há nada.
  */
-export function dadosDoSitioComOrigens(estado: Estado, id: string, redirecionados?: Redirecionamentos | null): DadosDoSitio | null {
+export function dadosDoSitioComOrigens(estado: Estado, id: string, redirecionados?: Redirecionamentos | null, resolucao?: Resolucao | null): DadosDoSitio | null {
+  const base = dadosComOrigens(estado, id, redirecionados)
+  // Parte 2C, bloco 2: as grafias de um destino são as da resolução (as do registro dele, as dos `SI-…` publicados como ele e
+  // as dos absorvidos, pela escrita mais recente), não a regra de `dadosComOrigens` (o registro do livro primeiro): a página e
+  // a resolução dizem o mesmo. Um absorvido fica com as dele (a tela pergunta pelo destino).
+  if (!resolucao || !resolucao.existe(id) || resolucao.destino(id) !== resolucao.canonico(id)) return base
+  const grafias = textosDasGrafias(resolucao.grafiasDoUsuario(id))
+  if (base === null && grafias.length === 0) return null
+  return { ...(base ?? SEM_DADOS), variantes: grafias }
+}
+
+function dadosComOrigens(estado: Estado, id: string, redirecionados?: Redirecionamentos | null): DadosDoSitio | null {
   const r = estado.registro('sitio', id)
-  const proprio = r ? lerDadosDoSitio(r) : null
+  const proprio = r ? lerDadosDoSitio(r, hlcDoSitio(estado, id)) : null
   if (eSitioSkc(id)) return proprio
   const origens = origensDe(redirecionados, id)
     .sort()
@@ -47,9 +68,10 @@ export function dadosDoSitioComOrigens(estado: Estado, id: string, redirecionado
   if (origens.length === 0) return proprio
   const d: DadosDoSitio = { ...(proprio ?? SEM_DADOS) }
   for (const campo of CAMPOS_HERDADOS) {
-    if (r && campo in r.campos) continue
+    // As outras grafias estão em `grafias` (ou nas `variantes` de antes): qualquer dos dois escrito no registro do livro vence.
+    if (r && (campo in r.campos || (campo === 'variantes' && 'grafias' in r.campos))) continue
     for (const o of origens) {
-      const v = lerDadosDoSitio(o)[campo]
+      const v = lerDadosDoSitio(o, hlcDoSitio(estado, o.id))[campo]
       if (campo === 'variantes' ? (v as string[]).length > 0 : v !== null) {
         ;(d as unknown as Record<string, unknown>)[campo] = v
         break
@@ -63,12 +85,15 @@ export function dadosDoSitioComOrigens(estado: Estado, id: string, redirecionado
  * O que a pessoa corrigiu nos sítios do LIVRO (pelo id do pacote), com o que deu aos sítios seus que o pacote publicou como
  * eles (`redirecionados`; veja `dadosDoSitioComOrigens`).
  */
-export function correcoesDosSitios(estado: Estado, redirecionados?: Redirecionamentos | null): Map<string, DadosDoSitio> {
+export function correcoesDosSitios(estado: Estado, redirecionados?: Redirecionamentos | null, resolucao?: Resolucao | null): Map<string, DadosDoSitio> {
   const mapa = new Map<string, DadosDoSitio>()
-  for (const r of estado.registros.get('sitio')?.values() ?? []) if (!eSitioSkc(r.id)) mapa.set(r.id, lerDadosDoSitio(r))
+  for (const r of estado.registros.get('sitio')?.values() ?? []) {
+    if (eSitioSkc(r.id)) continue
+    mapa.set(r.id, resolucao ? (dadosDoSitioComOrigens(estado, r.id, redirecionados, resolucao) ?? lerDadosDoSitio(r, hlcDoSitio(estado, r.id))) : lerDadosDoSitio(r, hlcDoSitio(estado, r.id)))
+  }
   for (const [de, para] of redirecionados ?? []) {
     if (!eSitioSkc(de) || eSitioSkc(para) || !estado.registro('sitio', de)) continue
-    const d = dadosDoSitioComOrigens(estado, para, redirecionados)
+    const d = dadosDoSitioComOrigens(estado, para, redirecionados, resolucao)
     if (d) mapa.set(para, d)
   }
   return mapa
@@ -298,15 +323,75 @@ export interface SitioParaComparar {
   doUsuario: boolean
 }
 
-/** Todos os sítios que valem (livro com as correções, e os do usuário vivos), com o nome de agora e as grafias. */
-export function sitiosParaComparar(estado: Estado, livro: SitiosDoPacote | null, redirecionados?: Redirecionamentos | null): SitioParaComparar[] {
-  const correcoes = correcoesDosSitios(estado, redirecionados)
+/**
+ * Parte 2C, bloco 2: o que acha um destino além do nome dele e das correções: as grafias do usuário (a resolução, com as dos
+ * absorvidos), os nomes dos absorvidos (o do livro, o impresso e o corrigido; o de um `SI-…`) e as grafias que os livros dão a
+ * ele e aos absorvidos (`sitio_grafia` com `origem = 'livro'`; as do usuário vêm só da camada, F12). Sem repetir pela
+ * `chaveDaGrafia`. [] para um absorvido (quem acha é o destino).
+ */
+export function nomesQueAchamODestino(
+  estado: Estado,
+  resolucao: Resolucao,
+  id: string,
+  livro: SitiosDoPacote | null,
+  grafiasDoLivro: readonly GrafiaDoPacote[] = [],
+): string[] {
+  if (resolucao.destino(id) !== resolucao.canonico(id)) return []
+  const absorvidos = resolucao.absorvidos(id)
+  const doLivro = grafiasDoLivroPorSitio(grafiasDoLivro)
+  const textos: (string | null | undefined)[] = resolucao.grafiasDoUsuario(id).map((g) => g.texto)
+  textos.push(...(doLivro.get(resolucao.canonico(id)) ?? []))
+  for (const a of absorvidos) {
+    const r = estado.registro('sitio', a)
+    textos.push(livro?.get(a)?.nome, livro?.get(a)?.literal, r ? lerDadosDoSitio(r).nome : null, ...(doLivro.get(a) ?? []))
+  }
+  const vistos = new Set<string>()
+  const saida: string[] = []
+  for (const t of textos) {
+    if (!t || vistos.has(chaveDaGrafia(t))) continue
+    vistos.add(chaveDaGrafia(t))
+    saida.push(t)
+  }
+  return saida
+}
+
+const porSitio = new WeakMap<readonly GrafiaDoPacote[], ReadonlyMap<string, readonly string[]>>()
+
+/** As grafias dos livros (`origem = 'livro'`) agrupadas por sítio, uma vez por pacote (a lista é a do pacote lido). */
+function grafiasDoLivroPorSitio(grafias: readonly GrafiaDoPacote[]): ReadonlyMap<string, readonly string[]> {
+  let mapa = porSitio.get(grafias)
+  if (!mapa) {
+    const novo = new Map<string, string[]>()
+    for (const g of grafias) if (g.origem === 'livro') novo.set(g.sitio, [...(novo.get(g.sitio) ?? []), g.texto])
+    porSitio.set(grafias, (mapa = novo))
+  }
+  return mapa
+}
+
+/** O que muda numa lista de sítios com a resolução (Parte 2C, bloco 2): quem some (os absorvidos) e o que acha cada destino. */
+interface ComResolucao {
+  resolucao?: Resolucao | null
+  grafiasDoLivro?: readonly GrafiaDoPacote[]
+  /** Os objetos do pacote de cada árvore, sem repetir (`objetosDoPacoteSemRepetir`). */
+  distintos?: ReadonlyMap<string, number> | null
+}
+
+/**
+ * Todos os sítios que valem (livro com as correções, e os do usuário vivos), com o nome de agora e as grafias. Com a resolução,
+ * sem os absorvidos, e cada destino também com os nomes que o acham (`nomesQueAchamODestino`).
+ */
+export function sitiosParaComparar(estado: Estado, livro: SitiosDoPacote | null, redirecionados?: Redirecionamentos | null, comResolucao: ComResolucao = {}): SitioParaComparar[] {
+  const { resolucao, grafiasDoLivro } = comResolucao
+  const destinos = resolucao ? destinosDosSitios(resolucao, redirecionados) : redirecionados
+  const correcoes = correcoesDosSitios(estado, redirecionados, resolucao)
+  const aMais = (id: string) => (resolucao ? nomesQueAchamODestino(estado, resolucao, id, livro, grafiasDoLivro) : [])
   const saida: SitioParaComparar[] = []
   for (const s of livro?.values() ?? []) {
+    if (destinos?.has(s.id)) continue
     const c = correcoes.get(s.id)
-    saida.push({ id: s.id, nome: c?.nome ?? s.nome, grafias: [s.nome, s.literal, ...(c?.variantes ?? [])], doUsuario: false })
+    saida.push({ id: s.id, nome: c?.nome ?? s.nome, grafias: [s.nome, s.literal, ...(c?.variantes ?? []), ...aMais(s.id)], doUsuario: false })
   }
-  for (const s of sitiosSkc(estado, redirecionados)) saida.push({ id: s.id, nome: s.nomeDeAgora, grafias: s.variantes, doUsuario: true })
+  for (const s of sitiosSkc(estado, destinos)) saida.push({ id: s.id, nome: s.nomeDeAgora, grafias: [...s.variantes, ...aMais(s.id)], doUsuario: true })
   return saida
 }
 
@@ -330,12 +415,27 @@ export interface OpcaoDeSitio {
   objetos: number
 }
 
-/** Todos os sítios que valem, para escolher: os do livro com as correções e os do usuário vivos, em ordem alfabética. */
-export function opcoesDeSitio(estado: Estado, livro: SitiosDoPacote | null, redirecionados?: Redirecionamentos | null): OpcaoDeSitio[] {
-  const correcoes = correcoesDosSitios(estado, redirecionados)
-  const contagem = objetosPorSitio(estado, redirecionados)
+/**
+ * Todos os sítios que valem, para escolher: os do livro com as correções e os do usuário vivos, em ordem alfabética. Com a
+ * resolução (Parte 2C, bloco 2), sem os absorvidos; cada destino acha-se também pelos nomes e grafias deles e pelas grafias do
+ * usuário (`nomesQueAchamODestino`), e conta os objetos dele, dos absorvidos e das partes (`contagemDoSitio`).
+ */
+export function opcoesDeSitio(estado: Estado, livro: SitiosDoPacote | null, redirecionados?: Redirecionamentos | null, comResolucao: ComResolucao = {}): OpcaoDeSitio[] {
+  const { resolucao, grafiasDoLivro, distintos } = comResolucao
+  const destinos = resolucao ? destinosDosSitios(resolucao, redirecionados) : redirecionados
+  const correcoes = correcoesDosSitios(estado, redirecionados, resolucao)
+  const contagem = objetosPorSitio(estado, destinos)
+  const doPacote = (id: string) => livro?.get(id)?.objetos ?? 0
+  const daPessoa = (id: string) => contagem.get(id) ?? 0
+  const objetos = (id: string) => (resolucao ? totalDeObjetos(resolucao, id, doPacote, daPessoa, distintos) : doPacote(id) + daPessoa(id))
+  const aMais = (id: string) => (resolucao ? nomesQueAchamODestino(estado, resolucao, id, livro, grafiasDoLivro) : [])
+  const semRepetir = (nome: string, lista: readonly string[]) => {
+    const vistos = new Set([chaveDaGrafia(nome)])
+    return lista.filter((g) => !vistos.has(chaveDaGrafia(g)) && !!vistos.add(chaveDaGrafia(g)))
+  }
   const saida: OpcaoDeSitio[] = []
   for (const s of livro?.values() ?? []) {
+    if (destinos?.has(s.id)) continue
     const c = correcoes.get(s.id)
     const nome = c?.nome ?? s.nome
     saida.push({
@@ -344,22 +444,27 @@ export function opcoesDeSitio(estado: Estado, livro: SitiosDoPacote | null, redi
       regiao: c?.regiao ?? s.regiao?.nome ?? null,
       doUsuario: false,
       nomeDoLivro: nome !== s.nome ? s.nome : null,
-      grafias: [s.literal, ...(c?.variantes ?? [])].filter((g) => g !== nome),
-      objetos: s.objetos + (contagem.get(s.id) ?? 0),
+      grafias: resolucao ? semRepetir(nome, [s.literal, ...(c?.variantes ?? []), ...aMais(s.id)]) : [s.literal, ...(c?.variantes ?? [])].filter((g) => g !== nome),
+      objetos: objetos(s.id),
     })
   }
-  for (const s of sitiosSkc(estado, redirecionados)) {
-    saida.push({ id: s.id, nome: s.nomeDeAgora, regiao: s.regiao, doUsuario: true, nomeDoLivro: null, grafias: s.variantes, objetos: contagem.get(s.id) ?? 0 })
+  for (const s of sitiosSkc(estado, destinos)) {
+    const grafias = resolucao ? semRepetir(s.nomeDeAgora, [...s.variantes, ...aMais(s.id)]) : s.variantes
+    saida.push({ id: s.id, nome: s.nomeDeAgora, regiao: s.regiao, doUsuario: true, nomeDoLivro: null, grafias, objetos: objetos(s.id) })
   }
   return saida.sort((a, b) => a.nome.localeCompare(b.nome, 'pt'))
 }
 
-/** Os sítios para escolher (`opcoesDeSitio`); o do livro só entra depois que o pacote chega. */
+/** Os sítios para escolher (`opcoesDeSitio`, com a resolução); o do livro só entra depois que o pacote chega. */
 export function useOpcoesDeSitio(): OpcaoDeSitio[] {
   const estado = useEstado((e) => e)
   const livro = useSitiosDoPacote()
   const redirecionados = useRedirecionamentos()
-  return useMemo(() => opcoesDeSitio(estado, livro, redirecionados), [estado, livro, redirecionados])
+  const resolucao = useResolucaoDeSitios()
+  const pacote = usePacoteDeSitios()
+  const trocas = useTrocasDeSitio()
+  const distintos = useObjetosDoPacoteSemRepetir(resolucao, trocas)
+  return useMemo(() => opcoesDeSitio(estado, livro, redirecionados, { resolucao, grafiasDoLivro: pacote?.grafias, distintos }), [estado, livro, redirecionados, resolucao, pacote, distintos])
 }
 
 // ---------------------------------------------------------------------------------------------------------- hooks
@@ -367,28 +472,32 @@ export function useOpcoesDeSitio(): OpcaoDeSitio[] {
 /** Os "sítios não resolvidos" de agora para as telas (`sitiosNaoResolvidos`); refaz quando um sítio, uma troca ou um objeto muda. */
 export function useSitiosNaoResolvidos(linhasDoPacote: readonly LinhaDeSitioNaoResolvido[]): SitiosNaoResolvidos {
   const estado = useEstado((e) => e)
-  const redirecionados = useRedirecionamentos()
+  const redirecionados = useDestinosDosSitios()
   return useMemo(() => sitiosNaoResolvidos(estado, linhasDoPacote, redirecionados), [estado, linhasDoPacote, redirecionados])
 }
 
 /** A chave de leitura de um mapa de redirecionamentos (o `useLido` refaz a leitura quando ele muda). */
 const chaveDosRedirecionamentos = (r: Redirecionamentos | null): string => [...(r ?? [])].map(([de, para]) => `${de}>${para}`).join(',')
 
-/** Quantos objetos a pessoa ligou a cada sítio (`objetosPorSitio`), com os dos sítios seus publicados no do livro. */
+/** Quantos objetos a pessoa ligou a cada sítio (`objetosPorSitio`), no destino: os dos publicados e dos absorvidos contam nele. */
 export function useObjetosPorSitio(): ReadonlyMap<string, number> {
-  const redirecionados = useRedirecionamentos()
+  const redirecionados = useDestinosDosSitios()
   return useLido(['objeto', 'item-sitio'], `contagem|${chaveDosRedirecionamentos(redirecionados)}`, (e) => objetosPorSitio(e, redirecionados))
 }
-/** Os sítios novos do usuário vivos (`sitiosSkc`), sem os que o pacote publicou (os redirecionados, Tarefa 16). */
+/** Os sítios novos do usuário vivos (`sitiosSkc`), todos: também os publicados e os mesclados (os dados de um absorvido). */
+export const useTodosOsSitiosSkc = (): SitioSkc[] => useLido(['sitio'], 'skc', sitiosSkc)
+
+/** Os sítios novos do usuário vivos (`sitiosSkc`), sem os que o pacote publicou (Tarefa 16) nem os mesclados em outro. */
 export function useSitiosSkc(): SitioSkc[] {
-  const todos = useLido(['sitio'], 'skc', sitiosSkc)
-  const redirecionados = useRedirecionamentos()
+  const todos = useTodosOsSitiosSkc()
+  const redirecionados = useDestinosDosSitios()
   return useMemo(() => (redirecionados && redirecionados.size > 0 ? todos.filter((s) => !redirecionados.has(s.id)) : todos), [todos, redirecionados])
 }
 /** As correções dos sítios do livro (`correcoesDosSitios`), com o que a pessoa deu aos sítios seus que o pacote publicou. */
 export function useCorrecoesDosSitios(): ReadonlyMap<string, DadosDoSitio> {
   const redirecionados = useRedirecionamentos()
-  return useLido(['sitio'], `correcoes|${chaveDosRedirecionamentos(redirecionados)}`, (e) => correcoesDosSitios(e, redirecionados))
+  const resolucao = useResolucaoDeSitios()
+  return useLido(['sitio'], `correcoes|${chaveDosRedirecionamentos(redirecionados)}|${chaveDoObjeto(resolucao)}`, (e) => correcoesDosSitios(e, redirecionados, resolucao))
 }
 export const useTrocasDeSitio = (): ReadonlyMap<string, TrocaDeSitio> => useLido(['item-sitio'], 'trocas', trocasDeSitio)
 
@@ -399,10 +508,11 @@ export const useTrocasDeSitio = (): ReadonlyMap<string, TrocaDeSitio> => useLido
  */
 export function useDadosDoSitio(id: string): { dados: DadosDoSitio; excluido: boolean; criadoEm: string } | null {
   const redirecionados = useRedirecionamentos()
+  const resolucao = useResolucaoDeSitios()
   const origens = eSitioSkc(id) ? [] : origensDe(redirecionados, id)
-  return useLido(['sitio'], `dados:${id}|${origens.join(',')}`, (e) => {
+  return useLido(['sitio'], `dados:${id}|${origens.join(',')}|${chaveDoObjeto(resolucao)}`, (e) => {
     const r = e.registro('sitio', id)
-    const dados = dadosDoSitioComOrigens(e, id, redirecionados)
+    const dados = dadosDoSitioComOrigens(e, id, redirecionados, resolucao)
     return dados ? { dados, excluido: r?.excluido ?? false, criadoEm: r?.criadoEm ?? '' } : null
   })
 }
@@ -446,9 +556,10 @@ export interface SitiosVivos {
 export function useSitiosVivos(comPacote = true): SitiosVivos {
   const tabela = useLido(['sitio', 'item-sitio'], 'tabela', tabelaDeSitios)
   const livro = useSitiosDoPacote(comPacote)
-  const redirecionados = useRedirecionamentos()
+  const redirecionados = useDestinosDosSitios()
   return useMemo<SitiosVivos>(() => {
-    // Um sítio do usuário que o pacote publicou (Tarefa 16) é o sítio do livro: o nome de agora dele, sem marca.
+    // Um sítio do usuário que o pacote publicou (Tarefa 16) é o sítio do livro, e um sítio mesclado é o destino (Parte 2C,
+    // bloco 2): o nome de agora dele, sem marca.
     const real = (id: string) => destinoDe(redirecionados, id)
     const nome = (id0: string | null | undefined, guardado: string | null = null) => {
       if (!id0) return guardado
@@ -482,10 +593,32 @@ export function useSitiosVivos(comPacote = true): SitiosVivos {
   }, [tabela, livro, redirecionados])
 }
 
-/** Os sítios para comparar nomes (aviso de repetido). */
+/**
+ * Para a lista dos sítios (Parte 2C, bloco 2): a resolução, os destinos e o que acha cada destino além do nome e das correções
+ * (`nomesQueAchamODestino`; só os destinos que têm algo). null enquanto a resolução não chegou.
+ */
+export function useResolucaoDaLista(): { resolucao: Resolucao; destinos: Redirecionamentos; nomes: ReadonlyMap<string, string[]> } | null {
+  const resolucao = useResolucaoDeSitios()
+  const pacote = usePacoteDeSitios()
+  const livro = useSitiosDoPacote()
+  const redirecionados = useRedirecionamentos()
+  return useLido(['sitio'], `lista|${chaveDoObjeto(resolucao)}|${chaveDoObjeto(pacote)}|${chaveDoObjeto(livro)}|${chaveDosRedirecionamentos(redirecionados)}`, (e) => {
+    if (!resolucao) return null
+    const nomes = new Map<string, string[]>()
+    for (const k of resolucao.sitios) {
+      const n = nomesQueAchamODestino(e, resolucao, k, livro, pacote?.grafias)
+      if (n.length > 0) nomes.set(k, n)
+    }
+    return { resolucao, destinos: destinosDosSitios(resolucao, redirecionados), nomes }
+  })
+}
+
+/** Os sítios para comparar nomes (aviso de repetido), sem os absorvidos (cada destino com os nomes deles). */
 export function useSitiosParaComparar(): SitioParaComparar[] {
   const estado = useEstado((e) => e)
   const livro = useSitiosDoPacote()
   const redirecionados = useRedirecionamentos()
-  return useMemo(() => sitiosParaComparar(estado, livro, redirecionados), [estado, livro, redirecionados])
+  const resolucao = useResolucaoDeSitios()
+  const pacote = usePacoteDeSitios()
+  return useMemo(() => sitiosParaComparar(estado, livro, redirecionados, { resolucao, grafiasDoLivro: pacote?.grafias }), [estado, livro, redirecionados, resolucao, pacote])
 }

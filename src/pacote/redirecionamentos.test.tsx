@@ -26,7 +26,7 @@ import { ev } from '../../tests/suporte/eventosDeTeste'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { estadoAtual, registrar } from '../usuario/estado'
-import { redirecionamentosDoPacote } from './redirecionamentos'
+import { destinoDe, mesclasDoPacote, origensDe, redirecionamentosDoPacote, useRedirecionamentos } from './redirecionamentos'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
 vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
@@ -82,6 +82,50 @@ describe('a tabela do pacote', () => {
       await executar(`INSERT INTO main.redirecionamento (de, para, tipo) VALUES ('GL-900001', 'GL-900003', 'verbete'), ('GL-bbbbbbbb-1', 'GL-cccccccc-1', 'verbete'),
         ('SI-bbbbbbbb-1', 'SI-cccccccc-1', 'sitio'), ('GL-bbbbbbbb-2', 'TESTE-1', 'verbete'), ('SI-bbbbbbbb-2', 'GL-900001', 'sitio')`)
       expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+})
+
+describe('Parte 2C, bloco 2: a mescla de um sítio do livro em outro (tipo sitio, criado 0) vai para um mapa à parte', () => {
+  it('TESTE-4 → TESTE-2 está em mesclasDoPacote e não nos redirecionamentos das publicações', async () => {
+    expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2' })
+    expect((await redirecionamentosDoPacote()).has('TESTE-4')).toBe(false)
+    const { result } = renderHook(() => useRedirecionamentos())
+    await waitFor(() => expect(result.current).not.toBeNull())
+    expect(result.current!.has('TESTE-4')).toBe(false)
+    expect(destinoDe(result.current, 'TESTE-4')).toBe('TESTE-4')
+    expect(origensDe(result.current, 'TESTE-2')).toEqual(['SI-teste123-2'])
+  })
+
+  it('só de um sítio da lista do pacote para outro: um id sequencial, um sítio fora da lista ou o mesmo sítio são recusados', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    try {
+      await executar(`INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('GL-12', 'TESTE-2', 'sitio', 0), ('TESTE-5', 'GL-9', 'sitio', 0),
+        ('TESTE-6', 'TESTE-99', 'sitio', 0), ('TESTE-99', 'TESTE-1', 'sitio', 0), ('TESTE-7', 'TESTE-7', 'sitio', 0), ('TESTE-8', 'TESTE-1', 'verbete', 0)`)
+      expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2' })
+      expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+
+  it('TESTE-4 → TESTE-99 (fora da lista dos sítios) é recusado', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    try {
+      await executar("UPDATE main.redirecionamento SET para = 'TESTE-99' WHERE de = 'TESTE-4'")
+      expect((await mesclasDoPacote()).size).toBe(0)
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+
+  it('um pacote sem a tabela (schema 5) não tem mesclas', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    try {
+      await executar('DROP TABLE main.redirecionamento')
+      expect((await mesclasDoPacote()).size).toBe(0)
     } finally {
       usarMotor(await bancoDeTeste())
     }

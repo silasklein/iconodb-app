@@ -69,16 +69,19 @@ export interface ContextoDoIndice {
   nomeDeAgoraDe?(id: string): string | null
   /** O nome de um sítio do livro, pelo id do pacote (Tarefa 12): o rótulo de uma correção que só mudou as grafias. */
   nomeDoSitio?(id: string): string | null
+  /** O hlc da escrita que vale num campo (Parte 2C, bloco 2: as `variantes` de um app antigo escritas depois das `grafias`). */
+  hlcDoCampo?(tipo: Tipo, reg: string, campo: string): string | null
 }
 
 /** `null`: este registro não entra no índice. */
 export type CampoIndexavel = (r: Registro, ctx?: ContextoDoIndice) => EntradaDoIndice | null
 
-const contextoDe = (n: Numeracao, formas: ReadonlyMap<string, string>, pacote: FormasDoPacote, sitios: SitiosDoPacote): ContextoDoIndice => ({
+const contextoDe = (n: Numeracao, formas: ReadonlyMap<string, string>, pacote: FormasDoPacote, sitios: SitiosDoPacote, estado: Estado): ContextoDoIndice => ({
   numeroDe: (id) => n.porId.get(id)?.numero ?? null,
   nrSkcDe: (id) => n.porId.get(id)?.nrSkc ?? null,
   nomeDeAgoraDe: (id) => formas.get(id) ?? nomeDoPacote(pacote.get(id)),
   nomeDoSitio: (id) => sitios.get(id)?.nome ?? null,
+  hlcDoCampo: (tipo, reg, campo) => estado.hlcDoCampo(tipo, reg, campo),
 })
 
 /** Um número de objeto, ou o id de um objeto SKC resolvido para o número dele. */
@@ -145,7 +148,8 @@ const ESCOPO_DO_ALVO: Record<string, EscopoDoUsuario> = {
  *   Reservas de livro (`reserva`) não entram. Um id `OB-…` no alvo de uma nota, numa coleção ou numa hipótese vale
  *   pelo número do objeto.
  * - colecao: `nome`, `descricao` e um campo `i:<ref>` por membro (ver colecoes/modelo.ts).
- * - sitio (Tarefa 12, src/sitios/modelo.ts): `nome`, `variantes`, `regiao`, `pais`, `nota`. Um sítio NOVO (`SI-…`) sem nome não entra.
+ * - sitio (Tarefa 12, src/sitios/modelo.ts): `nome`, as outras grafias (os textos de `grafias`, com as `variantes` de antes pela
+ *   regra de `lerGrafias`; a tradição e o livro não), `regiao`, `pais`, `nota`. Um sítio NOVO (`SI-…`) sem nome não entra.
  *   A correção de um sítio do LIVRO (reg = o id do pacote) entra quando mudou nome, grafias, região ou nota (o rótulo é o nome
  *   corrigido, senão o do livro); `buscar()` e `sugerir()` a tratam como o sítio do livro, com os objetos dele.
  * - hipotese: `termos` (rótulos e/ou ids), `termosRotulos`, a forma em uso de cada termo de agora (Tarefa 11: a forma
@@ -200,8 +204,8 @@ export const camposIndexaveis: Record<Tipo, CampoIndexavel> = {
 
   sitio: (r, ctx) => {
     const c = r.campos
-    const d = lerDadosDoSitio(r)
-    const corpo = semLinks(texto(c, 'nome', 'variantes', 'regiao', 'pais', 'nota'))
+    const d = lerDadosDoSitio(r, ctx?.hlcDoCampo ? (campo) => ctx.hlcDoCampo!('sitio', r.id, campo) : undefined)
+    const corpo = semLinks([texto(c, 'nome'), d.variantes.join(' '), texto(c, 'regiao', 'pais', 'nota')].filter((t) => t.trim() !== '').join('\n'))
     if (eSitioSkc(r.id)) {
       if (d.nome === null) return null
       return { rotulo: d.nome, texto: corpo, escopo: 'local' }
@@ -293,7 +297,7 @@ const assinaturaDe = (tipo: Tipo, e: EntradaDoIndice) =>
 
 function desejadoDe(estado: Estado, numeracao: Numeracao, pacote: FormasDoPacote, sitios: SitiosDoPacote): Map<string, Desejado> {
   const mapa = new Map<string, Desejado>()
-  const ctx = contextoDe(numeracao, formasEmUso(estado), pacote, sitios)
+  const ctx = contextoDe(numeracao, formasEmUso(estado), pacote, sitios, estado)
   for (const [tipo, registros] of estado.registros) {
     const regra = camposIndexaveis[tipo]
     for (const r of registros.values()) {

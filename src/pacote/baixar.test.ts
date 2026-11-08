@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fonteDeTeste, RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
+import { fonteDeTeste, RAIZ_DO_PACOTE_6, RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
 import { armazemMemoria, type Armazem } from './armazem'
 import {
   ErroDeIntegridade,
@@ -9,6 +9,7 @@ import {
   ErroDeSincronizacaoEmAndamento,
   lerManifesto,
   MSG_SCHEMA,
+  SCHEMA_ESPERADO,
   SCHEMAS_ACEITOS,
   type Fonte,
   type Manifesto,
@@ -110,18 +111,24 @@ afterEach(() => {
 describe('lerManifesto', () => {
   it('lê o manifesto do pacote sintético', async () => {
     const m = await lerManifesto(fonteDeTeste())
-    expect(m.schema).toBe(6)
+    expect(m.schema).toBe(8)
     expect(m.publicacoes[0]?.sigla).toBe('TESTE')
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it('aceita o schema 6 (o de agora, com redirecionamentos) e o 5 (o anterior, sem a tabela; Tarefa 16)', async () => {
-    expect(SCHEMAS_ACEITOS).toEqual([5, 6])
-    expect((await lerManifesto(comSchema(fonteDeTeste(), 5))).schema).toBe(5)
-    expect((await lerManifesto(comSchema(fonteDeTeste(), 6))).schema).toBe(6)
+  it('aceita os schemas 5, 6, 7 e 8 (Parte 2C, bloco 2): o 8 é o de agora; os outros abrem sem as tabelas novas', async () => {
+    expect(SCHEMA_ESPERADO).toBe(8)
+    expect(SCHEMAS_ACEITOS).toEqual([5, 6, 7, 8])
+    for (const schema of [5, 6, 7, 8]) expect((await lerManifesto(comSchema(fonteDeTeste(), schema))).schema).toBe(schema)
   })
 
-  it.each([4, 7, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
+  it('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6, o que está hoje no Dropbox) continua aceito', async () => {
+    const m = await lerManifesto(fonteDeTeste(RAIZ_DO_PACOTE_6))
+    expect(m.schema).toBe(6)
+    expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
+  })
+
+  it.each([4, 9, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
     const fonte = comSchema(fonteDeTeste(), schema)
     await expect(lerManifesto(fonte)).rejects.toBeInstanceOf(ErroDeSchema)
     await expect(lerManifesto(fonte)).rejects.toThrow(
@@ -182,8 +189,8 @@ describe('pacote com defeito: conferido antes de baixar e da troca', () => {
 })
 
 describe('sincronizarPacote', () => {
-  it('um schema que o app não lê (7) é recusado e nada é baixado nem gravado', async () => {
-    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 7))
+  it('um schema que o app não lê (9) é recusado e nada é baixado nem gravado', async () => {
+    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 9))
     const { armazem, opcoes } = ambiente()
     await expect(sincronizarPacote(fonte, semProgresso, opcoes)).rejects.toBeInstanceOf(ErroDeSchema)
     expect(baixados).toEqual([])

@@ -68,7 +68,7 @@ describe('Novo sítio: registrar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registrar sítio' }))
     await waitFor(() => expect(screen.getByTestId('endereco').textContent).toMatch(/^\/sitio\/SI-/))
     const id = decodeURIComponent(screen.getByTestId('endereco').textContent!.slice('/sitio/'.length))
-    expect(estadoAtual().registro('sitio', id)!.campos).toEqual({ nome: 'Tell Novo', variantes: ['Tall Naw', 'Tell Nuovo'], regiao: 'Negev', lat: 31.77, lon: 35.21, nota: 'Coordenada do artigo.' })
+    expect(estadoAtual().registro('sitio', id)!.campos).toEqual({ nome: 'Tell Novo', grafias: [{ texto: 'Tall Naw' }, { texto: 'Tell Nuovo' }], regiao: 'Negev', lat: 31.77, lon: 35.21, nota: 'Coordenada do artigo.' })
     expect(lerSitioSkc(estadoAtual().registro('sitio', id)!)).toMatchObject({ nomeDeAgora: 'Tell Novo', excluido: false })
     expect(rascunho()).toBeNull()
     expect(await screen.findByRole('heading', { level: 1, name: 'Tell Novo' })).toBeInTheDocument()

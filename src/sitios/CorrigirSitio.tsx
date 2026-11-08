@@ -5,8 +5,11 @@ import { IconButton } from '../ui/IconButton'
 import { useCampoSalvo } from '../usuario/campoSalvo'
 import { AvisoDeSitioParecido } from './AvisoDeSitioParecido'
 import { sitiosComEsteNome, useSitiosParaComparar } from './doUsuario'
-import { chaveDoNome, type Coordenada } from './modelo'
-import { corrigirCoordenada, corrigirVariantes, voltarAoLivro } from './operacoes'
+import { publicacoesAbertas } from '../banco/cliente'
+import { textoDosLivros } from './Grafias'
+import { chaveDaGrafia, chaveDoNome, ROTULO_DA_TRADICAO, TRADICOES, tradicaoValida, type Coordenada } from './modelo'
+import { corrigirCoordenada, corrigirGrafias, voltarAoLivro } from './operacoes'
+import { gravacaoDaGrafia, type GrafiasDeUmSitio, type GrafiaVista, type MudancaDaGrafia } from './resolucao'
 import { apagarRascunhoDaCoordenada, apagarRascunhoDaCoordenadaSeVersao, comecarAGravarACoordenada, guardarRascunhoDaCoordenada, lerRascunhoDaCoordenada, versaoDoRascunhoDaCoordenada } from './rascunho'
 import '../objetos-skc/Formulario.css'
 import './Sitios.css'
@@ -146,49 +149,143 @@ export function CampoDeTextoDoSitio({
   )
 }
 
+/** As siglas dos livros do pacote (as publicações do manifesto, sem repetir), para o campo «Livro». [] sem pacote. */
+function useSiglasDosLivros(): string[] {
+  const [siglas, setSiglas] = useState<string[]>([])
+  useEffect(() => {
+    let vivo = true
+    publicacoesAbertas().then(
+      (ps) => vivo && setSiglas([...new Set(ps.map((p) => p.sigla))]),
+      () => undefined,
+    )
+    return () => {
+      vivo = false
+    }
+  }, [])
+  return siglas
+}
+
 /**
- * As outras grafias: pílulas com × e um campo ("outra grafia + Enter"; sair do campo também acrescenta o que está escrito, para
- * nada se perder). A lista inteira é um valor do registro (`variantes`); uma grafia igual a outra pela dobra não entra.
+ * Um `<select>` nativo que se grava sozinho: mostra a escolha na hora (até o valor gravado chegar de volta) e volta ao gravado
+ * se a gravação falha.
  */
-export function GrafiasDoSitio({ id, variantes, nomeAgora }: { id: string; variantes: readonly string[]; nomeAgora: string }) {
+function EscolhaQueGrava({ id, rotulo, nome, valor, opcoes, aoEscolher }: { id: string; rotulo: string; nome: string; valor: string; opcoes: readonly (readonly [string, string])[]; aoEscolher: (v: string) => Promise<unknown> }) {
+  const [escolhido, setEscolhido] = useState<string | null>(null)
+  useEffect(() => setEscolhido(null), [valor])
+  return (
+    <div className="sitio-grafia-escolha">
+      <label htmlFor={id}>{rotulo}</label>
+      <select
+        id={id}
+        aria-label={`${rotulo} de ${nome}`}
+        value={escolhido ?? valor}
+        onChange={(e) => {
+          const v = e.target.value
+          setEscolhido(v)
+          aoEscolher(v).catch(() => setEscolhido(null))
+        }}
+      >
+        {opcoes.map(([v, texto]) => (
+          <option key={v} value={v}>
+            {texto}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+const OPCOES_DE_TRADICAO: readonly (readonly [string, string])[] = [['', 'sem origem'], ...TRADICOES.map((t) => [t, ROTULO_DA_TRADICAO[t]] as const)]
+
+/**
+ * As outras grafias em «Corrigir» (Parte 2C, bloco 2, Tarefa 13; telas aprovadas §4): cada grafia numa linha, o texto e,
+ * embaixo, «Tradição» e «Livro» (dois `<select>` nativos). A que veio de um livro diz «do livro TESTE, p. 12», sem o × e sem
+ * «Livro» (só recebe a tradição); as suas têm a marca «SKC» e o × (o nome de um sítio mesclado aqui, que ainda não está na sua
+ * lista, sai com o «desfazer» da mescla, não com o ×). Cada escolha se grava sozinha: `gravacaoDaGrafia` diz em que sítio e com que lista
+ * inteira (`corrigirGrafias`). O campo «outra grafia + Enter» acrescenta (sair dele também, para nada se perder); uma grafia
+ * igual, pela dobra, ao nome de agora ou a outra já mostrada não entra.
+ *
+ * `grafias`: as de `grafiasDoSitio`; `listas`: as `grafiasProprias` do sítio (primeiro) e dos mesclados nele, lidas na hora de
+ * cada gravação (a primeira gravação de um registro que só tem `variantes` grava `grafias` com elas). As gravações vão em fila:
+ * cada uma parte do estado deixado pela anterior, então duas escolhas seguidas (antes de a primeira voltar à tela) nunca se
+ * apagam uma à outra.
+ */
+export function GrafiasDoSitio({ id, nomeAgora, grafias, listas }: { id: string; nomeAgora: string; grafias: readonly GrafiaVista[]; listas: () => readonly GrafiasDeUmSitio[] }) {
   const uid = useId()
   const [texto, setTexto] = useState('')
   const [falhou, setFalhou] = useState(false)
   const todos = useSitiosParaComparar()
+  const siglas = useSiglasDosLivros()
   const parecidos = sitiosComEsteNome(todos, texto, id)
 
-  const tentar = (p: Promise<unknown>) => {
+  const fila = useRef<Promise<unknown>>(Promise.resolve())
+  /** Na fila: `gravar` lê as listas de agora (o que as gravações anteriores deixaram) e grava; uma que falha não para as outras. */
+  const naFila = (gravar: (agora: readonly GrafiasDeUmSitio[]) => Promise<unknown> | null): Promise<unknown> => {
     setFalhou(false)
-    p.catch(() => setFalhou(true))
+    const vez = fila.current.then(() => gravar(listas()))
+    fila.current = vez.catch(() => undefined)
+    return vez.catch((e: unknown) => {
+      setFalhou(true)
+      throw e
+    })
   }
+  const mudar = (g: GrafiaVista, m: MudancaDaGrafia): Promise<unknown> =>
+    naFila(async (agora) => {
+      // uma gravação por sítio cuja lista muda (a do livro de um absorvido fica no registro dele), uma depois da outra
+      for (const { id: sitio, grafias: lista } of gravacaoDaGrafia(agora, g, m)) await corrigirGrafias(sitio, lista)
+    })
   const acrescentar = () => {
     const nova = normalizarForma(texto)
     setTexto('')
-    if (nova === '' || chaveDoNome(nova) === chaveDoNome(nomeAgora) || variantes.some((v) => chaveDoNome(v) === chaveDoNome(nova))) return
-    tentar(corrigirVariantes(id, [...variantes, nova]))
+    const k = chaveDaGrafia(nova)
+    if (nova === '' || k === chaveDaGrafia(nomeAgora) || grafias.some((g) => chaveDaGrafia(g.texto) === k)) return
+    naFila((agora) => corrigirGrafias(id, [...(agora.find((l) => l.id === id)?.grafias ?? []), { texto: nova }])).catch(() => undefined)
   }
   const teclar = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
     e.preventDefault()
     acrescentar()
   }
+  // o × de uma grafia que é o nome de um absorvido só aparece se outra lista tem uma entrada com a mesma chave (N2)
+  const agora = grafias.some((g) => g.nomeDe !== undefined) ? listas() : []
+  const opcoesDeLivro = (atual: string): (readonly [string, string])[] => [['', 'nenhum'], ...[...siglas, ...(atual && !siglas.includes(atual) ? [atual] : [])].map((s) => [s, s] as const)]
   return (
     <div className="form-campo">
       <label htmlFor={`${uid}-grafia`}>Outras grafias</label>
-      {variantes.length > 0 && (
-        <ul className="sitio-grafias" aria-label="Outras grafias do sítio">
-          {variantes.map((v) => (
-            <li key={v} className="sitio-grafia">
-              {v}
-              <span className="marca-skc">SKC</span>
-              <IconButton icon="fechar" label={`Tirar a grafia ${v}`} size={16} tipPosition="start" onClick={() => tentar(corrigirVariantes(id, variantes.filter((x) => x !== v)))} />
-            </li>
-          ))}
+      {grafias.length > 0 && (
+        <ul className="sitio-grafias-edicao" aria-label="Outras grafias do sítio">
+          {grafias.map((g, i) => {
+            const livro = g.doUsuario ? (g.livros[0]?.sigla ?? '') : ''
+            return (
+              <li key={g.texto} className="sitio-grafia-edicao">
+                <div className="sitio-grafia-l1">
+                  <span className="sitio-grafia-texto">{g.texto}</span>
+                  {g.doUsuario ? <span className="marca-skc">SKC</span> : <span className="sitio-grafia-do-livro">{`${g.livros.length > 1 ? 'dos livros' : 'do livro'} ${textoDosLivros(g.livros)}`}</span>}
+                  {g.doUsuario && (!g.nomeDe || gravacaoDaGrafia(agora, g, { tirar: true }).length > 0) && (
+                    <IconButton icon="fechar" label={`Tirar a grafia ${g.texto}`} size={16} tipPosition="start" onClick={() => void mudar(g, { tirar: true }).catch(() => undefined)} />
+                  )}
+                </div>
+                <div className="sitio-grafia-l2">
+                  <EscolhaQueGrava
+                    id={`${uid}-tradicao-${i}`}
+                    rotulo="Tradição"
+                    nome={g.texto}
+                    valor={g.tradicao ?? ''}
+                    opcoes={OPCOES_DE_TRADICAO}
+                    aoEscolher={(v) => mudar(g, { tradicao: tradicaoValida(v) ? v : null })}
+                  />
+                  {g.doUsuario && (
+                    <EscolhaQueGrava id={`${uid}-livro-${i}`} rotulo="Livro" nome={g.texto} valor={livro} opcoes={opcoesDeLivro(livro)} aoEscolher={(v) => mudar(g, { livro: v === '' ? null : v })} />
+                  )}
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
       <input id={`${uid}-grafia`} type="text" autoComplete="off" placeholder="outra grafia + Enter" value={texto} aria-describedby={`${uid}-ajuda`} onChange={(e) => setTexto(e.target.value)} onKeyDown={teclar} onBlur={acrescentar} />
       <span id={`${uid}-ajuda`} className="form-ajuda">
-        Formas antigas, modernas, árabes, hebraicas ou de outros livros. Entram na busca.
+        Formas antigas, modernas, árabes, hebraicas ou de outros livros. Entram na busca. Diga de que tradição vem cada uma e, se quiser, de que livro.
       </span>
       <AvisoDeSitioParecido parecidos={parecidos} quando="existente" />
       {falhou && (

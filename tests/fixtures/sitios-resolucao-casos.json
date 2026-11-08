@@ -1,0 +1,789 @@
+{
+  "versao": 1,
+  "casos": [
+    {
+      "nome": "mescla-simples",
+      "descricao": "Um sítio do livro e um sítio novo do usuário mesclados em TESTE-1; TESTE-3 fica como está.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio novo"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"SI-aaaaaaaa-1": "TESTE-1", "TESTE-2": "TESTE-1"},
+          "partes": {},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "desfazer-vence-o-pacote",
+      "descricao": "mescladoEm escrito null desfaz a mescla do pacote (TESTE-2) e a de outro aparelho (TESTE-3); a mescla do pacote que ninguém tocou (TESTE-4) continua.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": null}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "bbbbbbbb-1-3", "hlc": "1794000003000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": null}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {"TESTE-2": "TESTE-1", "TESTE-4": "TESTE-1"},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-4": "TESTE-1"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "pacote-hlc-zero",
+      "descricao": "As mesclas do pacote valem com hlc zero: TESTE-1 → TESTE-2 sozinha; no círculo TESTE-3 → TESTE-4 (pacote) e TESTE-4 → TESTE-3 (usuário) cai a do pacote, sem conflito.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-4", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {"TESTE-1": "TESTE-2", "TESTE-3": "TESTE-4"},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-1": "TESTE-2", "TESTE-4": "TESTE-3"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "encadeamento",
+      "descricao": "TESTE-1 → TESTE-2 → TESTE-3: os dois vão ao fim da cadeia.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-1": "TESTE-3", "TESTE-2": "TESTE-3"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "circulo-dois-aparelhos",
+      "descricao": "aaaaaaaa mescla TESTE-1 em TESTE-2; depois bbbbbbbb mescla TESTE-2 em TESTE-1. Cai a mais antiga (a de aaaaaaaa), que vira o conflito; TESTE-1 fica.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}}
+      ],
+      "pacote": {"sitios": ["TESTE-1", "TESTE-2"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-2": "TESTE-1"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [
+          {
+            "tipo": "mescla",
+            "registro": "TESTE-1",
+            "valor": "TESTE-2",
+            "hlc": "1794000001000-0000-aaaaaaaa",
+            "aparelho": "aaaaaaaa",
+            "vencedor": {
+              "registro": "TESTE-2",
+              "valor": "TESTE-1",
+              "hlc": "1794000002000-0000-bbbbbbbb",
+              "aparelho": "bbbbbbbb"
+            }
+          }
+        ],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "circulo-de-tres",
+      "descricao": "TESTE-1 → 2 → 3 → 1, mais TESTE-4 → 2 fora do círculo. Cai a mais antiga (TESTE-1 → 2); o vencedor é a mais recente do círculo (TESTE-3 → 1), do mesmo aparelho.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "bbbbbbbb-1-4", "hlc": "1794000004000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-4", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-1", "TESTE-3": "TESTE-1", "TESTE-4": "TESTE-1"},
+          "partes": {},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [
+          {
+            "tipo": "mescla",
+            "registro": "TESTE-1",
+            "valor": "TESTE-2",
+            "hlc": "1794000001000-0000-aaaaaaaa",
+            "aparelho": "aaaaaaaa",
+            "vencedor": {
+              "registro": "TESTE-3",
+              "valor": "TESTE-1",
+              "hlc": "1794000003000-0000-aaaaaaaa",
+              "aparelho": "aaaaaaaa"
+            }
+          }
+        ],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "alvo-inexistente",
+      "descricao": "Mesclas que não valem: alvo fora do pacote (TESTE-99), SI-… sem registro, origem fora do pacote (TESTE-50), em si mesmo (TESTE-3). TESTE-1 foi escrito, então a mescla do pacote dele não volta.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-99"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "SI-aaaaaaaa-7"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-50", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {"TESTE-1": "TESTE-2"},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "alvo-excluido",
+      "descricao": "SI-aaaaaaaa-1 tem TESTE-1 e TESTE-2 mesclados nele e é excluído: as duas mesclas são ignoradas (sem voltar à do pacote, TESTE-2 → TESTE-3), e o mescladoEm do próprio excluído não conta.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio apagado"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "SI-aaaaaaaa-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "SI-aaaaaaaa-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "excluir", "campos": {}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {"TESTE-2": "TESTE-3"},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "origem-excluida-e-restaurada",
+      "descricao": "SI-aaaaaaaa-1 mesclado em TESTE-1, excluído e restaurado (por outro aparelho): a mescla volta. SI-aaaaaaaa-2, mesclado em TESTE-2 e excluído, não aparece.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio restaurado"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "excluir", "campos": {}},
+        {"v": 1, "id": "bbbbbbbb-1-4", "hlc": "1794000004000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "restaurar", "campos": {}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "criar", "campos": {"nome": "Sitio excluido"}},
+        {"v": 1, "id": "aaaaaaaa-1-6", "hlc": "1794000006000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "aaaaaaaa-1-7", "hlc": "1794000007000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "excluir", "campos": {}}
+      ],
+      "pacote": {"sitios": ["TESTE-1", "TESTE-2"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {"mesclas": {"SI-aaaaaaaa-1": "TESTE-1"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "publicado-canonico",
+      "descricao": "SI-aaaaaaaa-1 foi publicado como TESTE-91 e SI-bbbbbbbb-1 como TESTE-92: o mescladoEm escrito no SI-… e o escrito no TESTE-9x são um campo só (vence o hlc maior, de um lado ou de outro); mesclar em SI-aaaaaaaa-1 é mesclar em TESTE-91; as chaves das relações são os ids do livro.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio publicado A"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "bbbbbbbb-1-3", "hlc": "1794000003000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-91", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-4", "hlc": "1794000004000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "SI-bbbbbbbb-1", "op": "criar", "campos": {"nome": "Sitio publicado B"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-92", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-6", "hlc": "1794000006000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "SI-bbbbbbbb-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-7", "hlc": "1794000007000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "SI-aaaaaaaa-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-91", "TESTE-92"],
+        "publicados": {"SI-aaaaaaaa-1": "TESTE-91", "SI-bbbbbbbb-1": "TESTE-92"},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-3": "TESTE-2", "TESTE-91": "TESTE-2", "TESTE-92": "TESTE-1"},
+          "partes": {},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "partes-em-tres-niveis",
+      "descricao": "TESTE-4 parte de TESTE-3 (pacote), TESTE-3 de TESTE-2 e TESTE-2 de TESTE-1 (usuário).",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"parteDe": "TESTE-2"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {"TESTE-4": "TESTE-3"},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {},
+          "partes": {"TESTE-2": "TESTE-1", "TESTE-3": "TESTE-2", "TESTE-4": "TESTE-3"},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "parte-de-absorvido",
+      "descricao": "TESTE-3 é parte de TESTE-2, que foi mesclado em TESTE-1: o todo é o destino, TESTE-1.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"parteDe": "TESTE-2"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-2": "TESTE-1"}, "partes": {"TESTE-3": "TESTE-1"}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "mesclado-nao-e-parte",
+      "descricao": "Um sítio mesclado não é parte: o parteDe de TESTE-2 (usuário) e o de TESTE-4 (pacote) são ignorados enquanto eles estão mesclados em TESTE-3.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-4", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {"TESTE-4": "TESTE-1"},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-2": "TESTE-3", "TESTE-4": "TESTE-3"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "circulo-de-partes",
+      "descricao": "TESTE-1 parte de TESTE-2 (aaaaaaaa), depois TESTE-2 parte de TESTE-1 (bbbbbbbb): cai a mais antiga, que vira o conflito de tipo parte; TESTE-3 continua parte de TESTE-1.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"parteDe": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"parteDe": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {}, "partes": {"TESTE-2": "TESTE-1", "TESTE-3": "TESTE-1"}, "grafias": {}, "diferentes": []},
+        "conflitos": [
+          {
+            "tipo": "parte",
+            "registro": "TESTE-1",
+            "valor": "TESTE-2",
+            "hlc": "1794000001000-0000-aaaaaaaa",
+            "aparelho": "aaaaaaaa",
+            "vencedor": {
+              "registro": "TESTE-2",
+              "valor": "TESTE-1",
+              "hlc": "1794000002000-0000-bbbbbbbb",
+              "aparelho": "bbbbbbbb"
+            }
+          }
+        ],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "parte-de-si-apos-mescla",
+      "descricao": "TESTE-2 é parte de TESTE-1; depois TESTE-1 é mesclado em TESTE-2. O todo de TESTE-2 seria ele mesmo: a parte some, sem conflito.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"mescladoEm": "TESTE-2"}}
+      ],
+      "pacote": {"sitios": ["TESTE-1", "TESTE-2"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {"mesclas": {"TESTE-1": "TESTE-2"}, "partes": {}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "todo-excluido",
+      "descricao": "TESTE-1 é parte de SI-aaaaaaaa-1, que foi excluído: não vale. SI-aaaaaaaa-2 é parte de TESTE-1; SI-aaaaaaaa-3 também, mas foi excluído.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Todo apagado"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"parteDe": "SI-aaaaaaaa-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "excluir", "campos": {}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "criar", "campos": {"nome": "Parte viva"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-6", "hlc": "1794000006000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-3", "op": "criar", "campos": {"nome": "Parte apagada"}},
+        {"v": 1, "id": "aaaaaaaa-1-7", "hlc": "1794000007000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-3", "op": "alterar", "campos": {"parteDe": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-8", "hlc": "1794000008000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-3", "op": "excluir", "campos": {}}
+      ],
+      "pacote": {"sitios": ["TESTE-1"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {"mesclas": {}, "partes": {"SI-aaaaaaaa-2": "TESTE-1"}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "variantes-antigas",
+      "descricao": "Sem grafias, as variantes (do app antigo) valem como grafias sem origem: normalizadas, sem vazias e sem repetidas pela dobra.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"variantes": ["Tel A", "tel a", "  ", "Tall  A"]}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio antigo", "variantes": ["Tel Z"]}}
+      ],
+      "pacote": {"sitios": ["TESTE-1"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {
+          "mesclas": {},
+          "partes": {},
+          "grafias": {
+            "SI-aaaaaaaa-1": [{"texto": "Tel Z", "tradicao": null, "livro": null}],
+            "TESTE-1": [
+              {"texto": "Tel A", "tradicao": null, "livro": null},
+              {"texto": "Tall A", "tradicao": null, "livro": null}
+            ]
+          },
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "grafias-contra-variantes",
+      "descricao": "TESTE-1: variantes mais novas que as grafias (app antigo depois do novo) somam as que faltam. TESTE-2: grafias mais novas valem sozinhas (e a tradição desconhecida cai). TESTE-3: grafias escritas null depois das variantes: nenhuma grafia.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"grafias": [{"texto": "Tel B", "tradicao": "arabe"}]}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"variantes": ["Tel B", "Tell B"]}},
+        {"v": 1, "id": "bbbbbbbb-1-3", "hlc": "1794000003000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"variantes": ["Tel C", "Tell C"]}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"grafias": [{"texto": "Tel C", "tradicao": "biblica", "livro": "TESTE"}, {"texto": "Tal C", "tradicao": "klingon"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"variantes": ["Tel D"]}},
+        {"v": 1, "id": "aaaaaaaa-1-6", "hlc": "1794000006000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"grafias": null}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {},
+          "partes": {},
+          "grafias": {
+            "TESTE-1": [
+              {"texto": "Tel B", "tradicao": "arabe", "livro": null},
+              {"texto": "Tell B", "tradicao": null, "livro": null}
+            ],
+            "TESTE-2": [
+              {"texto": "Tel C", "tradicao": "biblica", "livro": "TESTE"},
+              {"texto": "Tal C", "tradicao": null, "livro": null}
+            ]
+          },
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "grafias-do-absorvido",
+      "descricao": "O destino junta as próprias grafias e depois as dos absorvidos, em ordem de id, sem repetir (texto pela dobra, livro); a mesma grafia com outro livro fica. As grafias do pacote (dos livros) não entram nas grafias do usuário.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"grafias": [{"texto": "Tel E", "tradicao": "arabe"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"grafias": [{"texto": "Tell E", "tradicao": "inglesa"}, {"texto": "Tel E", "tradicao": "alema"}, {"texto": "Tel E", "livro": "TESTE"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"variantes": ["Tall E", "tel e"]}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [
+          {
+            "sitio": "TESTE-2",
+            "texto": "Tal E",
+            "tradicao": null,
+            "sigla": "TESTE",
+            "pagina": "12",
+            "origem": "livro"
+          }
+        ],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-1", "TESTE-3": "TESTE-1"},
+          "partes": {},
+          "grafias": {
+            "TESTE-1": [
+              {"texto": "Tel E", "tradicao": "arabe", "livro": null},
+              {"texto": "Tell E", "tradicao": "inglesa", "livro": null},
+              {"texto": "Tel E", "tradicao": null, "livro": "TESTE"},
+              {"texto": "Tall E", "tradicao": null, "livro": null}
+            ]
+          },
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "grafia-u2011",
+      "descricao": "Tell\u2011X (hífen U+2011), Tell-X e Tell\u2010X (U+2010) são uma grafia só (fica a primeira); Tell X, com espaço, é outra.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"grafias": [{"texto": "Tell\u2011X"}, {"texto": "Tell-X", "tradicao": "inglesa"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"grafias": [{"texto": "Tell\u2010X"}, {"texto": "Tell X"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}}
+      ],
+      "pacote": {"sitios": ["TESTE-1", "TESTE-2"], "publicados": {}, "mesclas": {}, "partes": {}, "grafias": [], "pares": []},
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-1"},
+          "partes": {},
+          "grafias": {
+            "TESTE-1": [
+              {"texto": "Tell\u2011X", "tradicao": null, "livro": null},
+              {"texto": "Tell X", "tradicao": null, "livro": null}
+            ]
+          },
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "diferentes",
+      "descricao": "A união dos diferentesDe de todos os registros, em pares (menor, maior) de ids canônicos que existem, sem repetir; o SI-… publicado conta como TESTE-91; fora: TESTE-99, o próprio sítio e o registro excluído.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"diferentesDe": ["TESTE-1"]}},
+        {"v": 1, "id": "bbbbbbbb-1-2", "hlc": "1794000002000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"diferentesDe": ["TESTE-2", "TESTE-3"]}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "criar", "campos": {"nome": "Sitio publicado"}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-1", "op": "alterar", "campos": {"diferentesDe": ["TESTE-3", "TESTE-99", "TESTE-91"]}},
+        {"v": 1, "id": "bbbbbbbb-1-5", "hlc": "1794000005000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"diferentesDe": ["SI-aaaaaaaa-1"]}},
+        {"v": 1, "id": "aaaaaaaa-1-6", "hlc": "1794000006000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "criar", "campos": {"nome": "Sitio excluido"}},
+        {"v": 1, "id": "aaaaaaaa-1-7", "hlc": "1794000007000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "alterar", "campos": {"diferentesDe": ["TESTE-1"]}},
+        {"v": 1, "id": "aaaaaaaa-1-8", "hlc": "1794000008000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "SI-aaaaaaaa-2", "op": "excluir", "campos": {}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-91"],
+        "publicados": {"SI-aaaaaaaa-1": "TESTE-91"},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {},
+          "partes": {},
+          "grafias": {},
+          "diferentes": [["TESTE-1", "TESTE-2"], ["TESTE-1", "TESTE-3"], ["TESTE-3", "TESTE-91"]]
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "pares-resolvidos",
+      "descricao": "Dos pares do pacote, saem os resolvidos: mesmo destino (1, 2), um parte do outro (3, 4) e em cadeia (8, 3), diferentes (5, 6), e o que tem um sítio que não existe (7, 99). Fica (2, 7): o destino de TESTE-2 é TESTE-1, que não tem relação com TESTE-7.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-4", "op": "alterar", "campos": {"parteDe": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-8", "op": "alterar", "campos": {"parteDe": "TESTE-4"}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-5", "op": "alterar", "campos": {"diferentesDe": ["TESTE-6"]}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4", "TESTE-5", "TESTE-6", "TESTE-7", "TESTE-8"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": [
+          {"a": "TESTE-1", "b": "TESTE-2", "motivo": "coordenada"},
+          {"a": "TESTE-3", "b": "TESTE-4", "motivo": "nome"},
+          {"a": "TESTE-5", "b": "TESTE-6", "motivo": "variante"},
+          {"a": "TESTE-8", "b": "TESTE-3", "motivo": "coordenada"},
+          {"a": "TESTE-7", "b": "TESTE-99", "motivo": "nome"},
+          {"a": "TESTE-2", "b": "TESTE-7", "motivo": "nome"}
+        ]
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-1"},
+          "partes": {"TESTE-4": "TESTE-3", "TESTE-8": "TESTE-4"},
+          "grafias": {},
+          "diferentes": [["TESTE-5", "TESTE-6"]]
+        },
+        "conflitos": [],
+        "paresPendentes": [{"a": "TESTE-2", "b": "TESTE-7", "motivo": "nome"}]
+      }
+    },
+    {
+      "nome": "circulos-so-do-pacote",
+      "descricao": "Círculos com duas ou mais mesclas do pacote (hlc \"\"): o empate de hlc decide pelo menor id em ponto de código, e essa aresta cai, sem conflito. TESTE-9 ↔ TESTE-10 (só pacote): cai a de TESTE-10 (\"TESTE-10\" < \"TESTE-9\" por ponto de código). TESTE-3 → 4 → 5 (pacote) e TESTE-5 → 3 (usuário): cai a de TESTE-3.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-5", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-3", "TESTE-4", "TESTE-5", "TESTE-9", "TESTE-10"],
+        "publicados": {},
+        "mesclas": {"TESTE-9": "TESTE-10", "TESTE-10": "TESTE-9", "TESTE-3": "TESTE-4", "TESTE-4": "TESTE-5"},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-4": "TESTE-3", "TESTE-5": "TESTE-3", "TESTE-9": "TESTE-10"},
+          "partes": {},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "diferentes-pelo-destino",
+      "descricao": "Um par sugerido está resolvido se «São lugares diferentes» tem o par pelos ids canônicos OU pelos destinos. TESTE-1 ≠ TESTE-2 e depois TESTE-2 foi mesclado em TESTE-3: (2, 1) continua resolvido (pelos canônicos), mas (1, 3) fica pendente. TESTE-4 ≠ TESTE-5 e TESTE-6 foi mesclado em TESTE-4: (6, 5) está resolvido (pelos destinos, (4, 5)). (9, 3) fica pendente; os pendentes saem na ordem do pacote. Os pares de diferentes saem em ordem de ponto de código: TESTE-10 antes de TESTE-4 e de TESTE-9.",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"diferentesDe": ["TESTE-2"]}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-4", "op": "alterar", "campos": {"diferentesDe": ["TESTE-5"]}},
+        {"v": 1, "id": "bbbbbbbb-1-4", "hlc": "1794000004000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-6", "op": "alterar", "campos": {"mescladoEm": "TESTE-4"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-9", "op": "alterar", "campos": {"diferentesDe": ["TESTE-10"]}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4", "TESTE-5", "TESTE-6", "TESTE-9", "TESTE-10"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": [
+          {"a": "TESTE-1", "b": "TESTE-3", "motivo": "nome"},
+          {"a": "TESTE-4", "b": "TESTE-5", "motivo": "nome"},
+          {"a": "TESTE-2", "b": "TESTE-1", "motivo": "coordenada"},
+          {"a": "TESTE-6", "b": "TESTE-5", "motivo": "variante"},
+          {"a": "TESTE-9", "b": "TESTE-3", "motivo": "nome"}
+        ]
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-3", "TESTE-6": "TESTE-4"},
+          "partes": {},
+          "grafias": {},
+          "diferentes": [["TESTE-1", "TESTE-2"], ["TESTE-10", "TESTE-9"], ["TESTE-4", "TESTE-5"]]
+        },
+        "conflitos": [],
+        "paresPendentes": [{"a": "TESTE-1", "b": "TESTE-3", "motivo": "nome"}, {"a": "TESTE-9", "b": "TESTE-3", "motivo": "nome"}]
+      }
+    },
+    {
+      "nome": "varios-conflitos",
+      "descricao": "Três círculos: dois de mescla (TESTE-3 ↔ 8, perde TESTE-8; TESTE-5 ↔ 6, perde TESTE-5) e um de parte (TESTE-1 ↔ 2, perde TESTE-1). Os conflitos saem: primeiro os de mescla, depois os de parte; em cada tipo, pelo registro (o que perdeu) em ponto de código, não pela ordem em que os círculos foram achados.",
+      "eventos": [
+        {"v": 1, "id": "bbbbbbbb-1-1", "hlc": "1794000001000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-8", "op": "alterar", "campos": {"mescladoEm": "TESTE-3"}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"mescladoEm": "TESTE-8"}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-5", "op": "alterar", "campos": {"mescladoEm": "TESTE-6"}},
+        {"v": 1, "id": "bbbbbbbb-1-4", "hlc": "1794000004000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-6", "op": "alterar", "campos": {"mescladoEm": "TESTE-5"}},
+        {"v": 1, "id": "aaaaaaaa-1-5", "hlc": "1794000005000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"parteDe": "TESTE-2"}},
+        {"v": 1, "id": "bbbbbbbb-1-6", "hlc": "1794000006000-0000-bbbbbbbb", "aparelho": "bbbbbbbb", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-5", "TESTE-6", "TESTE-8"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-3": "TESTE-8", "TESTE-6": "TESTE-5"},
+          "partes": {"TESTE-2": "TESTE-1"},
+          "grafias": {},
+          "diferentes": []
+        },
+        "conflitos": [
+          {
+            "tipo": "mescla",
+            "registro": "TESTE-5",
+            "valor": "TESTE-6",
+            "hlc": "1794000003000-0000-aaaaaaaa",
+            "aparelho": "aaaaaaaa",
+            "vencedor": {
+              "registro": "TESTE-6",
+              "valor": "TESTE-5",
+              "hlc": "1794000004000-0000-bbbbbbbb",
+              "aparelho": "bbbbbbbb"
+            }
+          },
+          {
+            "tipo": "mescla",
+            "registro": "TESTE-8",
+            "valor": "TESTE-3",
+            "hlc": "1794000001000-0000-bbbbbbbb",
+            "aparelho": "bbbbbbbb",
+            "vencedor": {
+              "registro": "TESTE-3",
+              "valor": "TESTE-8",
+              "hlc": "1794000002000-0000-aaaaaaaa",
+              "aparelho": "aaaaaaaa"
+            }
+          },
+          {
+            "tipo": "parte",
+            "registro": "TESTE-1",
+            "valor": "TESTE-2",
+            "hlc": "1794000005000-0000-aaaaaaaa",
+            "aparelho": "aaaaaaaa",
+            "vencedor": {
+              "registro": "TESTE-2",
+              "valor": "TESTE-1",
+              "hlc": "1794000006000-0000-bbbbbbbb",
+              "aparelho": "bbbbbbbb"
+            }
+          }
+        ],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "circulo-de-partes-do-pacote",
+      "descricao": "Partes do pacote valem com hlc \"\": TESTE-1 parte de TESTE-2 (pacote) e TESTE-2 parte de TESTE-1 (usuário): cai a do pacote, sem conflito. TESTE-3 ↔ TESTE-4, as duas do pacote: cai a de TESTE-3 (empate de hlc, menor id).",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"parteDe": "TESTE-1"}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3", "TESTE-4"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {"TESTE-1": "TESTE-2", "TESTE-3": "TESTE-4", "TESTE-4": "TESTE-3"},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {"mesclas": {}, "partes": {"TESTE-2": "TESTE-1", "TESTE-4": "TESTE-3"}, "grafias": {}, "diferentes": []},
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    },
+    {
+      "nome": "grafias-forma-de-leitura",
+      "descricao": "Duas grafias são a mesma se têm a mesma chave: o texto em NFC com os espaços colapsados e sem pontas, U+2010/U+2011 trocados por \"-\", depois NFD, sem as marcas combinantes (categoria Unicode M), em minúsculas e sem ʿ (U+02BF), ʾ (U+02BE), ' (U+0027), ’ (U+2019), ` (U+0060) e ´ (U+00B4) (o chaveDaForma do glossário). Fica a primeira, com o texto em NFC (TESTE-3: e + U+0301 vira é).",
+      "eventos": [
+        {"v": 1, "id": "aaaaaaaa-1-1", "hlc": "1794000001000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-1", "op": "alterar", "campos": {"grafias": [{"texto": "Tell el-ʿAmarna"}, {"texto": "Tell el-Amarna"}, {"texto": "TELL EL-'AMARNA"}, {"texto": "Tell el-’Amarna"}, {"texto": "Tél"}, {"texto": "Tel"}, {"texto": "Tal Ḥamid"}, {"texto": "Tell el Amarna"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-2", "hlc": "1794000002000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"grafias": [{"texto": "tal hamid"}, {"texto": "Tèl"}, {"texto": "Tal Hamid", "livro": "TESTE"}]}},
+        {"v": 1, "id": "aaaaaaaa-1-3", "hlc": "1794000003000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-2", "op": "alterar", "campos": {"mescladoEm": "TESTE-1"}},
+        {"v": 1, "id": "aaaaaaaa-1-4", "hlc": "1794000004000-0000-aaaaaaaa", "aparelho": "aaaaaaaa", "tipo": "sitio", "reg": "TESTE-3", "op": "alterar", "campos": {"grafias": [{"texto": "Te\u0301l  Z "}]}}
+      ],
+      "pacote": {
+        "sitios": ["TESTE-1", "TESTE-2", "TESTE-3"],
+        "publicados": {},
+        "mesclas": {},
+        "partes": {},
+        "grafias": [],
+        "pares": []
+      },
+      "esperado": {
+        "relacoes": {
+          "mesclas": {"TESTE-2": "TESTE-1"},
+          "partes": {},
+          "grafias": {
+            "TESTE-1": [
+              {"texto": "Tell el-ʿAmarna", "tradicao": null, "livro": null},
+              {"texto": "Tél", "tradicao": null, "livro": null},
+              {"texto": "Tal Ḥamid", "tradicao": null, "livro": null},
+              {"texto": "Tell el Amarna", "tradicao": null, "livro": null},
+              {"texto": "Tal Hamid", "tradicao": null, "livro": "TESTE"}
+            ],
+            "TESTE-3": [{"texto": "Tél Z", "tradicao": null, "livro": null}]
+          },
+          "diferentes": []
+        },
+        "conflitos": [],
+        "paresPendentes": []
+      }
+    }
+  ]
+}

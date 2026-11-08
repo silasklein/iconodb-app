@@ -7,7 +7,18 @@ import { redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/red
 import type { Pendencias } from '../banco/tipos'
 import type { Carga } from '../ui/useCarregar'
 import { estadoAtual, useEstado } from '../usuario/estado'
+import { resolverSitios, type PacoteDeSitios, type ParSugerido, type Resolucao } from '../sitios/resolucao'
+import { pacoteDeSitiosOuVazio } from '../sitios/useResolucao'
 import { montarFila, type Fila } from './fila'
+import { ID_DOS_PARES, paresDaRevisao, ROTULO_DOS_PARES, type ParResolvido } from './pares'
+
+/** Os pares de sítios que podem ser o mesmo (Tarefa 15), sobre a mesma resolução e o mesmo pacote da conta. */
+export interface ParesDaFila {
+  abertos: ParSugerido[]
+  resolvidos: ParResolvido[]
+  resolucao: Resolucao
+  pacote: PacoteDeSitios
+}
 
 interface DadosDoPacote {
   linhas: LinhaDaFila[]
@@ -18,6 +29,8 @@ interface DadosDoPacote {
   traducoes: TraducaoNaoRevisada[]
   /** Os redirecionamentos do pacote (Tarefa 16). */
   redirecionamentos: Redirecionamentos
+  /** O pacote dos sítios (Parte 2C, bloco 2): os sítios não resolvidos valem pelo destino. */
+  pacoteDeSitios: PacoteDeSitios
 }
 
 interface Opcoes {
@@ -32,7 +45,7 @@ interface Opcoes {
  * por uma sincronização) e acompanha o estado do usuário: marcar um caso, ligar um sítio, dar um período, aprovar um
  * verbete ou receber eventos de outro aparelho refaz a conta no mesmo ciclo de renderização, em todas as telas que a usam.
  */
-export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPacote | null>; fila: Fila | null } {
+export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPacote | null>; fila: Fila | null; pares: ParesDaFila | null } {
   const { lugares: comLugares = false, exigirBanco = false } = opcoes
   const [versao, setVersao] = useState(0)
   const [tentativa, setTentativa] = useState(0)
@@ -42,17 +55,18 @@ export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPaco
     let vivo = true
     const buscar = async (): Promise<DadosDoPacote | null> => {
       if (!exigirBanco && !(await lerEstado())) return null
-      const [linhas, verbetesDoPacote, elementos, traducoes, redirecionamentos] = await Promise.all([
+      const [linhas, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios] = await Promise.all([
         linhasDaFila(),
         verbetesAReverNoPacote(),
         elementosSemRegiaoNoPacote(),
         comLugares ? traducoesNaoRevisadasNoPacote() : Promise.resolve([]),
         redirecionamentosOuNenhum(),
+        pacoteDeSitiosOuVazio(),
       ])
       // Onde cada caso está: os da fila, os itens dos elementos sem região e as traduções (trecho ou campo do catálogo).
       const pares = comLugares ? [...linhas, ...elementos.map((e) => ({ entidade: 'item', entidadeId: e.itemId })), ...traducoes] : []
       const lugares = comLugares ? await lugaresDosCasos(pares) : null
-      return { linhas, lugares, verbetesDoPacote, elementos, traducoes, redirecionamentos }
+      return { linhas, lugares, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios }
     }
     buscar().then(
       (dados) => vivo && setCarga({ fase: 'ok', dados }),
@@ -76,13 +90,20 @@ export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPaco
   const regioes = useEstado((e) => e.registros.get('regiao'))
   const numeracao = useNumeracao()
   const dados = carga.fase === 'ok' ? carga.dados : null
-  const fila = useMemo(
-    () => (dados ? montarFila({ ...dados, numeracao, estado: estadoAtual() }) : null),
+  const conta = useMemo(
+    () => {
+      if (!dados) return null
+      const estado = estadoAtual()
+      // Tarefa 15: os pares abertos somam no total; a Revisão mostra estes mesmos (a página, o Menu e a barra concordam).
+      const resolucao = resolverSitios(estado, dados.pacoteDeSitios)
+      const pares: ParesDaFila = { ...paresDaRevisao(resolucao, dados.pacoteDeSitios), resolucao, pacote: dados.pacoteDeSitios }
+      return { fila: montarFila({ ...dados, numeracao, estado, paresAbertos: pares.abertos.length }), pares }
+    },
     // os mapas são o que `estadoAtual()` tem de novo para esta conta
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dados, numeracao, resolvidos, trocas, sitios, objetos, verbetes, regioes],
   )
-  return { carga, fila }
+  return { carga, fila: conta?.fila ?? null, pares: conta?.pares ?? null }
 }
 
 /** Só a fila (null enquanto carrega, sem pacote ou se falhou): o que o Menu e a barra superior leem. */
@@ -90,5 +111,7 @@ export const useFila = (): Fila | null => useFilaComCarga().fila
 
 /** A fila no formato dos contadores (`total` e `porTipo`), a que o Menu e o ponto da barra usam. */
 export function pendenciasDaFila(f: Fila): Pendencias {
-  return { total: f.total, porTipo: f.grupos.filter((g) => !g.soConsulta && g.quantidade > 0).map((g) => ({ tipo: g.id, rotulo: g.rotulo, quantidade: g.quantidade })) }
+  const porTipo = f.grupos.filter((g) => !g.soConsulta && g.quantidade > 0).map((g) => ({ tipo: g.id, rotulo: g.rotulo, quantidade: g.quantidade }))
+  if (f.paresAbertos > 0) porTipo.push({ tipo: ID_DOS_PARES, rotulo: ROTULO_DOS_PARES, quantidade: f.paresAbertos })
+  return { total: f.total, porTipo }
 }

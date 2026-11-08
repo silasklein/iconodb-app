@@ -9,7 +9,7 @@ vi.mock('../pacote/local', async (original) => ({
   lerEstado: vi.fn(),
 }))
 vi.mock('../dropbox/auth', () => ({ estadoLogin: vi.fn(async () => 'sem-login') }))
-vi.mock('../banco/consultas', () => ({ linhasDaFila: vi.fn(async () => Array.from({ length: 3 }, (_, i) => ({ tipo: 'medidas_nao_normalizadas', entidade: 'item', entidadeId: `X${i}`, detalhe: '', numero: `N${i}` }))), verbetesAReverNoPacote: vi.fn(async () => []), elementosSemRegiaoNoPacote: vi.fn(async () => []), traducoesNaoRevisadasNoPacote: vi.fn(async () => []), lugaresDosCasos: vi.fn(async () => new Map()), sitios: vi.fn(async () => []), contagens: vi.fn(async () => ({ objetos: 1, hipoteses: 1, verbetes: 1 })), grupos: vi.fn(async () => []) }))
+vi.mock('../banco/consultas', () => ({ linhasDaFila: vi.fn(async () => Array.from({ length: 3 }, (_, i) => ({ tipo: 'medidas_nao_normalizadas', entidade: 'item', entidadeId: `X${i}`, detalhe: '', numero: `N${i}` }))), verbetesAReverNoPacote: vi.fn(async () => []), elementosSemRegiaoNoPacote: vi.fn(async () => []), traducoesNaoRevisadasNoPacote: vi.fn(async () => []), lugaresDosCasos: vi.fn(async () => new Map()), sitios: vi.fn(async () => []), contagens: vi.fn(async () => ({ objetos: 1, hipoteses: 1, verbetes: 1 })), grupos: vi.fn(async () => []), redirecionamentos: vi.fn(async () => []), partesDoPacote: vi.fn(async () => []), grafiasDoPacote: vi.fn(async () => []), paresSugeridos: vi.fn(async () => []) }))
 
 describe('barra superior em "/" (computador)', () => {
   afterEach(() => instalarMatchMedia(375))

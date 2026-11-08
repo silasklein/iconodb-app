@@ -4,8 +4,10 @@ import { dobrar, normalizarForma } from '../glossario/modelo'
 import { Camada } from '../ui/Camada'
 import { IconButton } from '../ui/IconButton'
 import { Icon } from '../ui/Icon'
-import { sitiosComEsteNome, useOpcoesDeSitio, useSitiosParaComparar, useSitiosVivos, type OpcaoDeSitio } from './doUsuario'
+import { sitiosComEsteNome, useOpcoesDeSitio, useSitiosParaComparar, useSitiosVivos } from './doUsuario'
 import { criarSitio, pedidoDeTroca, trocarSitioDoObjeto } from './operacoes'
+import { opcoesDaTroca } from './trocar'
+import { useResolucaoDeSitios } from './useResolucao'
 import '../colecoes/FolhaDeColecao.css'
 import '../imagens-usuario/MarcaSkc.css'
 import './Sitios.css'
@@ -23,22 +25,18 @@ interface Props {
   devolverFoco?: () => HTMLElement | null
 }
 
-/** Uma opção casa com a busca: todas as palavras (sem diacríticos nem caixa) no nome, no nome do livro, nas grafias e na região. */
-const casa = (o: OpcaoDeSitio, palavras: readonly string[]) => {
-  const texto = dobrar([o.nome, o.nomeDoLivro, o.regiao, ...o.grafias].filter(Boolean).join(' '))
-  return palavras.every((p) => texto.includes(p))
-}
-
 /**
  * "Sítio deste objeto · SKC" (ItemSitio.dc.html no celular, folha de baixo; PC-ItemSitio.dc.html no computador, diálogo): o
  * sítio atual, a busca entre os sítios (pelo nome de agora, pelo do livro e pelas grafias, com ou sem diacríticos), a lista
- * (rádio), "Novo sítio «…»" / "Novo sítio com mais dados…" e Cancelar / Trocar. A troca é um `item-sitio` na camada do usuário: o dado do livro não é tocado e
+ * (rádio; em árvore, as partes recuadas sob o todo, `opcoesDaTroca`, telas aprovadas da Parte 2C, bloco 2, §5), "Novo sítio
+ * «…»" / "Novo sítio com mais dados…" e Cancelar / Trocar. A troca é um `item-sitio` na camada do usuário: o dado do livro não é tocado e
  * continua visível na ficha como "no livro: …". É o mesmo caminho para os "sítios não resolvidos" da Revisão.
  */
 export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco }: Props) {
   const uid = useId()
   const vivos = useSitiosVivos()
   const opcoes = useOpcoesDeSitio()
+  const resolucao = useResolucaoDeSitios()
   const todos = useSitiosParaComparar()
   const [consulta, setConsulta] = useState('')
   const [escolhido, setEscolhido] = useState<string | null>(null)
@@ -48,7 +46,7 @@ export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco 
 
   const atual = vivos.doObjetoDoPacote(numero, { id: doLivro.id, nome: doLivro.nome })
   const palavras = useMemo(() => dobrar(consulta).split(' ').filter(Boolean), [consulta])
-  const resultado = useMemo(() => opcoes.filter((o) => o.id !== atual.id && casa(o, palavras)), [opcoes, atual.id, palavras])
+  const resultado = useMemo(() => opcoesDaTroca(resolucao, opcoes, atual.id, palavras), [resolucao, opcoes, atual.id, palavras])
   const visiveis = resultado.slice(0, MAXIMO_DE_OPCOES)
   const q = normalizarForma(consulta)
   // "Novo sítio «…»" só quando nada existente tem este nome ou grafia: o existente aparece na lista.
@@ -77,7 +75,7 @@ export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco 
   // Setas percorrem a lista de rádios (roving tabindex: uma parada de Tab no grupo).
   const teclar = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    const ids = visiveis.map((o) => o.id)
+    const ids = visiveis.map((l) => l.opcao.id)
     if (ids.length === 0) return
     e.preventDefault()
     const i = escolhido ? ids.indexOf(escolhido) : -1
@@ -148,7 +146,7 @@ export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco 
             <span className="codigo">{resultado.length}</span>
           </div>
           {visiveis.length === 0 && <p className="trocar-sitio-vazio">Nenhum sítio com este nome.</p>}
-          {visiveis.map((o, i) => (
+          {visiveis.map(({ opcao: o, nivel, apoio }, i) => (
             <button
               key={o.id}
               type="button"
@@ -156,6 +154,7 @@ export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco 
               aria-checked={escolhido === o.id}
               tabIndex={escolhido === o.id || (escolhido === null && i === 0) ? 0 : -1}
               className="trocar-sitio-opcao"
+              data-nivel={Math.min(nivel, 6)}
               onClick={() => {
                 setEscolhido(o.id)
                 setErro(null)
@@ -167,9 +166,7 @@ export function TrocarSitio({ numero, doLivro, variante, aoFechar, devolverFoco 
                   {o.nome}
                   {o.doUsuario && <span className="marca-skc">SKC</span>}
                 </span>
-                <span className="trocar-sitio-opcao-apoio">
-                  {[o.nomeDoLivro ? `antes: ${o.nomeDoLivro}` : null, o.regiao, `${o.objetos.toLocaleString('pt-BR')} ${o.objetos === 1 ? 'objeto' : 'objetos'}`].filter(Boolean).join(' · ')}
-                </span>
+                <span className="trocar-sitio-opcao-apoio">{apoio}</span>
               </span>
             </button>
           ))}

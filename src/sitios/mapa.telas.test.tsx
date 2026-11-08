@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import userEvent from '@testing-library/user-event'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { atalhoRegistrado } from '../app/atalhos'
-import { usarMotor } from '../banco/cliente'
+import { executar, usarMotor } from '../banco/cliente'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { registrar } from '../usuario/estado'
@@ -58,9 +58,11 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     await abrir()
     const grupo = screen.getByRole('group', { name: 'Filtrar por região' })
     const nomes = within(grupo).getAllByRole('button').map((b) => b.getAttribute('aria-label'))
+    // Pacote 8: TESTE-5 a TESTE-8 a mais (TESTE-7 e TESTE-8 no Levante Sul, TESTE-5 e TESTE-6 sem coordenada); TESTE-4, mesclado
+    // em TESTE-2, não aparece.
     expect(nomes).toEqual([
-      'Todas, 9 sítios',
-      'Levante Sul, 3 sítios',
+      'Todas, 13 sítios',
+      'Levante Sul, 5 sítios',
       'Levante Norte, 2 sítios',
       'Transjordânia, 0 sítios (nenhum ainda)',
       'Egito, 1 sítio',
@@ -68,17 +70,17 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
       'Anatólia, 0 sítios (nenhum ainda)',
       'Chipre, 0 sítios (nenhum ainda)',
       'Irã, 1 sítio',
-      'Sem coordenada, 1 sítio',
+      'Sem coordenada, 3 sítios',
       'Fora das regiões, 1 sítio',
     ])
-    expect(within(grupo).getByRole('button', { name: 'Todas, 9 sítios' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(grupo).getByRole('button', { name: 'Todas, 13 sítios' })).toHaveAttribute('aria-pressed', 'true')
     expect(chip('Chipre')).toHaveClass('regiao-chip-vazia')
   })
 
   it('as etiquetas combinam (união) e filtram a lista e o mapa; o endereço guarda o filtro', async () => {
     await abrir()
-    expect(linhas()).toHaveLength(9)
-    expect(pontos()).toHaveLength(7) // 9 sítios, 1 sem coordenada, 2 de uma coordenada só (Gêmeos)
+    expect(linhas()).toHaveLength(13) // pacote 8: TESTE-5 a TESTE-8 a mais (TESTE-4, mesclado, não)
+    expect(pontos()).toHaveLength(9) // 13 sítios, 3 sem coordenada, 2 de uma coordenada só (Gêmeos)
     await userEvent.click(chip('Egito'))
     expect(endereco()).toBe('/sitios?regioes=egito')
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-1']))
@@ -94,7 +96,7 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     await userEvent.click(chip('Egito')) // tirar uma
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-2']))
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtro' }))
-    await waitFor(() => expect(linhas()).toHaveLength(9))
+    await waitFor(() => expect(linhas()).toHaveLength(13))
     expect(endereco()).toBe('/sitios')
   })
 
@@ -121,9 +123,9 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     await abrir('/sitios?regioes=egito')
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-1']))
     await userEvent.click(screen.getByRole('button', { name: /^Todas, / }))
-    await waitFor(() => expect(linhas()).toHaveLength(9))
+    await waitFor(() => expect(linhas()).toHaveLength(13))
     await userEvent.click(chip('Sem coordenada'))
-    await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-3']))
+    await waitFor(() => expect(linhas()).toEqual(['TESTE-5', 'SI-aaaaaaaa-3', 'TESTE-6'])) // pacote 8: as partes sem coordenada
     expect(pontos()).toHaveLength(0)
     expect(screen.getByText('Nenhum sítio com coordenada neste filtro.')).toBeInTheDocument()
   })
@@ -346,7 +348,7 @@ describe('«Mostrar no mapa» e «Abrir no mapa»', () => {
   it('/sitios?foco=<sítio> chega com o mapa centrado e o cartão aberto; um filtro que o esconde é desfeito', async () => {
     await abrir('/sitios?foco=SI-aaaaaaaa-1&regioes=ira', 1280)
     expect(await screen.findByRole('dialog', { name: 'Sítio selecionado: Tell do Egito' })).toBeInTheDocument()
-    await waitFor(() => expect(linhas()).toHaveLength(9))
+    await waitFor(() => expect(linhas()).toHaveLength(13)) // pacote 8: TESTE-5 a TESTE-8 a mais
     expect(chip('Irã')).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -561,6 +563,10 @@ describe('T17-C-26: o nome de um mar não cobre um ponto', () => {
   const lugares = () => [...document.querySelectorAll('.mapa-lugar')].map((e) => e.textContent)
 
   it('«Mar Mediterrâneo» é escrito no lugar dele e some quando um sítio cairia debaixo do nome', async () => {
+    // Pacote 8: TESTE-7 «Maḥtiṣ Teste» (32,5 N · 35,5 E) já cai debaixo do nome; o controle positivo é sem ele.
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar('DELETE FROM pub_TESTE.site WHERE id = 7')
+    onTestFinished(async () => usarMotor(await bancoDeTeste()))
     await abrir()
     await waitFor(() => expect(lugares()).toContain('Mar Mediterrâneo')) // o controle positivo: com os pontos de sempre ele aparece
     // um sítio no centro do nome (33,0 N · 33,0 E, no mar)

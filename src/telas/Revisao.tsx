@@ -3,12 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAtalhos } from '../app/useAtalhos'
 import { desfazerResolvido, marcarComoResolvido } from '../revisao/operacoes'
 import { casosIguais, type Caso, type GrupoDaFila } from '../revisao/fila'
+import { ID_DOS_PARES } from '../revisao/pares'
+import { ROTULO_DOS_SITIOS } from '../sitios/pendencias'
 import { useFilaComCarga } from '../revisao/useFila'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { numeroPtBr } from '../ui/numero'
+import { GrupoDosPares, type Decisao } from './ParesNaRevisao'
 import './Estado.css'
 import './Revisao.css'
 
@@ -44,12 +47,15 @@ const resumoDoCaso = (c: Caso) => (c.numero !== '—' ? c.numero : c.o_que.lengt
  * a de `montarFila`, a mesma do Menu e do ponto da barra.
  */
 export function Revisao() {
-  const { carga, fila } = useFilaComCarga({ lugares: true, exigirBanco: true })
+  const { carga, fila, pares } = useFilaComCarga({ lugares: true, exigirBanco: true })
   const [params, setParams] = useSearchParams()
   const abertos = lista(params, PARAMETRO_ABERTOS)
   const ate = mostrados(params)
-  /** O último caso deixado como está: o que a tecla U desfaz (o aviso some sozinho, o U não). */
-  const [ultimo, setUltimo] = useState<{ chave: string; texto: string } | null>(null)
+  /**
+   * A última decisão (um caso deixado como está; um par de sítios decidido, Tarefa 15): o texto do aviso e o que a tecla U
+   * desfaz (o aviso some sozinho, o U não).
+   */
+  const [ultimo, setUltimo] = useState<Decisao | null>(null)
   const [avisoVisivel, setAvisoVisivel] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [foco, setFoco] = useState<{ chave?: string; grupo?: string } | null>(null)
@@ -114,7 +120,7 @@ export function Revisao() {
     setErro(null)
     try {
       await marcarComoResolvido(c.chave, c.tipo)
-      setUltimo({ chave: c.chave, texto: c.numero !== '—' ? c.numero : resumoDoCaso(c) })
+      setUltimo({ chave: c.chave, texto: `${c.numero !== '—' ? c.numero : resumoDoCaso(c)}: marcado como resolvido.`, desfazer: () => desfazerResolvido(c.chave) })
       setAvisoVisivel(true)
       setFoco({ chave: vizinho?.chave, grupo })
     } catch {
@@ -132,6 +138,31 @@ export function Revisao() {
     }
   }, [])
   const aoDesfazerUm = useCallback((c: Caso) => void desfazer(c.chave), [desfazer])
+  /** «Desfazer» do aviso e a tecla U: a ação que a decisão guardou. */
+  const desfazerDecisao = useCallback(async (d: Decisao) => {
+    setErro(null)
+    try {
+      await d.desfazer()
+      setUltimo((u) => (u?.chave === d.chave ? null : u))
+      setFoco({ chave: d.chave })
+    } catch {
+      setErro('Não foi possível guardar; tente de novo. Nada foi perdido.')
+    }
+  }, [])
+  // Os pares de sítios (Tarefa 15): decidir mostra o aviso e leva o foco ao par vizinho (ou ao grupo); desfazer pela linha o
+  // devolve aos abertos, com o foco nele.
+  const aoDecidirPar = useCallback((d: Decisao, vizinho: string | null) => {
+    setErro(null)
+    setUltimo(d)
+    setAvisoVisivel(true)
+    setFoco({ chave: vizinho ?? undefined, grupo: ID_DOS_PARES })
+  }, [])
+  const aoDesfazerPar = useCallback((chave: string) => {
+    setErro(null)
+    setUltimo((u) => (u?.chave === chave ? null : u))
+    setFoco({ chave })
+  }, [])
+  const aoFalharPar = useCallback(() => setErro('Não foi possível guardar; tente de novo. Nada foi perdido.'), [])
   const aoResolverUm = useCallback((grupo: string, c: Caso) => void resolver(grupo, c), [resolver])
 
   // D: deixar como está o caso da linha em foco. U: desfazer o último. (Ignoradas dentro de campos de texto.)
@@ -151,10 +182,32 @@ export function Revisao() {
       },
       u: () => {
         if (!ultimo) return false
-        void desfazer(ultimo.chave)
+        void desfazerDecisao(ultimo)
       },
     },
     'revisao',
+  )
+
+  // Tarefa 15: o grupo dos pares de sítios vem logo antes de «Sítios não resolvidos» (sem ele, no começo da lista).
+  const temPares = !!pares && (pares.abertos.length > 0 || pares.resolvidos.length > 0)
+  const grupos = fila?.grupos ?? []
+  const iDosSitios = grupos.findIndex((g) => g.rotulo === ROTULO_DOS_SITIOS)
+  const corte = iDosSitios >= 0 ? iDosSitios : 0
+  const gruposAntesDosPares = grupos.slice(0, corte)
+  const gruposDepoisDosPares = grupos.slice(corte)
+  const linhaDoGrupo = (g: GrupoDaFila) => (
+    <li key={g.id} data-grupo={g.id}>
+      <Grupo
+        g={g}
+        aberto={abertos.has(g.id)}
+        ateAbertos={ate.get(g.id) ?? VISIVEIS}
+        ateResolvidos={ate.get(`${g.id}~r`) ?? VISIVEIS}
+        aoAbrir={(a) => mudar(PARAMETRO_ABERTOS, g.id, a)}
+        aoVerAte={verAte}
+        aoResolver={aoResolverUm}
+        aoDesfazer={aoDesfazerUm}
+      />
+    </li>
   )
 
   return (
@@ -184,24 +237,25 @@ export function Revisao() {
                 {erro}
               </p>
             )}
-            {fila.grupos.length === 0 ? (
+            {fila.grupos.length === 0 && !temPares ? (
               <p className="pagina-consulta-vazio">Nada a revisar.</p>
             ) : (
               <ul className="revisao-tipos" aria-label="Casos por tipo">
-                {fila.grupos.map((g) => (
-                  <li key={g.id} data-grupo={g.id}>
-                    <Grupo
-                      g={g}
-                      aberto={abertos.has(g.id)}
-                      ateAbertos={ate.get(g.id) ?? VISIVEIS}
-                      ateResolvidos={ate.get(`${g.id}~r`) ?? VISIVEIS}
-                      aoAbrir={(a) => mudar(PARAMETRO_ABERTOS, g.id, a)}
-                      aoVerAte={verAte}
-                      aoResolver={aoResolverUm}
-                      aoDesfazer={aoDesfazerUm}
+                {gruposAntesDosPares.map(linhaDoGrupo)}
+                {pares && temPares && (
+                  <li data-grupo={ID_DOS_PARES}>
+                    <GrupoDosPares
+                      pares={pares}
+                      aberto={abertos.has(ID_DOS_PARES)}
+                      abertos={abertos}
+                      aoAbrir={(id, a) => mudar(PARAMETRO_ABERTOS, id, a)}
+                      aoDecidir={aoDecidirPar}
+                      aoDesfazer={aoDesfazerPar}
+                      aoFalhar={aoFalharPar}
                     />
                   </li>
-                ))}
+                )}
+                {gruposDepoisDosPares.map(linhaDoGrupo)}
               </ul>
             )}
           </>
@@ -210,8 +264,8 @@ export function Revisao() {
       <p className="revisao-aviso" role="status" aria-live="polite" hidden={!ultimo || !avisoVisivel}>
         {ultimo && avisoVisivel && (
           <>
-            <span>{ultimo.texto}: marcado como resolvido.</span>
-            <button type="button" className="revisao-desfazer" aria-keyshortcuts="U" onClick={() => void desfazer(ultimo.chave)}>
+            <span>{ultimo.texto}</span>
+            <button type="button" className="revisao-desfazer" aria-keyshortcuts="U" onClick={() => void desfazerDecisao(ultimo)}>
               <Icon name="desfazer" size={16} />
               Desfazer
             </button>

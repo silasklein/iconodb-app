@@ -14,7 +14,7 @@ import css from './Busca.css?raw'
  * busca/consulta.test.ts sobre o pacote sintético; aqui `buscar` é simulada para
  * olhar só a tela: verbete em destaque, abas, etiquetas, sem resultado, filtros, estado do roteador.
  */
-vi.mock('../banco/consultas', () => ({ sitios: vi.fn(async () => []) }))
+vi.mock('../banco/consultas', () => ({ sitios: vi.fn(async () => []), redirecionamentos: vi.fn(async () => []), partesDoPacote: vi.fn(async () => []), grafiasDoPacote: vi.fn(async () => []), paresSugeridos: vi.fn(async () => []) }))
 vi.mock('../pacote/local', () => ({ lerEstado: vi.fn(async () => ({ schema: 5 })) }))
 vi.mock('../busca/consulta', async (original) => ({ ...(await original<typeof import('../busca/consulta')>()), buscar: vi.fn() }))
 

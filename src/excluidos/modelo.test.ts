@@ -7,6 +7,7 @@ import type { Json, Op, Tipo } from '../usuario/eventos'
 import { fundir } from '../usuario/fusao'
 import { quando } from '../usuario/textosDaSync'
 import { gruposDeExcluidos, quandoDaMarca, textoDoRestaurado, type LinhaExcluida } from './modelo'
+import { PACOTE_VAZIO, resolverSitios } from '../sitios/resolucao'
 
 let seq = 0
 const e = (tipo: Tipo, reg: string, op: Op, campos: Record<string, Json> = {}, ms?: number) => ev({ seq: ++seq, tipo, reg, op, campos, ms })
@@ -480,5 +481,40 @@ describe('revisão 1: textoDoRestaurado', () => {
     // N-2: o mesmo nome duas vezes (duas origens da mesma entrada dos livros) aparece uma vez
     expect(textoDoRestaurado(['amuleto do livro', 'amuleto do livro'])).toBe('Restaurado: amuleto do livro.')
     expect(textoDoRestaurado(['A', 'B', 'A'])).toBe('Restaurado: A e B.')
+  })
+})
+
+describe('Parte 2C, bloco 2: um sítio seu excluído que estava mesclado em outro', () => {
+  const X = 'SI-aaaaaaaa-1'
+  const Y = 'SI-aaaaaaaa-2'
+  it('com mescladoEm válido: volta mesclado nele (texto proposto); o alvo dos livros pelo nome dos livros', () => {
+    const estado = fundir([
+      e('sitio', Y, 'criar', { nome: 'Tell Teste' }),
+      e('sitio', X, 'criar', { nome: 'Tell Exemplo', mescladoEm: Y }),
+      e('sitio', X, 'excluir'),
+      e('sitio', 'SI-aaaaaaaa-3', 'criar', { nome: 'Tall Exemplo', mescladoEm: 'TESTE-2' }),
+      e('sitio', 'SI-aaaaaaaa-3', 'excluir'),
+    ])
+    const resolucao = resolverSitios(estado, { ...PACOTE_VAZIO, sitios: new Set(['TESTE-2']) })
+    const nomeNoLivro = (tipo: 'verbete' | 'sitio', id: string) => (tipo === 'sitio' && id === 'TESTE-2' ? 'Tell Probe Teste' : null)
+    const grupos = gruposDeExcluidos(estado, ctx({ resolucao, nomeNoLivro }))
+    expect(linha(grupos, X).confirmacao).toBe('Restaurar o sítio «Tell Exemplo»? Ele volta mesclado em «Tell Teste», como estava.')
+    expect(linha(grupos, 'SI-aaaaaaaa-3').confirmacao).toBe('Restaurar o sítio «Tall Exemplo»? Ele volta mesclado em «Tell Probe Teste», como estava.')
+  })
+
+  it('o alvo foi excluído também (ou não existe), ou mescladoEm é null: a aprovação de sempre', () => {
+    const estado = fundir([
+      e('sitio', Y, 'criar', { nome: 'Tell Teste' }),
+      e('sitio', X, 'criar', { nome: 'Tell Exemplo', mescladoEm: Y }),
+      e('sitio', X, 'excluir'),
+      e('sitio', Y, 'excluir'),
+      e('sitio', 'SI-aaaaaaaa-3', 'criar', { nome: 'Tall Exemplo', mescladoEm: null }),
+      e('sitio', 'SI-aaaaaaaa-3', 'excluir'),
+    ])
+    const grupos = gruposDeExcluidos(estado, ctx({ resolucao: resolverSitios(estado, PACOTE_VAZIO) }))
+    expect(linha(grupos, X).confirmacao).toBe('Restaurar o sítio «Tell Exemplo»?')
+    expect(linha(grupos, 'SI-aaaaaaaa-3').confirmacao).toBe('Restaurar o sítio «Tall Exemplo»?')
+    // sem a resolução (ainda não chegou), também
+    expect(linha(gruposDeExcluidos(estado, ctx()), X).confirmacao).toBe('Restaurar o sítio «Tell Exemplo»?')
   })
 })

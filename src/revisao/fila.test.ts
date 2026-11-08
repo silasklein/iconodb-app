@@ -48,6 +48,16 @@ describe('a fila de agora', () => {
     expect(denovo.total).toBe(4)
   })
 
+  it('Tarefa 15 (2C, bloco 2): os pares de sítios abertos somam no total (a Revisão, o Menu e o ponto da barra concordam)', () => {
+    const f = fila([], { paresAbertos: 2 })
+    expect(f.total).toBe(7)
+    expect(f.paresAbertos).toBe(2)
+    // os grupos da fila não mudam: o grupo dos pares é da página
+    expect(f.grupos.map((g) => g.quantidade)).toEqual([2, 2, 1])
+    expect(fila([]).paresAbertos).toBe(0)
+    expect(fila([], { paresAbertos: 0 }).total).toBe(5)
+  })
+
   it('um grupo todo resolvido continua listado (com 0), para o Desfazer', () => {
     const f = fila([e({ tipo: 'revisao', reg: chaveDoCaso(medida), op: 'criar' })])
     expect(f.grupos.find((g) => g.rotulo === 'Medidas não organizadas')).toMatchObject({ quantidade: 0, abertos: [], resolvidos: [{ numero: 'CA00004' }] })

@@ -12,19 +12,19 @@ import { validarManifesto } from '../../src/pacote/manifesto'
 import { Banco } from '../../src/banco/nucleo'
 import { RAIZ_DO_PACOTE_SINTETICO } from './fonteDeTeste'
 
-/** Um armazém com o núcleo do pacote sintético completo (blobs + estado.json). */
-export async function armazemComPacote(): Promise<Armazem> {
+/** Um armazém com o núcleo do pacote sintético completo (blobs + estado.json); `raiz`: outro pacote (o do schema 6, F11). */
+export async function armazemComPacote(raiz: string = RAIZ_DO_PACOTE_SINTETICO): Promise<Armazem> {
   const armazem = armazemMemoria()
-  const manifesto = validarManifesto(JSON.parse(readFileSync(join(RAIZ_DO_PACOTE_SINTETICO, 'nucleo/manifest.json'), 'utf8')))
+  const manifesto = validarManifesto(JSON.parse(readFileSync(join(raiz, 'nucleo/manifest.json'), 'utf8')))
   for (const [caminho, { sha256 }] of Object.entries(manifesto.arquivos)) {
     if (!caminho.startsWith('nucleo/')) continue
-    await armazem.gravar(caminhoDoBlob(sha256), new Uint8Array(readFileSync(join(RAIZ_DO_PACOTE_SINTETICO, caminho))))
+    await armazem.gravar(caminhoDoBlob(sha256), new Uint8Array(readFileSync(join(raiz, caminho))))
   }
   await gravarEstado(armazem, manifesto)
   return armazem
 }
 
 /** O Banco (que também é um Motor do cliente) sobre o pacote sintético, em memória. */
-export async function bancoDeTeste(opcoes: { escrita?: boolean; armazem?: Armazem } = {}): Promise<Banco> {
-  return new Banco({ armazem: opcoes.armazem ?? (await armazemComPacote()), escrita: opcoes.escrita })
+export async function bancoDeTeste(opcoes: { escrita?: boolean; armazem?: Armazem; raiz?: string } = {}): Promise<Banco> {
+  return new Banco({ armazem: opcoes.armazem ?? (await armazemComPacote(opcoes.raiz)), escrita: opcoes.escrita })
 }

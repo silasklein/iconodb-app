@@ -1,4 +1,4 @@
-import { apagarRascunhoDaCoordenadaSeVersao, chaveDoRascunhoDaCoordenada, comecarAGravarACoordenada, guardarRascunhoDaCoordenada, versaoDoRascunhoDaCoordenada } from './rascunho'
+import { apagarRascunhoDaCoordenadaSeVersao, chaveDoRascunhoDaCoordenada, comecarAGravarACoordenada, coordenadaSendoGravada, guardarRascunhoDaCoordenada, versaoDoRascunhoDaCoordenada } from './rascunho'
 import { renderHook, act } from '@testing-library/react'
 import { useRascunhoDaCoordenada } from './rascunho'
 
@@ -56,5 +56,18 @@ describe('T17-B-13: apagar só se a versão é a mesma, e «gravando» esconde o
     expect(localStorage.getItem(chaveDoRascunhoDaCoordenada('TESTE-9'))).not.toBeNull()
     act(() => fim())
     expect(result.current).toEqual({ lat: '1', lon: '' })
+  })
+
+  it('I-2: `coordenadaSendoGravada` diz se há gravação em andamento, contando as gravações uma por uma', () => {
+    expect(coordenadaSendoGravada('TESTE-9')).toBe(false)
+    const fim1 = comecarAGravarACoordenada('TESTE-9')
+    const fim2 = comecarAGravarACoordenada('TESTE-9')
+    expect(coordenadaSendoGravada('TESTE-9')).toBe(true)
+    expect(coordenadaSendoGravada('TESTE-8')).toBe(false)
+    fim1()
+    fim1() // chamar o fim duas vezes não conta duas
+    expect(coordenadaSendoGravada('TESTE-9')).toBe(true)
+    fim2()
+    expect(coordenadaSendoGravada('TESTE-9')).toBe(false)
   })
 })

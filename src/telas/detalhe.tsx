@@ -18,8 +18,23 @@ export function Linha({ rotulo, children, lang, dir, vazio = false }: { rotulo: 
   )
 }
 
-/** A seção de objetos do detalhe: título, quantos são e a grade de cartões que levam ao item. */
-export function SecaoDeObjetos({ rotulo, titulo, objetos, computador }: { rotulo: string; titulo: string; objetos: ObjetoResumo[]; computador: boolean }) {
+/**
+ * A seção de objetos do detalhe: título, quantos são e a grade de cartões que levam ao item. `em(o)`: o sítio de onde o objeto
+ * vem quando não é o da página (uma parte dele, Parte 2C, bloco 2): o cartão diz «em Área Teste BB».
+ */
+export function SecaoDeObjetos<T extends ObjetoResumo>({
+  rotulo,
+  titulo,
+  objetos,
+  computador,
+  em,
+}: {
+  rotulo: string
+  titulo: string
+  objetos: T[]
+  computador: boolean
+  em?: (o: T) => string | null
+}) {
   return (
     <section className="detalhe-secao" aria-label={rotulo}>
       <div className="detalhe-secao-topo">
@@ -31,7 +46,7 @@ export function SecaoDeObjetos({ rotulo, titulo, objetos, computador }: { rotulo
       ) : (
         <div className="detalhe-grade">
           {objetos.map((o) => (
-            <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} />
+            <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} em={em?.(o) ?? undefined} />
           ))}
         </div>
       )}
@@ -67,15 +82,18 @@ interface Cabecalho {
   codigo: string
   acoes: ReactNode
   tituloRef?: Ref<HTMLHeadingElement>
+  /** Entre a etiqueta e o título (o caminho de uma parte até o todo, na página do sítio). */
+  antesDoTitulo?: ReactNode
 }
 
 /** O cabeçalho do detalhe: etiqueta, título (h1 na página do celular, h2 no painel), código e, no computador, as ações. */
-export function CabecalhoDoDetalhe({ pagina, etiqueta, titulo, codigo, acoes, tituloRef }: Cabecalho) {
+export function CabecalhoDoDetalhe({ pagina, etiqueta, titulo, codigo, acoes, tituloRef, antesDoTitulo }: Cabecalho) {
   const Titulo = pagina ? 'h1' : 'h2'
   return (
     <header className="detalhe-cabecalho">
       <div className="detalhe-titulos">
         <span className="detalhe-etiqueta">{etiqueta}</span>
+        {antesDoTitulo}
         <Titulo className="detalhe-titulo" ref={tituloRef}>
           {titulo}
         </Titulo>

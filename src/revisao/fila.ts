@@ -22,6 +22,8 @@
  *   (`soConsulta`): não entra no total, no Menu nem no ponto da barra, e não tem «Deixar como está» (o app da 2B não tem uma
  *   ação «li e aprovo esta tradução»).
  * - Um caso resolvido pela pessoa sai da contagem mas continua listado no grupo, em "Resolvidos por você", com "Desfazer".
+ * - Parte 2C, bloco 2 (Tarefa 15): os pares de sítios que podem ser o mesmo (src/revisao/pares.ts) não são linhas da fila: a
+ *   página os mostra num grupo próprio, e quem monta a fila dá quantos estão abertos (`paresAbertos`), que somam no total.
  */
 import type { ElementoSemRegiao, LinhaDaFila, LugarDoCaso, TraducaoNaoRevisada } from '../banco/consultas'
 import { lerRegiao, RE_ELEMENTO_DO_LIVRO } from '../hipoteses/modelo'
@@ -33,6 +35,8 @@ import { lerObjeto, tituloDe } from '../objetos-skc/modelo'
 import type { Numeracao } from '../objetos-skc/numeracao'
 import { ROTULO_DOS_SITIOS, ehMotivoDeSitio } from '../sitios/pendencias'
 import { sitiosNaoResolvidos, type LinhaDeSitioNaoResolvido } from '../sitios/doUsuario'
+import { resolverSitios, type PacoteDeSitios } from '../sitios/resolucao'
+import { destinosDosSitios } from '../sitios/useResolucao'
 import type { Estado } from '../usuario/estado'
 import { chaveDoElementoSemRegiao, chaveDoRascunho, chaveDoSitioSolto, chavesDosCasos } from './chave'
 
@@ -99,6 +103,8 @@ export interface Fila {
   resolvidosPelaPessoa: number
   /** Quantos objetos do livro a pessoa resolveu ligando o sítio (já descontados). */
   sitiosLigados: number
+  /** Os pares de sítios que podem ser o mesmo ainda abertos (já somados no `total`). */
+  paresAbertos: number
 }
 
 export interface EntradaDaFila {
@@ -119,6 +125,13 @@ export interface EntradaDaFila {
    * sítio do usuário publicado é o do livro (nunca "excluído" nem com o nome de antes nos sítios não resolvidos).
    */
   redirecionamentos?: Redirecionamentos | null
+  /**
+   * Parte 2C, bloco 2: o pacote dos sítios (`pacoteDeSitios`), para a resolução. Nos «sítios não resolvidos», um sítio mesclado
+   * vale pelo destino (o nome dele; um objeto ligado a um sítio absorvido não fica sem sítio).
+   */
+  pacoteDeSitios?: PacoteDeSitios | null
+  /** Tarefa 15: quantos pares de sítios que podem ser o mesmo estão abertos (`paresDaRevisao(…).abertos`); somam no total. */
+  paresAbertos?: number
 }
 
 export const ROTULO_DOS_RASCUNHOS = 'Objetos sem número'
@@ -355,7 +368,8 @@ export function montarFila(entrada: EntradaDaFila): Fila {
   linhas.forEach((l, i) => {
     if (ehMotivoDeSitio(l.tipo) && l.entidade === 'item' && l.entidadeId && l.numero) linhasDeSitio.push({ itemId: l.entidadeId, numero: l.numero, i })
   })
-  const sitios = sitiosNaoResolvidos(estado, linhasDeSitio, entrada.redirecionamentos)
+  const destinos = entrada.pacoteDeSitios ? destinosDosSitios(resolverSitios(estado, entrada.pacoteDeSitios), entrada.redirecionamentos) : entrada.redirecionamentos
+  const sitios = sitiosNaoResolvidos(estado, linhasDeSitio, destinos)
   const sitioEmAberto = new Set(sitios.pacote.map((p) => (p as LinhaDeSitioNaoResolvido & { i: number }).i))
   const ehSitioDoItem = new Set(linhasDeSitio.map((p) => p.i))
 
@@ -428,10 +442,12 @@ export function montarFila(entrada: EntradaDaFila): Fila {
   const lista = [...grupos.values()].filter((g) => g.quantidade > 0 || g.resolvidos.length > 0)
   // Os grupos só de consulta vão por último, e só os outros somam no total.
   lista.sort((x, y) => Number(x.soConsulta) - Number(y.soConsulta) || y.quantidade - x.quantidade || x.rotulo.localeCompare(y.rotulo, 'pt'))
+  const paresAbertos = entrada.paresAbertos ?? 0
   return {
-    total: lista.reduce((soma, g) => soma + (g.soConsulta ? 0 : g.quantidade), 0),
+    total: lista.reduce((soma, g) => soma + (g.soConsulta ? 0 : g.quantidade), 0) + paresAbertos,
     grupos: lista,
     resolvidosPelaPessoa: lista.reduce((soma, g) => soma + g.resolvidos.length, 0),
     sitiosLigados: sitios.resolvidasPeloUsuario,
+    paresAbertos,
   }
 }

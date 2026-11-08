@@ -10,7 +10,7 @@ import { definirSync, modulo as sync, zerarSync } from '../../tests/suporte/sync
 import { teclasNaoDeclaradas } from '../test/atalhosDeclarados'
 import { BarraSuperior } from './BarraSuperior'
 
-vi.mock('../banco/consultas', () => ({ linhasDaFila: vi.fn(), verbetesAReverNoPacote: vi.fn(async () => []), elementosSemRegiaoNoPacote: vi.fn(async () => []), traducoesNaoRevisadasNoPacote: vi.fn(async () => []), lugaresDosCasos: vi.fn(async () => new Map()), sitios: vi.fn() }))
+vi.mock('../banco/consultas', () => ({ linhasDaFila: vi.fn(), verbetesAReverNoPacote: vi.fn(async () => []), elementosSemRegiaoNoPacote: vi.fn(async () => []), traducoesNaoRevisadasNoPacote: vi.fn(async () => []), lugaresDosCasos: vi.fn(async () => new Map()), sitios: vi.fn(), redirecionamentos: vi.fn(async () => []), partesDoPacote: vi.fn(async () => []), grafiasDoPacote: vi.fn(async () => []), paresSugeridos: vi.fn(async () => []) }))
 vi.mock('../pacote/local', () => ({ lerEstado: vi.fn() }))
 vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
 

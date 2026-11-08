@@ -5,6 +5,7 @@ import { useAtalhos } from '../app/useAtalhos'
 import { useBandeja } from '../comparar/useBandeja'
 import { sitios } from '../banco/consultas'
 import { useSitiosSkc } from '../sitios/doUsuario'
+import { useDestinosDosSitios } from '../sitios/useResolucao'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { IconeDeSincronizacao } from '../ui/IconeDeSincronizacao'
@@ -66,14 +67,16 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
   const fechar = useRef(aoFechar)
   fechar.current = aoFechar
   const pend = usePendencias()
-  const [totalDeSitios, setTotalDeSitios] = useState<number | null>(null)
+  const [sitiosDoLivro, setSitiosDoLivro] = useState<readonly string[] | null>(null)
   const sitiosDoUsuario = useSitiosSkc()
+  // Parte 2C, bloco 2: conta como a lista dos sítios — um sítio do livro mesclado em outro não conta.
+  const destinos = useDestinosDosSitios()
   const bandeja = useBandeja()
 
   useEffect(() => {
     let vivo = true
     sitios().then(
-      (s) => vivo && setTotalDeSitios(s.length),
+      (s) => vivo && setSitiosDoLivro(s.map((x) => x.id)),
       () => undefined,
     )
     return () => {
@@ -112,7 +115,7 @@ export function Menu({ variante, aoFechar, gatilho }: Props) {
     }
   }
 
-  const total = totalDeSitios === null ? null : totalDeSitios + sitiosDoUsuario.length
+  const total = sitiosDoLivro === null ? null : sitiosDoLivro.filter((id) => !destinos?.has(id)).length + sitiosDoUsuario.length
   const sitiosMeta = total === null ? null : `${numeroPtBr(total)} ${total === 1 ? 'sítio' : 'sítios'}`
   const revisaoMeta = pend === null ? null : `${numeroPtBr(pend.total)} ${pend.total === 1 ? 'caso' : 'casos'}`
 

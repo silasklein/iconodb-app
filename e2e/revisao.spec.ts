@@ -71,10 +71,11 @@ test('Revisão: ações por tipo, Deixar como está e Desfazer, a mesma conta no
   await expect(page).toHaveURL(/#\/item\/OB-[a-z0-9]{8}-\d+/)
   await expect(page.getByRole('heading', { level: 1, name: 'Selo sintético com sítio solto.' })).toBeVisible()
 
-  // A página: 2 do pacote + 4 verbetes a revisar + 1 elemento sem região + o rascunho + o sítio solto.
+  // A página: 2 do pacote + 4 verbetes a revisar + 1 elemento sem região + o rascunho + o sítio solto + os 2 pares de sítios que
+  // podem ser o mesmo (Tarefa 15, 2C bloco 2).
   await page.goto('#/revisao')
   await expect(page.getByRole('heading', { level: 1, name: 'Revisão' })).toBeVisible()
-  await expect(page.getByText(/^9 casos · o que o processamento não decidiu sozinho/)).toBeVisible()
+  await expect(page.getByText(/^11 casos · o que o processamento não decidiu sozinho/)).toBeVisible()
   await foto(page, 'revisao-1-grupos', 'topo')
   await semRolagemHorizontal(page, 'Revisão fechada')
   const verbetes = page.getByRole('link', { name: /^Verbetes a revisar/ })
@@ -111,28 +112,28 @@ test('Revisão: ações por tipo, Deixar como está e Desfazer, a mesma conta no
 
   // A mesma conta na página e no Menu (e, no computador, no ponto da barra).
   await page.goto('#/revisao?abrir=citacoes-nao-resolvidas,objetos-sem-numero,sitios-nao-resolvidos')
-  expect(await total(page)).toBe(9)
-  expect(await contagemDoMenu(page)).toBe(9)
-  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 9 pendências', exact: true })).toBeVisible()
+  expect(await total(page)).toBe(11)
+  expect(await contagemDoMenu(page)).toBe(11)
+  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 11 pendências', exact: true })).toBeVisible()
 
   // Deixar como está na citação: desce um em todo lugar, o caso passa para «Resolvidos por você», o foco não se perde.
   await page.getByRole('button', { name: /^Deixar como está: / }).first().click()
-  await expect(page.getByText(/^8 casos · /)).toBeVisible()
+  await expect(page.getByText(/^10 casos · /)).toBeVisible()
   await expect(page.locator('.revisao-aviso')).toContainText('marcado como resolvido')
   await expect(page.getByRole('heading', { level: 3, name: 'Resolvidos por você · 1' })).toBeVisible()
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BODY')
-  expect(await contagemDoMenu(page)).toBe(8)
-  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 8 pendências', exact: true })).toBeVisible()
+  expect(await contagemDoMenu(page)).toBe(10)
+  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 10 pendências', exact: true })).toBeVisible()
   await foto(page, 'revisao-6-resolvido-com-desfazer', page.getByRole('heading', { level: 3, name: 'Resolvidos por você · 1' }))
   await alvoOk(page.getByRole('button', { name: /^Desfazer: / }).first(), toque, 'Desfazer')
 
   // Recarregar: continua resolvido; Desfazer devolve à fila (e o Menu acompanha).
   await page.reload()
-  await expect(page.getByText(/^8 casos · /)).toBeVisible()
+  await expect(page.getByText(/^10 casos · /)).toBeVisible()
   await expect(page.getByRole('heading', { level: 3, name: 'Resolvidos por você · 1' })).toBeVisible()
   await page.getByRole('button', { name: /^Desfazer: / }).first().click()
-  await expect(page.getByText(/^9 casos · /)).toBeVisible()
-  expect(await contagemDoMenu(page)).toBe(9)
+  await expect(page.getByText(/^11 casos · /)).toBeVisible()
+  expect(await contagemDoMenu(page)).toBe(11)
 
   // O lugar certo: «Escolher o período» abre o rascunho na escolha do período; voltar encontra a Revisão como estava.
   await page.getByRole('link', { name: 'Escolher o período' }).click()
@@ -154,7 +155,7 @@ test('Revisão: ações por tipo, Deixar como está e Desfazer, a mesma conta no
   await expect(traducoes.getByRole('listitem')).toHaveCount(25)
   await expect(page.getByRole('button', { name: 'Mostrar mais 1 (25 de 26)' })).toBeVisible()
   await expect(traducoes.getByRole('button', { name: /Deixar como está/ })).toHaveCount(0)
-  expect(await total(page)).toBe(9)
+  expect(await total(page)).toBe(11)
   await foto(page, 'revisao-8-traducoes-so-consulta', page.getByRole('button', { name: /^Traduções não revisadas/ }))
   await semRolagemHorizontal(page, 'Revisão com as traduções')
 
@@ -182,9 +183,9 @@ test('Revisão: ações por tipo, Deixar como está e Desfazer, a mesma conta no
   await expect(page).toHaveURL(/#\/imagem\/IMG-TESTE-0001-1$/)
   await page.getByRole('button', { name: 'Fechar o visualizador' }).click()
   await expect(page).toHaveURL(/#\/revisao\?abrir=regioes-a-desenhar$/)
-  await expect(page.getByText(/^8 casos · /)).toBeVisible()
-  expect(await contagemDoMenu(page)).toBe(8)
-  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 8 pendências', exact: true })).toBeVisible()
+  await expect(page.getByText(/^10 casos · /)).toBeVisible()
+  expect(await contagemDoMenu(page)).toBe(10)
+  if (!toque) await expect(page.getByRole('link', { name: 'Revisão, 10 pendências', exact: true })).toBeVisible()
 
   // T17-B-22: aberto direto no endereço (primeira entrada da sessão do roteador), «Fechar» leva ao objeto e não sai do app pelo histórico
   await page.goto('#/imagem/IMG-TESTE-0001-1?desenhar=EL-900002')

@@ -124,6 +124,11 @@ export function Busca() {
     clearTimeout(espera.current)
     ir({ q: novo })
   }
+  // Escolher uma sugestão sai da Busca: a espera pendente da digitação não pode mais gravar ?q= (veja a BarraSuperior).
+  const irPara = (caminho: string) => {
+    clearTimeout(espera.current)
+    navegar(caminho)
+  }
 
   const alternar = (chave: ChaveDeFiltro, valor: string) => {
     const todos = corrente.current.filtros
@@ -182,7 +187,7 @@ export function Busca() {
   }, [computador])
 
   // No computador o campo é o da barra superior (BarraSuperior); aqui só o do celular.
-  const campo = computador ? null : <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} navegar={navegar} atalho />
+  const campo = computador ? null : <CampoDeBusca id="busca-q" valor={texto} aoMudar={aoDigitar} aoEnviar={aoEnviar} navegar={irPara} atalho />
 
   const abas = (
     <div className="busca-escopos" role="group" aria-label="Escopo da busca">

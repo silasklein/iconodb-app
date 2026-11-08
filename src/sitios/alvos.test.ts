@@ -34,3 +34,17 @@ describe('links de nota para um sítio, sem rótulo', () => {
     expect(await alvo('SI-zzzzzzzz-9')).toMatchObject({ existe: false, rota: null })
   })
 })
+
+describe('Parte 2C, bloco 2: o link para um sítio mesclado em outro', () => {
+  it('[[TESTE-4]] (mesclado em TESTE-2 pelo pacote): o nome do destino; o link continua no endereço antigo (que leva lá, com o aviso)', async () => {
+    expect(await alvo('TESTE-4')).toMatchObject({ existe: true, rotulo: 'Tell Probe Teste', rota: '/sitio/TESTE-4' })
+  })
+
+  it('um sítio seu mesclado num do livro: o nome do destino; desfeita a mescla, o dele', async () => {
+    await registrar('sitio', 'SI-alvosbbb-1', 'criar', { nome: 'Tell Que Entra' })
+    await registrar('sitio', 'SI-alvosbbb-1', 'alterar', { mescladoEm: 'TESTE-1' })
+    expect(await alvo('SI-alvosbbb-1')).toMatchObject({ existe: true, rotulo: 'Maḥteṣ Teste', rota: '/sitio/SI-alvosbbb-1' })
+    await registrar('sitio', 'SI-alvosbbb-1', 'alterar', { mescladoEm: null })
+    expect(await alvo('SI-alvosbbb-1')).toMatchObject({ rotulo: 'Tell Que Entra' })
+  })
+})

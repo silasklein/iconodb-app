@@ -18,6 +18,7 @@ import { formasDoPacote, nomeVivo } from '../glossario/formasDoPacote'
 import { eVerbeteSkc, lerVerbeteSkc } from '../glossario/modelo'
 import { lerHipotese, nomeDaHipoteseSkc } from '../hipoteses/modelo'
 import { lerDadosDoSitio } from '../sitios/modelo'
+import { resolucaoDeSitios } from '../sitios/useResolucao'
 import { destinoDe, redirecionamentosOuNenhum } from '../pacote/redirecionamentos'
 import { citacoesDoTexto } from './citacoes'
 import { chaveDoAlvo, idCanonico, referenciasDe, type TipoDeRef } from './links'
@@ -164,7 +165,16 @@ export async function resolverAlvos(alvos: readonly { tipo: TipoDeRef; ref: stri
     ...a,
     ref: a.tipo === 'verbete' || a.tipo === 'sitio' ? destinoDe(redirecionamentos, a.ref) : a.ref,
   }))
-  const semResposta = await consultarPacote(unicos)
+  // Parte 2C, bloco 2: um sítio mesclado em outro é dito pelo nome do destino (o link continua no endereço antigo, que leva ao
+  // destino com o aviso «Você abriu …»).
+  const resolucao = unicos.some((a) => a.tipo === 'sitio') ? await resolucaoDeSitios(estado) : null
+  const destinoDoSitio = new Map<string, string>()
+  for (const a of unicos) {
+    if (a.tipo !== 'sitio' || !resolucao?.existe(a.ref)) continue
+    const d = resolucao.destino(a.ref)
+    if (d !== resolucao.canonico(a.ref)) destinoDoSitio.set(a.ref, d)
+  }
+  const semResposta = await consultarPacote([...unicos, ...[...destinoDoSitio.values()].map((ref) => ({ tipo: 'sitio' as const, ref }))])
   // Os nomes de agora dos verbetes (T17-B-12): a forma em uso do usuário e o nome do livro.
   const formas = formasEmUso(estado)
   const pacoteDasFormas = await formasDoPacote().catch(() => null)
@@ -190,6 +200,13 @@ export async function resolverAlvos(alvos: readonly { tipo: TipoDeRef; ref: stri
       const r = noEstado(estado, a.tipo, a.ref, nomeDe)
       existe = r ? r.existe : null
       rotulo = r?.rotulo ?? null
+    }
+    const destino = a.tipo === 'sitio' ? destinoDoSitio.get(a.ref) : undefined
+    if (destino !== undefined) {
+      const nomeDoDestino = doPacote('sitio', destino)
+        ? (nomeCorrigidoDoSitio(estado, destino) ?? cache.get(chaveDoAlvo('sitio', destino))?.rotulo ?? null)
+        : (noEstado(estado, 'sitio', destino, nomeDe)?.rotulo ?? null)
+      rotulo = nomeDoDestino ?? rotulo
     }
     const resolvido = { tipo: a.tipo, ref: a.ref, existe, rota: existe === false ? null : rotaDoAlvo(a.tipo, a.ref), rotulo }
     mapa.set(chave, resolvido)

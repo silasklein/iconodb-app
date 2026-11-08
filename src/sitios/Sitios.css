@@ -159,6 +159,96 @@
   }
 }
 
+/* Tarefa 13: na página, as grafias agrupadas por tradição (telas aprovadas §4) */
+.sitio-tradicoes {
+  display: grid;
+  gap: 8px;
+}
+.sitio-tradicao {
+  display: grid;
+  gap: 4px;
+}
+.sitio-tradicao-rotulo,
+.sitio-grafia-livro,
+.sitio-grafia-do-livro {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+/* Em «Corrigir»: cada grafia numa linha, o texto e, embaixo, «Tradição» e «Livro» */
+.sitio-grafias-edicao {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sitio-grafia-edicao {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete);
+}
+.sitio-grafia-edicao:last-child {
+  border-bottom: 1px solid var(--filete);
+}
+.sitio-grafia-l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.sitio-grafia-texto {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.sitio-grafia-l1 .icon-button {
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+}
+.sitio-grafia-l2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.sitio-grafia-escolha {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.sitio-grafia-escolha label {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.sitio-grafia-escolha select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--alvo-mouse);
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+.sitio-grafia-escolha select:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .sitio-grafia-l1 .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  /* 16px: o iOS não aproxima a tela ao abrir a lista */
+  .sitio-grafia-escolha select {
+    min-height: var(--alvo-toque);
+    font-size: 16px;
+  }
+}
+
 /* A coordenada em correção (um quadro, como Sitio.dc.html) */
 .sitio-coordenada-edicao {
   margin-top: 4px;
@@ -520,6 +610,23 @@ span.trocar-sitio-nome {
   text-align: left;
   cursor: pointer;
 }
+/* as partes, recuadas sob o todo (telas aprovadas da Parte 2C, bloco 2, §5): 22px por nível */
+.trocar-sitio-opcao[data-nivel='1'] {
+  padding-left: 28px;
+}
+.trocar-sitio-opcao[data-nivel='2'] {
+  padding-left: 50px;
+}
+.trocar-sitio-opcao[data-nivel='3'] {
+  padding-left: 72px;
+}
+.trocar-sitio-opcao[data-nivel='4'] {
+  padding-left: 94px;
+}
+.trocar-sitio-opcao[data-nivel='5'],
+.trocar-sitio-opcao[data-nivel='6'] {
+  padding-left: 116px;
+}
 .trocar-sitio-opcao[aria-checked='true'] {
   background: var(--superficie);
   box-shadow: inset 2px 0 0 var(--texto-consulta);
@@ -787,4 +894,255 @@ span.trocar-sitio-nome {
   margin-top: 0;
   align-self: center;
   white-space: nowrap;
+}
+
+/*
+ * Parte 2C, bloco 2 (telas aprovadas §1, §2, §7): os links discretos abaixo dos botões («Mesclar com outro sítio…»), a caixa de
+ * mesclar no lugar, a linha «Mesclado aqui», os avisos com borda (o endereço antigo, o conflito) e a mensagem depois de
+ * «desfazer», embaixo, como o aviso da Revisão.
+ */
+.sitio-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 18px;
+}
+.sitio-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--texto);
+  text-underline-offset: 3px;
+}
+.sitio-links .sitio-link-botao {
+  font-size: 14px;
+}
+.sitio-links-da-pagina {
+  margin: 6px 24px 0;
+}
+.sitio-mesclar-lugar {
+  margin: 8px 24px 0;
+}
+.sitio-caixa-aviso {
+  display: grid;
+  gap: 4px;
+  max-width: 520px;
+  margin: 14px 24px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (min-width: 768px) {
+  .sitio-links-da-pagina,
+  .sitio-mesclar-lugar,
+  .sitio-caixa-aviso {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+@media (pointer: coarse) {
+  .sitio-links a {
+    min-height: 44px;
+  }
+}
+.sitio-mesclados {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sitio-mesclado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+}
+.sitio-mesclado a {
+  /* o nome abre a página dele: um alvo de 44 px no toque e 40 com o mouse, como o «desfazer» ao lado (Tarefa 16) */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  color: var(--texto);
+  text-underline-offset: 3px;
+}
+@media (pointer: fine) {
+  .sitio-mesclado a {
+    min-height: var(--alvo-mouse);
+  }
+}
+.sitio-desfazer {
+  margin: 6px 0 8px;
+}
+.sitio-aviso-flutuante {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  max-width: 520px;
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-size: 14px;
+  line-height: 1.45;
+  z-index: 5;
+}
+.sitio-aviso-flutuante[hidden] {
+  display: none;
+}
+.sitio-aviso-flutuante a {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  /* o «Ver» é um alvo como os outros: 44 px no toque, 40 com o mouse, nas duas direções (Tarefa 16) */
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+  padding: 0 4px;
+  color: var(--texto);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+@media (pointer: fine) {
+  .sitio-aviso-flutuante a {
+    min-width: var(--alvo-mouse);
+    min-height: var(--alvo-mouse);
+  }
+}
+@media (min-width: 768px) {
+  .sitio-aviso-flutuante {
+    left: auto;
+    right: 48px;
+    width: 520px;
+  }
+}
+
+/*
+ * Tarefa 12 (telas aprovadas §3): as partes. O caminho acima do título de uma parte; a seção «Partes» do todo, em árvore (uma
+ * linha por parte, com o filete embaixo; do segundo nível para baixo, recuada e com «└»); o link da caixa aberta em negrito; o
+ * «Desfazer» do aviso de «Não é parte de outro», como o da Revisão.
+ */
+.sitio-caminho {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.sitio-caminho a {
+  /* o texto fica em 13 px; a área de toque é de 44 px (36 com o mouse), e a margem negativa devolve a altura da linha (20 px) */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  margin: -12px 0;
+  color: var(--texto);
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+@media (pointer: fine) {
+  .sitio-caminho a {
+    min-height: 36px;
+    margin: -8px 0;
+  }
+}
+.sitio-caminho-sep {
+  padding: 0 4px;
+}
+.sitio-partes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sitio-parte {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--filete);
+  font-size: 15px;
+}
+.sitio-parte-nome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sitio-parte-nome a {
+  /* o nome da parte é o alvo da linha: 44 px no toque e 40 com o mouse (Tarefa 16); um nome longo quebra dentro dele */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  padding: 4px 0;
+  box-sizing: border-box;
+  color: var(--texto);
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+@media (pointer: fine) {
+  .sitio-parte-nome a {
+    min-height: var(--alvo-mouse);
+  }
+}
+.sitio-parte[data-nivel='2'] .sitio-parte-nome {
+  padding-left: 22px;
+}
+.sitio-parte[data-nivel='3'] .sitio-parte-nome {
+  padding-left: 44px;
+}
+.sitio-parte[data-nivel='4'] .sitio-parte-nome {
+  padding-left: 66px;
+}
+.sitio-parte[data-nivel='5'] .sitio-parte-nome,
+.sitio-parte[data-nivel='6'] .sitio-parte-nome {
+  padding-left: 88px;
+}
+.sitio-parte-ramo {
+  color: var(--secundario);
+  font-size: 13px;
+}
+.sitio-parte-n {
+  font-size: 12px;
+  color: var(--secundario);
+  white-space: nowrap;
+}
+.sitio-links .sitio-link-botao[aria-expanded='true'] {
+  font-weight: 600;
+}
+.sitio-desfazer-botao {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--alvo-toque);
+  padding: 0 12px;
+  border: 1px solid var(--secundario);
+  border-radius: 8px;
+  background: var(--fundo);
+  font: inherit;
+  font-size: 14px;
+  color: var(--texto);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sitio-desfazer-botao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .sitio-desfazer-botao {
+    min-height: var(--alvo-mouse);
+  }
 }

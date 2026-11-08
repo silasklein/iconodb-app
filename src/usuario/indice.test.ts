@@ -166,6 +166,15 @@ describe('camposIndexaveis: o que cada tipo de registro põe no índice', () => 
     for (const parte of ['Tall Naw', 'Tell Nuovo', 'Negev']) expect(r.texto).toContain(parte)
   })
 
+  it('sítio com grafias (Parte 2C, bloco 2; F10): os textos delas entram, a tradição e o livro não', () => {
+    const r = m.indice.camposIndexaveis.sitio(registro('sitio', 'SI-a-1', { nome: 'Tell Novo', grafias: [{ texto: 'Tal Grafado', tradicao: 'arabe', livro: 'TESTE' }] }))!
+    expect(r.texto).toContain('Tal Grafado')
+    expect(r.texto).not.toContain('arabe')
+    // uma correção de um sítio do livro só com grafias também entra
+    const c = m.indice.camposIndexaveis.sitio(registro('sitio', 'TESTE-2', { grafias: [{ texto: 'Tel Corrigido' }] }))!
+    expect(c.texto).toContain('Tel Corrigido')
+  })
+
   it('hipótese: termos e justificativa; o objeto é o alvo; escopo termo', () => {
     const r = m.indice.camposIndexaveis.hipotese(
       registro('hipotese', 'HY-a-1', { termos: ['íbex', 'GL-900001'], justificativa: 'a pose lembra o selo de Maḥteṣ', objeto: 'CA00001', nivel: 'iconographic' }),
@@ -553,6 +562,22 @@ describe('buscar() junta o pacote e a camada do usuário', () => {
     expect(r.usuario).toEqual([expect.objectContaining({ tipo: 'sitio', ref: 'SI-a-1', rotulo: 'Tell Novo' })])
     expect(numeros(await m.consulta.buscar('tall naw', opcoes))).toEqual(['CA00005'])
     expect((await m.consulta.buscar('tall naw', { ...opcoes, escopo: 'termo' })).total).toBe(0)
+  })
+
+  it('escopo "local": um sítio é achado pelas grafias novas, e as variantes antigas que as grafias substituíram não o acham mais', async () => {
+    await m.estado.receberEventos([
+      e('sitio', 'SI-a-1', { nome: 'Tell Novo', variantes: ['Tall Antiga'] }, 'criar'),
+      e('objeto', 'OB-a-1', { numero: 'CA00005', sitio: 'SI-a-1' }, 'criar'),
+      e('sitio', 'SI-a-1', { grafias: [{ texto: 'Tal Grafado', tradicao: 'arabe' }] }),
+    ])
+    const r = await m.consulta.buscar('tal grafado', { ...opcoes, escopo: 'local' })
+    expect(numeros(r)).toEqual(['CA00005'])
+    expect(r.usuario).toEqual([expect.objectContaining({ tipo: 'sitio', ref: 'SI-a-1', rotulo: 'Tell Novo' })])
+    expect((await m.consulta.buscar('tall antiga', { ...opcoes, escopo: 'local' })).usuario).toEqual([])
+    // o app antigo grava variantes DEPOIS: somam-se às grafias
+    await m.estado.receberEventos([e('sitio', 'SI-a-1', { variantes: ['Tall Depois'] })])
+    expect((await m.consulta.buscar('tall depois', { ...opcoes, escopo: 'local' })).usuario).toEqual([expect.objectContaining({ ref: 'SI-a-1' })])
+    expect((await m.consulta.buscar('tal grafado', { ...opcoes, escopo: 'local' })).usuario).toEqual([expect.objectContaining({ ref: 'SI-a-1' })])
   })
 
   it('escopo "termo": hipóteses SKC (termos e justificativa) e o objeto delas', async () => {

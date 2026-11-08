@@ -18,11 +18,15 @@ export function irPara(...args: Parameters<NavigateFunction> | [caminho: string]
   void (navegarAgora as (...a: unknown[]) => unknown)(...args)
 }
 
-/** Mostra o endereço atual (para os testes conferirem a navegação). */
+/** Mostra o endereço atual (para os testes conferirem a navegação) e, em `data-estado`, o `state` da navegação (JSON). */
 function Endereco() {
   navegarAgora = useNavigate()
-  const { pathname, search } = useLocation()
-  return <div data-testid="endereco">{`${pathname}${search}`}</div>
+  const { pathname, search, state } = useLocation()
+  return (
+    <div data-testid="endereco" data-estado={JSON.stringify(state ?? null)}>
+      {`${pathname}${search}`}
+    </div>
+  )
 }
 
 /** Renderiza as rotas do app (sem a barra superior) a partir de `url`. */

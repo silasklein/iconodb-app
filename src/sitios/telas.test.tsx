@@ -14,7 +14,7 @@ import * as armazem from '../usuario/armazem'
 import { estadoAtual, receberEventos, registrar } from '../usuario/estado'
 import { descarregarPendentes } from '../usuario/pendentes'
 import { lerDadosDoSitio } from './modelo'
-import { chaveDoRascunhoDaCoordenada } from './rascunho'
+import { chaveDoRascunhoDaCoordenada, coordenadaSendoGravada } from './rascunho'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
 vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
@@ -31,6 +31,8 @@ afterAll(() => usarMotor(null))
 afterEach(() => instalarMatchMedia(375))
 
 const dados = (id: string) => lerDadosDoSitio(estadoAtual().registro('sitio', id)!)
+/** Espera terminar a gravação da coordenada em andamento (a do sair do campo, ou a que fechar «Corrigir» dispara), se houver. */
+const semGravacaoDaCoordenada = (id = 'TESTE-2') => waitFor(() => expect(coordenadaSendoGravada(id)).toBe(false))
 const linhas = () => screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/sitio/'))
 
 describe('a lista de sítios com os sítios do usuário', () => {
@@ -38,8 +40,21 @@ describe('a lista de sítios com os sítios do usuário', () => {
     renderizarRota('/sitios')
     await screen.findAllByRole('link', { name: /^Tell Probe Teste/ })
     // ordem pelo nome dobrado: Maḥteṣ, Sítio só com nome, Tell Inventado, Tell Probe, Tell Usuário (TESTE-3: publicado da camada, Tarefa 16)
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/sitio/TESTE-1', '/sitio/SI-aaaaaaaa-2', '/sitio/SI-aaaaaaaa-1', '/sitio/TESTE-2', '/sitio/TESTE-3'])
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['M', 'S', 'T'])
+    // pacote 8: TESTE-5 a TESTE-8 a mais (Área, Ḫirbet, Maḥtiṣ, Túmulo); TESTE-4, mesclado em TESTE-2, não aparece
+    await waitFor(() =>
+      expect(linhas().map((a) => a.getAttribute('href'))).toEqual([
+        '/sitio/TESTE-5',
+        '/sitio/TESTE-8',
+        '/sitio/TESTE-1',
+        '/sitio/TESTE-7',
+        '/sitio/SI-aaaaaaaa-2',
+        '/sitio/SI-aaaaaaaa-1',
+        '/sitio/TESTE-2',
+        '/sitio/TESTE-3',
+        '/sitio/TESTE-6',
+      ]),
+    )
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['A', 'H', 'M', 'S', 'T'])
     const inventado = screen.getByRole('link', { name: /^Tell Inventado/ })
     expect(inventado).toHaveAttribute('href', '/sitio/SI-aaaaaaaa-1')
     expect(within(inventado).getByText('SKC')).toHaveClass('marca-skc')
@@ -47,7 +62,7 @@ describe('a lista de sítios com os sítios do usuário', () => {
     expect(within(inventado).getByText('31,77 N · 35,21 E · Levante Sul')).toHaveClass('sitio-coord')
     expect(within(screen.getByRole('link', { name: /^Sítio só com nome/ })).getByText('sem coordenada')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Novo sítio' })).toHaveAttribute('href', '/sitios/novo')
-    expect(screen.getByText('5 sítios · 4 com coordenada')).toBeInTheDocument()
+    expect(screen.getByText('9 sítios · 6 com coordenada')).toBeInTheDocument() // pacote 8: TESTE-5 e TESTE-6 sem coordenada
   })
 
   it('E-5: a região da linha sai da coordenada (a do filtro); sem coordenada ou fora das regiões, a linha não a mostra', async () => {
@@ -149,7 +164,12 @@ describe('a página de um sítio novo (/sitio/SI-…)', () => {
 
 describe('corrigir um sítio do livro: a correção fica na camada do usuário e o livro continua visível', () => {
   afterEach(async () => {
-    await registrar('sitio', 'TESTE-2', 'alterar', { nome: null, regiao: null, lat: null, lon: null, nota: null, variantes: null })
+    // I-2: desmonta ANTES de voltar o sítio ao que era. Fechar a página com um par válido e mexido ainda no campo grava (é a
+    // regra de «Corrigir»); sem esperar essa gravação, ela caía no teste seguinte (por cima do que ele lê) sob carga.
+    cleanup()
+    await semGravacaoDaCoordenada()
+    await registrar('sitio', 'TESTE-2', 'alterar', { nome: null, regiao: null, lat: null, lon: null, nota: null, variantes: null, grafias: null })
+    if (estadoAtual().registro('sitio', 'TESTE-4')) await registrar('sitio', 'TESTE-4', 'alterar', { grafias: null })
   })
 
   it('"Corrigir" abre os campos; mudar o nome e sair do campo grava só o nome; a página mostra "no livro: …"', async () => {
@@ -439,7 +459,7 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
         })
         await waitFor(() => expect(dados('TESTE-2').coordenada).toEqual({ lat: 31.66, lon: 35.66 }))
         expect(await screen.findByText('31,66 N · 35,66 E')).toBeInTheDocument()
-        await new Promise((ok) => setTimeout(ok, 150))
+        await semGravacaoDaCoordenada()
         expect(screen.queryByRole('status', { name: 'Coordenada ainda não salva' })).toBeNull()
         expect(localStorage.getItem(chave)).toBeNull()
       })
@@ -472,7 +492,7 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
         expect(JSON.parse(localStorage.getItem(chave)!)).toEqual({ lat: '31,2', lon: '' })
         liberar()
         await waitFor(() => expect(dados('TESTE-2').coordenada).toEqual({ lat: 31.11, lon: 35.11 }))
-        await new Promise((ok) => setTimeout(ok, 100))
+        await semGravacaoDaCoordenada() // a gravação terminou de vez (o rascunho já teria saído, se fosse sair)
         expect(JSON.parse(localStorage.getItem(chave)!)).toEqual({ lat: '31,2', lon: '' })
         expect(lat).toHaveValue('31,2')
         // fechar: a página avisa, e o meio par volta ao reabrir
@@ -493,7 +513,7 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
         await userEvent.click(screen.getByRole('button', { name: 'Corrigir' })) // ao fechar tenta de novo, e falha de novo
         expect(await screen.findByRole('status', { name: 'Coordenada ainda não salva' })).toBeInTheDocument()
         await waitFor(() => expect(falha.mock.calls.length).toBeGreaterThanOrEqual(2))
-        await new Promise((ok) => setTimeout(ok, 50))
+        await semGravacaoDaCoordenada() // a segunda falha já voltou (o rascunho e o aviso estão no lugar de vez)
         falha.mockRestore()
         expect(JSON.parse(localStorage.getItem(chave)!)).toEqual({ lat: '31,33', lon: '35,33' })
         expect(screen.getByRole('status', { name: 'Coordenada ainda não salva' })).toBeInTheDocument()
@@ -511,7 +531,7 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
         falha.mockRestore()
         await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
         await waitFor(() => expect(dados('TESTE-2').coordenada).toEqual({ lat: 31.34, lon: 35.34 }))
-        await new Promise((ok) => setTimeout(ok, 100))
+        await semGravacaoDaCoordenada()
         expect(screen.queryByRole('status', { name: 'Coordenada ainda não salva' })).toBeNull()
         expect(localStorage.getItem(chave)).toBeNull()
       })
@@ -531,6 +551,7 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
         await userEvent.click(lat)
         await userEvent.tab()
         await userEvent.tab() // saiu do par sem mudar nada
+        await semGravacaoDaCoordenada()
         expect(estadoAtual().hlcDoCampo('sitio', 'TESTE-2', 'lat')).toBe(antes)
         expect(dados('TESTE-2').coordenada).toEqual({ lat: 32.5, lon: 36.5 })
         expect(localStorage.getItem(chaveDoRascunhoDaCoordenada('TESTE-2'))).toBeNull()
@@ -575,10 +596,13 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
           expect(lon).toHaveValue('36,5')
           expect(lat).toHaveValue('31,5')
         })
-        // e sair dos campos não grava o valor velho por cima do que chegou
+        // e sair dos campos não grava o valor velho por cima do que chegou (nem grava nada: o hlc é o da chegada)
+        const daChegada = estadoAtual().hlcDoCampo('sitio', 'TESTE-2', 'lat')
         await userEvent.tab()
         await userEvent.tab()
+        await semGravacaoDaCoordenada()
         expect(dados('TESTE-2').coordenada).toEqual({ lat: 31.5, lon: 36.5 })
+        expect(estadoAtual().hlcDoCampo('sitio', 'TESTE-2', 'lat')).toBe(daChegada)
       })
 
       it('T17-B-15: uma gravação que falha depois de uma chegada de fora avisa e guarda o par que a pessoa escreveu', async () => {
@@ -633,13 +657,109 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
     expect(grafia).toHaveValue('')
     await userEvent.type(grafia, 'khirbet  probe{Enter}')
     expect(dados('TESTE-2').variantes).toEqual(['Khirbet Probe']) // a mesma, pela dobra
-    await userEvent.click(screen.getByRole('button', { name: 'Tirar a grafia Khirbet Probe' }))
+    // a grafia do livro do sítio mesclado aqui (TESTE-4, «Tel Probe Teste») também não entra de novo
+    await userEvent.type(grafia, 'tel probe teste{Enter}')
+    expect(dados('TESTE-2').variantes).toEqual(['Khirbet Probe'])
+    await userEvent.click(await screen.findByRole('button', { name: 'Tirar a grafia Khirbet Probe' }))
     await waitFor(() => expect(dados('TESTE-2').variantes).toEqual([]))
     await userEvent.type(screen.getByRole('textbox', { name: 'Região ou país' }), 'Judeia')
     await userEvent.type(screen.getByRole('textbox', { name: 'Nota' }), 'Conferir no artigo.')
     await act_descarregar()
     await waitFor(() => expect(dados('TESTE-2')).toMatchObject({ regiao: 'Judeia', nota: 'Conferir no artigo.' }))
     expect(screen.getByText('Sítio · Judeia')).toBeInTheDocument()
+  })
+
+  describe('Tarefa 13: a tradição e o livro de cada grafia', () => {
+    const TRADICOES = ['sem origem', 'Árabe', 'Hebraica moderna', 'Bíblica', 'Grega/latina', 'Alemã', 'Inglesa', 'Francesa', 'Portuguesa', 'Outra']
+    const linhaDa = (texto: string) => {
+      const lista = screen.getByRole('list', { name: 'Outras grafias do sítio' })
+      const li = within(lista)
+        .getAllByRole('listitem')
+        .find((x) => x.querySelector('.sitio-grafia-texto')?.textContent === texto)
+      if (!li) throw new Error(`sem a linha ${texto}`)
+      return li
+    }
+    const opcoes = (select: HTMLElement) => within(select).getAllByRole('option').map((o) => o.textContent)
+    const grafiasGravadas = (id: string) => estadoAtual().registro('sitio', id)?.campos.grafias
+
+    it('«Corrigir»: a do livro (do sítio mesclado aqui) com «do livro TESTE, p. 7», só «Tradição», sem × e sem «Livro»; a sua com «SKC», o ×, «Tradição» e «Livro», com as opções exatas', async () => {
+      await registrar('sitio', 'TESTE-2', 'alterar', { grafias: [{ texto: 'Khirbet Probe' }] })
+      renderizarRota('/sitio/TESTE-2')
+      await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+      await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
+      const doLivro = linhaDa('Tel Probe Teste')
+      expect(within(doLivro).getByText('do livro TESTE, p. 7')).toBeInTheDocument()
+      expect(within(doLivro).queryByText('SKC')).toBeNull()
+      expect(within(doLivro).queryByRole('button')).toBeNull()
+      expect(within(doLivro).getAllByRole('combobox')).toHaveLength(1)
+      const tradicao = within(doLivro).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' })
+      expect(opcoes(tradicao)).toEqual(TRADICOES)
+      expect(tradicao).toHaveValue('')
+      const sua = linhaDa('Khirbet Probe')
+      expect(within(sua).getByText('SKC')).toHaveClass('marca-skc')
+      expect(within(sua).getByRole('button', { name: 'Tirar a grafia Khirbet Probe' })).toBeInTheDocument()
+      expect(opcoes(within(sua).getByRole('combobox', { name: 'Tradição de Khirbet Probe' }))).toEqual(TRADICOES)
+      expect(opcoes(within(sua).getByRole('combobox', { name: 'Livro de Khirbet Probe' }))).toEqual(['nenhum', 'TESTE'])
+      // o nome de agora não é «outra grafia»
+      expect(within(screen.getByRole('list', { name: 'Outras grafias do sítio' })).queryByText('Tell Probe Teste')).toBeNull()
+      expect(screen.getByText('Formas antigas, modernas, árabes, hebraicas ou de outros livros. Entram na busca. Diga de que tradição vem cada uma e, se quiser, de que livro.')).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: 'Outras grafias' })).toHaveAttribute('placeholder', 'outra grafia + Enter')
+    })
+
+    it('escolher «Árabe» na do livro grava {texto, livro, tradicao} no sítio de que a linha é (TESTE-4, mesclado aqui); o livro de uma sua grava a lista inteira; a página agrupa', async () => {
+      await registrar('sitio', 'TESTE-2', 'alterar', { grafias: [{ texto: 'Khirbet Probe' }, { texto: 'Testheim', tradicao: 'alema' }] })
+      renderizarRota('/sitio/TESTE-2')
+      await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+      await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
+      await userEvent.selectOptions(within(linhaDa('Tel Probe Teste')).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' }), 'Árabe')
+      await waitFor(() => expect(grafiasGravadas('TESTE-4')).toEqual([{ texto: 'Tel Probe Teste', livro: 'TESTE', tradicao: 'arabe' }]))
+      expect(grafiasGravadas('TESTE-2')).toEqual([{ texto: 'Khirbet Probe' }, { texto: 'Testheim', tradicao: 'alema' }])
+      await waitFor(() => expect(within(linhaDa('Tel Probe Teste')).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' })).toHaveValue('arabe'))
+      await userEvent.selectOptions(within(linhaDa('Testheim')).getByRole('combobox', { name: 'Livro de Testheim' }), 'TESTE')
+      await waitFor(() => expect(grafiasGravadas('TESTE-2')).toEqual([{ texto: 'Khirbet Probe' }, { texto: 'Testheim', tradicao: 'alema', livro: 'TESTE' }]))
+      // «sem origem» na do livro: a entrada sai
+      await userEvent.selectOptions(within(linhaDa('Tel Probe Teste')).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' }), 'sem origem')
+      await waitFor(() => expect(grafiasGravadas('TESTE-4')).toBeNull())
+      await userEvent.selectOptions(within(linhaDa('Tel Probe Teste')).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' }), 'Árabe')
+      await waitFor(() => expect(grafiasGravadas('TESTE-4')).toHaveLength(1))
+      // a página: agrupada por tradição, «sem tradição» antes de «sem origem»
+      await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
+      const dl = screen.getByRole('region', { name: 'Dados do sítio' })
+      const grupos = within(dl).getAllByRole('group')
+      expect(grupos.map((g) => g.getAttribute('aria-label'))).toEqual(['árabe', 'alemã', 'sem origem'])
+      expect(within(grupos[0]!).getByRole('listitem')).toHaveTextContent(/^Tel Probe TesteTESTE, p\. 7$/)
+      expect(within(grupos[1]!).getByRole('listitem')).toHaveTextContent(/^TestheimSKCTESTE$/)
+      expect(within(grupos[2]!).getByRole('listitem')).toHaveTextContent(/^Khirbet ProbeSKC$/)
+    })
+
+    it('duas escolhas seguidas, antes de a primeira voltar gravada: nenhuma se perde (cada gravação parte do estado de agora)', async () => {
+      await registrar('sitio', 'TESTE-2', 'alterar', { grafias: [{ texto: 'Testheim' }] })
+      renderizarRota('/sitio/TESTE-2')
+      await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+      await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
+      const tradicaoDoLivro = within(linhaDa('Tel Probe Teste')).getByRole('combobox', { name: 'Tradição de Tel Probe Teste' })
+      const tradicaoSua = within(linhaDa('Testheim')).getByRole('combobox', { name: 'Tradição de Testheim' })
+      const livroSeu = within(linhaDa('Testheim')).getByRole('combobox', { name: 'Livro de Testheim' })
+      act(() => {
+        fireEvent.change(tradicaoDoLivro, { target: { value: 'arabe' } })
+        fireEvent.change(tradicaoSua, { target: { value: 'alema' } })
+        fireEvent.change(livroSeu, { target: { value: 'TESTE' } })
+      })
+      await waitFor(() => expect(grafiasGravadas('TESTE-2')).toEqual([{ texto: 'Testheim', tradicao: 'alema', livro: 'TESTE' }]))
+      await waitFor(() => expect(grafiasGravadas('TESTE-4')).toEqual([{ texto: 'Tel Probe Teste', livro: 'TESTE', tradicao: 'arabe' }]))
+    })
+
+    it('o registro antigo (só `variantes`): a primeira escolha grava `grafias` com as antigas incluídas', async () => {
+      await registrar('sitio', 'TESTE-8', 'alterar', { variantes: ['Tel Antigo', 'Tall Antiga'] })
+      renderizarRota('/sitio/TESTE-8')
+      await screen.findByRole('heading', { level: 1, name: 'Ḫirbet Vizinha Teste' })
+      // na página, antes de editar: sem origem
+      expect(within(screen.getByRole('region', { name: 'Dados do sítio' })).getByRole('group', { name: 'sem origem' })).toHaveTextContent('Tel AntigoSKCTall AntigaSKC')
+      await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
+      await userEvent.selectOptions(within(linhaDa('Tall Antiga')).getByRole('combobox', { name: 'Tradição de Tall Antiga' }), 'Hebraica moderna')
+      await waitFor(() => expect(grafiasGravadas('TESTE-8')).toEqual([{ texto: 'Tel Antigo' }, { texto: 'Tall Antiga', tradicao: 'hebraica-moderna' }]))
+      await registrar('sitio', 'TESTE-8', 'alterar', { variantes: null, grafias: null })
+    })
   })
 
   it('um sítio do livro não se exclui, só se corrige', async () => {

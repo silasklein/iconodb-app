@@ -20,8 +20,11 @@ import { eVerbeteSkc, lerVerbeteSkc, ROTULO_DO_STATUS } from '../glossario/model
 import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
 import { pareceComecoDeNumero, textoDoNrSkc } from '../objetos-skc/numeracao'
 import { lerFicha, textoDaOrigem, tipoCurtoDe } from '../objetos-skc/modelo'
-import { correcoesDosSitios, nomeComMarcaDoSitio, nomeDeAgoraDoSitio, sitioDeAgoraDoResumo } from '../sitios/doUsuario'
-import { eSitioSkc } from '../sitios/modelo'
+import { totalDeObjetos } from '../sitios/contagem'
+import { correcoesDosSitios, nomeComMarcaDoSitio, nomeDeAgoraDoSitio, nomesQueAchamODestino, objetosPorSitio, sitioDeAgoraDoResumo, trocasDeSitio } from '../sitios/doUsuario'
+import type { GrafiaDoPacote, Resolucao } from '../sitios/resolucao'
+import { destinosDosSitios, objetosDoPacoteSemRepetir, pacoteDeSitiosOuVazio, resolucaoDeSitios } from '../sitios/useResolucao'
+import { eSitioSkc, lerDadosDoSitio } from '../sitios/modelo'
 import { redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
 import { sitiosDoPacote, type SitiosDoPacote } from '../sitios/pacote'
 import type { Estado, Registro } from '../usuario/estado'
@@ -110,6 +113,13 @@ interface Contexto {
   livro: SitiosDoPacote | null
   /** Os redirecionamentos do pacote (Tarefa 16): um sítio do usuário publicado tem o nome do sítio do livro. */
   redirecionamentos: Redirecionamentos
+  /**
+   * Parte 2C, bloco 2: a resolução dos sítios, os destinos (`destinosDosSitios`: os publicados e os absorvidos → o destino) e
+   * as grafias dos livros. Um sítio mesclado não é sugerido: o nome dele e as grafias novas acham o destino.
+   */
+  resolucao: Resolucao
+  destinos: Redirecionamentos
+  grafiasDoLivro: readonly GrafiaDoPacote[]
 }
 
 function montar(
@@ -241,7 +251,7 @@ async function objetosDoPacote(c: Contexto, numeros: readonly string[]): Promise
       ref: numero,
       rotulo: r.tipo ?? 'Objeto sem tipo',
       codigo: numero,
-      complemento: [r.origem, sitioDeAgoraDoResumo(c.estado, c.livro, r, c.redirecionamentos).nome].filter(Boolean).join(' · ') || null,
+      complemento: [r.origem, sitioDeAgoraDoResumo(c.estado, c.livro, r, c.destinos).nome].filter(Boolean).join(' · ') || null,
       miniatura: r.miniatura,
       destino: `/item/${encodeURIComponent(numero)}`,
     })
@@ -296,12 +306,23 @@ function listaDeSitios(tabela: FoldTabela): Promise<SitioIndexado[]> {
 
 async function sitios(c: Contexto, palavras: readonly string[]): Promise<Sugestao[]> {
   const dobrado = palavras.join(' ')
-  const correcoes = correcoesDosSitios(c.estado, c.redirecionamentos)
-  const achados = (await listaDeSitios(c.tabela))
+  const correcoes = correcoesDosSitios(c.estado, c.redirecionamentos, c.resolucao)
+  const lista = await listaDeSitios(c.tabela)
+  const porId = new Map(lista.map((x) => [x.id, x] as const))
+  // Parte 2C, bloco 2: o absorvido não é sugerido; o nome dele (com as outras formas do verbete) e as grafias novas acham o destino.
+  const doUsuario = objetosPorSitio(c.estado, c.destinos)
+  const distintos = await objetosDoPacoteSemRepetir(c.resolucao, trocasDeSitio(c.estado)).catch(() => null)
+  const doPacote = (id: string) => porId.get(id)?.objetos ?? 0
+  const daPessoa = (id: string) => doUsuario.get(id) ?? 0
+  const achados = lista
+    .filter((x) => !c.destinos.has(x.id))
     .map((x) => {
       // O que a pessoa corrigiu (Tarefa 12): o nome de agora, as grafias a mais e a região; o nome do livro continua achando.
       const k = correcoes.get(x.id)
-      return { x, nome: k?.nome ?? x.nome, regiao: k?.regiao ?? x.regiao, nomes: k ? [x.nomes, k.nome, ...k.variantes, k.regiao].filter(Boolean).join(' ') : x.nomes }
+      const absorvidos = c.resolucao.absorvidos(x.id).map((a) => porId.get(a)?.nomes)
+      const novas = nomesQueAchamODestino(c.estado, c.resolucao, x.id, c.livro, c.grafiasDoLivro)
+      const nomes = [x.nomes, k?.nome, ...(k?.variantes ?? []), k?.regiao, ...absorvidos, ...novas].filter(Boolean).join(' ')
+      return { x, nome: k?.nome ?? x.nome, regiao: k?.regiao ?? x.regiao, nomes, objetos: totalDeObjetos(c.resolucao, x.id, doPacote, daPessoa, distintos) }
     })
     .filter((y) => casa(palavras, y.nomes, c.tabela))
     .map((y) => {
@@ -320,7 +341,7 @@ async function sitios(c: Contexto, palavras: readonly string[]): Promise<Sugesta
       rotulo: y.nome,
       // Achado só pelo nome de antes: diz qual é o do livro (o nome corrigido não casou).
       complemento:
-        [y.nome !== y.x.nome && !casa(palavras, y.nome, c.tabela) && casa(palavras, y.x.nome, c.tabela) ? `no livro: ${y.x.nome}` : null, y.regiao, plural(y.x.objetos, 'objeto', 'objetos')]
+        [y.nome !== y.x.nome && !casa(palavras, y.nome, c.tabela) && casa(palavras, y.x.nome, c.tabela) ? `no livro: ${y.x.nome}` : null, y.regiao, plural(y.objetos, 'objeto', 'objetos')]
           .filter(Boolean)
           .join(' · '),
       destino: `/sitio/${encodeURIComponent(y.x.id)}`,
@@ -357,7 +378,18 @@ async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise
   ])
   // O verbete ou sítio do usuário que o pacote publicou (Tarefa 16) é sugerido como o do livro (pela lista do pacote), nunca aqui.
   const publicado = (l: L) => redirecionamentos.has(s(l.ref) ?? '')
-  const linhasSitio = linhasSitioTodas.filter((l) => !publicado(l))
+  // Parte 2C, bloco 2: um sítio seu mesclado num do livro também (a lista do pacote o acha pelo nome dele); mesclado noutro
+  // sítio seu, a linha leva a esse (uma vez só).
+  const vistos = new Set<string>()
+  const linhasSitio = linhasSitioTodas.flatMap((l): L[] => {
+    const ref = s(l.ref) ?? ''
+    const destino = c.destinos.get(ref) ?? ref
+    if (publicado(l) || !eSitioSkc(destino) || vistos.has(destino)) return []
+    vistos.add(destino)
+    if (destino === ref) return [l]
+    const r = estado.registro('sitio', destino)
+    return [{ ...l, ref: destino, rotulo: r ? (lerDadosDoSitio(r).nome ?? destino) : s(l.rotulo) }]
+  })
   const linhasVerbete = linhasVerbeteTodas.filter((l) => !publicado(l))
 
   const objetos = linhasObjeto.flatMap((l) => {
@@ -406,8 +438,8 @@ function objetoSkc(c: Contexto, estado: Estado, r: Registro, numero: string): Su
   const nrSkc = numeracaoDe(estado).porId.get(r.id)?.nrSkc ?? null
   const sitioId = texto(r.campos.sitio)
   // O nome de agora do sítio (corrigido → do livro → o guardado na ficha), «excluído» num sítio seu que se excluiu, «ainda não sincronizado» num que este aparelho não tem.
-  const nomeDoSitio = sitioId ? nomeDeAgoraDoSitio(estado, sitioId, c.livro, texto(r.campos.sitioNome), c.redirecionamentos) : texto(r.campos.sitioNome)
-  const sitio = nomeComMarcaDoSitio(estado, sitioId || null, nomeDoSitio, c.redirecionamentos)
+  const nomeDoSitio = sitioId ? nomeDeAgoraDoSitio(estado, sitioId, c.livro, texto(r.campos.sitioNome), c.destinos) : texto(r.campos.sitioNome)
+  const sitio = nomeComMarcaDoSitio(estado, sitioId || null, nomeDoSitio, c.destinos)
   return montar(c, {
     categoria: 'objetos',
     alvoTipo: 'objeto',
@@ -470,7 +502,23 @@ export async function sugerir(digitado: string, opcoes: OpcoesDeSugestao = {}): 
     const consulta = montarConsulta(digitado, tabela)
     if (consulta === null || palavras.join('').length < MINIMO_DE_CARACTERES) return semSugestoes()
     const estado = await garantirIndiceDoUsuario(tabela)
-    const c: Contexto = { digitado, tabela, limite: Math.max(1, opcoes.limitePorCategoria ?? LIMITE_PADRAO_POR_CATEGORIA), estado, livro: await sitiosDoPacote().catch((): SitiosDoPacote | null => null), redirecionamentos: await redirecionamentosOuNenhum() }
+    const [livro, redirecionamentos, resolucao, pacote] = await Promise.all([
+      sitiosDoPacote().catch((): SitiosDoPacote | null => null),
+      redirecionamentosOuNenhum(),
+      resolucaoDeSitios(estado),
+      pacoteDeSitiosOuVazio(),
+    ])
+    const c: Contexto = {
+      digitado,
+      tabela,
+      limite: Math.max(1, opcoes.limitePorCategoria ?? LIMITE_PADRAO_POR_CATEGORIA),
+      estado,
+      livro,
+      redirecionamentos,
+      resolucao,
+      destinos: destinosDosSitios(resolucao, redirecionamentos),
+      grafiasDoLivro: pacote.grafias,
+    }
     // "SKC 12", "IPIAO I: 60"…: só o(s) objeto(s) da referência, como na busca (`objetosDaReferencia`).
     const exatos = await objetosDaReferencia(digitado, await publicacoesAbertas(), estado)
     if (exatos) {

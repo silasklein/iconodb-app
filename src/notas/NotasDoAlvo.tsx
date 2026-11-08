@@ -40,6 +40,11 @@ interface Props {
    * nota nova vai ao principal) e sem voz nenhuma quando o membro não tem nota.
    */
   membro?: string
+  /**
+   * Só num sítio (Parte 2C, bloco 2): os sítios mesclados nele. As notas feitas neles, ou que os citam, também são deste (e as
+   * dos `SI-…` publicados como eles).
+   */
+  outros?: readonly string[]
 }
 
 interface Edicao {
@@ -60,7 +65,7 @@ export function NotasDoAlvo(props: Props) {
   return <NotasDeUmAlvo key={`${props.tipo}:${props.ref_}`} {...props} />
 }
 
-function NotasDeUmAlvo({ tipo, ref_, variante, ancorar, pedido = 0, rotuloDoAlvo, membro }: Props) {
+function NotasDeUmAlvo({ tipo, ref_, variante, ancorar, pedido = 0, rotuloDoAlvo, membro, outros }: Props) {
   const computador = useBreakpoint() === 'computador'
   const indice = useIndiceDeNotas()
   // Um objeto também é citado pelas referências dele nas fontes ("TESTE I: 1-3", decisão 40).
@@ -68,10 +73,15 @@ function NotasDeUmAlvo({ tipo, ref_, variante, ancorar, pedido = 0, rotuloDoAlvo
   // Um verbete ou sítio do livro que é o destino de um do usuário publicado (Tarefa 16, revisão 1): as notas feitas no id do
   // usuário, ou que o citam, também são dele.
   const redirecionamentos = useRedirecionamentos()
-  const origens = useMemo(() => (tipo === 'verbete' || tipo === 'sitio' ? origensDe(redirecionamentos, ref_) : []), [tipo, ref_, redirecionamentos])
+  const chaveDosOutros = (outros ?? []).join('\u0000')
+  const origens = useMemo(() => {
+    if (tipo === 'verbete') return origensDe(redirecionamentos, ref_)
+    if (tipo !== 'sitio') return []
+    return [...origensDe(redirecionamentos, ref_), ...(outros ?? []).flatMap((o) => [o, ...origensDe(redirecionamentos, o)])]
+  }, [tipo, ref_, redirecionamentos, chaveDosOutros]) // eslint-disable-line react-hooks/exhaustive-deps
   const ligadas = useMemo(() => {
-    const outros = [...origens.map((ref) => ({ tipo, ref })), ...fontes]
-    return outros.length === 0 ? indice.ligadasA(tipo, ref_) : indice.ligadasAQualquer([{ tipo, ref: ref_ }, ...outros])
+    const mais = [...origens.map((ref) => ({ tipo, ref })), ...fontes]
+    return mais.length === 0 ? indice.ligadasA(tipo, ref_) : indice.ligadasAQualquer([{ tipo, ref: ref_ }, ...mais])
   }, [indice, tipo, ref_, fontes, origens])
   const quantas = origens.reduce((n, ref) => n + indice.quantasDoAlvo(tipo, ref), indice.quantasDoAlvo(tipo, ref_))
   const [edicao, setEdicao] = useState<Edicao | null>(null)

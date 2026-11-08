@@ -8,6 +8,11 @@ import { join, relative, sep } from 'node:path'
 import type { Fonte } from '../../src/pacote/manifesto'
 
 export const RAIZ_DO_PACOTE_SINTETICO = join(import.meta.dirname, '..', 'fixtures', 'pacote')
+/**
+ * F11 (Parte 2C, bloco 2): o pacote sintético do schema 6 de antes (c86e1da), só o núcleo. É o formato do pacote que está hoje
+ * no Dropbox da pessoa: o app novo tem de continuar a abri-lo (sem as tabelas do schema 7 e 8, só a camada).
+ */
+export const RAIZ_DO_PACOTE_6 = join(import.meta.dirname, '..', 'fixtures', 'pacote-6')
 
 function arquivosEm(pasta: string): string[] {
   return readdirSync(pasta).flatMap((nome) => {
