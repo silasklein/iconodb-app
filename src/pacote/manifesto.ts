@@ -24,10 +24,18 @@ export interface ArquivoDoPacote {
   bytes: number
 }
 
+export interface VolumeDaPublicacao {
+  volume: string
+  rotulo?: string
+  ano?: number
+}
+
 export interface Publicacao {
   sigla: string
   volume?: string
   rotulo?: string
+  /** Os volumes, na ordem da obra (pacotes do schema 7 em diante; o app só os lê para nomear os livros). */
+  volumes?: VolumeDaPublicacao[]
 }
 
 export interface Manifesto {
@@ -156,6 +164,16 @@ export function validarPacote(m: Manifesto): void {
   const { publicacoes } = arquivosDoBanco(m)
   if (publicacoes.length !== m.publicacoes.length) throw new ErroDePacote('arquivos do banco incompletos')
 }
+
+/**
+ * O conjunto de arquivos do pacote (caminho e sha256), sem o `gerado_em`. Dois manifestos com a mesma assinatura são o
+ * mesmo pacote: é o que o download (baixar.ts) e a procura de livros novos (novidade.ts) comparam.
+ */
+export const assinatura = (m: Pick<Manifesto, 'arquivos'>): string =>
+  Object.entries(m.arquivos)
+    .map(([c, a]) => `${c}:${a.sha256}`)
+    .sort()
+    .join('\n')
 
 export async function lerManifesto(fonte: Fonte): Promise<Manifesto> {
   const bytes = await fonte.baixar(CAMINHO_DO_MANIFESTO)

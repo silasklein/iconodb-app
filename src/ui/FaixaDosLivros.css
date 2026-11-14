@@ -1,0 +1,47 @@
+/*
+ * «Há uma versão nova dos livros no Dropbox»: uma caixa no fluxo da tela, com a borda dos controles (como os avisos dos
+ * sítios), e um botão com borda (como «Recarregar» na faixa da versão nova do app). Preto e branco, sem cor de destaque.
+ */
+.faixa-livros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  max-width: 520px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.faixa-livros p {
+  flex: 1 1 220px;
+  margin: 0;
+}
+
+.faixa-livros-acao {
+  flex: none;
+  min-width: var(--alvo-toque);
+  min-height: var(--alvo-toque);
+  padding: 0 16px;
+  border: 1px solid var(--controle);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: 600 14px/1 var(--fonte-texto);
+  cursor: pointer;
+}
+
+.faixa-livros-acao:hover {
+  border-color: var(--texto);
+}
+
+@media (min-width: 768px) and (pointer: fine) {
+  .faixa-livros-acao {
+    min-height: var(--alvo-mouse);
+  }
+}

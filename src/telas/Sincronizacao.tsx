@@ -2,6 +2,9 @@ import { ImagensComProblema } from '../imagens-usuario/ImagensComProblema'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { sair } from '../dropbox/auth'
+import { MSG_SEM_PACOTE_NO_DROPBOX, MSG_SEM_PERMISSAO } from '../dropbox/mensagens'
+import { procurarAgora, useAtualizandoOsLivros, useNovidadeDosLivros, type Novidade } from '../pacote/novidade'
+import { FaixaDosLivros } from '../ui/FaixaDosLivros'
 import { IconButton } from '../ui/IconButton'
 import { IconeDeSincronizacao } from '../ui/IconeDeSincronizacao'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -227,6 +230,81 @@ export function ChegouDoOutro({ info, variante }: { info: InfoDaSync; variante: 
   )
 }
 
+export const MSG_LIVROS_EM_DIA = 'Os livros estão em dia.'
+export const MSG_LIVROS_SEM_RESPOSTA = 'Não foi possível procurar agora: sem conexão com o Dropbox ou sem login. Tente de novo mais tarde.'
+export const MSG_LIVROS_INCOMPATIVEL =
+  'O pacote que está no Dropbox não abre nesta versão do app (é de outra versão do banco ou está com defeito). Os livros do aparelho continuam valendo.'
+export const MSG_LIVROS_ATUALIZANDO = 'Os livros estão sendo atualizados neste aparelho. Espere terminar.'
+
+/** A resposta de uma procura feita aqui, em palavras (a de «nova» é a faixa). */
+function textoDaResposta(r: Novidade): string {
+  if (r.tipo === 'em-dia') return MSG_LIVROS_EM_DIA
+  if (r.tipo === 'incompativel') return MSG_LIVROS_INCOMPATIVEL
+  if (r.tipo === 'desconhecida') {
+    if (r.motivo === 'sem-pacote') return MSG_SEM_PACOTE_NO_DROPBOX
+    if (r.motivo === 'sem-permissao') return MSG_SEM_PERMISSAO
+    return MSG_LIVROS_SEM_RESPOSTA
+  }
+  return ''
+}
+
+/**
+ * «Procurar livros novos»: compara o pacote do Dropbox com o do aparelho (novidade.ts). Com um pacote novo, a mesma
+ * faixa do Início («Atualizar os livros»); depois de procurar aqui, a resposta em palavras: em dia, um pacote que não
+ * abre nesta versão, ou por que não deu para saber. O que a procura da abertura do app já achou de novo aparece sem
+ * clicar; o resto só depois do clique. A faixa fica na tela enquanto procura (nada pula), e some enquanto os livros
+ * estão sendo baixados.
+ */
+export function LivrosDoDropbox() {
+  const navegar = useNavigate()
+  const novidade = useNovidadeDosLivros()
+  const atualizando = useAtualizandoOsLivros()
+  const [procurando, setProcurando] = useState(false)
+  const [resposta, setResposta] = useState<Novidade | null>(null)
+  const montada = useRef(true)
+  useEffect(() => {
+    montada.current = true
+    return () => {
+      montada.current = false
+    }
+  }, [])
+  function procurar() {
+    if (procurando) return
+    setProcurando(true)
+    void procurarAgora().then((r) => {
+      if (!montada.current) return
+      setResposta(r)
+      setProcurando(false)
+    })
+  }
+  const texto = atualizando ? MSG_LIVROS_ATUALIZANDO : procurando ? 'Procurando…' : resposta ? textoDaResposta(resposta) : ''
+  const semPermissao = !procurando && !atualizando && resposta?.tipo === 'desconhecida' && resposta.motivo === 'sem-permissao'
+  return (
+    <section className="sync-secao sync-secao-tela sync-livros" aria-labelledby="sync-livros">
+      <h2 id="sync-livros">Livros</h2>
+      <p className="sync-nota">Um pacote novo posto na pasta do app no Dropbox aparece aqui e no Início.</p>
+      <FaixaDosLivros novidade={novidade} />
+      {/* aria-live, não role=status: o status da tela é o da sincronização (EstadoDaSincronizacao). */}
+      <p aria-live="polite" className="sync-livros-estado">
+        {texto}
+      </p>
+      {semPermissao && (
+        <button type="button" className="sync-acao-erro" onClick={() => void sair().finally(() => navegar('/entrar'))}>
+          Entrar de novo
+        </button>
+      )}
+      <button
+        type="button"
+        className="sync-acao-erro sync-procurar-livros"
+        aria-disabled={procurando || atualizando || undefined}
+        onClick={() => !atualizando && procurar()}
+      >
+        Procurar livros novos
+      </button>
+    </section>
+  )
+}
+
 /** "Salvar e sincronizar" (Ctrl/⌘S): envia e recebe na hora. */
 export function BotaoSalvar({ variante }: { variante: Variante | 'menu' }) {
   return (
@@ -307,6 +385,7 @@ export function Sincronizacao() {
         <VaiSubir porEnviar={info.porEnviar} variante="tela" />
         <ImagensComProblema />
         <ChegouDoOutro info={info} variante="tela" />
+        <LivrosDoDropbox />
 
         <section className="sync-secao sync-secao-tela" aria-labelledby="sync-hist">
           <h2 id="sync-hist">Histórico recente</h2>

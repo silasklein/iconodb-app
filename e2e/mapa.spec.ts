@@ -118,10 +118,12 @@ async function dedos(page: Page) {
     sessao.send('Input.dispatchTouchEvent', { type: tipo, touchPoints: pontos.map((p, id) => ({ x: p.x, y: p.y, id })) })
 }
 
-test('o mapa só é baixado ao abrir Sítios, e nada sai para a rede', async ({ page }) => {
+test('o mapa só é baixado ao abrir Sítios, e nada sai para a rede', async ({ page, dropbox }) => {
   const pedidos: string[] = []
   page.on('request', (r) => pedidos.push(r.url()))
   await entrar(page)
+  // A abertura que acabou de baixar o pacote não procura livros novos (marcarEmDia): o manifesto foi baixado uma vez só.
+  expect(dropbox.baixados.filter((c) => c === 'nucleo/manifest.json').length).toBe(1)
   await page.goto('#/glossario')
   await expect(page.getByRole('heading', { level: 1, name: 'Glossário' })).toBeVisible()
   const chunk = (u: string) => /\/assets\/Mapa-[^/]+\.js$/.test(u)

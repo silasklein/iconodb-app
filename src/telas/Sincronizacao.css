@@ -432,3 +432,26 @@
 .sync-copiar .aviso-de-copia {
   padding: 0;
 }
+
+/* Livros: «Procurar livros novos» e, com um pacote novo, a faixa do Início («Atualizar os livros»). */
+.sync-livros .sync-nota {
+  margin-top: 0;
+}
+.sync-livros .faixa-livros {
+  margin-top: 12px;
+}
+.sync-livros-estado {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sync-livros-estado:empty {
+  margin: 0;
+}
+.sync-procurar-livros {
+  margin-top: 4px;
+}
+.sync-procurar-livros[aria-disabled='true'] {
+  color: var(--secundario-consulta);
+  cursor: progress;
+}

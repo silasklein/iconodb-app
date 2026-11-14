@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { reabrirBanco } from '../banco/cliente'
 import { sair } from '../dropbox/auth'
 import { eErroDeRede, ErroDePacoteAusente, ErroDePermissao, fonteDropbox, resumoDoErro } from '../dropbox/fonte'
-import { MSG_SEM_PERMISSAO } from '../dropbox/mensagens'
+import { MSG_SEM_PACOTE_NO_DROPBOX, MSG_SEM_PERMISSAO } from '../dropbox/mensagens'
 import { Logo } from '../ui/Logo'
 import { armazemPadrao, type Armazem } from '../pacote/armazem'
 import { sincronizarPacote, type Etapa } from '../pacote/baixar'
 import type { CacheImagens } from '../pacote/imagens'
 import { gravarPreferencias, lerEstado, lerPreferencias } from '../pacote/local'
+import { marcarAtualizando, marcarEmDia } from '../pacote/novidade'
 import {
   ErroDeIntegridade,
   ErroDeLogin,
@@ -18,6 +19,7 @@ import {
   ErroDeSincronizacaoEmAndamento,
   MSG_SCHEMA,
   type Fonte,
+  type Manifesto,
 } from '../pacote/manifesto'
 import { camadaDoUsuarioVazia } from '../usuario/sincronizar'
 import { sincronizarAgora } from '../usuario/useSincronizacao'
@@ -33,9 +35,7 @@ const MSG_PACOTE =
 const MSG_INTEGRIDADE = 'Um arquivo não passou na conferência e foi descartado; o que já estava no aparelho foi mantido.'
 export const MSG_EM_ANDAMENTO = 'Já há uma sincronização em andamento em outra janela do app. Espere terminar e tente de novo.'
 const MSG_GERAL = 'Não foi possível baixar o pacote; tente de novo'
-export const MSG_SEM_PACOTE_NO_DROPBOX =
-  'O pacote não está na pasta do app no Dropbox. Ponha as pastas nucleo e imagens na pasta deste app, dentro de Dropbox → Aplicativos (o nome pode ter um número, como "(1)"), espere o Dropbox terminar de enviar e tente de novo.'
-export { MSG_SEM_PERMISSAO }
+export { MSG_SEM_PACOTE_NO_DROPBOX, MSG_SEM_PERMISSAO }
 
 type Fase = 'baixando' | 'pronto' | 'erro'
 type Erro = 'sem-conexao' | 'schema' | 'pacote' | 'integridade' | 'em-andamento' | 'sem-pacote-no-dropbox' | 'sem-permissao' | 'geral'
@@ -100,7 +100,12 @@ export interface PreparandoProps {
 
 /**
  * Primeira sincronização (Sincronizando.dc.html no celular, PC-Preparando.dc.html no
- * computador). Um só componente: o tamanho muda no CSS, em 768 px.
+ * computador), e também a atualização dos livros («Atualizar os livros», no Início e na Sincronização).
+ * Um só componente: o tamanho muda no CSS, em 768 px.
+ *
+ * Com pacote no aparelho ao abrir, é uma atualização: o título é «Atualizando os livros», só o que mudou é baixado
+ * (sincronizarPacote), a camada do usuário não é tratada como primeira vez (nada dela é puxado aqui) e, ao terminar,
+ * volta ao Início ("Abrir assim que terminar" já vem ligado). Uma falha mantém o pacote que já estava.
  *
  * Baixa o pacote em duas etapas ("Banco de dados"; "Imagens de tela", que aqui são as
  * miniaturas) e, na primeira vez da camada do usuário, depois do pacote, "Suas notas e coleções (SKC)"
@@ -112,20 +117,31 @@ export interface PreparandoProps {
  */
 export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDoUsuario = CAMADA_PADRAO }: PreparandoProps) {
   const navegar = useNavigate()
+  // Vindo de «Atualizar os livros», o título da atualização já no primeiro quadro; o estado do aparelho confirma.
+  const pediuAtualizar = (useLocation().state as { atualizar?: unknown } | null)?.atualizar === true
   const [fase, setFase] = useState<Fase>('baixando')
   const [erro, setErro] = useState<Erro | null>(null)
   const [detalhe, setDetalhe] = useState<string | null>(null)
   const [andamento, setAndamento] = useState<Andamento>({})
   const [temPacote, setTemPacote] = useState(false)
   const [primeiraVez, setPrimeiraVez] = useState(true)
-  const [abrirAoTerminar, setAbrirAoTerminar] = useState(false)
+  const [abrirAoTerminar, setAbrirAoTerminar] = useState(pediuAtualizar)
+  const [atualizando, setAtualizando] = useState(pediuAtualizar)
+  // A pessoa já mexeu em "Abrir assim que terminar": a leitura do estado (assíncrona) não desfaz a escolha dela.
+  const mexeuNoAbrir = useRef(false)
   const [altaResolucao, setAltaResolucao] = useState(false)
   const montada = useRef(false)
   const iniciou = useRef(false)
   // Na primeira vez (sem nada do usuário neste aparelho), a camada do usuário é baixada depois do pacote.
   const [usuario, setUsuario] = useState<EtapaDoUsuario | null>(null)
+  // O pacote que já estava no aparelho ao abrir a tela (null: primeira vez). Lido uma vez.
+  const estadoAoAbrir = useRef<Promise<Manifesto | null> | null>(null)
+  estadoAoAbrir.current ??= (async () => lerEstado(armazem ?? armazemPadrao()))().catch(() => null)
   const primeiraVezDoUsuario = useRef<Promise<boolean> | null>(null)
-  primeiraVezDoUsuario.current ??= camadaDoUsuario.primeiraVez().catch(() => false)
+  // Numa atualização dos livros a camada do usuário já esteve neste aparelho: a sincronização automática cuida dela.
+  primeiraVezDoUsuario.current ??= estadoAoAbrir.current
+    .then((estado) => (estado !== null ? false : camadaDoUsuario.primeiraVez()))
+    .catch(() => false)
   useEffect(() => {
     let vivo = true
     void primeiraVezDoUsuario.current!.then((sim) => vivo && sim && setUsuario((u) => u ?? 'aguardando'))
@@ -173,6 +189,8 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
       return
     }
     let resultado: 'atualizado' | 'igual'
+    // Enquanto baixa, a faixa «Atualizar os livros» some (tocar nela de novo daria na trava, com outra mensagem).
+    marcarAtualizando(true)
     try {
       resultado = await sincronizarPacote(
         fonte,
@@ -182,6 +200,7 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
         { armazem: guardado(), cache },
       )
     } catch (e) {
+      marcarAtualizando(false)
       await falhou(e)
       return
     }
@@ -195,6 +214,9 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
         /* segue */
       }
     }
+    // O pacote do Dropbox é o do aparelho agora (e o banco já o abriu): a faixa «Há uma versão nova dos livros» some.
+    marcarEmDia()
+    marcarAtualizando(false)
     if (!ativa()) return
     setTemPacote(true)
     // O pacote está pronto: o app já pode ser aberto. A camada do usuário (na primeira vez) continua em
@@ -227,10 +249,12 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
           }
         })()
         if (arm) {
-          const [estado, preferencias] = await Promise.all([lerEstado(arm).catch(() => null), lerPreferencias(arm).catch(() => null)])
+          const [estado, preferencias] = await Promise.all([estadoAoAbrir.current!, lerPreferencias(arm).catch(() => null)])
           if (montada.current) {
             setTemPacote(estado !== null)
             setPrimeiraVez(estado === null)
+            setAtualizando(estado !== null)
+            if (!mexeuNoAbrir.current) setAbrirAoTerminar(estado !== null)
             if (preferencias) setAltaResolucao(preferencias.altaResolucaoOffline)
           }
         }
@@ -278,9 +302,11 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
       </header>
 
       <main className="preparando-principal">
-        <h1 className="preparando-titulo">Preparando este aparelho</h1>
+        <h1 className="preparando-titulo">{atualizando ? 'Atualizando os livros' : 'Preparando este aparelho'}</h1>
         <p className="preparando-intro">
-          Conectado ao Dropbox. Só na primeira vez: depois, o app abre direto e funciona sem internet.
+          {atualizando
+            ? 'Conectado ao Dropbox. Só o que mudou é baixado; suas notas, coleções e objetos não mudam.'
+            : 'Conectado ao Dropbox. Só na primeira vez: depois, o app abre direto e funciona sem internet.'}
         </p>
 
         <ul className="preparando-etapas" role="list">
@@ -348,7 +374,10 @@ export function Preparando({ armazem, cache, obterFonte = fonteDropbox, camadaDo
               type="button"
               className="preparando-botao"
               aria-pressed={abrirAoTerminar}
-              onClick={() => setAbrirAoTerminar((v) => !v)}
+              onClick={() => {
+                mexeuNoAbrir.current = true
+                setAbrirAoTerminar((v) => !v)
+              }}
             >
               Abrir assim que terminar
             </button>

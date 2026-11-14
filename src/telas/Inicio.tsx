@@ -6,6 +6,8 @@ import { IconButton } from '../ui/IconButton'
 import { ImagemDeCapa } from '../ui/ImagemDeCapa'
 import { MarcasDeSincronizacao } from '../ui/IconeDeSincronizacao'
 import { Logo } from '../ui/Logo'
+import { useNovidadeDosLivros } from '../pacote/novidade'
+import { FaixaDosLivros } from '../ui/FaixaDosLivros'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { numeroPtBr } from '../ui/numero'
@@ -40,6 +42,8 @@ export function Inicio() {
   const sync = useSincronizacao()
   const rotuloDoIndicador = `${alteracoes(sync.porEnviar)} por enviar — abrir sincronização`
   const marcaDoIndicador = ((m) => (m === 'nenhuma' ? 'ponto' : m))(textosDoEstado(sync, 'Ctrl+S').marca)
+  // Um pacote novo no Dropbox: procurado uma vez por abertura do app, depois que o Início foi desenhado.
+  const novidade = useNovidadeDosLivros({ procurarAoAbrir: true })
 
   const carga = useCarregar(async () => {
     const [c, g] = await Promise.all([contagens(), grupos()])
@@ -90,6 +94,8 @@ export function Inicio() {
       )}
 
       <main className="inicio-principal">
+        <FaixaDosLivros novidade={novidade} />
+
         <div className="inicio-titulo">
           <h1>Iconografia do Levante antigo</h1>
           <span className="inicio-filete" aria-hidden="true" />

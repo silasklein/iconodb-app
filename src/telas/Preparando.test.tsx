@@ -20,6 +20,7 @@ import {
 import { reabrirBanco } from '../banco/cliente'
 import { ErroDePacoteAusente, ErroDePermissao } from '../dropbox/fonte'
 import { sair } from '../dropbox/auth'
+import { atualizandoOsLivros, esquecerNovidade, novidadeAtual } from '../pacote/novidade'
 import { MSG_SEM_PACOTE_NO_DROPBOX, MSG_SEM_PERMISSAO, Preparando } from './Preparando'
 
 vi.mock('../dropbox/auth', async (original) => ({
@@ -64,9 +65,9 @@ function sincronizacaoManual() {
 /** A camada do usuário que o teste conduz (por padrão: não é a primeira vez, nada a puxar). */
 let camada: { primeiraVez: () => Promise<boolean>; puxar: () => Promise<boolean> }
 
-function montar(obterFonte: () => Promise<Fonte | null> = async () => FONTE, estrito = false) {
+function montar(obterFonte: () => Promise<Fonte | null> = async () => FONTE, estrito = false, estadoDaNavegacao?: unknown) {
   const arvore = (
-    <MemoryRouter initialEntries={['/preparando']}>
+    <MemoryRouter initialEntries={[{ pathname: '/preparando', state: estadoDaNavegacao }]}>
       <Routes>
         <Route path="/preparando" element={<Preparando armazem={armazem} cache={cacheMemoria()} obterFonte={obterFonte} camadaDoUsuario={camada} />} />
         <Route path="/" element={<p>Início do app</p>} />
@@ -169,6 +170,111 @@ describe('Preparando: a camada do usuário na primeira vez', () => {
     expect(await screen.findByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
     expect(screen.getAllByRole('listitem')).toHaveLength(2)
     expect(camada.puxar).not.toHaveBeenCalled()
+  })
+})
+
+describe('Preparando: atualizar os livros (já há pacote no aparelho)', () => {
+  beforeEach(() => esquecerNovidade())
+
+  it('diz que atualiza (não «primeira vez»), não trata a camada do usuário como nova e volta ao Início ao terminar', async () => {
+    await comEstado()
+    // Mesmo que a camada do usuário esteja vazia neste aparelho, a atualização dos livros não a puxa aqui.
+    const puxar = vi.fn(async () => true)
+    camada = { primeiraVez: async () => true, puxar }
+    const s = sincronizacaoManual()
+    montar()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Atualizando os livros' })).toBeInTheDocument()
+    expect(screen.queryByText(/primeira vez/i)).toBeNull()
+    expect(screen.getByText(/Só o que mudou é baixado/)).toBeInTheDocument()
+    expect(screen.getByText(/suas notas, coleções e objetos não mudam/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir assim que terminar' })).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalledTimes(1))
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    await s.terminar('atualizado')
+    expect(await screen.findByText('Início do app')).toBeInTheDocument()
+    expect(reabrirBanco).toHaveBeenCalledTimes(1)
+    expect(puxar).not.toHaveBeenCalled()
+  })
+
+  it('o aviso do Início some: depois do download, a novidade é «em dia» (também quando nada mudou)', async () => {
+    await comEstado()
+    for (const resultado of ['atualizado', 'igual'] as const) {
+      const s = sincronizacaoManual()
+      const { unmount } = montar(undefined, false, { atualizar: true })
+      await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+      expect(novidadeAtual()).toBeNull()
+      await s.terminar(resultado)
+      expect(await screen.findByText('Início do app')).toBeInTheDocument()
+      expect(novidadeAtual()).toEqual({ tipo: 'em-dia' })
+      unmount()
+      esquecerNovidade()
+      vi.mocked(sincronizarPacote).mockReset()
+    }
+  })
+
+  it('vindo da faixa («Atualizar os livros»), o título já é o da atualização no primeiro quadro', () => {
+    sincronizacaoManual()
+    montar(undefined, false, { atualizar: true })
+    expect(screen.getByRole('heading', { level: 1, name: 'Atualizando os livros' })).toBeInTheDocument()
+  })
+
+  it('uma falha na atualização não apaga nada: avisa e deixa abrir o app com o que já está lá', async () => {
+    await comEstado()
+    const s = sincronizacaoManual()
+    montar(undefined, false, { atualizar: true })
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    await s.falhar(new ErroDeRede())
+    expect(screen.getByRole('alert')).toHaveTextContent(MSG_SEM_CONEXAO)
+    expect(novidadeAtual()).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir o app' }))
+    expect(screen.getByText('Início do app')).toBeInTheDocument()
+  })
+
+  it('durante o download a faixa fica escondida (atualizandoOsLivros), e volta a valer ao terminar ou falhar', async () => {
+    await comEstado()
+    const s = sincronizacaoManual()
+    const { unmount } = montar(undefined, false, { atualizar: true })
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    expect(atualizandoOsLivros()).toBe(true)
+    await s.terminar('atualizado')
+    await screen.findByText('Início do app')
+    expect(atualizandoOsLivros()).toBe(false)
+    unmount()
+
+    const s2 = sincronizacaoManual()
+    montar(undefined, false, { atualizar: true })
+    await waitFor(() => expect(atualizandoOsLivros()).toBe(true))
+    await s2.falhar(new ErroDeRede())
+    expect(atualizandoOsLivros()).toBe(false)
+  })
+
+  it('"Abrir assim que terminar" desligado nos primeiros quadros não é religado pela leitura do estado', async () => {
+    await comEstado()
+    // A leitura do estado demora: a pessoa toca no botão antes de ela chegar.
+    let soltar!: () => void
+    const espera = new Promise<void>((ok) => (soltar = ok))
+    const real = armazem
+    armazem = { ...real, ler: async (c) => (await espera, real.ler(c)) }
+    const s = sincronizacaoManual()
+    montar(undefined, false, { atualizar: true })
+    const botao = screen.getByRole('button', { name: 'Abrir assim que terminar' })
+    expect(botao).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(botao)
+    expect(botao).toHaveAttribute('aria-pressed', 'false')
+    await act(async () => soltar())
+    await waitFor(() => expect(sincronizarPacote).toHaveBeenCalled())
+    expect(screen.getByRole('heading', { level: 1, name: 'Atualizando os livros' })).toBeInTheDocument()
+    expect(botao).toHaveAttribute('aria-pressed', 'false')
+    await s.terminar('atualizado')
+    expect(await screen.findByRole('button', { name: 'Abrir o app' })).toBeInTheDocument()
+    expect(screen.queryByText('Início do app')).toBeNull()
+  })
+
+  it('sem pacote no aparelho, é a primeira vez (mesmo que a navegação diga «atualizar»)', async () => {
+    sincronizacaoManual()
+    montar(undefined, false, { atualizar: true })
+    expect(await screen.findByRole('heading', { level: 1, name: 'Preparando este aparelho' })).toBeInTheDocument()
+    expect(screen.getByText(/Só na primeira vez/)).toBeInTheDocument()
   })
 })
 

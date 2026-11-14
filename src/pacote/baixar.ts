@@ -28,6 +28,7 @@ import {
   PASTA_BLOBS,
 } from './local'
 import {
+  assinatura,
   ErroDeIntegridade,
   ErroDeSincronizacaoEmAndamento,
   lerManifesto,
@@ -124,12 +125,6 @@ async function emParalelo<T>(itens: T[], quantos: number, fazer: (item: T) => Pr
   await Promise.all(Array.from({ length: Math.min(Math.max(quantos, 1), itens.length) }, trabalhador))
   if (falhou) throw erro
 }
-
-const assinatura = (m: Manifesto) =>
-  Object.entries(m.arquivos)
-    .map(([c, a]) => `${c}:${a.sha256}`)
-    .sort()
-    .join('\n')
 
 async function pedirPersistencia(armazem: Armazem): Promise<void> {
   if (await lerPersistencia(armazem)) return
