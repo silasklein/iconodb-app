@@ -132,10 +132,16 @@ describe('Adicionar à coleção, no item (ItemColecao.dc.html)', () => {
     await userEvent.click(within(estado).getByRole('button', { name: 'Desfazer' }))
     await waitFor(() => expect(membrosDe(a)).toEqual(['BA00001', 'CA00001', 'CA00002']))
     expect(lerColecao(estadoAtual().registro('colecao', a)!).membros.find((m) => m.ref === 'CA00001')!.ordem).toBe(antes)
-    // e o aviso seguinte
-    await userEvent.click(within(folha).getByRole('checkbox', { name: 'Incluir em Desfaz A' }))
-    await userEvent.click(within(folha).getByRole('checkbox', { name: 'Incluir em Desfaz A' }))
-    expect(await within(folha).findByRole('status')).toHaveTextContent('Adicionado a «Desfaz A»')
+    // e o aviso seguinte. Cada clique grava de forma assíncrona: a caixa muda com o estado, mas o aviso (setAviso depois do
+    // await da gravação) chega num render depois. Sob carga, um findByRole('status') logo após dois cliques devolvia o aviso
+    // do primeiro. Espera o aviso do Desfazer sair (a região vazia não é acessível) e cada clique chegar à tela antes do próximo.
+    const caixa = () => within(folha).getByRole('checkbox', { name: 'Incluir em Desfaz A' })
+    await waitFor(() => expect(within(folha).queryByRole('status')).toBeNull())
+    await userEvent.click(caixa())
+    await waitFor(() => expect(within(folha).getByRole('status')).toHaveTextContent('Tirado de «Desfaz A»'))
+    expect(caixa()).not.toBeChecked()
+    await userEvent.click(caixa())
+    await waitFor(() => expect(within(folha).getByRole('status')).toHaveTextContent('Adicionado a «Desfaz A»'))
     await userEvent.click(within(folha).getByRole('button', { name: 'Desfazer' }))
     await waitFor(() => expect(membrosDe(a)).toEqual(['BA00001', 'CA00002']))
   })

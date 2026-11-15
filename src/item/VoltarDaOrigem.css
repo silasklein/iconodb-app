@@ -1,0 +1,43 @@
+/* O «‹ origem» da página do objeto (decisão 85). Celular: entre o topo e a posição; computador: à esquerda das ações. */
+.item-volta-nav {
+  min-width: 0;
+  padding: 0 24px;
+}
+.item-volta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em; /* o espaço depois do «‹» (aria-hidden): num flex, o espaço dentro do span some */
+  max-width: 100%;
+  min-height: var(--alvo-toque);
+  font-size: 15px;
+  color: var(--texto);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.item-volta:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+  /* A linha de cima da coluna da leitura: o «‹ origem» à esquerda, as ações à direita. */
+  .item-topo-pc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+  }
+  .item-topo-pc > .item-acoes {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .item-topo-pc > .item-volta-nav {
+    padding: 0;
+  }
+  .item-pc .item-volta {
+    min-height: var(--alvo-mouse);
+    font-size: 14px;
+  }
+}

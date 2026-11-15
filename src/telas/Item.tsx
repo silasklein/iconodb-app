@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { estadoDoGrupo, type EstadoDeOrigem, type EstadoVindoDoGrupo } from '../app/origem'
+import { useAoVoltarParaOrigem } from '../app/OrigemDosLinks'
+import { comVoltar, lerVoltar, rotuloDoIconeDeVoltar, voltarDaOrigem } from '../app/voltar'
+import { VoltarDaOrigem } from '../item/VoltarDaOrigem'
 import { useAtalhos } from '../app/useAtalhos'
 import { elementosDoObjeto, fontesDosObjetos, item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
@@ -200,7 +203,12 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     anterior: v?.anterior ?? null,
     proximo: v?.proximo ?? null,
   }
-  const voltar = !adiante
+  // A origem leve (decisão 85): de um verbete, sítio, obra, da Busca, das notas… O «‹ origem» e o Voltar do topo do celular
+  // voltam a ela; o anterior/próximo a levam adiante. Sem ela, o Voltar fica o do grupo (ou «Voltar às coleções»).
+  const deOnde = voltarDaOrigem(location.state)
+  const aoVoltarParaOrigem = useAoVoltarParaOrigem(deOnde)
+  const estadoAdiante = comVoltar(adiante ?? undefined, lerVoltar(location.state))
+  const doContexto = !adiante
     ? { href: '#/colecoes', rotulo: 'Voltar às coleções' }
     : {
         href: `#${adiante.origem.caminho}`,
@@ -212,6 +220,10 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
               ? 'Voltar à subcoleção'
               : 'Voltar ao grupo',
       }
+  // A Busca e as coleções SKC já tinham o nome no Voltar do topo («Voltar à busca», «Voltar à coleção»): ficam.
+  const voltar = deOnde
+    ? { href: `#${deOnde.caminho}`, rotulo: adiante?.contexto.tipo === 'lista' ? doContexto.rotulo : rotuloDoIconeDeVoltar(deOnde), aoClicar: aoVoltarParaOrigem }
+    : doContexto
 
   // As regiões marcadas de cada imagem (poucas imagens por objeto).
   const cargaDasRegioes = useCarregar(
@@ -321,9 +333,9 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     // R20: anterior e próximo trocam a entrada do histórico (replace), com o mesmo estado (janela da busca ou
     // grupo): o Voltar e o botão do navegador voltam ao grupo ou à busca, não ao objeto vizinho.
     (outro: string | null) => {
-      if (outro) void navegar(`/item/${encodeURIComponent(outro)}`, { replace: true, state: adiante ?? undefined })
+      if (outro) void navegar(`/item/${encodeURIComponent(outro)}`, { replace: true, state: estadoAdiante })
     },
-    [navegar, adiante],
+    [navegar, estadoAdiante],
   )
   const abrirHipotese = useCallback(
     (id: string) => {
@@ -594,7 +606,8 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       }}
     />
   )
-  const nav = posicao && <NavDePosicao posicao={posicao} estado={adiante} />
+  const nav = posicao && <NavDePosicao posicao={posicao} estado={estadoAdiante} />
+  const linkDeVolta = deOnde && <VoltarDaOrigem voltar={deOnde} />
   const painel = nova ? (
     <NovaHipotese
       key={`nova-${lateral ? 'lateral' : 'folha'}`}
@@ -763,6 +776,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     return (
       <div className={`item${comPainel ? ' item-com-folha' : ''}`}>
         <TopoDoCelular voltar={voltar} acoes={acoes} />
+        {linkDeVolta}
         {nav}
         <main className="item-conteudo">{conteudo}</main>
         {painel}
@@ -782,8 +796,11 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       </section>
       <div className="item-coluna-leitura" data-testid="item-leitura-coluna">
         <main className="item-conteudo">
-          <div role="toolbar" aria-label="Ações do item" className="item-acoes">
-            {acoes}
+          <div className="item-topo-pc">
+            {linkDeVolta}
+            <div role="toolbar" aria-label="Ações do item" className="item-acoes">
+              {acoes}
+            </div>
           </div>
           {conteudo}
         </main>
@@ -874,6 +891,7 @@ function textoDasImagens(livro: number, doUsuario: readonly ImagemDoUsuario[]): 
 function SitioDaFicha({ d }: { d: ItemDetalhe }) {
   const vivos = useSitiosVivos()
   const computador = useBreakpoint() === 'computador'
+  const location = useLocation()
   // «Escolher o sítio» da Revisão chega com `?corrigir=sitio`: a folha já abre, e o parâmetro sai do endereço (voltar não a reabre).
   const [params, setParams] = useSearchParams()
   const [trocando, setTrocando] = useState(() => params.get('corrigir') === 'sitio')
@@ -885,7 +903,8 @@ function SitioDaFicha({ d }: { d: ItemDetalhe }) {
           p.delete('corrigir')
           return p
         },
-        { replace: true },
+        // o estado do roteador fica (a origem «‹ Revisão», decisão 85): sem ele, setParams navegaria sem estado
+        { replace: true, state: location.state },
       )
     // só ao montar
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -949,7 +968,7 @@ function Ficha({ d, doUsuario = [] }: { d: ItemDetalhe; doUsuario?: readonly Ima
   )
 }
 
-function NavDePosicao({ posicao, estado }: { posicao: Posicao; estado: EstadoDeOrigem | null }) {
+function NavDePosicao({ posicao, estado }: { posicao: Posicao; estado: unknown }) {
   const nome = posicao.colecao ? 'Posição na coleção' : posicao.tipo === 'lista' ? 'Posição na busca' : posicao.subcolecao ? 'Posição na subcoleção' : 'Posição no grupo'
   return (
     <nav aria-label={nome} className="item-posicao">
@@ -987,7 +1006,8 @@ function LinkIcone({
   rotulo: string
   atalho: string
   dica: string
-  estado: EstadoDeOrigem | null
+  /** O estado do contexto (grupo ou lista), com a origem leve se houver. */
+  estado: unknown
   inicio?: boolean
 }) {
   if (!destino) {
@@ -1002,7 +1022,7 @@ function LinkIcone({
       className={`icon-button${inicio ? ' tip-start' : ''}`}
       to={`/item/${encodeURIComponent(destino)}`}
       replace
-      state={estado ?? undefined}
+      state={estado}
       aria-label={`${rotulo}: ${destino}`}
       aria-keyshortcuts={atalho}
       data-tip={`${rotulo} (${dica})`}

@@ -133,3 +133,57 @@ describe('voltar à Revisão', () => {
     await registrar('revisao', Array.from(estadoAtual().registros.get('revisao')!.keys())[0]!, 'excluir')
   })
 })
+
+describe('o objeto aberto da Revisão mostra «‹ Revisão» (decisão 85)', () => {
+  const origem = () => screen.getByRole('navigation', { name: 'Origem', hidden: true })
+
+  it('«Escolher o sítio» (objeto do livro): a origem fica depois que ?corrigir= sai do endereço, e volta à Revisão como estava', async () => {
+    await executar("INSERT INTO pub_TESTE.review_queue (entity, entity_id, reason, detail) VALUES ('item', 'TESTE-0001', 'sitio_nao_resolvido', 'Tell?')")
+    try {
+      app('/revisao?abrir=sitios-nao-resolvidos')
+      const casos = await screen.findByRole('list', { name: 'Casos de Sítios não resolvidos' })
+      const escolher = within(casos).getAllByRole('link', { name: 'Escolher o sítio' }).find((a) => a.getAttribute('href') === '#/item/CA00001?corrigir=sitio')!
+      await userEvent.click(escolher)
+      await screen.findByRole('dialog', { name: 'Sítio deste objeto' })
+      await waitFor(() => expect(endereco()).toBe('/item/CA00001'))
+      await userEvent.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Sítio deste objeto' })).toBeNull())
+      const volta = within(origem()).getByRole('link', { name: 'Revisão' })
+      expect(volta).toHaveAttribute('href', '/revisao?abrir=sitios-nao-resolvidos')
+      expect(screen.getByRole('link', { name: 'Voltar (Revisão)' })).toHaveAttribute('href', '#/revisao?abrir=sitios-nao-resolvidos')
+      await userEvent.click(volta)
+      await waitFor(() => expect(endereco()).toBe('/revisao?abrir=sitios-nao-resolvidos'))
+      expect(await screen.findByRole('list', { name: 'Casos de Sítios não resolvidos' })).toBeInTheDocument()
+    } finally {
+      await executar("DELETE FROM pub_TESTE.review_queue WHERE entity_id = 'TESTE-0001' AND reason = 'sitio_nao_resolvido'")
+    }
+  })
+
+  it('«Escolher o período» (rascunho SKC): a origem fica depois que ?corrigir= sai', async () => {
+    await registrar('objeto', 'OB-aaaaaaaa-4', 'criar', { titulo: 'Sem período' })
+    try {
+      app('/revisao?abrir=objetos-sem-numero')
+      await userEvent.click(await screen.findByRole('link', { name: 'Escolher o período' }))
+      await screen.findByRole('radiogroup', { name: 'Período' })
+      await waitFor(() => expect(endereco()).toBe('/item/OB-aaaaaaaa-4'))
+      const volta = within(origem()).getByRole('link', { name: 'Revisão' })
+      expect(screen.getByRole('link', { name: 'Voltar (Revisão)', hidden: true })).toBeInTheDocument()
+      await userEvent.click(volta)
+      await waitFor(() => expect(endereco()).toBe('/revisao?abrir=objetos-sem-numero'))
+    } finally {
+      await registrar('objeto', 'OB-aaaaaaaa-4', 'excluir')
+    }
+  })
+
+  it('o número do caso e «Abrir o objeto» também levam a origem', async () => {
+    app('/revisao?abrir=medidas-nao-organizadas')
+    const casos = await screen.findByRole('list', { name: 'Casos de Medidas não organizadas' })
+    await userEvent.click(within(casos).getByRole('link', { name: 'Abrir CA00004' }))
+    await waitFor(() => expect(endereco()).toBe('/item/CA00004'))
+    await userEvent.click(within(await screen.findByRole('navigation', { name: 'Origem' })).getByRole('link', { name: 'Revisão' }))
+    await waitFor(() => expect(endereco()).toBe('/revisao?abrir=medidas-nao-organizadas'))
+    await userEvent.click(within(await screen.findByRole('list', { name: 'Casos de Medidas não organizadas' })).getByRole('link', { name: 'Abrir o objeto' }))
+    await waitFor(() => expect(endereco()).toBe('/item/CA00004'))
+    expect(within(await screen.findByRole('navigation', { name: 'Origem' })).getByRole('link', { name: 'Revisão' })).toBeInTheDocument()
+  })
+})

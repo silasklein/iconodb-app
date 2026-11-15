@@ -775,7 +775,8 @@ describe('a mensagem de Comparar todos (decisão 44)', () => {
     await waitFor(() => expect(bandeja().todos).toEqual(antes))
     await screen.findByRole('region', { name: 'CA00004' })
     expect(screen.getAllByRole('region', { name: /^CA0000\d$/ }).map((c) => c.getAttribute('aria-label'))).toEqual(['CA00003', 'CA00001', 'CA00004'])
-    expect(screen.queryByRole('button', { name: 'Desfazer' })).toBeNull()
+    // A bandeja volta com o estado; o aviso com Desfazer só sai depois que a gravação resolve, num render seguinte.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Desfazer' })).toBeNull())
   })
 
   it('o Desfazer continua valendo depois de recarregar a página (o estado do histórico fica, a tela monta de novo)', async () => {

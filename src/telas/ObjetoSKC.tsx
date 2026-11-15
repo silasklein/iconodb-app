@@ -40,6 +40,9 @@ import { useSitiosVivos } from '../sitios/doUsuario'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
+import { useAoVoltarParaOrigem } from '../app/OrigemDosLinks'
+import { comVoltar, rotuloDoIconeDeVoltar, voltarDaOrigem } from '../app/voltar'
+import { VoltarDaOrigem } from '../item/VoltarDaOrigem'
 import { useBreakpoint, useLarguraMinima } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { useTema } from '../ui/useTema'
@@ -94,7 +97,8 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
           p.delete('corrigir')
           return p
         },
-        { replace: true },
+        // o estado do roteador fica (a origem «‹ Revisão», decisão 85): sem ele, setParams navegaria sem estado
+        { replace: true, state: location.state },
       )
     // só ao montar
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,6 +114,14 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
   const [imagemExcluida, setImagemExcluida] = useState<string | null>(null)
   const gatilho = useRef<HTMLElement | null>(null)
   const novo = (location.state as { objetoNovo?: { imagensComErro: number } } | null)?.objetoNovo
+  // A origem leve (decisão 85): o «‹ origem» e o Voltar do topo do celular voltam à tela de onde se veio; o anterior e o
+  // próximo de «Meus objetos» a levam adiante. Sem ela, «Voltar a Meus objetos» como sempre.
+  const deOnde = voltarDaOrigem(location.state)
+  const aoVoltarParaOrigem = useAoVoltarParaOrigem(deOnde)
+  const estadoDasSetas = comVoltar(undefined, deOnde)
+  const voltarDoTopo = deOnde
+    ? { href: `#${deOnde.caminho}`, rotulo: rotuloDoIconeDeVoltar(deOnde), aoClicar: aoVoltarParaOrigem }
+    : { href: '#/colecoes', rotulo: 'Voltar a Meus objetos' }
 
   // Posição em "Meus objetos" (anterior e próximo na ordem da lista).
   const meus = useObjetosSkc()
@@ -234,8 +246,8 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
       c: () => setFolha((f) => !f),
       'Shift+C': comparar.adicionar,
       a: () => (adicionando ? false : setAdicionando(true)),
-      ArrowLeft: () => (anterior ? void navegar(caminhoDe(anterior), { replace: true }) : false),
-      ArrowRight: () => (proximo ? void navegar(caminhoDe(proximo), { replace: true }) : false),
+      ArrowLeft: () => (anterior ? void navegar(caminhoDe(anterior), { replace: true, state: estadoDasSetas }) : false),
+      ArrowRight: () => (proximo ? void navegar(caminhoDe(proximo), { replace: true, state: estadoDasSetas }) : false),
       'Shift+H': registrarHipotese,
     },
     'item',
@@ -309,11 +321,12 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
         </span>
       </span>
       <span className="item-posicao-setas">
-        <Seta icon="anterior" destino={anterior ? caminhoDe(anterior) : null} rotulo={`Objeto anterior${anterior ? `: ${anterior.semNumero ? 'sem número' : anterior.numero}` : ''}`} atalho="ArrowLeft" dica="←" inicio />
-        <Seta icon="proximo" destino={proximo ? caminhoDe(proximo) : null} rotulo={`Próximo objeto${proximo ? `: ${proximo.semNumero ? 'sem número' : proximo.numero}` : ''}`} atalho="ArrowRight" dica="→" />
+        <Seta icon="anterior" destino={anterior ? caminhoDe(anterior) : null} rotulo={`Objeto anterior${anterior ? `: ${anterior.semNumero ? 'sem número' : anterior.numero}` : ''}`} atalho="ArrowLeft" dica="←" estado={estadoDasSetas} inicio />
+        <Seta icon="proximo" destino={proximo ? caminhoDe(proximo) : null} rotulo={`Próximo objeto${proximo ? `: ${proximo.semNumero ? 'sem número' : proximo.numero}` : ''}`} atalho="ArrowRight" dica="→" estado={estadoDasSetas} />
       </span>
     </nav>
   )
+  const linkDeVolta = deOnde && <VoltarDaOrigem voltar={deOnde} />
   const botaoDeRegistrar = (
     <div className="objeto-hipoteses-acoes">
       <button type="button" className="objeto-botao" aria-keyshortcuts="Shift+H" onClick={registrarHipotese}>
@@ -508,7 +521,8 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
   if (!computador) {
     return (
       <div className={`item objeto-skc${comPainel ? ' item-com-folha' : ''}`}>
-        <TopoDoCelular voltar={{ href: '#/colecoes', rotulo: 'Voltar a Meus objetos' }} acoes={acoes} />
+        <TopoDoCelular voltar={voltarDoTopo} acoes={acoes} />
+        {linkDeVolta}
         {nav}
         <main className="item-conteudo">{conteudo}</main>
         {painel}
@@ -527,8 +541,11 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
       </section>
       <div className="item-coluna-leitura">
         <main className="item-conteudo">
-          <div role="toolbar" aria-label="Ações do objeto" className="item-acoes">
-            {acoes}
+          <div className="item-topo-pc">
+            {linkDeVolta}
+            <div role="toolbar" aria-label="Ações do objeto" className="item-acoes">
+              {acoes}
+            </div>
           </div>
           {conteudo}
         </main>
@@ -540,7 +557,7 @@ export function ObjetoSKC({ id, membros, ligadoDe = null, numeroAntigo = null }:
   )
 }
 
-function Seta({ icon, destino, rotulo, atalho, dica, inicio = false }: { icon: 'anterior' | 'proximo'; destino: string | null; rotulo: string; atalho: string; dica: string; inicio?: boolean }) {
+function Seta({ icon, destino, rotulo, atalho, dica, estado, inicio = false }: { icon: 'anterior' | 'proximo'; destino: string | null; rotulo: string; atalho: string; dica: string; estado?: unknown; inicio?: boolean }) {
   if (!destino) {
     return (
       <span className="icon-button item-posicao-apagado" aria-hidden="true">
@@ -549,7 +566,7 @@ function Seta({ icon, destino, rotulo, atalho, dica, inicio = false }: { icon: '
     )
   }
   return (
-    <Link className={`icon-button${inicio ? ' tip-start' : ''}`} to={destino} replace aria-label={rotulo} aria-keyshortcuts={atalho} data-tip={`${rotulo} (${dica})`}>
+    <Link className={`icon-button${inicio ? ' tip-start' : ''}`} to={destino} replace state={estado} aria-label={rotulo} aria-keyshortcuts={atalho} data-tip={`${rotulo} (${dica})`}>
       <Icon name={icon} size={20} />
     </Link>
   )

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { LinkComOrigem, OrigemDosLinks } from '../app/OrigemDosLinks'
 import type { Verbete } from '../banco/tipos'
 import {
   CHAVES_DE_FILTRO,
@@ -236,7 +237,7 @@ export function Busca() {
   )
 
   return (
-    <>
+    <OrigemDosLinks rotulo="Busca">
       <div className="busca-pagina" inert={folha}>
         <h1 className="so-leitor">Busca</h1>
 
@@ -374,7 +375,7 @@ export function Busca() {
       {folha && resultado && (
         <FolhaDeFiltros resultado={resultado} aoAlternar={alternar} aoLimpar={limparFiltros} aoFechar={() => setFolha(false)} />
       )}
-    </>
+    </OrigemDosLinks>
   )
 }
 
@@ -393,9 +394,9 @@ function AcertosDoUsuario({ acertos }: { acertos: AcertoDoUsuario[] }) {
             <li key={`${a.tipo}:${a.ref}`} className="busca-usuario-linha">
               <span className="busca-usuario-texto">
                 {rota ? (
-                  <Link className="busca-usuario-rotulo hit" to={rota}>
+                  <LinkComOrigem className="busca-usuario-rotulo hit" to={rota}>
                     {a.rotulo}
-                  </Link>
+                  </LinkComOrigem>
                 ) : (
                   <span className="busca-usuario-rotulo">{a.rotulo}</span>
                 )}

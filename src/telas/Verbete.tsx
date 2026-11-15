@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
+import { LinkComOrigem } from '../app/OrigemDosLinks'
 import { verbete, type Verbete as VerbeteCompleto } from '../banco/consultas'
 import { AvisoDeDuplicado } from '../glossario/AvisoDeDuplicado'
 import { useDuplicadosDoGlossario, useEdicaoDoVerbete, useFormasEmUso, useHipotesesDoVerbete, useNomeVivo } from '../glossario/doUsuario'
@@ -87,7 +88,7 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
   )
 
   return (
-    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes}>
+    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Verbete: ${nome}`}>
       <CabecalhoDoDetalhe
         pagina={pagina}
         etiqueta={`${TIPO_DO_VERBETE[v.tipo]} · ${status === 'approved' ? 'aprovado' : 'a revisar'}`}
@@ -191,9 +192,9 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
             </>
           )
           return h.alvo.numero ? (
-            <Link key={h.id} className="hipotese-linha" to={`/item/${encodeURIComponent(h.alvo.numero)}?hipotese=${encodeURIComponent(h.id)}`}>
+            <LinkComOrigem key={h.id} className="hipotese-linha" to={`/item/${encodeURIComponent(h.alvo.numero)}?hipotese=${encodeURIComponent(h.id)}`}>
               {textos}
-            </Link>
+            </LinkComOrigem>
           ) : (
             <div key={h.id} className="hipotese-linha">
               {textos}

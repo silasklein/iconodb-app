@@ -1,5 +1,6 @@
 import { forwardRef, type CSSProperties } from 'react'
 import { Link } from 'react-router'
+import { LinkComOrigem } from '../app/OrigemDosLinks'
 import { sitio } from '../banco/consultas'
 import { MiniaturaDoObjeto } from '../imagens-usuario/MiniaturaDoObjeto'
 import { useObjetosDoSitio } from '../telas/Sitio'
@@ -80,12 +81,12 @@ function SitioDoCartao({ sitio: s, comTitulo, computador }: { sitio: SitioNoMapa
         <ul className="cartao-ponto-miniaturas" aria-label={`Objetos de ${s.nome}`}>
           {mostrados.map((o) => (
             <li key={o.numero}>
-              <Link className="cartao-ponto-miniatura" to={`/item/${encodeURIComponent(o.numero)}`} aria-label={`Abrir ${o.semNumero ? (o.tipo ?? 'objeto sem número') : o.numero}`}>
+              <LinkComOrigem className="cartao-ponto-miniatura" to={`/item/${encodeURIComponent(o.numero)}`} aria-label={`Abrir ${o.semNumero ? (o.tipo ?? 'objeto sem número') : o.numero}`}>
                 <span className="cartao-ponto-imagem">
                   <MiniaturaDoObjeto numero={o.skc ? o.itemId : o.numero} caminho={o.miniatura} alt="" />
                 </span>
                 {!computador && <span className="cartao-ponto-codigo">{o.semNumero ? '—' : o.numero}</span>}
-              </Link>
+              </LinkComOrigem>
             </li>
           ))}
           {mais > 0 && (

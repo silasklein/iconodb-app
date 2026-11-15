@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { LinkComOrigem } from '../app/OrigemDosLinks'
 import { descreverAlvo, rotaDoAlvo } from './alvos'
 import type { NotaVista } from './indiceDeNotas'
 import { chaveDoAlvo, citacoesDe, type TipoDeRef } from './links'
@@ -22,9 +22,9 @@ export function LigacoesDaNota({ nota }: { nota: Pick<NotaVista, 'texto' | 'alvo
     const nome = a.rotulo ?? descreverAlvo(a.tipo, a.ref, r)
     const rota = r ? r.rota : rotaDoAlvo(a.tipo, a.ref)
     return rota && r?.existe !== false ? (
-      <Link className="nota-link" to={rota}>
+      <LinkComOrigem className="nota-link" to={rota}>
         {nome}
-      </Link>
+      </LinkComOrigem>
     ) : (
       <span>{nome}</span>
     )

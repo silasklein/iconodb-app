@@ -1,4 +1,6 @@
 import { Link } from 'react-router'
+import { useOrigemDosLinks } from '../app/OrigemDosLinks'
+import { comVoltar } from '../app/voltar'
 import type { ObjetoResumo } from '../banco/tipos'
 import { MiniaturaDoObjeto } from '../imagens-usuario/MiniaturaDoObjeto'
 import { textoDoNrSkc } from '../objetos-skc/numeracao'
@@ -19,9 +21,11 @@ interface Props {
 export function CartaoDeObjeto({ objeto, state, grande = false, em }: Props) {
   // O sítio de agora (Tarefa 12): o nome corrigido, o sítio que a pessoa escolheu para o objeto; excluído, com a marca.
   const s = useSitiosVivos(false).doResumo(objeto)
+  // Numa tela de origem (verbete, sítio, obra, Busca…; decisão 85) o cartão leva também o «‹ …» de volta a ela.
+  const origem = useOrigemDosLinks()
   const sitio = em !== undefined ? `em ${em}` : [s.nome, s.marca].filter(Boolean).join(' · ')
   return (
-    <Link className={`cartao-objeto${grande ? ' cartao-grande' : ''}`} to={`/item/${encodeURIComponent(objeto.numero)}`} state={state}>
+    <Link className={`cartao-objeto${grande ? ' cartao-grande' : ''}`} to={`/item/${encodeURIComponent(objeto.numero)}`} state={comVoltar(state, origem)}>
       <span className="cartao-imagem">
         {/* As imagens de um objeto SKC são do id dele (o número provisório pode mudar). */}
         <MiniaturaDoObjeto numero={objeto.skc ? objeto.itemId : objeto.numero} caminho={objeto.miniatura} alt={objeto.tipo ?? `Objeto ${objeto.numero}`} />

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
+import { LinkComOrigem } from '../app/OrigemDosLinks'
 import type { AlvoResolvido } from './alvos'
 import { analisarComCitacoes, chaveDaFonte, textoDoPedaco, type PedacoDeCitacao } from './citacoes'
 import type { ObjetoCitado, ReferenciaCitada } from './fontesCitadas'
@@ -157,9 +158,9 @@ function Citacao({ pedaco: p, obras, citadas }: { pedaco: Extract<PedacoDeCitaca
   // Ainda sem resposta (o pacote está abrindo): texto, sem link e sem "?".
   if (o === undefined) return <span className="citacao-esperando">{visivel}</span>
   return (
-    <Link className="nota-link citacao-link" to={o.rota} aria-label={`${fonte} (${o.numero})`}>
+    <LinkComOrigem className="nota-link citacao-link" to={o.rota} aria-label={`${fonte} (${o.numero})`}>
       {visivel}
-    </Link>
+    </LinkComOrigem>
   )
 }
 
@@ -212,9 +213,9 @@ function LinkDaNota({ ref_, rotulo, resolvido }: { ref_: string; rotulo: string 
   const rota = alvo ? alvo.rota : rotaPadrao(tipo, ref)
   if (!rota) return <span className={codigo ? 'codigo' : undefined}>{texto}</span>
   return (
-    <Link className="nota-link" to={rota} aria-label={tipo === 'objeto' && rotulo ? `${rotulo} (${ref})` : undefined}>
+    <LinkComOrigem className="nota-link" to={rota} aria-label={tipo === 'objeto' && rotulo ? `${rotulo} (${ref})` : undefined}>
       <span className={codigo ? 'codigo' : undefined}>{texto}</span>
-    </Link>
+    </LinkComOrigem>
   )
 }
 

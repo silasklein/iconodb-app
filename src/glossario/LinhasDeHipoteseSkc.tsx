@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { LinkComOrigem } from '../app/OrigemDosLinks'
 import { ROTULO_DA_MODALIDADE, ROTULO_DO_NIVEL } from '../item/rotulos'
 import { useDonosDosTrechos } from '../hipoteses/garantirDonos'
 import { objetoDaHipotese, type HipoteseSkc } from '../hipoteses/modelo'
@@ -10,7 +10,7 @@ import './Glossario.css'
 /**
  * As hipóteses SKC que usam um termo, uma linha cada (a página do verbete do usuário e a do verbete do livro): o
  * número do objeto onde a hipótese aparece (o dono da leitura SKC em que está ancorada, revisão 3, M13), a citação ou
- * o "sobre", e "nível · certeza · SKC". Cada linha leva ao objeto, com a hipótese aberta.
+ * o "sobre", e "nível · certeza · SKC". Cada linha leva ao objeto, com a hipótese aberta e a origem (o verbete; decisão 85).
  */
 export function LinhasDeHipoteseSkc({ hipoteses }: { hipoteses: readonly HipoteseSkc[] }) {
   const numeracao = useNumeracao()
@@ -35,9 +35,9 @@ export function LinhasDeHipoteseSkc({ hipoteses }: { hipoteses: readonly Hipotes
           </>
         )
         return objeto ? (
-          <Link key={h.id} className="hipotese-linha" to={`/item/${encodeURIComponent(objeto)}?hipotese=${encodeURIComponent(h.id)}`}>
+          <LinkComOrigem key={h.id} className="hipotese-linha" to={`/item/${encodeURIComponent(objeto)}?hipotese=${encodeURIComponent(h.id)}`}>
             {textos}
-          </Link>
+          </LinkComOrigem>
         ) : (
           <div key={h.id} className="hipotese-linha">
             {textos}

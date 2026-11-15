@@ -1,4 +1,4 @@
-import { alturaSuficiente, decidirRolagem, guardarPosicao, lerPosicoes } from './rolagem'
+import { alturaSuficiente, decidirRolagem, guardarPaineis, guardarPosicao, lerPaineis, lerPosicoes } from './rolagem'
 
 describe('decidirRolagem: quando voltar ao topo e quando restaurar', () => {
   it('PUSH ou REPLACE para outro caminho: topo', () => {
@@ -68,5 +68,38 @@ describe('posições guardadas na sessão', () => {
     })
     expect(() => guardarPosicao('k', 1)).not.toThrow()
     vi.restoreAllMocks()
+  })
+})
+
+describe('a rolagem dos painéis da lista e detalhe (decisão 85)', () => {
+  beforeEach(() => sessionStorage.clear())
+
+  it('guarda e lê as duas posições por entrada do histórico', () => {
+    guardarPaineis('k1', { lista: 120.4, principal: 597 })
+    guardarPaineis('k2', { lista: 0, principal: 30 })
+    expect(lerPaineis()).toEqual({ k1: { lista: 120, principal: 597 }, k2: { lista: 0, principal: 30 } })
+  })
+
+  it('as duas no topo: a entrada some (nada a restaurar)', () => {
+    guardarPaineis('k1', { lista: 10, principal: 10 })
+    guardarPaineis('k1', { lista: 0, principal: 0 })
+    expect(lerPaineis()).toEqual({})
+  })
+
+  it('guarda só as 100 mais recentes', () => {
+    for (let i = 0; i < 105; i++) guardarPaineis(`k${i}`, { lista: 1, principal: i + 1 })
+    const todas = lerPaineis()
+    expect(Object.keys(todas)).toHaveLength(100)
+    expect(todas.k0).toBeUndefined()
+    expect(todas.k104).toEqual({ lista: 1, principal: 105 })
+  })
+
+  it('o que não se lê fica de fora', () => {
+    sessionStorage.setItem('iconodb:rolagem-paineis', JSON.stringify({ a: { lista: 1, principal: 2 }, b: { lista: -1, principal: 2 }, c: 3, d: { lista: '1', principal: 2 } }))
+    expect(lerPaineis()).toEqual({ a: { lista: 1, principal: 2 } })
+    sessionStorage.setItem('iconodb:rolagem-paineis', '[1]')
+    expect(lerPaineis()).toEqual({})
+    sessionStorage.setItem('iconodb:rolagem-paineis', '{')
+    expect(lerPaineis()).toEqual({})
   })
 })

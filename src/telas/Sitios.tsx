@@ -12,6 +12,7 @@ import { CampoDeFiltro } from '../ui/CampoDeFiltro'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { ListaEDetalhe } from '../ui/ListaEDetalhe'
+import { OrigemDosLinks } from '../app/OrigemDosLinks'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
@@ -373,27 +374,30 @@ export function Sitios() {
   const filtroDeRegioes = (
     <FiltroDeRegioes contagens={dados?.porRegiao ?? new Map()} total={total} ativas={regioesAtivas} aoAlternar={alternarRegiao} aoLimpar={() => definir({ regioes: '' })} />
   )
+  // O mapa é uma tela de origem (decisão 85): o objeto aberto do cartão de um ponto mostra «‹ Sítios».
   const mapa = (
-    <Suspense
-      fallback={
-        <p className="mapa-carregando" role="status">
-          Carregando o mapa…
-        </p>
-      }
-    >
-      <Mapa
-        pontos={pontos}
-        selecionada={selecionada}
-        aoSelecionar={setSelecionada}
-        destaque={destaque}
-        aoDestacar={(ids) => setDestaque(ids ?? SEM_DESTAQUE)}
-        foco={foco}
-        regioesAtivas={regioesAtivas}
-        aoAlternarRegiao={alternarRegiao}
-        computador={computador}
-        assinatura={assinatura}
-      />
-    </Suspense>
+    <OrigemDosLinks rotulo="Sítios">
+      <Suspense
+        fallback={
+          <p className="mapa-carregando" role="status">
+            Carregando o mapa…
+          </p>
+        }
+      >
+        <Mapa
+          pontos={pontos}
+          selecionada={selecionada}
+          aoSelecionar={setSelecionada}
+          destaque={destaque}
+          aoDestacar={(ids) => setDestaque(ids ?? SEM_DESTAQUE)}
+          foco={foco}
+          regioesAtivas={regioesAtivas}
+          aoAlternarRegiao={alternarRegiao}
+          computador={computador}
+          assinatura={assinatura}
+        />
+      </Suspense>
+    </OrigemDosLinks>
   )
   const modoDoCelular = !computador && vista === 'mapa'
 

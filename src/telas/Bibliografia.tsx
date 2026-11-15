@@ -180,7 +180,7 @@ export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
   const acoes = <IconButton icon="copiar" label="Copiar referência completa" onClick={() => void copiar(chicagoEmTexto(o))} />
   const citadas = Object.entries(o.citadaComo).filter(([, curtas]) => curtas.length > 0)
   return (
-    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes}>
+    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Obra: ${o.curta ?? o.titulo ?? o.id}`}>
       <CabecalhoDoDetalhe pagina={pagina} etiqueta="Obra" titulo={o.curta ?? o.titulo ?? o.id} codigo={o.id} acoes={acoes} />
       <p className="obra-chicago" ref={chicagoRef}>
         {o.chicagoHtml ? htmlComItalico(o.chicagoHtml) : chicagoEmTexto(o)}

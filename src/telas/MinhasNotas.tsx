@@ -1,5 +1,6 @@
 import { memo, useDeferredValue, useMemo } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
+import { OrigemDosLinks } from '../app/OrigemDosLinks'
 import { tabelaDoPacote } from '../busca/fold'
 import { alvosDosTextos, descreverAlvo, type AlvoResolvido } from '../notas/alvos'
 import { filtrarNotas, agruparPorData, ehLigadaA, OPCOES_LIGADA, type LigadaA } from '../notas/filtroDeNotas'
@@ -38,9 +39,18 @@ const LinhaDaNota = memo(function LinhaDaNota({ nota, atual, resolvidos, busca }
 /**
  * Minhas notas (MinhasNotas.dc.html no celular, PC-Notas.dc.html no computador) e a tela de /nota/:id: as notas SKC por
  * data, a mais recente primeiro, com a busca (texto dobrado) e o filtro "Ligada a". No computador a lista e a nota
- * lado a lado; no celular a nota abre numa tela só dela.
+ * lado a lado; no celular a nota abre numa tela só dela. É uma tela de origem (decisão 85): um objeto aberto de uma nota
+ * mostra «‹ Notas».
  */
 export function MinhasNotas() {
+  return (
+    <OrigemDosLinks rotulo="Notas">
+      <TelaDasNotas />
+    </OrigemDosLinks>
+  )
+}
+
+function TelaDasNotas() {
   const { id } = useParams()
   const computador = useBreakpoint() === 'computador'
   useTema(!computador && id ? 'item' : 'consulta')

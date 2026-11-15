@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { LinkComOrigem, OrigemDosLinks } from '../app/OrigemDosLinks'
 import { useAtalhos } from '../app/useAtalhos'
 import { resumosDosObjetos } from '../banco/consultas'
 import { refDeObjeto, type Membro } from '../colecoes/modelo'
@@ -346,121 +347,123 @@ export function Comparar() {
   const total = bandeja.todos.length
 
   return (
-    <div className="comparar" onFocus={(e) => (focoDaTela.current = e.target as HTMLElement)}>
-      <TopoDoCelular voltar={{ href: '#/', rotulo: 'Voltar' }} />
-      <main className="comparar-corpo" aria-busy={carregando || undefined}>
-        <div className="comparar-topo">
-          <h1 className="comparar-titulo">
-            Comparar · {plural(bandeja.itens.length, 'objeto', 'objetos')}
-          </h1>
-          <div ref={barra} role="toolbar" aria-label="Ações da comparação" className="comparar-acoes">
-            <IconButton icon="adicionar" label="Adicionar objeto à comparação" expandido={adicionando} onClick={() => setAdicionando((a) => !a)} />
-            {comDiferencas && <IconButton icon="diferencas" label="Mostrar só as diferenças" pressionado={diferencas} onClick={() => setDiferencas((d) => !d)} />}
-            {total > 0 && <IconButton icon="excluir" label="Esvaziar a comparação" onClick={() => void esvaziar()} />}
-            {computador && <IconButton icon="fechar" label="Fechar a comparação" shortcut="Escape" shortcutLabel="Esc" onClick={fechar} />}
-          </div>
-        </div>
-
-        {adicionando && (
-          <AdicionarPorNumero
-            aoFechar={() => {
-              setAdicionando(false)
-              requestAnimationFrame(() => maisDoTopo()?.focus())
-            }}
-            aoResultar={(texto) => dizer({ texto })}
-          />
-        )}
-
-        <div className="comparar-avisos">
-          <div ref={regiao} className="comparar-aviso" role="status" aria-label="Mensagem de Comparar">
-            {aviso && (
-              <>
-                <span>{aviso.texto}</span>
-                {aviso.falhou && <span className="comparar-aviso-falha">{MSG_FALHA}</span>}
-                {(aviso.desfazer || (aviso.troca && trocaVale)) && (
-                  <button type="button" className="comparar-link" onClick={() => void desfazer()}>
-                    Desfazer
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-          {bandeja.excedentes.length > 0 && (
-            <section className="comparar-excedentes" aria-labelledby="comparar-excedentes-titulo">
-              <h2 id="comparar-excedentes-titulo">Não couberam</h2>
-              <p>
-                {plural(bandeja.excedentes.length, 'objeto não coube', 'objetos não couberam')}: a comparação mostra no máximo {MAXIMO_DA_BANDEJA}. Tire um da comparação para o próximo entrar, ou tire estes daqui.
-              </p>
-              <ul>
-                {bandeja.excedentes.map((ref) => (
-                  <li key={ref}>
-                    <span className="codigo">{rotuloDaRef(ref, numeracao)}</span>
-                    <button type="button" className="comparar-link" aria-label={`Tirar da comparação: ${rotuloDaRef(ref, numeracao)}`} onClick={() => void tirar(ref)}>
-                      Tirar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-
-        {n === 0 ? (
-          <div className="comparar-vazio">
-            <p>Nenhum objeto na comparação.</p>
-            <p>
-              Em um objeto, use o botão <strong>Comparar</strong> (no teclado, Shift+C) para pôr até {MAXIMO_DA_BANDEJA} aqui, ou use o + acima para escrever o número. Numa citação como «IPIAO I: 1–3», «Comparar todos» troca a comparação pelos objetos dela.
-            </p>
-            <p>
-              <Link to="/colecoes">Ver as coleções</Link>
-            </p>
-          </div>
-        ) : (
-          <>
-            {!computador && n > 1 && (
-              <nav className="comparar-posicao" aria-label="Posição na comparação">
-                <IconButton icon="anterior" label="Objeto anterior" shortcut="ArrowLeft" shortcutLabel="←" tipPosition="start" onClick={() => irPara(posicao - 1)} />
-                <span className="comparar-posicao-n codigo" role="status">
-                  {posicao + 1} de {n}
-                </span>
-                <IconButton icon="proximo" label="Objeto seguinte" shortcut="ArrowRight" shortcutLabel="→" onClick={() => irPara(posicao + 1)} />
-              </nav>
-            )}
-            {filtrando && visiveis.length === 0 && (
-              <p className="comparar-aviso" role="status">
-                Nenhuma diferença nos dados mostrados.
-              </p>
-            )}
-            <div
-              ref={faixa}
-              className="comparar-colunas"
-              data-n={n}
-              data-testid="comparar-colunas"
-              style={{ '--n': n, gridTemplateRows: ['auto', '340px', ...visiveis.map(() => 'auto'), 'auto'].join(' ') } as React.CSSProperties}
-              onScroll={aoRolar}
-            >
-              {colunas.map((c, i) => (
-                <ColunaDoObjeto
-                  key={c.ref}
-                  c={c}
-                  linhas={visiveis}
-                  indice={i}
-                  total={n}
-                  totalDeLinhas={totalDeLinhas}
-                  abertas={abertas}
-                  aoAlternar={alternarTexto}
-                  aoTirar={() => void tirar(c.ref)}
-                  nomeParaTirar={rotuloDaRef(c.ref, numeracao)}
-                  aoAmpliar={(imagemId, original) => ampliarImagem(c.ref, imagemId, original)}
-                  voltouDoVisualizador={ampliouDe === c.ref}
-                  imagemAberta={ampliouDe === c.ref ? imagemAberta : null}
-                />
-              ))}
+    <OrigemDosLinks rotulo="Comparar">
+      <div className="comparar" onFocus={(e) => (focoDaTela.current = e.target as HTMLElement)}>
+        <TopoDoCelular voltar={{ href: '#/', rotulo: 'Voltar' }} />
+        <main className="comparar-corpo" aria-busy={carregando || undefined}>
+          <div className="comparar-topo">
+            <h1 className="comparar-titulo">
+              Comparar · {plural(bandeja.itens.length, 'objeto', 'objetos')}
+            </h1>
+            <div ref={barra} role="toolbar" aria-label="Ações da comparação" className="comparar-acoes">
+              <IconButton icon="adicionar" label="Adicionar objeto à comparação" expandido={adicionando} onClick={() => setAdicionando((a) => !a)} />
+              {comDiferencas && <IconButton icon="diferencas" label="Mostrar só as diferenças" pressionado={diferencas} onClick={() => setDiferencas((d) => !d)} />}
+              {total > 0 && <IconButton icon="excluir" label="Esvaziar a comparação" onClick={() => void esvaziar()} />}
+              {computador && <IconButton icon="fechar" label="Fechar a comparação" shortcut="Escape" shortcutLabel="Esc" onClick={fechar} />}
             </div>
-          </>
-        )}
-      </main>
-    </div>
+          </div>
+
+          {adicionando && (
+            <AdicionarPorNumero
+              aoFechar={() => {
+                setAdicionando(false)
+                requestAnimationFrame(() => maisDoTopo()?.focus())
+              }}
+              aoResultar={(texto) => dizer({ texto })}
+            />
+          )}
+
+          <div className="comparar-avisos">
+            <div ref={regiao} className="comparar-aviso" role="status" aria-label="Mensagem de Comparar">
+              {aviso && (
+                <>
+                  <span>{aviso.texto}</span>
+                  {aviso.falhou && <span className="comparar-aviso-falha">{MSG_FALHA}</span>}
+                  {(aviso.desfazer || (aviso.troca && trocaVale)) && (
+                    <button type="button" className="comparar-link" onClick={() => void desfazer()}>
+                      Desfazer
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {bandeja.excedentes.length > 0 && (
+              <section className="comparar-excedentes" aria-labelledby="comparar-excedentes-titulo">
+                <h2 id="comparar-excedentes-titulo">Não couberam</h2>
+                <p>
+                  {plural(bandeja.excedentes.length, 'objeto não coube', 'objetos não couberam')}: a comparação mostra no máximo {MAXIMO_DA_BANDEJA}. Tire um da comparação para o próximo entrar, ou tire estes daqui.
+                </p>
+                <ul>
+                  {bandeja.excedentes.map((ref) => (
+                    <li key={ref}>
+                      <span className="codigo">{rotuloDaRef(ref, numeracao)}</span>
+                      <button type="button" className="comparar-link" aria-label={`Tirar da comparação: ${rotuloDaRef(ref, numeracao)}`} onClick={() => void tirar(ref)}>
+                        Tirar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+
+          {n === 0 ? (
+            <div className="comparar-vazio">
+              <p>Nenhum objeto na comparação.</p>
+              <p>
+                Em um objeto, use o botão <strong>Comparar</strong> (no teclado, Shift+C) para pôr até {MAXIMO_DA_BANDEJA} aqui, ou use o + acima para escrever o número. Numa citação como «IPIAO I: 1–3», «Comparar todos» troca a comparação pelos objetos dela.
+              </p>
+              <p>
+                <Link to="/colecoes">Ver as coleções</Link>
+              </p>
+            </div>
+          ) : (
+            <>
+              {!computador && n > 1 && (
+                <nav className="comparar-posicao" aria-label="Posição na comparação">
+                  <IconButton icon="anterior" label="Objeto anterior" shortcut="ArrowLeft" shortcutLabel="←" tipPosition="start" onClick={() => irPara(posicao - 1)} />
+                  <span className="comparar-posicao-n codigo" role="status">
+                    {posicao + 1} de {n}
+                  </span>
+                  <IconButton icon="proximo" label="Objeto seguinte" shortcut="ArrowRight" shortcutLabel="→" onClick={() => irPara(posicao + 1)} />
+                </nav>
+              )}
+              {filtrando && visiveis.length === 0 && (
+                <p className="comparar-aviso" role="status">
+                  Nenhuma diferença nos dados mostrados.
+                </p>
+              )}
+              <div
+                ref={faixa}
+                className="comparar-colunas"
+                data-n={n}
+                data-testid="comparar-colunas"
+                style={{ '--n': n, gridTemplateRows: ['auto', '340px', ...visiveis.map(() => 'auto'), 'auto'].join(' ') } as React.CSSProperties}
+                onScroll={aoRolar}
+              >
+                {colunas.map((c, i) => (
+                  <ColunaDoObjeto
+                    key={c.ref}
+                    c={c}
+                    linhas={visiveis}
+                    indice={i}
+                    total={n}
+                    totalDeLinhas={totalDeLinhas}
+                    abertas={abertas}
+                    aoAlternar={alternarTexto}
+                    aoTirar={() => void tirar(c.ref)}
+                    nomeParaTirar={rotuloDaRef(c.ref, numeracao)}
+                    aoAmpliar={(imagemId, original) => ampliarImagem(c.ref, imagemId, original)}
+                    voltouDoVisualizador={ampliouDe === c.ref}
+                    imagemAberta={ampliouDe === c.ref ? imagemAberta : null}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+    </OrigemDosLinks>
   )
 }
 
@@ -527,9 +530,9 @@ function ColunaDoObjeto({
         ))}
       </dl>
       <footer className="comparar-pe" style={{ gridRow: totalDeLinhas }}>
-        <Link className="comparar-link" to={c.rota} aria-label={`Abrir o item ${nome}`}>
+        <LinkComOrigem className="comparar-link" to={c.rota} aria-label={`Abrir o item ${nome}`}>
           Abrir o item
-        </Link>
+        </LinkComOrigem>
         <button type="button" className="comparar-link comparar-tirar" aria-label={`Tirar da comparação: ${nomeParaTirar}`} onClick={aoTirar}>
           Tirar da comparação
         </button>

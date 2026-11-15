@@ -200,7 +200,8 @@ describe('excluir uma nota no lugar (computador)', () => {
     expect(estadoAtual().registro('nota', 'NT-tela0000-30')?.excluido).toBe(true)
     await userEvent.click(within(secao).getByRole('button', { name: 'Desfazer' }))
     expect(await within(secao).findByRole('article')).toHaveTextContent('Nota para excluir.')
-    expect(within(secao).queryByText('Nota excluída.')).toBeNull()
+    // A nota volta com o estado; o aviso só sai depois que a gravação resolve (setExcluida no .then), num render seguinte.
+    await waitFor(() => expect(within(secao).queryByText('Nota excluída.')).toBeNull())
     expect(estadoAtual().registro('nota', 'NT-tela0000-30')?.excluido).toBe(false)
   })
 })

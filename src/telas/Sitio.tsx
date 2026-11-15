@@ -368,7 +368,7 @@ function Pagina({ id, livro, ehNovo, pagina, voltar, voltarPara, computador }: P
   const nObjetos = `${numeroPtBr(objetos.length)} ${objetos.length === 1 ? 'objeto' : 'objetos'}${nasPartes > 0 ? `, ${numeroPtBr(nasPartes)} nas partes` : ''}`
 
   return (
-    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes}>
+    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Sítio: ${nomeAgora}`}>
       <CabecalhoDoDetalhe
         pagina={pagina}
         etiqueta={`${ehNovo ? 'Sítio SKC' : 'Sítio'}${regiaoAgora ? ` · ${regiaoAgora}` : ''}`}

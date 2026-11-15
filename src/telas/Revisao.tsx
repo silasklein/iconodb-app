@@ -1,5 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
+import { LinkComOrigem, OrigemDosLinks, useOrigemDosLinks } from '../app/OrigemDosLinks'
+import { comVoltar } from '../app/voltar'
 import { useAtalhos } from '../app/useAtalhos'
 import { desfazerResolvido, marcarComoResolvido } from '../revisao/operacoes'
 import { casosIguais, type Caso, type GrupoDaFila } from '../revisao/fila'
@@ -44,9 +46,18 @@ const resumoDoCaso = (c: Caso) => (c.numero !== '—' ? c.numero : c.o_que.lengt
  * é um registro `revisao` que se sincroniza como o resto). Os grupos abertos e quantos casos cada lista mostra ficam no endereço
  * (`?abrir=`, `?ate=`), então voltar de um caso encontra a tela como estava; a rolagem volta pelo `useRestaurarRolagem`. As
  * listas mostram 25 casos e crescem de 100 em 100 («Mostrar mais»), e cada linha só se refaz quando o seu caso muda. A conta é
- * a de `montarFila`, a mesma do Menu e do ponto da barra.
+ * a de `montarFila`, a mesma do Menu e do ponto da barra. É uma tela de origem (decisão 85): o objeto aberto de um caso mostra
+ * «‹ Revisão», que volta a ela como estava.
  */
 export function Revisao() {
+  return (
+    <OrigemDosLinks rotulo="Revisão">
+      <TelaDaRevisao />
+    </OrigemDosLinks>
+  )
+}
+
+function TelaDaRevisao() {
   const { carga, fila, pares } = useFilaComCarga({ lugares: true, exigirBanco: true })
   const [params, setParams] = useSearchParams()
   const abertos = lista(params, PARAMETRO_ABERTOS)
@@ -302,9 +313,9 @@ function Grupo({ g, aberto, ateAbertos, ateResolvidos, aoAbrir, aoVerAte, aoReso
   )
   if (g.link) {
     return (
-      <Link className="revisao-grupo-cabeca" to={g.link.para} aria-label={`${g.rotulo}, ${numeroPtBr(g.quantidade)}: ${g.link.rotulo}`}>
+      <LinkComOrigem className="revisao-grupo-cabeca" to={g.link.para} aria-label={`${g.rotulo}, ${numeroPtBr(g.quantidade)}: ${g.link.rotulo}`}>
         {cabeca}
-      </Link>
+      </LinkComOrigem>
     )
   }
   const idLista = `revisao-casos-${g.id}`
@@ -386,20 +397,22 @@ interface PropsDaLinha {
 const LinhaDoCaso = memo(function LinhaDoCaso({ grupo, c, resolvido = false, aoResolver, aoDesfazer }: PropsDaLinha) {
   const resumo = resumoDoCaso(c)
   const navegar = useNavigate()
-  // A ação navega pelo roteador (uma entrada de histórico do app): a tela aberta sabe que há para onde voltar (T17-B-22).
+  const origem = useOrigemDosLinks()
+  // A ação navega pelo roteador (uma entrada de histórico do app): a tela aberta sabe que há para onde voltar (T17-B-22). Ao
+  // objeto vai junto a origem (decisão 85): «‹ Revisão».
   const irPara = (para: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
     e.preventDefault()
-    void navegar(para)
+    void navegar(para, para.startsWith('/item/') ? { state: comVoltar(undefined, origem) } : undefined)
   }
   // O número leva ao objeto; sem número (um «—») não há o que abrir por ele, e a ação da linha já leva ao mesmo lugar.
   const comNumero = c.abrir && c.numero !== '—'
   return (
     <li className={`revisao-caso${resolvido ? ' revisao-caso-resolvido' : ''}`} data-chave={c.chave}>
       {comNumero ? (
-        <Link className="hit revisao-caso-numero" to={c.abrir!} aria-label={`Abrir ${c.numero}`}>
+        <LinkComOrigem className="hit revisao-caso-numero" to={c.abrir!} aria-label={`Abrir ${c.numero}`}>
           {c.numero}
-        </Link>
+        </LinkComOrigem>
       ) : (
         <span className="revisao-caso-numero">{c.numero}</span>
       )}

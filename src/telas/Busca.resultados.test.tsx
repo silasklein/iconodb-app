@@ -115,7 +115,7 @@ describe('tela Busca: resultados', () => {
     mock.mockResolvedValue(resultado())
   })
 
-  it('abrir um resultado leva ao item com a lista ordenada dos números no estado do roteador', async () => {
+  it('abrir um resultado leva ao item com a lista ordenada dos números no estado do roteador, e a origem «Busca» (decisão 85)', async () => {
     mock.mockResolvedValue(resultado())
     abrirComRota('/busca?q=leao&escopo=termo')
     await userEvent.click(await screen.findByRole('link', { name: /CA00002/ }))
@@ -126,6 +126,7 @@ describe('tela Busca: resultados', () => {
       inicio: 0,
       total: 3,
       origem: { rotulo: 'Busca', caminho: '/busca?q=leao&escopo=termo' },
+      voltar: { rotulo: 'Busca', caminho: '/busca?q=leao&escopo=termo' },
     })
   })
 

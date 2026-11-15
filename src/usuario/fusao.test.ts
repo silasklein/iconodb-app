@@ -445,7 +445,10 @@ describe('estadoCanonico', () => {
 })
 
 describe('desempenho', () => {
-  it('funde 50 mil eventos em menos de 1 s', () => {
+  // No CI (GitHub Actions, máquina dividida) os limites ficam 3× mais folgados: o teste mede ordem de grandeza, e
+  // falhou ali com 1,6–2,5 s sob carga (15/11). Localmente o limite continua o de sempre.
+  const FOLGA = process.env.CI ? 3 : 1
+  it('funde 50 mil eventos em menos de 1 s (3 s no CI)', () => {
     const aleatorio = gerador(99)
     const eventos: Evento[] = []
     const aparelhos = [A, B, C]
@@ -461,10 +464,10 @@ describe('desempenho', () => {
     const e = fundir(eventos)
     const ms = performance.now() - inicio
     expect(e.registros.get('nota')!.size).toBeGreaterThan(10_000)
-    expect(ms).toBeLessThan(1000)
+    expect(ms).toBeLessThan(1000 * FOLGA)
     const inicioAplicar = performance.now()
     aplicar(e, [ev({ ap: A, seq: 999_999, ms: T0 + 2e9, reg: 'NT-aaaaaaaa-1', campos: { titulo: 'x' } })])
-    expect(performance.now() - inicioAplicar).toBeLessThan(100)
+    expect(performance.now() - inicioAplicar).toBeLessThan(100 * FOLGA)
   })
 })
 

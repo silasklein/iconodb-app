@@ -56,3 +56,45 @@ export function guardarPosicao(chave: string, y: number): void {
     /* sem sessionStorage: a restauração só deixa de existir */
   }
 }
+
+/**
+ * A rolagem dos dois painéis da lista e detalhe do computador (Glossário, Bibliografia, Sítios, Notas), por
+ * `location.key`: ali a janela não rola, só os painéis. Voltar do objeto (decisão 85) remonta a tela; sem isto o verbete
+ * voltava no topo.
+ */
+export interface RolagemDosPaineis {
+  lista: number
+  principal: number
+}
+
+const CHAVE_DOS_PAINEIS = 'iconodb:rolagem-paineis'
+
+const posicaoValida = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
+
+export function lerPaineis(): Record<string, RolagemDosPaineis> {
+  try {
+    const dados: unknown = JSON.parse(sessionStorage.getItem(CHAVE_DOS_PAINEIS) ?? '{}')
+    if (typeof dados !== 'object' || dados === null || Array.isArray(dados)) return {}
+    const certas: Record<string, RolagemDosPaineis> = {}
+    for (const [k, v] of Object.entries(dados)) {
+      if (typeof v !== 'object' || v === null) continue
+      const { lista, principal } = v as Record<string, unknown>
+      if (posicaoValida(lista) && posicaoValida(principal)) certas[k] = { lista, principal }
+    }
+    return certas
+  } catch {
+    return {}
+  }
+}
+
+export function guardarPaineis(chave: string, r: RolagemDosPaineis): void {
+  try {
+    const todas = lerPaineis()
+    delete todas[chave]
+    if (r.lista > 0 || r.principal > 0) todas[chave] = { lista: Math.round(r.lista), principal: Math.round(r.principal) }
+    const manter = Object.entries(todas).slice(-MAXIMO)
+    sessionStorage.setItem(CHAVE_DOS_PAINEIS, JSON.stringify(Object.fromEntries(manter)))
+  } catch {
+    /* sem sessionStorage: a restauração só deixa de existir */
+  }
+}

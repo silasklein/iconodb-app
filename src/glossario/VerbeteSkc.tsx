@@ -82,7 +82,7 @@ export function VerbeteSkc({ id, pagina, voltarPara }: Props) {
   const criadoEm = dataDoHlc(v.criadoEm)
 
   return (
-    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes}>
+    <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Verbete: ${nome}`}>
       <div className="verbete-skc">
         <CabecalhoDoDetalhe pagina={pagina} etiqueta={`Verbete do SKC · ${ROTULO_DO_STATUS[v.status]}`} titulo={nome} codigo={v.id} acoes={acoes} tituloRef={nomeRef} />
         <AvisoDeCopia aviso={aviso} />

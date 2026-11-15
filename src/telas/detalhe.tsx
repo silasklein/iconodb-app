@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react'
 import { Link } from 'react-router'
 import type { ObjetoResumo } from '../banco/tipos'
+import { OrigemDosLinks } from '../app/OrigemDosLinks'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
@@ -60,18 +61,21 @@ interface Moldura {
   voltar: { href: string; rotulo: string }
   /** Os ícones de ação do detalhe (buscar, copiar): no topo do celular; no computador, no cabeçalho. */
   acoes?: ReactNode
+  /** O nome desta tela no «‹ …» dos objetos abertos daqui («Verbete: leão-de-teste»; decisão 85). */
+  origem?: string | null
   children: ReactNode
 }
 
 /** A página do detalhe no celular, ou o painel dele no computador. */
-export function MolduraDoDetalhe({ pagina, voltar, acoes, children }: Moldura) {
+export function MolduraDoDetalhe({ pagina, voltar, acoes, origem, children }: Moldura) {
+  const corpo = <OrigemDosLinks rotulo={origem}>{children}</OrigemDosLinks>
   return pagina ? (
     <div className="detalhe-pagina">
       <TopoDoCelular voltar={voltar} busca={acoes === undefined} acoes={acoes} />
-      <main className="detalhe">{children}</main>
+      <main className="detalhe">{corpo}</main>
     </div>
   ) : (
-    <div className="detalhe">{children}</div>
+    <div className="detalhe">{corpo}</div>
   )
 }
 

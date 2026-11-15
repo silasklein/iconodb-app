@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
 import { Link } from 'react-router'
+import { LinkComOrigem, OrigemDosLinks } from '../app/OrigemDosLinks'
 import { MAXIMO_DA_LISTA } from '../busca/url'
 import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { useIndiceDeNotas } from '../notas/useIndiceDeNotas'
@@ -128,119 +129,121 @@ function ColecaoAberta({ c }: { c: ColecaoVista }) {
   }
 
   return (
-    <div className="colecao">
-      <TopoDoCelular voltar={{ href: '#/colecoes', rotulo: 'Voltar às coleções' }} />
-      {computador && (
-        <nav aria-label="Trilha" className="colecao-trilha">
-          <Link className="hit" to="/colecoes">
-            Coleções
-          </Link>{' '}
-          · SKC
-        </nav>
-      )}
-
-      <main className="colecao-corpo">
-        <span className="colecao-etiqueta">SKC · Coleção</span>
-        <Titulo c={c} nome={nome} renomeando={renomeando} setRenomeando={setRenomeando} botao={botaoRenomear} aoFalhar={setFalha} />
-
-        {!c.excluida && <Descricao key={c.id} c={c} aoFalhar={setFalha} />}
-
-        <dl className="colecao-contagens" role="group" aria-label="O que há na coleção">
-          <div>
-            <dt>Objetos</dt>
-            <dd>{numeroPtBr(refs.length)}</dd>
-          </div>
-        </dl>
-
-        {c.excluida ? (
-          <p className="colecao-excluida" role="status">
-            Coleção «{nome}» excluída. Os objetos e as notas continuam guardados.{' '}
-            <button type="button" className="colecao-acao" onClick={() => void alternarExclusao()}>
-              <Icon name="desfazer" size={18} />
-              Restaurar coleção
-            </button>
-          </p>
-        ) : (
-          <div className="colecao-acoes">
-            <button type="button" className="colecao-acao" onClick={() => void alternarExclusao()}>
-              <Icon name="excluir" size={18} />
-              Excluir coleção
-            </button>
-          </div>
+    <OrigemDosLinks rotulo={`Coleção: ${nome}`}>
+      <div className="colecao">
+        <TopoDoCelular voltar={{ href: '#/colecoes', rotulo: 'Voltar às coleções' }} />
+        {computador && (
+          <nav aria-label="Trilha" className="colecao-trilha">
+            <Link className="hit" to="/colecoes">
+              Coleções
+            </Link>{' '}
+            · SKC
+          </nav>
         )}
 
-        {falha && (
-          <p className="colecao-erro" role="alert">
-            {falha}
-          </p>
-        )}
+        <main className="colecao-corpo">
+          <span className="colecao-etiqueta">SKC · Coleção</span>
+          <Titulo c={c} nome={nome} renomeando={renomeando} setRenomeando={setRenomeando} botao={botaoRenomear} aoFalhar={setFalha} />
 
-        {!c.excluida && (
-          <>
-            <div className="colecao-ferramentas">
-              <div className="colecao-modo" role="group" aria-label="Modo de exibição">
-                {MODOS_DA_COLECAO.map((m) => (
-                  <button key={m} type="button" aria-pressed={modo === m} onClick={() => escolherModo(m)}>
-                    {ROTULO_DO_MODO[m]}
-                  </button>
-                ))}
-              </div>
+          {!c.excluida && <Descricao key={c.id} c={c} aoFalhar={setFalha} />}
+
+          <dl className="colecao-contagens" role="group" aria-label="O que há na coleção">
+            <div>
+              <dt>Objetos</dt>
+              <dd>{numeroPtBr(refs.length)}</dd>
             </div>
+          </dl>
 
-            <div className="colecao-aviso-vivo" role="status" aria-live="polite">
-              {aviso && (
-                <>
-                  {aviso.texto}
-                  {aviso.desfazer && (
-                    <>
-                      {' · '}
-                      <button type="button" className="colecao-desfazer" onClick={() => void desfazer()}>
-                        Desfazer
-                      </button>
-                    </>
-                  )}
-                </>
+          {c.excluida ? (
+            <p className="colecao-excluida" role="status">
+              Coleção «{nome}» excluída. Os objetos e as notas continuam guardados.{' '}
+              <button type="button" className="colecao-acao" onClick={() => void alternarExclusao()}>
+                <Icon name="desfazer" size={18} />
+                Restaurar coleção
+              </button>
+            </p>
+          ) : (
+            <div className="colecao-acoes">
+              <button type="button" className="colecao-acao" onClick={() => void alternarExclusao()}>
+                <Icon name="excluir" size={18} />
+                Excluir coleção
+              </button>
+            </div>
+          )}
+
+          {falha && (
+            <p className="colecao-erro" role="alert">
+              {falha}
+            </p>
+          )}
+
+          {!c.excluida && (
+            <>
+              <div className="colecao-ferramentas">
+                <div className="colecao-modo" role="group" aria-label="Modo de exibição">
+                  {MODOS_DA_COLECAO.map((m) => (
+                    <button key={m} type="button" aria-pressed={modo === m} onClick={() => escolherModo(m)}>
+                      {ROTULO_DO_MODO[m]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="colecao-aviso-vivo" role="status" aria-live="polite">
+                {aviso && (
+                  <>
+                    {aviso.texto}
+                    {aviso.desfazer && (
+                      <>
+                        {' · '}
+                        <button type="button" className="colecao-desfazer" onClick={() => void desfazer()}>
+                          Desfazer
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="so-leitor" data-testid="anuncio">
+                <div role="status" aria-live="polite">
+                  {ord.anuncio.no === 0 ? ord.anuncio.texto : ''}
+                </div>
+                <div role="status" aria-live="polite">
+                  {ord.anuncio.no === 1 ? ord.anuncio.texto : ''}
+                </div>
+              </div>
+
+              {ord.ordem.length === 0 ? (
+                <p className="colecao-vazio">Nenhum objeto ainda. Abra um objeto e toque em «Adicionar à coleção», ou cole códigos abaixo.</p>
+              ) : (
+                <ul ref={ord.lista} role="list" aria-label="Itens da coleção" className={grade ? 'colecao-grade' : 'colecao-lista'} data-arrastando={ord.arrastando ? '' : undefined}>
+                  {ord.ordem.map((ref, i) => (
+                    <Linha
+                      key={ref}
+                      colecao={c}
+                      ref_={ref}
+                      posicao={i + 1}
+                      total={ord.ordem.length}
+                      resumo={resolvidos.get(ref)}
+                      grade={grade}
+                      ord={ord}
+                      estadoPara={estadoPara}
+                      aoTirar={() => void tirar(ref)}
+                    />
+                  ))}
+                </ul>
               )}
-            </div>
-            <div className="so-leitor" data-testid="anuncio">
-              <div role="status" aria-live="polite">
-                {ord.anuncio.no === 0 ? ord.anuncio.texto : ''}
-              </div>
-              <div role="status" aria-live="polite">
-                {ord.anuncio.no === 1 ? ord.anuncio.texto : ''}
-              </div>
-            </div>
 
-            {ord.ordem.length === 0 ? (
-              <p className="colecao-vazio">Nenhum objeto ainda. Abra um objeto e toque em «Adicionar à coleção», ou cole códigos abaixo.</p>
-            ) : (
-              <ul ref={ord.lista} role="list" aria-label="Itens da coleção" className={grade ? 'colecao-grade' : 'colecao-lista'} data-arrastando={ord.arrastando ? '' : undefined}>
-                {ord.ordem.map((ref, i) => (
-                  <Linha
-                    key={ref}
-                    colecao={c}
-                    ref_={ref}
-                    posicao={i + 1}
-                    total={ord.ordem.length}
-                    resumo={resolvidos.get(ref)}
-                    grade={grade}
-                    ord={ord}
-                    estadoPara={estadoPara}
-                    aoTirar={() => void tirar(ref)}
-                  />
-                ))}
-              </ul>
-            )}
-
-            <AdicionarPorCodigo
-              colecao={c}
-              campo={campoDoCodigo}
-              aoAdicionar={(a) => setAviso(a)}
-            />
-          </>
-        )}
-      </main>
-    </div>
+              <AdicionarPorCodigo
+                colecao={c}
+                campo={campoDoCodigo}
+                aoAdicionar={(a) => setAviso(a)}
+              />
+            </>
+          )}
+        </main>
+      </div>
+    </OrigemDosLinks>
   )
 }
 
@@ -511,7 +514,7 @@ function Linha({
         <span className="colecao-tipo">Não encontrado</span>
       </span>
     ) : (
-      <Link className="colecao-objeto" to={`/item/${encodeURIComponent(resumo?.numero ?? ref_)}`} state={estadoPara(resumo?.numero ?? ref_)}>
+      <LinkComOrigem className="colecao-objeto" to={`/item/${encodeURIComponent(resumo?.numero ?? ref_)}`} state={estadoPara(resumo?.numero ?? ref_)}>
         {grade && (
           <span className="colecao-miniatura">
             {/* decorativa: o número e o tipo, ao lado, já dizem o que é */}
@@ -526,7 +529,7 @@ function Linha({
           {resumo && <span className="colecao-tipo">{resumo.tipo ?? '—'}</span>}
           {sitioDoResumo && <span className="colecao-sitio">{sitioDoResumo}</span>}
         </span>
-      </Link>
+      </LinkComOrigem>
     )
 
   return (
