@@ -2,22 +2,30 @@
 /**
  * Consultas sobre o pacote sintético (tests/fixtures/pacote), com o sqlite-wasm em
  * memória no Node. O pacote tem 6 objetos (CA00001–CA00004, BA00001–BA00002, um item
- * TESTE-000N cada), 9 hipóteses, 9 verbetes e dois grupos de 3 itens.
+ * TESTE-000N cada), 9 hipóteses, 9 verbetes e dois grupos de 3 itens. No schema 9, GR-TESTE-I-01 tem as
+ * subcoleções «1.1» (TESTE-0001) e «1.2–1.3» (TESTE-0002); TESTE-0003 fica só no grupo.
  */
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { armazemComPacote, bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { RAIZ_DO_PACOTE_6 } from '../../tests/suporte/fonteDeTeste'
+import { tituloDoGrupo } from '../ui/tituloDoGrupo'
 import { mesclasDoPacote } from '../pacote/redirecionamentos'
 import { pacoteDeSitios } from '../sitios/pacote'
 import { armazemMemoria } from '../pacote/armazem'
 import { abrirBanco, aoReabrir, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
 import {
+  alvosDoPacote,
+  compararNoLivro,
   contagens,
   elementosSemRegiaoNoPacote,
   grafiasDoPacote,
   grupo,
   grupos,
   hipotese,
+  type Grupo,
+  type GrupoDetalhe,
+  type ItemDetalhe,
+  type LinhaDaFila,
   imagem,
   item,
   linhasDaFila,
@@ -121,12 +129,13 @@ describe('consultas sobre o pacote sintético', () => {
 
   it('traducoesNaoRevisadasNoPacote() traz só as de máquina, trechos e campos do catálogo (id#categoria)', async () => {
     const l = await traducoesNaoRevisadasNoPacote()
-    expect(l.filter((t) => t.entidade === 'passage')).toHaveLength(8)
+    // pacote 9: mais os três trechos das introduções das subcoleções (I.S.10 e I.S.11)
+    expect(l.filter((t) => t.entidade === 'passage')).toHaveLength(11)
     expect(l.filter((t) => t.entidade === 'catalog_field')).toHaveLength(18)
     expect(l.filter((t) => t.entidade === 'catalog_field').every((t) => /^TESTE-\d+#\d$/.test(t.entidadeId))).toBe(true)
     const [revisado] = await executar<{ id: string }>("SELECT id FROM pub_TESTE.passage WHERE translation_state = 'reviewed'")
     expect(l.some((t) => t.entidadeId === revisado!.id)).toBe(false)
-    expect(l.length).toBe(26)
+    expect(l.length).toBe(29)
   })
 
   it('verbetesAReverNoPacote() traz os verbetes propostos com a forma original', async () => {
@@ -265,8 +274,116 @@ describe('consultas sobre o pacote sintético', () => {
     const g = await grupo('GR-TESTE-I-02')
     expect(g!.itens.map((o) => o.numero)).toEqual(['CA00004', 'BA00001', 'BA00002'])
     expect(g!.itens[1]).toMatchObject({ itemId: 'TESTE-0005', origem: 'TESTE I: 5', tipo: 'Selo de teste', sitio: 'Maḥteṣ Teste', miniatura: 'imagens/TESTE/TESTE-0005/thumb-1.webp', display_mode: 'tons' })
-    expect(g!.introducao).toMatchObject({ id: 'PA-TESTE-I.S.19-ovw-1', texto: expect.stringContaining('selos de teste'), termos: [{ glId: 'GL-900009', inicio: 3, fim: 17 }] })
+    expect(g!.introducao).toEqual([
+      expect.objectContaining({ id: 'PA-TESTE-I.S.19-ovw-1', texto: expect.stringContaining('selos de teste'), termos: [{ glId: 'GL-900009', inicio: 3, fim: 17 }] }),
+    ])
     expect(await grupo('GR-NAO-EXISTE')).toBeNull()
+  })
+
+  describe('subcoleções (schema 9)', () => {
+    it('o pacote sintético é do schema 9', async () => {
+      const [l] = await executar<{ user_version: number }>('PRAGMA pub_TESTE.user_version')
+      expect(l!.user_version).toBe(9)
+    })
+
+    it('grupos() dá só os grupos de cima, com o número de subcoleções', async () => {
+      const gs = await grupos()
+      expect(gs.map((g) => [g.id, g.subcolecoes, g.paiId, g.numero])).toEqual([
+        ['GR-TESTE-I-01', 2, null, '1'],
+        ['GR-TESTE-I-02', 0, null, null],
+      ])
+      // Decisão 81: o grupo de cima com subcoleções leva o número do livro ('1'); a subcoleção se distingue só por paiId.
+      // Foco 5: os totais não contam as linhas das subcoleções
+      expect(gs.reduce((t, g) => t + g.objetos, 0)).toBe(6)
+    })
+
+    it('grupo() do grupo de cima traz as subcoleções em ordem, a introdução dele e todos os itens', async () => {
+      const g = (await grupo('GR-TESTE-I-01'))!
+      expect(g.subcolecoes).toEqual([
+        { id: 'GR-TESTE-I-01-01', numero: '1.1', titulo: 'Animais de prova', tituloDe: 'Probetiere', objetos: 1 },
+        { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen', objetos: 1 },
+      ])
+      expect(g.introducao.map((t) => t.id)).toEqual(['PA-TESTE-I.S.9-ovw-1'])
+      expect(g.itens.map((o) => o.numero)).toEqual(['CA00001', 'CA00002', 'CA00003'])
+      expect(g).toMatchObject({ subcolecoes: expect.any(Array), pai: null, posicao: null, anterior: null, proxima: null, paiId: null, numero: '1' })
+    })
+
+    it('grupo() da subcoleção traz o pai, a posição, as vizinhas, os trechos em ordem e os itens dela', async () => {
+      const g = (await grupo('GR-TESTE-I-01-02'))!
+      expect(g).toMatchObject({
+        paiId: 'GR-TESTE-I-01',
+        numero: '1.2–1.3',
+        titulo: 'Figuras de prova e sinais de teste',
+        tituloDe: 'Prüfgestalten und Testzeichen',
+        periodo: 'Calcolítico (fase de teste)',
+        pai: { id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova', tituloDe: '1. Testtiere und Probefiguren', numero: '1', subcolecoes: 2 },
+        posicao: { n: 2, total: 2 },
+        proxima: null,
+        subcolecoes: [],
+        objetos: 1,
+      })
+      expect(g.anterior).toMatchObject({ id: 'GR-TESTE-I-01-01', numero: '1.1', objetos: 1 })
+      expect(g.introducao.map((t) => t.id)).toEqual(['PA-TESTE-I.S.10-ovw-2', 'PA-TESTE-I.S.11-ovw-1'])
+      expect(g.introducao.map((t) => t.texto)).toEqual([expect.stringContaining('Figuras de prova'), expect.stringContaining('sinal de teste')])
+      expect(g.introducao.every((t) => t.original.length > 0)).toBe(true)
+      expect(g.itens.map((o) => o.numero)).toEqual(['CA00002'])
+      const primeira = (await grupo('GR-TESTE-I-01-01'))!
+      expect(primeira).toMatchObject({ posicao: { n: 1, total: 2 }, anterior: null, proxima: { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3' } })
+      expect(primeira.introducao.map((t) => t.id)).toEqual(['PA-TESTE-I.S.10-ovw-1'])
+    })
+
+    it('alvosDoPacote(): o rótulo do grupo como nas telas (decisão 81) e o da subcoleção com o seu número', async () => {
+      const a = await alvosDoPacote(['GR-TESTE-I-01', 'GR-TESTE-I-02', 'GR-TESTE-I-01-02', 'GR-NAO-HA'])
+      expect([...a.values()].map((x) => [x.ref, x.tipo, x.rotulo])).toEqual(
+        expect.arrayContaining([
+          ['GR-TESTE-I-01', 'grupo', '1. Animais de teste e figuras de prova'],
+          ['GR-TESTE-I-02', 'grupo', 'Selos de prova e padrões denteados'],
+          ['GR-TESTE-I-01-02', 'grupo', '1.2–1.3 Figuras de prova e sinais de teste'],
+        ]),
+      )
+      expect(a.size).toBe(3)
+    })
+
+    it('vizinhos() na subcoleção anda só entre os objetos dela', async () => {
+      expect(await vizinhos('CA00002', { tipo: 'grupo', id: 'GR-TESTE-I-01-02' })).toEqual({ anterior: null, proximo: null, posicao: 1, total: 1 })
+      expect(await vizinhos('CA00001', { tipo: 'grupo', id: 'GR-TESTE-I-01-02' })).toBeNull()
+    })
+
+    it('«No livro» tem ordem fixa: a obra (ordem do manifesto), o volume, o grupo (ordem de leitura, que segue os períodos) e a subcoleção', () => {
+      const k = (obra: number, volume: string, grupo: number, subcolecao: number) => ({ obra, volume, grupo, subcolecao })
+      const lista = [k(1, 'I', 1, 0), k(0, 'II', 1, 0), k(0, 'I', 3, 2), k(0, 'I', 3, 1), k(0, 'I', 2, 0), k(0, 'I', 3, 0)]
+      expect([...lista].sort(compararNoLivro)).toEqual([
+        k(0, 'I', 2, 0),
+        k(0, 'I', 3, 0),
+        k(0, 'I', 3, 1),
+        k(0, 'I', 3, 2),
+        k(0, 'II', 1, 0),
+        k(1, 'I', 1, 0),
+      ])
+    })
+
+    it('item() traz «No livro» com a subcoleção, e `grupos` só com os de cima', async () => {
+      const dois = (await item('CA00002'))!
+      expect(dois.noLivro).toEqual([
+        {
+          publicacao: 'TESTE',
+          volume: 'I',
+          periodo: 'Calcolítico (fase de teste)',
+          grupo: { id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova', tituloDe: '1. Testtiere und Probefiguren', numero: '1', subcolecoes: 2 },
+          subcolecao: { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen' },
+        },
+      ])
+      expect(dois.grupos).toEqual([{ id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova' }])
+      const tres = (await item('CA00003'))!
+      expect(tres.noLivro).toHaveLength(1)
+      expect(tres.noLivro[0]!.subcolecao).toBeNull()
+      expect((await item('CA00001'))!.noLivro[0]!.subcolecao?.numero).toBe('1.1')
+      const quatro = (await item('CA00004'))!
+      expect(quatro.noLivro).toEqual([expect.objectContaining({ grupo: expect.objectContaining({ id: 'GR-TESTE-I-02', numero: null, subcolecoes: 0 }), subcolecao: null })])
+      for (const n of ['CA00001', 'CA00002', 'CA00003', 'CA00004']) {
+        expect((await item(n))!.grupos.every((g) => !/^GR-TESTE-I-\d\d-\d\d$/.test(g.id))).toBe(true)
+      }
+    })
   })
 
   it('verbete(), obra(), obras(), verbetes(), sitios() e sitio()', async () => {
@@ -611,6 +728,78 @@ describe('lugaresDosCasos(): o trecho da introdução de um grupo', () => {
   })
 })
 
+describe('lugaresDosCasos(): subcoleções (schema 9)', () => {
+  beforeEach(async () => usarMotor(await bancoDeTeste({ escrita: true })))
+  afterAll(() => usarMotor(null))
+
+  it('o 2.º trecho da «1.2–1.3» (só em author_group_passage) leva à subcoleção', async () => {
+    const l = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.11-ovw-1' }])
+    expect(l.get('passage|PA-TESTE-I.S.11-ovw-1')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-01-02', origem: 'TESTE I · 1.2–1.3 · introdução' })
+  })
+
+  it('o trecho que é intro_passage_id do grupo de cima e também da 1.1 leva à subcoleção, qualquer que seja a ordem', async () => {
+    // Como no I-13, I-15, II-02, II-03, III-02 e III-03: o intro do grupo é o 1.º trecho da 1.1.
+    await executar("UPDATE pub_TESTE.author_group SET intro_passage_id = 'PA-TESTE-I.S.10-ovw-1' WHERE id = 'GR-TESTE-I-01'")
+    const a = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.10-ovw-1' }])
+    expect(a.get('passage|PA-TESTE-I.S.10-ovw-1')).toMatchObject({ grupoId: 'GR-TESTE-I-01-01', origem: 'TESTE I · 1.1 · introdução' })
+    // E com o trecho também numa linha de author_group_passage do grupo de cima (o texto próprio do grupo): a subcoleção ganha.
+    await executar("INSERT INTO pub_TESTE.author_group_passage (group_id, passage_id, ordinal) VALUES ('GR-TESTE-I-01', 'PA-TESTE-I.S.10-ovw-1', 1)")
+    const b = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.10-ovw-1' }])
+    expect(b.get('passage|PA-TESTE-I.S.10-ovw-1')).toMatchObject({ grupoId: 'GR-TESTE-I-01-01' })
+  })
+
+  it('um trecho só do grupo de cima continua no grupo, com a origem de antes', async () => {
+    await executar("INSERT INTO pub_TESTE.author_group_passage (group_id, passage_id, ordinal) VALUES ('GR-TESTE-I-01', 'PA-TESTE-I.S.3-txt-1', 1)")
+    const l = await lugaresDosCasos([{ entidade: 'passage', entidadeId: 'PA-TESTE-I.S.3-txt-1' }])
+    expect(l.get('passage|PA-TESTE-I.S.3-txt-1')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-01', origem: 'TESTE I · introdução' })
+  })
+
+  it("a entidade 'author_group' (filas subcolecao_* e grupo_*) leva ao grupo, com a obra, o número e o título", async () => {
+    const l = await lugaresDosCasos([
+      { entidade: 'author_group', entidadeId: 'GR-TESTE-I-01-02' },
+      { entidade: 'author_group', entidadeId: 'GR-TESTE-I-01' },
+      { entidade: 'author_group', entidadeId: 'GR-TESTE-I-02' },
+      { entidade: 'author_group', entidadeId: 'GR-NAO-HA' },
+      { entidade: 'subgroups_file', entidadeId: 'Testzeit › 9.' },
+    ])
+    expect(l.get('author_group|GR-TESTE-I-01-02')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-01-02', origem: 'TESTE I · 1.2–1.3 Figuras de prova e sinais de teste' })
+    // o grupo de cima com subcoleções: o título como nas telas, com o número do livro (decisão 81); o sem subcoleções, sem número
+    expect(l.get('author_group|GR-TESTE-I-01')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-01', origem: 'TESTE I · 1. Animais de teste e figuras de prova' })
+    expect(l.get('author_group|GR-TESTE-I-02')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-02', origem: 'TESTE I · Selos de prova e padrões denteados' })
+    expect(l.has('author_group|GR-NAO-HA')).toBe(false)
+    expect(l.has('subgroups_file|Testzeit › 9.')).toBe(false)
+  })
+
+  it("'subgroups_file' com o id de um item do build (fora_de_subcolecao_invalido) leva ao objeto", async () => {
+    const l = await lugaresDosCasos([
+      { entidade: 'subgroups_file', entidadeId: 'TESTE-0003' },
+      { entidade: 'subgroups_file', entidadeId: 'TESTE-9999' },
+    ])
+    expect(l.get('subgroups_file|TESTE-0003')).toEqual({ itemId: 'TESTE-0003', numero: 'CA00003', grupoId: null, origem: 'TESTE I: 3' })
+    expect(l.has('subgroups_file|TESTE-9999')).toBe(false)
+  })
+
+  it('a subcoleção sem título em português leva o título alemão na origem', async () => {
+    await executar("UPDATE pub_TESTE.author_group SET title_pt = NULL WHERE id = 'GR-TESTE-I-01-02'")
+    const l = await lugaresDosCasos([{ entidade: 'author_group', entidadeId: 'GR-TESTE-I-01-02' }])
+    expect(l.get('author_group|GR-TESTE-I-01-02')!.origem).toBe('TESTE I · 1.2–1.3 Prüfgestalten und Testzeichen')
+  })
+})
+
+describe('lugaresDosCasos() num pacote 6 (sem subcoleções)', () => {
+  afterAll(() => usarMotor(null))
+
+  it("o trecho da introdução e a entidade 'author_group' sem citar parent_id nem author_group_passage", async () => {
+    usarMotor(await bancoDeTeste({ raiz: RAIZ_DO_PACOTE_6 }))
+    const l = await lugaresDosCasos([
+      { entidade: 'author_group', entidadeId: 'GR-TESTE-I-01' },
+      { entidade: 'passage', entidadeId: 'PA-TESTE-I.S.9-cap-1' }, // sem item, nem introdução: passa pela consulta das introduções
+    ])
+    expect(l.has('passage|PA-TESTE-I.S.9-cap-1')).toBe(false)
+    expect(l.get('author_group|GR-TESTE-I-01')).toEqual({ itemId: null, numero: null, grupoId: 'GR-TESTE-I-01', origem: 'TESTE I · Animais de teste e figuras de prova' })
+  })
+})
+
 describe('numerosDosTrechos(): de que objeto do livro é cada trecho (T17-B-4)', () => {
   beforeAll(async () => usarMotor(await bancoDeTeste()))
   afterAll(() => usarMotor(null))
@@ -689,10 +878,10 @@ describe('Parte 2C, bloco 2: as tabelas dos sítios do pacote 8', () => {
 })
 
 describe('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6) continua a abrir com as consultas de hoje', () => {
-  let v8: Record<string, unknown>
+  let v9: Record<string, unknown>
   beforeAll(async () => {
     usarMotor(await bancoDeTeste())
-    v8 = await doPacote()
+    v9 = semSubcolecoes(await doPacote())
     usarMotor(await bancoDeTeste({ raiz: RAIZ_DO_PACOTE_6 }))
   })
   afterAll(() => usarMotor(null))
@@ -712,15 +901,58 @@ describe('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6) continua 
     }
   }
 
+  /**
+   * O pacote 9 sem o que só ele tem: as subcoleções do grupo, o número do livro no grupo de cima (decisão 81), a
+   * subcoleção em «No livro» e a fila das subcoleções.
+   * O resto tem de dar o mesmo no pacote 6.
+   */
+  function semSubcolecoes(p: Record<string, unknown>): Record<string, unknown> {
+    const semSub = (i: ItemDetalhe) => ({ ...i, noLivro: i.noLivro.map((l) => ({ ...l, grupo: { ...l.grupo, numero: null, subcolecoes: 0 }, subcolecao: null })) })
+    const g = p.grupo as GrupoDetalhe
+    return {
+      ...p,
+      item: semSub(p.item as ItemDetalhe),
+      item2: semSub(p.item2 as ItemDetalhe),
+      grupos: (p.grupos as Grupo[]).map((x) => ({ ...x, numero: null, subcolecoes: 0 })),
+      grupo: { ...g, numero: null, subcolecoes: [] },
+      fila: (p.fila as LinhaDaFila[]).filter((l) => !l.tipo.startsWith('subcolecao_')),
+    }
+  }
+
   it('abre: o schema é o 6, sem as tabelas novas', async () => {
     expect(await abrirBanco()).toMatchObject({ estado: 'aberto', publicacoes: [{ sigla: 'TESTE', esquema: 'pub_TESTE' }] })
     const [t] = await executar<{ n: number }>("SELECT count(*) AS n FROM main.sqlite_master WHERE name IN ('volume', 'item_alias', 'sitio_parte', 'sitio_grafia', 'sitio_par_sugerido')")
     expect(t!.n).toBe(0)
+    const [g] = await executar<{ n: number }>("SELECT count(*) AS n FROM pub_TESTE.sqlite_master WHERE name = 'author_group_passage'")
+    expect(g!.n).toBe(0)
   })
 
-  it('itens, publicação, grupos, verbetes, obras e sítios dão o mesmo que no pacote 8', async () => {
-    expect(await doPacote()).toEqual(v8)
+  it('itens, publicação, grupos, verbetes, obras e sítios dão o mesmo que no pacote 9, fora as subcoleções', async () => {
+    expect(await doPacote()).toEqual(v9)
     expect(await sitios()).toHaveLength(3)
+  })
+
+  it('Foco 3: sem `parent_id` nem `author_group_passage`, nenhuma subcoleção e nenhum erro de SQL', async () => {
+    const gs = await grupos()
+    expect(gs.map((g) => [g.id, g.subcolecoes, g.paiId, g.numero])).toEqual([
+      ['GR-TESTE-I-01', 0, null, null],
+      ['GR-TESTE-I-02', 0, null, null],
+    ])
+    const g = (await grupo('GR-TESTE-I-01'))!
+    expect(g.introducao.map((t) => t.id)).toEqual(['PA-TESTE-I.S.9-ovw-1'])
+    expect(g).toMatchObject({ subcolecoes: [], pai: null, posicao: null, anterior: null, proxima: null })
+    for (const n of ['CA00001', 'CA00002', 'CA00003', 'BA00002']) {
+      const i = (await item(n))!
+      expect(i.noLivro.length).toBeGreaterThan(0)
+      expect(i.noLivro.every((l) => l.subcolecao === null)).toBe(true)
+      // sem `numero` no pacote antigo, o grupo de cima fica sem o número do livro (decisão 81)
+      expect(i.noLivro.every((l) => l.grupo.numero === null && l.grupo.subcolecoes === 0)).toBe(true)
+      expect(i.noLivro.map((l) => tituloDoGrupo(l.grupo).texto)).toEqual(i.noLivro.map((l) => l.grupo.titulo))
+    }
+    expect(gs.map((x) => tituloDoGrupo(x).texto)).toEqual(['Animais de teste e figuras de prova', 'Selos de prova e padrões denteados'])
+    expect(tituloDoGrupo(g).texto).toBe('Animais de teste e figuras de prova')
+    expect((await alvosDoPacote(['GR-TESTE-I-01'])).get('GR-TESTE-I-01')?.rotulo).toBe('Animais de teste e figuras de prova')
+    expect(await grupo('GR-TESTE-I-01-02')).toBeNull()
   })
 
   it('as consultas dos sítios do pacote 8 dão listas vazias', async () => {

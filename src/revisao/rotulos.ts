@@ -1,6 +1,6 @@
 /** Os nomes dos motivos da fila de revisão do pacote (`review_queue.reason`). Puro: sem banco. */
 /** Os motivos da fila de revisão com nome próprio; os outros aparecem pelo motivo, legível. */
-export const ROTULO_DA_PENDENCIA: Record<string, string> = {
+const ROTULOS = {
   citacao_nao_resolvida: 'Citações não resolvidas',
   traducao_termo_alterado: 'Traduções com termo alterado',
   traducao_desatualizada: 'Traduções desatualizadas',
@@ -24,7 +24,27 @@ export const ROTULO_DA_PENDENCIA: Record<string, string> = {
   aparato_divisao_ambigua: 'Aparato do catálogo a conferir',
   aparato_divisao_por_recurso: 'Aparato do catálogo a conferir',
   aparato_campo_suspeito: 'Aparato do catálogo a conferir',
-}
+  // As subcoleções do IPIAO (schema 9; iconodb/groups.py, R_SUB_* e R_ITEM_OUTSIDE/R_BAD_OUTSIDE).
+  subcolecao_sem_titulo_pt: 'Subcoleções sem título em português',
+  subcolecao_sem_objeto: 'Subcoleções sem objeto',
+  subcolecao_intro_invalida: 'Introduções de subcoleção inválidas',
+  subcolecao_secao_orfa: 'Seções de subcoleção sem objeto',
+  subcolecao_grupo_orfao: 'Subcoleções de grupo inexistente',
+  item_fora_de_subcolecao: 'Objetos fora das subcoleções',
+  fora_de_subcolecao_invalido: 'Exceções de subcoleção inválidas',
+} satisfies Record<string, string>
+export const ROTULO_DA_PENDENCIA: Record<string, string> = ROTULOS
+
+/** Os motivos da fila que as subcoleções criam (iconodb/groups.py). */
+export const MOTIVOS_DAS_SUBCOLECOES = [
+  'subcolecao_sem_titulo_pt',
+  'subcolecao_sem_objeto',
+  'subcolecao_intro_invalida',
+  'subcolecao_secao_orfa',
+  'subcolecao_grupo_orfao',
+  'item_fora_de_subcolecao',
+  'fora_de_subcolecao_invalido',
+] as const satisfies readonly (keyof typeof ROTULOS)[]
 
 export function rotuloDaPendencia(motivo: string): string {
   const conhecido = ROTULO_DA_PENDENCIA[motivo]

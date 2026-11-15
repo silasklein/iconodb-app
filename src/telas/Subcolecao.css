@@ -1,0 +1,195 @@
+/*
+ * A página da subcoleção (schema 9; quadro «Subcolecao» do canvas das subcoleções).
+ * O topo é texto (sem capa); a caixa da introdução fica na superfície; a grade, o cabeçalho de seção e as notas
+ * são os do grupo (Grupo.css, Notas.css). No pé, a anterior e a próxima.
+ */
+.subcolecao {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+.subcolecao-alto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 24px 0;
+}
+.subcolecao-volta {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.3em; /* o espaço depois do «‹» (aria-hidden): num flex, o espaço dentro do span some */
+  min-height: var(--alvo-toque);
+  font-size: 15px;
+  color: var(--texto);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.subcolecao-volta:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.subcolecao-etiqueta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--corpo-consulta);
+}
+.subcolecao-alto h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.subcolecao-contagem {
+  font-size: 14px;
+  color: var(--corpo-consulta);
+  font-variant-numeric: tabular-nums;
+}
+
+.subcolecao-introducao {
+  margin: 20px 24px 0;
+  padding: 14px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.subcolecao-introducao-rotulo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--corpo-consulta);
+}
+.subcolecao-introducao-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.subcolecao-introducao-texto p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--corpo-consulta);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.subcolecao-resumo p {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.subcolecao-introducao-texto .introducao-aviso {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.subcolecao-ler {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* A grade é a do grupo; aqui o cabeçalho vem logo depois da introdução. */
+.subcolecao-objetos {
+  margin-top: 24px;
+}
+
+.subcolecao-vizinhas {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 6px 24px max(14px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--filete);
+  font-size: 15px;
+}
+.subcolecao-vizinhas a {
+  display: flex;
+  align-items: center;
+  /* O espaço entre a seta e o texto (o espaço do fim de um item flex some). */
+  column-gap: 0.3em;
+  min-width: 0;
+  min-height: var(--alvo-toque);
+  color: var(--texto);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.subcolecao-vizinhas a:hover .subcolecao-vizinha-texto {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.subcolecao-anterior {
+  grid-column: 1;
+}
+.subcolecao-proxima {
+  grid-column: 2;
+  justify-content: flex-end;
+}
+/* Sozinha no pé, a vizinha usa a largura toda (e corta menos o título). */
+.subcolecao-vizinhas a:only-child {
+  grid-column: 1 / -1;
+}
+.subcolecao-vizinha-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+  .subcolecao {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .subcolecao-alto {
+    max-width: 720px;
+    gap: 14px;
+    padding: 20px 48px 0;
+  }
+  .subcolecao-volta {
+    min-height: var(--alvo-mouse);
+  }
+  .subcolecao-alto h1 {
+    font-size: clamp(36px, 3.4vw, 44px);
+    line-height: 1.12;
+  }
+  .subcolecao-contagem {
+    font-size: 15px;
+  }
+  .subcolecao-introducao {
+    margin: 24px 48px 0;
+    max-width: 720px;
+    padding: 18px 20px;
+  }
+  .subcolecao-introducao-texto p {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .subcolecao-objetos {
+    margin-top: 32px;
+  }
+  .subcolecao-vizinhas {
+    padding: 8px 48px 20px;
+  }
+  .subcolecao-vizinhas a {
+    min-height: var(--alvo-mouse);
+  }
+}

@@ -111,15 +111,15 @@ afterEach(() => {
 describe('lerManifesto', () => {
   it('lê o manifesto do pacote sintético', async () => {
     const m = await lerManifesto(fonteDeTeste())
-    expect(m.schema).toBe(8)
+    expect(m.schema).toBe(9)
     expect(m.publicacoes[0]?.sigla).toBe('TESTE')
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it('aceita os schemas 5, 6, 7 e 8 (Parte 2C, bloco 2): o 8 é o de agora; os outros abrem sem as tabelas novas', async () => {
-    expect(SCHEMA_ESPERADO).toBe(8)
-    expect(SCHEMAS_ACEITOS).toEqual([5, 6, 7, 8])
-    for (const schema of [5, 6, 7, 8]) expect((await lerManifesto(comSchema(fonteDeTeste(), schema))).schema).toBe(schema)
+  it('aceita os schemas 5 a 9 (subcoleções): o 9 é o de agora; os outros abrem sem as tabelas novas', async () => {
+    expect(SCHEMA_ESPERADO).toBe(9)
+    expect(SCHEMAS_ACEITOS).toEqual([5, 6, 7, 8, 9])
+    for (const schema of [5, 6, 7, 8, 9]) expect((await lerManifesto(comSchema(fonteDeTeste(), schema))).schema).toBe(schema)
   })
 
   it('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6, o que está hoje no Dropbox) continua aceito', async () => {
@@ -128,7 +128,7 @@ describe('lerManifesto', () => {
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it.each([4, 9, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
+  it.each([4, 10, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
     const fonte = comSchema(fonteDeTeste(), schema)
     await expect(lerManifesto(fonte)).rejects.toBeInstanceOf(ErroDeSchema)
     await expect(lerManifesto(fonte)).rejects.toThrow(
@@ -189,8 +189,8 @@ describe('pacote com defeito: conferido antes de baixar e da troca', () => {
 })
 
 describe('sincronizarPacote', () => {
-  it('um schema que o app não lê (9) é recusado e nada é baixado nem gravado', async () => {
-    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 9))
+  it('um schema que o app não lê (10) é recusado e nada é baixado nem gravado', async () => {
+    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 10))
     const { armazem, opcoes } = ambiente()
     await expect(sincronizarPacote(fonte, semProgresso, opcoes)).rejects.toBeInstanceOf(ErroDeSchema)
     expect(baixados).toEqual([])

@@ -8,7 +8,7 @@ import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { numeroPtBr } from '../ui/numero'
-import { chaveDaObra, rotuloDaObra } from './obras'
+import { chaveDaObra, rotuloDaObra, tituloDoGrupo } from './obras'
 import './Colecoes.css'
 
 const SEM_PERIODO = 'Sem período'
@@ -108,10 +108,11 @@ export function Colecoes() {
                         </span>
                       )}
                       <span className="colecoes-grupo-texto">
-                        <span className="colecoes-grupo-nome">{g.titulo}</span>
+                        <span className="colecoes-grupo-nome">{tituloDoGrupo(g).texto}</span>
                         <span className="colecoes-grupo-n codigo">
                           {numeroPtBr(g.objetos)}
-                          {computador && <span className="colecoes-unidade"> {g.objetos === 1 ? 'objeto' : 'objetos'}</span>}
+                          {(computador || g.subcolecoes > 0) && <span className="colecoes-unidade"> {g.objetos === 1 ? 'objeto' : 'objetos'}</span>}
+                          {g.subcolecoes > 0 && <span className="colecoes-unidade"> · {plural(g.subcolecoes, 'subcoleção', 'subcoleções')}</span>}
                         </span>
                       </span>
                     </Link>

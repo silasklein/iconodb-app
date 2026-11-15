@@ -13,9 +13,12 @@ import { arquivosDoBanco } from '../banco/arquivos'
  *   lê muda de sentido (`coalesce(i.volume, p.volume)` continua certo);
  * - 8: as tabelas dos sítios (Parte 2C, bloco 2: `sitio_parte`, `sitio_grafia`, `sitio_par_sugerido`) e o redirecionamento
  *   de um sítio do livro para outro (a mescla). Num pacote 5–7 elas faltam e as consultas dão listas vazias: só a camada.
+ * - 9: as subcoleções (decisões 79 e 80): `author_group.parent_id` e `numero`, e a tabela `author_group_passage` com os
+ *   trechos da introdução de cada subcoleção. Num pacote 5–8, nenhuma subcoleção: o grupo, a introdução dele (um trecho)
+ *   e o objeto ficam como antes (src/banco/consultas.ts, `temSubcolecoes`).
  */
-export const SCHEMA_ESPERADO = 8
-export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8]
+export const SCHEMA_ESPERADO = 9
+export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8, 9]
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
 export const MSG_SCHEMA = 'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.'
 

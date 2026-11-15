@@ -8,7 +8,7 @@ import { fundir } from '../usuario/fusao'
 import type { Evento } from '../usuario/eventos'
 import { chaveDoCaso, chaveDoElementoSemRegiao, chaveDoRascunho, chaveDoSitioSolto } from './chave'
 import { autorDaCitacao, casosIguais, idDoGrupo, montarFila, verbetesARever, type EntradaDaFila } from './fila'
-import { rotuloDaPendencia } from './rotulos'
+import { MOTIVOS_DAS_SUBCOLECOES, rotuloDaPendencia } from './rotulos'
 
 const cit = (detalhe: string, id = 'PA-TESTE-0001-cat-1'): LinhaDaFila => ({ tipo: 'citacao_nao_resolvida', entidade: 'passage', entidadeId: id, detalhe, numero: null })
 const sitio = (item: string, numero: string, tipo = 'sitio_nao_normalizado', detalhe = 'x'): LinhaDaFila => ({ tipo, entidade: 'item', entidadeId: item, detalhe, numero })
@@ -329,6 +329,69 @@ describe('nomes em português para os motivos reais (m5)', () => {
     const f = fila([], { linhas: [{ tipo: motivo, entidade: 'item', entidadeId: 'TESTE-0001', detalhe: 'x', numero: 'CA00001' }] })
     expect(f.grupos[0]!.rotulo).toBe(nome)
     expect(f.grupos[0]!.apoio.length).toBeGreaterThan(10)
+  })
+})
+
+describe('as filas das subcoleções (schema 9)', () => {
+  const linha = (tipo: string, entidade: string, entidadeId: string, detalhe = 'x'): LinhaDaFila => ({ tipo, entidade, entidadeId, detalhe, numero: null })
+  const casoUnico = (l: LinhaDaFila, lugares: Map<string, LugarDoCaso> | null = null) => fila([], { linhas: [l], lugares }).grupos[0]!.abertos[0]!
+  const reserva = (motivo: string) => {
+    const legivel = motivo.replace(/_/g, ' ')
+    return legivel.charAt(0).toUpperCase() + legivel.slice(1)
+  }
+
+  it.each([...MOTIVOS_DAS_SUBCOLECOES])('%s tem nome em português (não o de reserva) e texto de apoio', (motivo) => {
+    const nome = rotuloDaPendencia(motivo)
+    expect(nome).not.toBe(reserva(motivo))
+    expect(nome).not.toMatch(/_/)
+    const f = fila([], { linhas: [linha(motivo, 'author_group', 'GR-TESTE-I-01-02')] })
+    expect(f.grupos[0]!.rotulo).toBe(nome)
+    expect(f.grupos[0]!.apoio.length).toBeGreaterThan(10)
+  })
+
+  it('a lista dos motivos é a de iconodb/groups.py (sete)', () => {
+    expect(MOTIVOS_DAS_SUBCOLECOES).toHaveLength(7)
+    expect(rotuloDaPendencia('subcolecao_sem_titulo_pt')).toBe('Subcoleções sem título em português')
+  })
+
+  it("uma fila de subcoleção (entidade 'author_group') abre a subcoleção, com a obra, o número e o título como lugar", () => {
+    const lugares = new Map<string, LugarDoCaso>([
+      ['author_group|GR-TESTE-I-01-02', { itemId: null, numero: null, grupoId: 'GR-TESTE-I-01-02', origem: 'TESTE I · 1.2–1.3 Figuras de prova e sinais de teste' }],
+    ])
+    const c = casoUnico(linha('subcolecao_sem_titulo_pt', 'author_group', 'GR-TESTE-I-01-02', '1.2–1.3: entrada sem `pt`'), lugares)
+    expect(c).toMatchObject({
+      numero: '—',
+      onde: 'TESTE I · 1.2–1.3 Figuras de prova e sinais de teste',
+      abrir: '/grupo/GR-TESTE-I-01-02',
+      acao: { rotulo: 'Abrir a subcoleção', para: '/grupo/GR-TESTE-I-01-02' },
+      deixavel: true,
+    })
+  })
+
+  it("uma fila antiga de grupo (grupo_*) com a entidade 'author_group' abre o grupo", () => {
+    const lugares = new Map<string, LugarDoCaso>([['author_group|GR-TESTE-I-01', { itemId: null, numero: null, grupoId: 'GR-TESTE-I-01', origem: 'TESTE I · Animais de teste e figuras de prova' }]])
+    expect(casoUnico(linha('grupo_sem_periodo_pt', 'author_group', 'GR-TESTE-I-01'), lugares)).toMatchObject({
+      onde: 'TESTE I · Animais de teste e figuras de prova',
+      acao: { rotulo: 'Abrir o grupo', para: '/grupo/GR-TESTE-I-01' },
+    })
+  })
+
+  it("'subgroups_file' (grupo órfão, lista fechada inválida) fica sem lugar: só «Deixar como está»", () => {
+    const c = casoUnico(linha('fora_de_subcolecao_invalido', 'subgroups_file', 'TESTE-0003'), new Map())
+    expect(c).toMatchObject({ numero: '—', abrir: null, acao: null, deixavel: true, onde: 'arquivo das subcoleções TESTE-0003' })
+  })
+
+  it("'subgroups_file' com lugar de item (o item da lista fechada que existe) abre o objeto", () => {
+    const lugares = new Map<string, LugarDoCaso>([['subgroups_file|TESTE-0003', { itemId: 'TESTE-0003', numero: 'CA00003', grupoId: null, origem: 'TESTE I: 3' }]])
+    expect(casoUnico(linha('fora_de_subcolecao_invalido', 'subgroups_file', 'TESTE-0003'), lugares)).toMatchObject({
+      numero: 'CA00003',
+      onde: 'TESTE I: 3 · arquivo das subcoleções',
+      acao: { rotulo: 'Abrir o objeto', para: '/item/CA00003' },
+    })
+  })
+
+  it("um 'author_group' sem lugar (fora do build) diz «grupo», não o nome cru da entidade", () => {
+    expect(casoUnico(linha('grupo_sem_periodo_pt', 'author_group', 'GR-NAO-HA'), new Map()).onde).toBe('grupo GR-NAO-HA')
   })
 })
 

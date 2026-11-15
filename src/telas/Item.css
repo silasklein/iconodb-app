@@ -373,19 +373,6 @@
   }
 }
 
-/*
- * No item do computador, a barra superior fica presa no alto (revisão 1 da Tarefa 10, M1). Antes ela rolava junto e a
- * coluna da imagem e o painel lateral (presos a `top: 0` com a altura da janela menos a barra) deixavam uma faixa de
- * 48 px vazia embaixo, onde ficava o pé do painel ("Registrar hipótese"). Agora os dois ficam presos logo abaixo dela.
- */
-@media (min-width: 768px) {
-  body:has(.item-pc) .barra-superior {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-  }
-}
-
 /* O sítio na ficha (Tarefa 12): o nome de agora, "no livro: …", a marca "excluído" e o botão de trocar. */
 .item-ficha-sitio {
   display: flex;

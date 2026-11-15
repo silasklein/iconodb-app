@@ -137,6 +137,16 @@ describe('buscar() sobre o pacote sintético', () => {
     expect((await buscar('minhas notas', { ...opcoes, escopo: 'colecao' })).total).toBe(0)
   })
 
+  it('escopo "colecao" (pacote 9): o título de uma subcoleção, em português ou em alemão, acha só os objetos dela, sem repetir', async () => {
+    // «1.2–1.3 Figuras de prova e sinais de teste» (Prüfgestalten und Testzeichen) tem só TESTE-0002 (CA00002)
+    expect(numeros(await buscar('sinais', { ...opcoes, escopo: 'colecao' }))).toEqual(['CA00002'])
+    expect(numeros(await buscar('testzeichen', { ...opcoes, escopo: 'colecao' }))).toEqual(['CA00002'])
+    // «1.1 Probetiere»: só TESTE-0001 (CA00001)
+    expect(numeros(await buscar('probetiere', { ...opcoes, escopo: 'colecao' }))).toEqual(['CA00001'])
+    // o título que casa com o grupo e com a subcoleção («figuras de prova») não dobra os objetos
+    expect(numeros(await buscar('figuras de prova', { ...opcoes, escopo: 'colecao' }))).toEqual(['CA00001', 'CA00002', 'CA00003'])
+  })
+
   it('contagens por escopo, para as abas', async () => {
     const r = await buscar('mahtes', opcoes)
     expect(r.contagens.tudo).toBe(3)

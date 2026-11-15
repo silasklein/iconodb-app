@@ -1,0 +1,39 @@
+/* «No livro» (quadro `Objeto`): o rótulo de seção do app e o caminho em links, logo abaixo da ficha. */
+.no-livro {
+  margin: 22px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.no-livro-rotulo {
+  margin: 0;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.no-livro-caminho {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.no-livro-caminho a {
+  color: inherit;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.no-livro-caminho a:hover {
+  text-decoration-color: currentColor;
+}
+.no-livro-sep {
+  color: var(--secundario);
+}
+
+@media (min-width: 768px) {
+  .no-livro {
+    margin: 22px 0 0;
+  }
+}

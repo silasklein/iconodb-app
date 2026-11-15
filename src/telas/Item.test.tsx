@@ -206,9 +206,77 @@ describe('Item', () => {
       abrir('/item/CA00001')
       const nav = await screen.findByRole('navigation', { name: 'Posição no grupo' })
       expect(await within(nav).findByText('1 / 3')).toBeInTheDocument()
-      expect(within(nav).getByRole('link', { name: g.titulo })).toHaveAttribute('href', '/grupo/GR-TESTE-I-01')
+      // com o número do livro, como no «No livro» (decisão 81)
+      expect(within(nav).getByRole('link', { name: `1. ${g.titulo}` })).toHaveAttribute('href', '/grupo/GR-TESTE-I-01')
       expect(within(nav).queryByRole('link', { name: /^Anterior/ })).toBeNull()
       expect(screen.getByRole('link', { name: 'Voltar ao grupo' })).toHaveAttribute('href', '#/grupo/GR-TESTE-I-01')
+    })
+
+    it('sem estado, o grupo sem subcoleções fica sem número na posição', async () => {
+      abrir('/item/CA00004')
+      const nav = await screen.findByRole('navigation', { name: 'Posição no grupo' })
+      expect(within(nav).getByRole('link', { name: 'Selos de prova e padrões denteados' })).toHaveAttribute('href', '/grupo/GR-TESTE-I-02')
+    })
+
+    describe('subcoleções', () => {
+      const SUB = 'GR-TESTE-I-01-02'
+      const daSubcolecao = () => estadoDoGrupo(SUB, 'Figuras de prova e sinais de teste', `/grupo/${SUB}`, true)
+
+      it('vindo da subcoleção: «1 / 1» dentro dela, «Posição na subcoleção» e «Voltar à subcoleção»', async () => {
+        abrir('/item/CA00002', daSubcolecao())
+        const nav = await screen.findByRole('navigation', { name: 'Posição na subcoleção' })
+        expect(await within(nav).findByText('1 / 1')).toBeInTheDocument()
+        expect(within(nav).getByRole('link', { name: 'Figuras de prova e sinais de teste' })).toHaveAttribute('href', `/grupo/${SUB}`)
+        expect(within(nav).queryByRole('link', { name: /^Anterior/ })).toBeNull()
+        expect(within(nav).queryByRole('link', { name: /^Próximo/ })).toBeNull()
+        expect(screen.getByRole('link', { name: 'Voltar à subcoleção' })).toHaveAttribute('href', `#/grupo/${SUB}`)
+        expect(screen.queryByRole('navigation', { name: 'Posição no grupo' })).toBeNull()
+      })
+
+      it('sem estado, o objeto da subcoleção cai no grupo de cima: «2 / 3» em GR-TESTE-I-01', async () => {
+        const g = (await grupo('GR-TESTE-I-01'))!
+        abrir('/item/CA00002')
+        const nav = await screen.findByRole('navigation', { name: 'Posição no grupo' })
+        expect(await within(nav).findByText('2 / 3')).toBeInTheDocument()
+        expect(within(nav).getByRole('link', { name: `1. ${g.titulo}` })).toHaveAttribute('href', '/grupo/GR-TESTE-I-01')
+        expect(screen.getByRole('link', { name: 'Voltar ao grupo' })).toHaveAttribute('href', '#/grupo/GR-TESTE-I-01')
+      })
+
+      it('da busca, o objeto da subcoleção anda na lista da busca, como hoje', async () => {
+        const estado: EstadoVindoDaBusca = { contexto: { tipo: 'lista', ids: ['CA00001', 'CA00002'] }, inicio: 0, total: 2, origem: { rotulo: 'Busca', caminho: '/busca?q=teste' } }
+        abrir('/item/CA00002', estado)
+        const nav = await screen.findByRole('navigation', { name: 'Posição na busca' })
+        expect(await within(nav).findByText('2 / 2')).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: 'Voltar à busca' })).toHaveAttribute('href', '#/busca?q=teste')
+        expect(screen.queryByRole('navigation', { name: 'Posição na subcoleção' })).toBeNull()
+      })
+
+      it('um estado com `subcolecao` que não é `true` vale como o de um grupo', async () => {
+        const estado = { ...daSubcolecao(), origem: { ...daSubcolecao().origem, subcolecao: 'sim' } }
+        abrir('/item/CA00002', estado)
+        expect(await screen.findByRole('navigation', { name: 'Posição no grupo' })).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: 'Voltar ao grupo' })).toBeInTheDocument()
+      })
+
+      it('«No livro» logo abaixo da ficha, com o caminho até a subcoleção; o original alemão troca os títulos', async () => {
+        abrir('/item/CA00002')
+        await titulo()
+        const noLivro = screen.getByRole('region', { name: 'No livro' })
+        const ficha = screen.getByRole('group', { name: 'Ficha' })
+        expect(ficha.compareDocumentPosition(noLivro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+        expect(noLivro.compareDocumentPosition(screen.getByRole('region', { name: 'Imagem' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+        expect(within(noLivro).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(['/colecoes?obra=TESTE-I', '/grupo/GR-TESTE-I-01', `/grupo/${SUB}`])
+        expect(within(noLivro).getByRole('link', { name: '1.2–1.3 Figuras de prova e sinais de teste' })).toBeInTheDocument()
+        await userEvent.click(await pronto())
+        expect(within(noLivro).getByRole('link', { name: '1.2–1.3 Prüfgestalten und Testzeichen' })).toHaveAttribute('lang', 'de')
+        expect(within(noLivro).getByRole('link', { name: '1. Testtiere und Probefiguren' })).toBeInTheDocument()
+      })
+
+      it('o objeto direto no grupo: «No livro» com dois níveis', async () => {
+        abrir('/item/CA00003')
+        await titulo()
+        expect(within(screen.getByRole('region', { name: 'No livro' })).getAllByRole('link')).toHaveLength(2)
+      })
     })
 
     it('da busca: a posição é início + posição na janela, de total; Voltar volta à busca', async () => {

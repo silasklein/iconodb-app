@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
-import { usarMotor } from '../banco/cliente'
+import { executar, usarMotor } from '../banco/cliente'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Colecoes } from './Colecoes'
 
@@ -47,6 +47,29 @@ describe('Coleções', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Época de transição (fase de teste)' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Minhas coleções' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'TESTE I' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('a linha do grupo com subcoleções diz «3 objetos · 2 subcoleções» também no celular; a do grupo sem subcoleções fica só com o número', async () => {
+    abrir('/colecoes?obra=TESTE-I')
+    const g1 = await screen.findByRole('link', { name: /Animais de teste e figuras de prova/ })
+    expect(g1.querySelector('.colecoes-grupo-n')).toHaveTextContent(/^3 objetos · 2 subcoleções$/)
+    const g2 = screen.getByRole('link', { name: /Selos de prova e padrões denteados/ })
+    expect(g2.querySelector('.colecoes-grupo-n')).toHaveTextContent(/^3$/)
+    expect(g2).not.toHaveTextContent(/subcole/)
+    // decisão 81: o número do livro antes do título só no grupo com subcoleções
+    expect(g1.querySelector('.colecoes-grupo-nome')).toHaveTextContent(/^1\. Animais de teste e figuras de prova$/)
+    expect(g2.querySelector('.colecoes-grupo-nome')).toHaveTextContent(/^Selos de prova e padrões denteados$/)
+    // As subcoleções não viram linhas: só os dois grupos de cima.
+    expect(screen.queryByRole('link', { name: /Animais de prova|Figuras de prova e sinais/ })).not.toBeInTheDocument()
+  })
+
+  it('no computador a linha diz «3 objetos · 2 subcoleções», e o total da aba não conta as subcoleções', async () => {
+    instalarMatchMedia(1280)
+    abrir('/colecoes?obra=TESTE-I')
+    const g1 = await screen.findByRole('link', { name: /Animais de teste e figuras de prova/ })
+    expect(g1.querySelector('.colecoes-grupo-n')).toHaveTextContent(/^3 objetos · 2 subcoleções$/)
+    expect(g1.querySelector('.colecoes-grupo-nome')).toHaveTextContent(/^1\. Animais de teste e figuras de prova$/)
+    expect(screen.getByText('2 grupos · 6 objetos')).toBeInTheDocument()
   })
 
   it('tocar na aba da obra troca o painel (e o endereço guarda a aba)', async () => {
@@ -119,5 +142,27 @@ describe('Coleções', () => {
     } finally {
       usarMotor(await bancoDeTeste())
     }
+  })
+})
+
+describe('Coleções: uma subcoleção só (banco mudado no teste)', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    await executar("DELETE FROM pub_TESTE.author_group_item WHERE group_id = 'GR-TESTE-I-01-02'")
+    await executar("DELETE FROM pub_TESTE.author_group_passage WHERE group_id = 'GR-TESTE-I-01-02'")
+    await executar("DELETE FROM pub_TESTE.author_group WHERE id = 'GR-TESTE-I-01-02'")
+  })
+  afterAll(() => usarMotor(null))
+  afterEach(() => instalarMatchMedia(375))
+
+  it('o singular: «3 objetos · 1 subcoleção», e o total da aba não muda', async () => {
+    abrir('/colecoes?obra=TESTE-I')
+    const g1 = await screen.findByRole('link', { name: /Animais de teste e figuras de prova/ })
+    expect(g1.querySelector('.colecoes-grupo-n')).toHaveTextContent(/^3 objetos · 1 subcoleção$/)
+    cleanup()
+    instalarMatchMedia(1280)
+    abrir('/colecoes?obra=TESTE-I')
+    await screen.findByRole('link', { name: /Animais de teste e figuras de prova/ })
+    expect(screen.getByText('2 grupos · 6 objetos')).toBeInTheDocument()
   })
 })

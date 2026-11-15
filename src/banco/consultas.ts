@@ -6,9 +6,10 @@
  * tabelas de publicação são lidas por UNION ALL sobre todos os esquemas abertos.
  * Os deslocamentos de texto ficam em code points (ver tipos.ts).
  */
-import { executar, publicacoesAbertas, type Parametro, type PublicacaoAberta } from './cliente'
+import { aoReabrir, executar, geracaoDoBanco, publicacoesAbertas, type Parametro, type PublicacaoAberta } from './cliente'
 import { chaveDaFonte, formatarReferencias, type ReferenciaDeFonte } from './referencias'
 import { tradicaoValida } from '../sitios/modelo'
+import { tituloDoGrupo } from '../ui/tituloDoGrupo'
 import type { GrafiaDoPacote, ParSugerido } from '../sitios/resolucao'
 import {
   NIVEIS,
@@ -28,6 +29,7 @@ import {
   type ItemDetalhe,
   type Leitura,
   type Medida,
+  type NoLivro,
   type ModoDeExibicao,
   type Numero,
   type ObjetoResumo,
@@ -40,6 +42,7 @@ import {
   type Sitio,
   type SitioDoItem,
   type SitioResumo,
+  type SubcolecaoResumo,
   type Termo,
   type TextoDaIntroducao,
   type Verbete,
@@ -442,6 +445,8 @@ export async function lugaresDosCasos(pares: readonly { entidade: string; entida
   await consultar('passage', passagens, (esq) => `SELECT passage_id AS entity_id, min(item_id) AS item_id FROM ${esq}.passage_item WHERE passage_id IN ${EM_IDS} GROUP BY passage_id`)
   await consultar('image', por('image'), (esq) => `SELECT id AS entity_id, item_id FROM ${esq}.image WHERE id IN ${EM_IDS}`)
   await consultar('bib_ref', por('bib_ref'), (esq) => `SELECT CAST(id AS TEXT) AS entity_id, item_id FROM ${esq}.bib_ref WHERE CAST(id AS TEXT) IN ${EM_IDS}`)
+  // `fora_de_subcolecao_invalido` (entity 'subgroups_file') cita um item: quando ele existe, o caso abre o objeto.
+  await consultar('subgroups_file', por('subgroups_file'), (esq) => `SELECT id AS entity_id, id AS item_id FROM ${esq}.item WHERE id IN ${EM_IDS}`)
   // Um campo do catálogo é `<item>#<categoria>`: o item é o que vem antes do `#`.
   for (const campo of por('catalog_field')) paraItem.set(`catalog_field|${campo}`, campo.split('#')[0]!)
   await consultar(
@@ -456,14 +461,58 @@ export async function lugaresDosCasos(pares: readonly { entidade: string; entida
     for (const l of await executar<L>(pubs.map((p) => SQL_ITEM(p.esquema)).join(' UNION ALL '), { $ids: ids(itens) })) origens.set(s(l.id)!, origemDe(l))
     for (const [chave, itemId] of paraItem) saida.set(chave, { itemId, numero: numeros.get(itemId) ?? itemId, grupoId: null, origem: origens.get(itemId) ?? itemId })
   }
-  // Os trechos sem item: a introdução de um grupo da autora.
+  // Os trechos sem item: a introdução de um grupo da autora ou, no schema 9, de uma subcoleção.
   const soltas = passagens.filter((p) => !saida.has(`passage|${p}`))
+  const sub = soltas.length > 0 || por('author_group').length > 0 ? await temSubcolecoes() : false
   if (soltas.length > 0) {
-    const sql = pubs.map((p) => `SELECT intro_passage_id AS entity_id, id AS grupo, publication, volume FROM ${p.esquema}.author_group WHERE intro_passage_id IN ${EM_IDS}`).join(' UNION ALL ')
-    for (const l of await executar<L>(sql, { $ids: ids(soltas) })) {
-      const chave = `passage|${s(l.entity_id)}`
-      if (!saida.has(chave)) saida.set(chave, { itemId: null, numero: null, grupoId: s(l.grupo)!, origem: `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim() + ' · introdução' })
+    for (const [trecho, g] of await gruposDosTrechos(pubs, soltas, sub)) {
+      const obra = `${s(g.publication) ?? ''} ${s(g.volume) ?? ''}`.trim()
+      // O número só na subcoleção («TESTE I · 1.1 · introdução»): o do grupo de cima (decisão 81) não entra.
+      const numero = n(g.e_sub) ? s(g.numero) : null
+      saida.set(`passage|${trecho}`, { itemId: null, numero: null, grupoId: s(g.grupo)!, origem: [obra, numero, 'introdução'].filter(Boolean).join(' · ') })
     }
+  }
+  // Um grupo da autora (as filas grupo_* e subcolecao_*): ele mesmo, com «<obra> · <número> <título>» na subcoleção e
+  // «<obra> · <título do grupo>» no de cima (`tituloDoGrupo`: «1. <título>» com subcoleções, decisão 81).
+  const grupos = por('author_group')
+  if (grupos.length > 0) {
+    const sql = pubs
+      .map(
+        (p) =>
+          `SELECT g.id, g.publication, g.volume, g.title_pt, g.title_de, ${SQL_COLUNAS_DA_SUBCOLECAO(p.esquema, sub)} FROM ${p.esquema}.author_group g WHERE g.id IN ${EM_IDS}`,
+      )
+      .join(' UNION ALL ')
+    for (const l of await executar<L>(sql, { $ids: ids(grupos) })) {
+      const obra = `${s(l.publication) ?? ''} ${s(l.volume) ?? ''}`.trim()
+      const titulo = rotuloDoGrupoDaLinha(l)
+      saida.set(`author_group|${s(l.id)}`, { itemId: null, numero: null, grupoId: s(l.id)!, origem: [obra, titulo].filter(Boolean).join(' · ') })
+    }
+  }
+  return saida
+}
+
+/**
+ * O grupo de cada trecho de introdução: o `intro_passage_id` e, no schema 9, as linhas de `author_group_passage`. Um trecho
+ * pode estar nos dois (no I-13, I-15, II-02, II-03, III-02 e III-03 o intro do grupo de cima é o 1.º trecho da 1.1): a
+ * subcoleção ganha do grupo de cima, `author_group_passage` ganha do `intro_passage_id`, e depois o menor id — nunca a ordem
+ * em que o `UNION ALL` devolve as linhas.
+ */
+async function gruposDosTrechos(pubs: readonly { esquema: string }[], trechos: string[], sub: boolean): Promise<Map<string, L>> {
+  const colunas = `g.id AS grupo, g.publication, g.volume, ${sub ? `g.numero, (g.parent_id IS NOT NULL) AS e_sub` : 'NULL AS numero, 0 AS e_sub'}`
+  const sql = pubs
+    .flatMap((p) => [
+      `SELECT g.intro_passage_id AS trecho, ${colunas}, 1 AS via FROM ${p.esquema}.author_group g WHERE g.intro_passage_id IN ${EM_IDS}`,
+      ...(sub
+        ? [`SELECT ap.passage_id AS trecho, ${colunas}, 0 AS via FROM ${p.esquema}.author_group_passage ap
+            JOIN ${p.esquema}.author_group g ON g.id = ap.group_id WHERE ap.passage_id IN ${EM_IDS}`]
+        : []),
+    ])
+    .join(' UNION ALL ')
+  const melhor = (a: L, b: L) => (n(b.e_sub) ?? 0) - (n(a.e_sub) ?? 0) || (n(a.via) ?? 0) - (n(b.via) ?? 0) || (s(a.grupo)! < s(b.grupo)! ? -1 : 1)
+  const saida = new Map<string, L>()
+  for (const l of await executar<L>(sql, { $ids: ids(trechos) })) {
+    const atual = saida.get(s(l.trecho)!)
+    if (!atual || melhor(l, atual) < 0) saida.set(s(l.trecho)!, l)
   }
   return saida
 }
@@ -474,10 +523,69 @@ export async function verbetesAReverNoPacote(): Promise<{ id: string; original: 
   return linhas.map((l) => ({ id: s(l.id)!, original: s(l.pt) ?? s(l.de) ?? s(l.id)! }))
 }
 
-const SQL_GRUPO = (esq: string, onde: string) => `
+// ---------------------------------------------------------------------------
+// Subcoleções (schema 9, decisões 79 e 80)
+// ---------------------------------------------------------------------------
+
+let subcolecoesGuardado: { motor: number; pedido: Promise<boolean> } | null = null
+aoReabrir(() => {
+  subcolecoesGuardado = null
+})
+
+/**
+ * O pacote tem subcoleções? (Schema 9: a coluna `author_group.parent_id` e a tabela `author_group_passage`, olhadas no
+ * esquema da primeira publicação; todas vêm do mesmo `app-export`.) Num pacote 5–8, não: as consultas leem os grupos e a
+ * introdução como antes, sem citar as colunas que faltam. Uma vez por pacote aberto.
+ */
+async function temSubcolecoes(): Promise<boolean> {
+  const motor = geracaoDoBanco()
+  if (subcolecoesGuardado?.motor === motor) return subcolecoesGuardado.pedido
+  const pedido = (async () => {
+    const [pub] = await publicacoesAbertas()
+    if (!pub) return false
+    const [l] = await executar<L>(
+      `SELECT (SELECT count(*) FROM pragma_table_info('author_group', $esq) WHERE name = 'parent_id')
+            + (SELECT count(*) FROM ${pub.esquema}.sqlite_master WHERE type = 'table' AND name = 'author_group_passage') AS n`,
+      { $esq: pub.esquema },
+    )
+    return n(l?.n) === 2
+  })()
+  const entrada = { motor, pedido }
+  subcolecoesGuardado = entrada
+  pedido.catch(() => {
+    if (subcolecoesGuardado === entrada) subcolecoesGuardado = null
+  })
+  return pedido
+}
+
+/**
+ * As colunas de um grupo da autora que dizem se é subcoleção (`g.parent_id`), o `g.numero` e quantas subcoleções ele tem
+ * (`subcolecoes`), lidas de `g`; num pacote 5–8 (`sub` falso), nulas e 0, sem citar colunas que não existem.
+ */
+const SQL_COLUNAS_DA_SUBCOLECAO = (esq: string, sub: boolean) =>
+  sub
+    ? `g.parent_id, g.numero, (SELECT count(*) FROM ${esq}.author_group f WHERE f.parent_id = g.id) AS subcolecoes`
+    : 'NULL AS parent_id, NULL AS numero, 0 AS subcolecoes'
+
+/**
+ * O rótulo de um grupo da autora numa linha com `title_pt`, `title_de` e as colunas de `SQL_COLUNAS_DA_SUBCOLECAO`, igual na
+ * origem dos casos da Revisão e no rótulo das notas: a subcoleção com o seu número antes («1.2–1.3 <título>»); o grupo de
+ * cima por `tituloDoGrupo` («1. <título>» com subcoleções, decisão 81). null sem título.
+ */
+function rotuloDoGrupoDaLinha(l: L): string | null {
+  const titulo = s(l.title_pt) ?? s(l.title_de)
+  if (!titulo) return null
+  if (s(l.parent_id)) return [s(l.numero), titulo].filter(Boolean).join(' ')
+  return tituloDoGrupo({ titulo, tituloDe: s(l.title_de) ?? titulo, numero: s(l.numero), paiId: null, subcolecoes: n(l.subcolecoes) ?? 0 }).texto
+}
+
+const SQL_OBJETOS_DO_GRUPO = (esq: string) => `(SELECT count(DISTINCT coalesce(om.object_id, gi.item_id)) FROM ${esq}.author_group_item gi
+       LEFT JOIN main.object_member om ON om.item_id = gi.item_id WHERE gi.group_id = g.id)`
+
+const SQL_GRUPO = (esq: string, onde: string, sub: boolean) => `
   SELECT g.id, g.publication, g.volume, g.ordinal, g.path, g.title_de, g.title_pt, g.period_pt, g.intro_passage_id,
-    (SELECT count(DISTINCT coalesce(om.object_id, gi.item_id)) FROM ${esq}.author_group_item gi
-       LEFT JOIN main.object_member om ON om.item_id = gi.item_id WHERE gi.group_id = g.id) AS objetos,
+    ${SQL_COLUNAS_DA_SUBCOLECAO(esq, sub)},
+    ${SQL_OBJETOS_DO_GRUPO(esq)} AS objetos,
     (SELECT count(*) FROM ${esq}.author_group_item gi JOIN ${esq}.image im ON im.item_id = gi.item_id
      WHERE gi.group_id = g.id) AS imagens,
     (SELECT count(*) FROM ${esq}.hypothesis h
@@ -505,14 +613,19 @@ function grupoDe(l: L): Grupo {
     imagens: n(l.imagens) ?? 0,
     hipoteses: n(l.hipoteses) ?? 0,
     capa: capa ? { miniatura: capa[0], display_mode: capa[1] as ModoDeExibicao | null } : null,
+    paiId: s(l.parent_id),
+    numero: s(l.numero),
+    subcolecoes: n(l.subcolecoes) ?? 0,
   }
 }
 
-/** Os grupos da obra (todos, ou só os de uma publicação), na ordem do livro. */
+/** Os grupos de cima da obra (todos, ou só os de uma publicação), na ordem do livro. Nunca uma subcoleção (Foco 5). */
 export async function grupos(publicacao?: string): Promise<Grupo[]> {
   const pubs = await publicacoesAbertas()
   const ordemPub = new Map(pubs.map((p, i) => [p.sigla, i]))
-  const linhas = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, '($pub IS NULL OR g.publication = $pub)'), { $pub: publicacao ?? null })
+  const sub = await temSubcolecoes()
+  const onde = `($pub IS NULL OR g.publication = $pub)${sub ? ' AND g.parent_id IS NULL' : ''}`
+  const linhas = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, onde, sub), { $pub: publicacao ?? null })
   return linhas
     .map(grupoDe)
     .sort(
@@ -536,19 +649,72 @@ const SQL_TRECHO = (esq: string) => `
   SELECT p.id, p.text, r.texto, r.termos FROM ${esq}.passage p
   LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id WHERE p.id = $id`
 
+const textoDoTrecho = (l: L): TextoDaIntroducao => ({ id: s(l.id)!, texto: s(l.texto), original: s(l.text) ?? '', termos: termos(l.termos) })
+
 async function trecho(id: string): Promise<TextoDaIntroducao | null> {
   const [l] = await linhasPorPublicacao(SQL_TRECHO, { $id: id })
-  return l ? { id: s(l.id)!, texto: s(l.texto), original: s(l.text) ?? '', termos: termos(l.termos) } : null
+  return l ? textoDoTrecho(l) : null
 }
 
+/**
+ * Os trechos da introdução do grupo, em ordem: as linhas de `author_group_passage` (schema 9), se a tabela existe e tem
+ * linhas do grupo; senão o `intro_passage_id` (o grupo de cima, e todo grupo num pacote 5–8); [] sem introdução.
+ */
+async function trechosDaIntroducao(id: string): Promise<TextoDaIntroducao[]> {
+  if (await temSubcolecoes()) {
+    const linhas = await linhasPorPublicacao(
+      (esq) => `SELECT ap.ordinal, p.id, p.text, r.texto, r.termos FROM ${esq}.author_group_passage ap
+                JOIN ${esq}.passage p ON p.id = ap.passage_id
+                LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id WHERE ap.group_id = $id`,
+      { $id: id },
+    )
+    if (linhas.length > 0) return linhas.sort((x, y) => (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0)).map(textoDoTrecho)
+  }
+  const [g] = await linhasPorPublicacao((esq) => `SELECT intro_passage_id FROM ${esq}.author_group WHERE id = $id`, { $id: id })
+  const unico = s(g?.intro_passage_id)
+  const t = unico ? await trecho(unico) : null
+  return t ? [t] : []
+}
+
+/** As subcoleções do grupo `pai`, na ordem do sumário. [] num pacote 5–8. */
+async function subcolecoesDe(pai: string): Promise<SubcolecaoResumo[]> {
+  if (!(await temSubcolecoes())) return []
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT g.id, g.numero, g.title_pt, g.title_de, g.ordinal, ${SQL_OBJETOS_DO_GRUPO(esq)} AS objetos
+              FROM ${esq}.author_group g WHERE g.parent_id = $pai`,
+    { $pai: pai },
+  )
+  return linhas
+    .sort((x, y) => (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0))
+    .map((l) => ({ id: s(l.id)!, numero: s(l.numero) ?? '', titulo: s(l.title_pt) ?? s(l.title_de)!, tituloDe: s(l.title_de)!, objetos: n(l.objetos) ?? 0 }))
+}
+
+/** O grupo ou a subcoleção: a introdução (todos os trechos), os objetos e, numa subcoleção, o pai, a posição e as vizinhas. */
 export async function grupo(id: string): Promise<GrupoDetalhe | null> {
-  const [l] = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, 'g.id = $id'), { $id: id })
+  const sub = await temSubcolecoes()
+  const [l] = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, 'g.id = $id', sub), { $id: id })
   if (!l) return null
   const g = grupoDe(l)
+  const [introducao, itens, subcolecoes, irmas, paiL] = await Promise.all([
+    trechosDaIntroducao(id),
+    itensDoGrupo(id).then((lista) => resumosDosItens(lista, 'dada')),
+    g.subcolecoes > 0 ? subcolecoesDe(id) : Promise.resolve([]),
+    g.paiId ? subcolecoesDe(g.paiId) : Promise.resolve([]),
+    g.paiId
+      ? linhasPorPublicacao((esq) => `SELECT id, title_pt, title_de, numero FROM ${esq}.author_group WHERE id = $pai`, { $pai: g.paiId })
+      : Promise.resolve([]),
+  ])
+  const p = paiL[0]
+  const i = irmas.findIndex((x) => x.id === id)
   return {
     ...g,
-    introducao: g.introducaoId ? await trecho(g.introducaoId) : null,
-    itens: await resumosDosItens(await itensDoGrupo(id), 'dada'),
+    introducao,
+    itens,
+    subcolecoes,
+    pai: p ? { id: s(p.id)!, titulo: s(p.title_pt) ?? s(p.title_de)!, tituloDe: s(p.title_de)!, numero: s(p.numero), subcolecoes: irmas.length } : null,
+    posicao: i >= 0 ? { n: i + 1, total: irmas.length } : null,
+    anterior: i > 0 ? irmas[i - 1]! : null,
+    proxima: i >= 0 ? (irmas[i + 1] ?? null) : null,
   }
 }
 
@@ -570,6 +736,22 @@ export async function vizinhos(numero: string, contexto: ContextoDeNavegacao): P
 // ---------------------------------------------------------------------------
 // Item
 // ---------------------------------------------------------------------------
+
+/** A chave de ordem de uma entrada de «No livro». */
+export interface ChaveDoNoLivro {
+  /** A posição da obra no manifesto. */
+  obra: number
+  volume: string
+  /** O ordinal do grupo de cima: a ordem de leitura do livro, que segue os períodos. */
+  grupo: number
+  /** O ordinal da subcoleção no grupo; 0 sem subcoleção (antes das subcoleções do mesmo grupo). */
+  subcolecao: number
+}
+
+/** A ordem fixa de «No livro»: obra › volume › grupo (e, com ele, o período) › subcoleção. O volume como em `grupos()`. */
+export function compararNoLivro(a: ChaveDoNoLivro, b: ChaveDoNoLivro): number {
+  return a.obra - b.obra || a.volume.localeCompare(b.volume) || a.grupo - b.grupo || a.subcolecao - b.subcolecao
+}
 
 /** Os itens-membros do objeto (pelo número dele ou pelo id de um dos seus itens), na ordem das fontes. */
 async function membros(numeroOuItem: string): Promise<{ numero: Numero; itens: L[] } | null> {
@@ -594,6 +776,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
   const p = { $ids: ids(idsDosItens) }
   const origemPorItem = new Map(m.itens.map((l) => [s(l.id)!, origemDe(l)]))
 
+  const sub = await temSubcolecoes()
   const [imagens, datacoes, afirmacoes, campos, passagens, paralelosL, bib, gruposL] = await Promise.all([
     linhasPorPublicacao((esq) => `SELECT * FROM ${esq}.image WHERE item_id IN ${EM_IDS}`, p),
     linhasPorPublicacao(
@@ -632,7 +815,9 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
       p,
     ),
     linhasPorPublicacao(
-      (esq) => `SELECT gi.item_id, g.id, g.publication, g.volume, g.ordinal, coalesce(g.title_pt, g.title_de) AS titulo
+      (esq) => `SELECT gi.item_id, g.id, g.publication, g.volume, g.ordinal, g.period_pt, g.title_de,
+                  coalesce(g.title_pt, g.title_de) AS titulo,
+                  ${SQL_COLUNAS_DA_SUBCOLECAO(esq, sub)}
                 FROM ${esq}.author_group_item gi JOIN ${esq}.author_group g ON g.id = gi.group_id
                 WHERE gi.item_id IN ${EM_IDS}`,
       p,
@@ -754,10 +939,34 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     }
   })
 
+  // Os grupos de cima (nunca uma subcoleção) e «No livro»: cada grupo de cima com a subcoleção do mesmo item, se há.
+  const deCima = gruposL.filter((l) => l.parent_id == null)
   const vistosGrupos = new Set<string>()
-  const gruposDoObjeto = gruposL
+  const gruposDoObjeto = deCima
     .filter((l) => !vistosGrupos.has(s(l.id)!) && vistosGrupos.add(s(l.id)!))
     .map((l) => ({ id: s(l.id)!, titulo: s(l.titulo)! }))
+  const ordemDaObra = new Map((await publicacoesAbertas()).map((x, i) => [x.sigla, i]))
+  const vistosNoLivro = new Set<string>()
+  const noLivroComChave: { chave: ChaveDoNoLivro; lugar: NoLivro }[] = []
+  for (const l of deCima) {
+    const sc = gruposL.find((x) => x.parent_id === l.id && x.item_id === l.item_id)
+    const vista = `${s(l.id)}|${s(sc?.id) ?? ''}`
+    if (vistosNoLivro.has(vista)) continue
+    vistosNoLivro.add(vista)
+    const publicacao = s(l.publication)!
+    const volume = s(l.volume) ?? ''
+    noLivroComChave.push({
+      chave: { obra: ordemDaObra.get(publicacao) ?? 99, volume, grupo: n(l.ordinal) ?? 0, subcolecao: sc ? (n(sc.ordinal) ?? 0) : 0 },
+      lugar: {
+        publicacao,
+        volume,
+        periodo: s(l.period_pt),
+        grupo: { id: s(l.id)!, titulo: s(l.titulo)!, tituloDe: s(l.title_de)!, numero: s(l.numero), subcolecoes: n(l.subcolecoes) ?? 0 },
+        subcolecao: sc ? { id: s(sc.id)!, numero: s(sc.numero) ?? '', titulo: s(sc.titulo)!, tituloDe: s(sc.title_de)! } : null,
+      },
+    })
+  }
+  const noLivro = noLivroComChave.sort((x, y) => compararNoLivro(x.chave, y.chave)).map((x) => x.lugar)
 
   return {
     numero: m.numero,
@@ -808,6 +1017,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
       }),
     ),
     grupos: gruposDoObjeto,
+    noLivro,
   }
 }
 
@@ -1383,6 +1593,7 @@ export async function alvosDoPacote(refs: readonly string[]): Promise<Map<string
   const achados = new Map<string, AlvoDoPacote>()
   if (unicos.length === 0) return achados
   const p = { $ids: ids(unicos) }
+  const sub = await temSubcolecoes()
   const [verbetesL, obrasL, objetosL, sitiosL, gruposL] = await Promise.all([
     executar<L>(`SELECT id, coalesce(pt, de, id) AS rotulo FROM main.glossary_entry WHERE id IN ${EM_IDS}`, p),
     executar<L>(`SELECT id, csl_json, short_cites FROM main.bib_entry WHERE id IN ${EM_IDS}`, p),
@@ -1392,7 +1603,10 @@ export async function alvosDoPacote(refs: readonly string[]): Promise<Map<string
                        LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id WHERE '${sigla}-' || st.id IN ${EM_IDS}`,
       p,
     ),
-    linhasPorPublicacao((esq) => `SELECT id, coalesce(title_pt, title_de, id) AS rotulo FROM ${esq}.author_group WHERE id IN ${EM_IDS}`, p),
+    linhasPorPublicacao(
+      (esq) => `SELECT g.id, g.title_pt, g.title_de, ${SQL_COLUNAS_DA_SUBCOLECAO(esq, sub)} FROM ${esq}.author_group g WHERE g.id IN ${EM_IDS}`,
+      p,
+    ),
   ])
   for (const l of verbetesL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'verbete', rotulo: s(l.rotulo)!, codigo: null })
   for (const l of obrasL) {
@@ -1409,7 +1623,11 @@ export async function alvosDoPacote(refs: readonly string[]): Promise<Map<string
     }
   }
   for (const l of sitiosL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'sitio', rotulo: s(l.rotulo)!, codigo: null })
-  for (const l of gruposL) achados.set(s(l.id)!, { ref: s(l.id)!, tipo: 'grupo', rotulo: s(l.rotulo)!, codigo: null })
+  // O rótulo do grupo como nas telas e na origem dos casos da Revisão (`rotuloDoGrupoDaLinha`).
+  for (const l of gruposL) {
+    const id = s(l.id)!
+    achados.set(id, { ref: id, tipo: 'grupo', rotulo: rotuloDoGrupoDaLinha(l) ?? id, codigo: null })
+  }
   return achados
 }
 

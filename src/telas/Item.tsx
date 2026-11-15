@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
-import { estadoDoGrupo, type EstadoDeOrigem } from '../app/origem'
+import { estadoDoGrupo, type EstadoDeOrigem, type EstadoVindoDoGrupo } from '../app/origem'
 import { useAtalhos } from '../app/useAtalhos'
 import { elementosDoObjeto, fontesDosObjetos, item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
 import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
@@ -12,6 +12,7 @@ import { acharLinks } from '../item/links'
 import { trechosEmUtf16 } from '../item/offsets'
 import { PainelHipotese, type OrdemNoTexto } from '../item/PainelHipotese'
 import { LARGURA_DO_PAINEL_LATERAL } from '../item/CascaDoPainel'
+import { NoLivro } from '../item/NoLivro'
 import { semPonto, textoDaData } from '../item/ficha'
 import { useResumoDasHipoteses } from '../item/resumoDasHipoteses'
 import { Bibliografia, Catalogo, contarHipoteses, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
@@ -54,6 +55,7 @@ import { LeituraSkc } from '../objetos-skc/LeituraSkc'
 import { useNumeracao } from '../objetos-skc/atual'
 import { useResolucaoDoObjeto } from '../objetos-skc/resolucao'
 import { textoDosNumerosNasFontes } from '../objetos-skc/numerosNasFontes'
+import { tituloDoGrupo } from '../ui/tituloDoGrupo'
 import '../imagens-usuario/MarcaSkc.css'
 import './Item.css'
 
@@ -62,7 +64,11 @@ function lerEstado(state: unknown): EstadoDeOrigem | null {
   const e = state as Partial<EstadoDeOrigem> | null
   if (!e || typeof e !== 'object' || !e.contexto || !e.origem) return null
   // Sem `imagemAberta` (a imagem do visualizador não vai junto para outro item).
-  if (e.contexto.tipo === 'grupo' && typeof e.contexto.id === 'string') return semImagemAberta(e) as EstadoDeOrigem
+  if (e.contexto.tipo === 'grupo' && typeof e.contexto.id === 'string') {
+    // `origem.subcolecao` só vale como `true` (veio de uma subcoleção); qualquer outro valor é o estado de um grupo.
+    const { subcolecao, ...origem } = (e as EstadoVindoDoGrupo).origem
+    return semImagemAberta({ ...e, origem: subcolecao === true ? { ...origem, subcolecao } : origem }) as EstadoDeOrigem
+  }
   if (e.contexto.tipo === 'lista' && Array.isArray(e.contexto.ids)) return semImagemAberta(e) as EstadoDeOrigem
   return null
 }
@@ -140,6 +146,8 @@ interface Posicao {
   tipo: ContextoDeNavegacao['tipo']
   /** A origem é uma coleção SKC (a lista que o item recebeu é a ordem dela). */
   colecao: boolean
+  /** A origem é uma subcoleção (o contexto é ela, não o grupo de cima). */
+  subcolecao: boolean
   texto: string | null
   anterior: string | null
   proximo: string | null
@@ -175,7 +183,9 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
   // Contexto: o do estado (Busca ou Grupo) ou, sem estado, o primeiro grupo do objeto.
   const estado = lerEstado(location.state)
   const primeiro = d.grupos[0] ?? null
-  const adiante = estado ?? (primeiro ? estadoDoGrupo(primeiro.id, primeiro.titulo, `/grupo/${encodeURIComponent(primeiro.id)}`) : null)
+  // O título com o número do livro (decisão 81): o grupo de `noLivro` traz `numero` e `subcolecoes`.
+  const tituloDoPrimeiro = primeiro ? tituloDoGrupo(d.noLivro.find((l) => l.grupo.id === primeiro.id)?.grupo ?? { ...primeiro, tituloDe: primeiro.titulo }).texto : ''
+  const adiante = estado ?? (primeiro ? estadoDoGrupo(primeiro.id, tituloDoPrimeiro, `/grupo/${encodeURIComponent(primeiro.id)}`) : null)
   const contexto = adiante?.contexto ?? null
   const chaveDoContexto = !contexto ? '' : contexto.tipo === 'grupo' ? `g:${contexto.id}` : `l:${contexto.ids.length}:${contexto.ids[0]}:${contexto.ids.at(-1)}`
   const viz = useCarregar(() => (contexto ? vizinhos(d.numero, contexto) : Promise.resolve(null)), `${d.numero}|${chaveDoContexto}`)
@@ -185,6 +195,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     caminho: adiante.origem.caminho,
     tipo: adiante.contexto.tipo,
     colecao: 'colecao' in adiante.origem && adiante.origem.colecao === true,
+    subcolecao: 'subcolecao' in adiante.origem && adiante.origem.subcolecao === true,
     texto: !v ? null : 'inicio' in adiante ? `${adiante.inicio + v.posicao} / ${adiante.total}` : `${v.posicao} / ${v.total}`,
     anterior: v?.anterior ?? null,
     proximo: v?.proximo ?? null,
@@ -193,7 +204,13 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     ? { href: '#/colecoes', rotulo: 'Voltar às coleções' }
     : {
         href: `#${adiante.origem.caminho}`,
-        rotulo: posicao?.colecao ? 'Voltar à coleção' : adiante.contexto.tipo === 'lista' ? 'Voltar à busca' : 'Voltar ao grupo',
+        rotulo: posicao?.colecao
+          ? 'Voltar à coleção'
+          : adiante.contexto.tipo === 'lista'
+            ? 'Voltar à busca'
+            : posicao?.subcolecao
+              ? 'Voltar à subcoleção'
+              : 'Voltar ao grupo',
       }
 
   // As regiões marcadas de cada imagem (poucas imagens por objeto).
@@ -626,6 +643,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       )}
       <Cabeca d={d} skcLigados={skcLigados} livrosLigados={livrosLigados} />
       <Ficha d={d} doUsuario={doUsuario} />
+      <NoLivro lugares={d.noLivro} idioma={idioma} />
       {!computador && (
         <section className="item-imagem" aria-label="Imagem">
           {imagem}
@@ -932,7 +950,7 @@ function Ficha({ d, doUsuario = [] }: { d: ItemDetalhe; doUsuario?: readonly Ima
 }
 
 function NavDePosicao({ posicao, estado }: { posicao: Posicao; estado: EstadoDeOrigem | null }) {
-  const nome = posicao.colecao ? 'Posição na coleção' : posicao.tipo === 'lista' ? 'Posição na busca' : 'Posição no grupo'
+  const nome = posicao.colecao ? 'Posição na coleção' : posicao.tipo === 'lista' ? 'Posição na busca' : posicao.subcolecao ? 'Posição na subcoleção' : 'Posição no grupo'
   return (
     <nav aria-label={nome} className="item-posicao">
       <span className="item-posicao-origem">

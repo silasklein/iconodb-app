@@ -114,6 +114,10 @@
   color: var(--secundario);
   font-variant-numeric: tabular-nums;
 }
+/* «objetos» e «· 2 subcoleções» no texto corrido; só o número fica no mono. */
+.colecoes-unidade {
+  font-family: var(--fonte-texto);
+}
 
 @media (min-width: 768px) {
   .colecoes {
@@ -189,9 +193,6 @@
   }
   .colecoes-grupo-n {
     font-size: 12px;
-  }
-  .colecoes-unidade {
-    font-family: var(--fonte-texto);
   }
 }
 @media (min-width: 1100px) {

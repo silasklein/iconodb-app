@@ -113,7 +113,7 @@
   flex-direction: column;
   gap: 8px;
 }
-.grupo-introducao .grupo-introducao-aviso {
+.grupo-introducao .introducao-aviso {
   font-size: 13px;
   color: var(--secundario);
 }
@@ -146,10 +146,82 @@
   cursor: pointer;
 }
 
+/*
+ * As subcoleções (schema 9; quadro «Grupo» do canvas das subcoleções): uma linha por subcoleção, com o número no mono,
+ * o título e os objetos. O título da seção e o da grade («Todos os objetos») usam o mesmo cabeçalho de seção.
+ */
+.grupo-subcolecoes {
+  margin: 0 24px;
+  padding: 0 0 28px;
+}
+.grupo-objetos-topo {
+  display: flex;
+  align-items: center;
+  border-top: 2px solid var(--texto);
+  padding: 12px 0 14px;
+}
+.grupo-objetos-topo h2 {
+  margin: 0;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.grupo-objetos-topo .codigo {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--secundario);
+}
+.grupo-subcolecoes-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--filete);
+}
+.grupo-subcolecao {
+  display: grid;
+  /* 76 px cabem «1.19–1.23», a faixa mais larga do sumário (9 caracteres de 7,8 px no mono de 13 px), sem quebrar. */
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: baseline;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--filete);
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.grupo-subcolecao:hover .grupo-subcolecao-titulo {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.grupo-subcolecao-numero {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.grupo-subcolecao-titulo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.grupo-subcolecao-n {
+  font-size: 13px;
+  color: var(--secundario);
+  font-variant-numeric: tabular-nums;
+}
+
 .grupo-objetos {
   margin: 0 24px;
   padding: 16px 0 48px;
   border-top: 2px solid var(--texto);
+}
+/* Com o cabeçalho («Todos os objetos»), o filete é o dele. */
+.grupo-objetos:has(.grupo-objetos-topo) {
+  border-top: 0;
+  padding-top: 0;
 }
 .grupo-grade {
   display: grid;
@@ -240,24 +312,12 @@
     margin: 0 48px;
     padding: 0 0 64px;
   }
-  .grupo-objetos-topo {
-    display: flex;
-    align-items: center;
-    border-top: 2px solid var(--texto);
-    padding: 12px 0 14px;
+  .grupo-subcolecoes {
+    margin: 0 48px;
+    padding-bottom: 40px;
   }
-  .grupo-objetos-topo h2 {
-    margin: 0;
-    font-family: var(--fonte-texto);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .grupo-objetos-topo .codigo {
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--secundario);
+  .grupo-subcolecoes-lista {
+    max-width: 880px;
   }
   .grupo-objetos {
     border-top: 0;

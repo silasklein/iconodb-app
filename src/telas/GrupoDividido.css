@@ -1,0 +1,224 @@
+/*
+ * O grupo com subcoleções no computador (quadro «Mac» do canvas das subcoleções): a coluna de 380 px à esquerda, presa
+ * abaixo da barra superior e com a sua rolagem, e a grade da escolhida à direita, que rola com a página (a rolagem da
+ * página é a que se restaura ao voltar do objeto). A grade e o cabeçalho de seção são os do grupo (Grupo.css).
+ */
+.grupo-dividido {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  min-height: calc(100dvh - var(--barra-superior));
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+/* A barra fica presa no alto, como no item (BarraSuperior.css): a coluna da esquerda se prende logo abaixo dela. */
+.grupo-dividido-lateral {
+  position: sticky;
+  top: var(--barra-superior);
+  align-self: start;
+  height: calc(100dvh - var(--barra-superior));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 24px 40px 32px;
+  border-right: 1px solid var(--filete);
+}
+.grupo-dividido-trilha {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.3em; /* o espaço depois do «‹» (aria-hidden): num flex, o espaço dentro do span some */
+  min-height: var(--alvo-mouse);
+  font-size: 14px;
+  color: var(--texto);
+  text-decoration: none;
+}
+.grupo-dividido-trilha:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.grupo-dividido-periodo {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--corpo-consulta);
+}
+.grupo-dividido-lateral h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.grupo-dividido-contagem {
+  font-size: 14px;
+  color: var(--corpo-consulta);
+  font-variant-numeric: tabular-nums;
+}
+.grupo-dividido-ler {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.grupo-dividido-introducao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.grupo-dividido-introducao p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--corpo-consulta);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.grupo-dividido-introducao .introducao-aviso {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+
+/* A lista: «Todos» e as subcoleções; a escolhida invertida (fundo do texto), um pouco além da coluna. */
+.grupo-dividido-lista {
+  margin-top: 8px;
+}
+.grupo-dividido-lista ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.grupo-dividido-linha {
+  display: grid;
+  /*
+   * O número nunca quebra: no mono de 12 px cada caractere tem 7,2 px, e as faixas mais longas do sumário («1.19–1.23»,
+   * «2.17–2.18») têm 9 (64,8 px). 72 px cabem 10.
+   */
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: baseline;
+  min-height: var(--alvo-mouse);
+  box-sizing: border-box;
+  margin: 0 -8px;
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--filete);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--texto);
+  text-decoration: none;
+}
+.grupo-dividido-linha:hover:not([aria-current]) .grupo-dividido-linha-titulo {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.grupo-dividido-linha-numero {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.grupo-dividido-linha-titulo {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.grupo-dividido-linha-n {
+  color: var(--secundario);
+  font-variant-numeric: tabular-nums;
+}
+.grupo-dividido-linha[aria-current] {
+  background: var(--texto);
+  color: var(--fundo);
+  border-bottom-color: var(--texto);
+}
+.grupo-dividido-linha[aria-current] .grupo-dividido-linha-n {
+  color: inherit;
+}
+.grupo-dividido-linha:focus-visible {
+  outline-offset: -2px;
+}
+
+/* À direita: o cabeçalho da escolhida (ou «Todos os objetos») e a grade de 5 colunas a 1280. */
+.grupo-dividido-principal {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px 64px;
+}
+.grupo-dividido-objetos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.grupo-dividido-objetos > .grupo-objetos-topo {
+  padding-bottom: 0;
+}
+.grupo-dividido-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 4px;
+}
+.grupo-dividido-numero {
+  font-size: 13px;
+}
+.grupo-dividido-cabecalho h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.grupo-dividido-n {
+  font-size: 14px;
+  color: var(--corpo-consulta);
+  font-variant-numeric: tabular-nums;
+}
+.grupo-dividido-cabecalho .grupo-dividido-ler {
+  align-self: baseline;
+  padding: 0;
+}
+.grupo-dividido-introducao-sub {
+  max-width: 720px;
+  padding: 14px 16px;
+  background: var(--superficie);
+}
+.grupo-dividido .grupo-dividido-grade {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 16px;
+  row-gap: 24px;
+  margin-top: 4px;
+}
+.grupo-dividido .grupo-dividido-grade .cartao-imagem {
+  height: 168px;
+  padding: 12px;
+}
+.grupo-dividido-notas {
+  margin-top: 48px;
+}
+
+/* Janelas estreitas de computador: a coluna encolhe para a grade ter pelo menos duas colunas. */
+@media (max-width: 1023px) {
+  .grupo-dividido {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .grupo-dividido-lateral {
+    padding: 20px 20px 32px 24px;
+  }
+  .grupo-dividido-principal {
+    padding: 20px 24px 48px;
+  }
+}

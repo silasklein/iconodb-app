@@ -12,7 +12,8 @@ export function temEntradaAnterior(location: Pick<Location, 'key'>): boolean {
   return location.key !== 'default'
 }
 
-const comModificador = (e: MouseEvent) => e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey
+/** Clique com botão do meio ou com tecla: o navegador abre o `href` (outra aba, outra janela); o app não intercepta. */
+export const comModificador = (e: MouseEvent) => e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey
 
 /**
  * O Voltar das telas: um voltar de verdade no histórico (a tela anterior reaparece como estava, com a

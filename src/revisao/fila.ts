@@ -153,6 +153,13 @@ const APOIO: Record<string, string> = {
   'Datações não organizadas': 'datação sem anos explícitos ou sem rótulo',
   [ROTULO_DOS_SITIOS]: 'objetos cujo sítio não está ligado a um sítio do banco',
   'Créditos de desenho ausentes': 'imagem sem crédito',
+  'Subcoleções sem título em português': 'subcoleção do sumário ainda sem o título traduzido',
+  'Subcoleções sem objeto': 'nenhum objeto do catálogo entrou na subcoleção',
+  'Introduções de subcoleção inválidas': 'trecho da introdução da subcoleção que não está no livro processado',
+  'Seções de subcoleção sem objeto': 'seção do catálogo da subcoleção que nenhum objeto do grupo tem',
+  'Subcoleções de grupo inexistente': 'o arquivo das subcoleções cita um grupo que o processamento não achou',
+  'Objetos fora das subcoleções': 'objeto de um grupo com subcoleções que não entrou em nenhuma',
+  'Exceções de subcoleção inválidas': 'objeto da lista dos que ficam só no grupo que não existe ou já está numa subcoleção',
 }
 export const ROTULO_DOS_VERBETES = 'Verbetes a revisar'
 
@@ -182,6 +189,9 @@ const ROTULO_DA_ENTIDADE: Record<string, string> = {
   hypothesis: 'hipótese',
   glossary: 'glossário',
   glossary_entry: 'glossário',
+  author_group: 'grupo',
+  groups_file: 'arquivo dos grupos',
+  subgroups_file: 'arquivo das subcoleções',
 }
 
 /**
@@ -221,7 +231,7 @@ function acaoDoCaso(l: LinhaDaFila, abrir: string | null, grupoLugar: string | n
   if ((l.entidade === 'glossary_entry' || l.entidade === 'glossary') && l.entidadeId) return { rotulo: 'Abrir o verbete', para: `/verbete/${enc(l.entidadeId)}` }
   if (l.entidade === 'bib_entry' && l.entidadeId && /^BIB-\d+$/.test(l.entidadeId)) return { rotulo: 'Abrir a obra', para: `/obra/${enc(l.entidadeId)}` }
   if (objeto) return { rotulo: 'Abrir o objeto', para: objeto }
-  if (grupoLugar) return { rotulo: 'Abrir o grupo', para: grupoLugar }
+  if (grupoLugar) return { rotulo: l.entidade === 'author_group' && l.tipo.startsWith('subcolecao_') ? 'Abrir a subcoleção' : 'Abrir o grupo', para: grupoLugar }
   return null
 }
 
@@ -235,7 +245,8 @@ function casoDaLinha(l: LinhaDaFila, chave: string, lugares: ReadonlyMap<string,
   const { lugar: naFonte, citacao } = l.tipo === 'citacao_nao_resolvida' ? separarLugarDaCitacao(l.detalhe) : { lugar: null, citacao: l.detalhe }
   // Trecho de seção da introdução sem lugar resolvido: o mesmo rótulo legível das traduções (B-23), não o id cru.
   const introducao = !lugar && l.entidade === 'passage' && l.entidadeId ? lugarDoTrechoDeIntroducao(l.entidadeId) : null
-  const onde = lugar ? `${lugar.origem} · ${naFonte ?? tipoDoLugar}` : introducao ? `${introducao} · ${naFonte ?? tipoDoLugar}` : l.entidadeId ? `${tipoDoLugar} ${l.entidadeId}${naFonte ? ` · ${naFonte}` : ''}` : (naFonte ?? tipoDoLugar)
+  // Um grupo da autora: a origem já diz qual («TESTE I · 1.2–1.3 Figuras…»).
+  const onde = lugar && l.entidade === 'author_group' ? lugar.origem : lugar ? `${lugar.origem} · ${naFonte ?? tipoDoLugar}` : introducao ? `${introducao} · ${naFonte ?? tipoDoLugar}` : l.entidadeId ? `${tipoDoLugar} ${l.entidadeId}${naFonte ? ` · ${naFonte}` : ''}` : (naFonte ?? tipoDoLugar)
   const texto = citacao.trim() || rotuloDaPendencia(l.tipo)
   return {
     chave,

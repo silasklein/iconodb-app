@@ -44,3 +44,17 @@
     height: var(--alvo-toque);
   }
 }
+
+/*
+ * Telas com uma coluna presa logo abaixo da barra: a barra também fica presa no alto. São o item do computador (revisão
+ * 1 da Tarefa 10, M1: antes a barra rolava junto, e a coluna da imagem e o painel lateral, presos com a altura da janela
+ * menos a barra, deixavam uma faixa de 48 px vazia embaixo, onde ficava o pé do painel) e o grupo dividido (a lista das
+ * subcoleções).
+ */
+@media (min-width: 768px) {
+  body:has(.item-pc, .grupo-dividido) .barra-superior {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+}

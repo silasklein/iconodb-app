@@ -264,7 +264,20 @@ export interface ItemDetalhe {
   outrasHipoteses: Hipotese[]
   relacoes: Relacoes
   bibliografia: ReferenciaBibliografica[]
+  /** Os grupos de cima do objeto (nunca uma subcoleção), na ordem dos itens. */
   grupos: { id: string; titulo: string }[]
+  /** «No livro»: onde o objeto está em cada livro, com a subcoleção quando há (schema 9). */
+  noLivro: NoLivro[]
+}
+
+/** Um lugar do objeto no livro: a obra, o volume, o período, o grupo de cima e a subcoleção (null fora dela ou num pacote 5–8). */
+export interface NoLivro {
+  publicacao: string
+  volume: string
+  periodo: string | null
+  /** O grupo de cima: `numero` e `subcolecoes` para o número do livro antes do título (decisão 81, `tituloDoGrupo`). */
+  grupo: { id: string; titulo: string; tituloDe: string; numero: string | null; subcolecoes: number }
+  subcolecao: { id: string; numero: string; titulo: string; tituloDe: string } | null
 }
 
 /** Um objeto numa grade ou lista (grupo, verbete, obra, sítio). */
@@ -304,6 +317,25 @@ export interface Grupo {
   imagens: number
   hipoteses: number
   capa: { miniatura: string; display_mode: ModoDeExibicao | null } | null
+  /** O grupo de cima de uma subcoleção (schema 9); null num grupo de cima. */
+  paiId: string | null
+  /**
+   * Numa subcoleção, o número do sumário («1.1», «1.5–1.8»). No grupo de cima, o número do título do livro ('1') quando
+   * ele tem subcoleções (decisão 81), e null nos outros e num pacote 5–8. Subcoleção ou grupo de cima: só por `paiId`.
+   */
+  numero: string | null
+  /** Quantas subcoleções o grupo tem (0 numa subcoleção e num pacote 5–8). */
+  subcolecoes: number
+}
+
+/** Uma subcoleção na lista do grupo e nas vizinhas («anterior», «próxima»). */
+export interface SubcolecaoResumo {
+  id: string
+  numero: string
+  /** Título em português, ou o alemão quando falta. */
+  titulo: string
+  tituloDe: string
+  objetos: number
 }
 
 export interface TextoDaIntroducao {
@@ -313,9 +345,18 @@ export interface TextoDaIntroducao {
   termos: Termo[]
 }
 
-export interface GrupoDetalhe extends Grupo {
-  introducao: TextoDaIntroducao | null
+export interface GrupoDetalhe extends Omit<Grupo, 'subcolecoes'> {
+  /** Os trechos da introdução, em ordem; vazio = sem introdução. */
+  introducao: TextoDaIntroducao[]
   itens: ObjetoResumo[]
+  /** As subcoleções do grupo, em ordem (vazio numa subcoleção e num pacote 5–8). */
+  subcolecoes: SubcolecaoResumo[]
+  /** O grupo de cima, numa subcoleção (com `numero` e `subcolecoes` para `tituloDoGrupo`). */
+  pai: { id: string; titulo: string; tituloDe: string; numero: string | null; subcolecoes: number } | null
+  /** A posição da subcoleção entre as do pai (1 a total); null num grupo de cima. */
+  posicao: { n: number; total: number } | null
+  anterior: SubcolecaoResumo | null
+  proxima: SubcolecaoResumo | null
 }
 
 export type ContextoDeNavegacao = { tipo: 'grupo'; id: string } | { tipo: 'lista'; ids: string[] }
