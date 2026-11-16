@@ -162,8 +162,9 @@ test('objeto: da subcoleção, «1 / 1» dentro dela; o «No livro» leva ao gru
   )
   if (celular) await expect(page.getByRole('link', { name: 'Voltar à subcoleção' })).toBeVisible()
 
-  // «No livro»: o período › o grupo › a subcoleção, em links.
+  // «No livro»: o nome do livro · o período › o grupo › a subcoleção; o nome em texto, o caminho em links.
   const noLivro = page.getByRole('region', { name: 'No livro' })
+  await expect(noLivro.locator('p').first()).toHaveText(/^TESTE I · Calcolítico \(fase de teste\) › /)
   await expect(noLivro.getByRole('link')).toHaveText(['Calcolítico (fase de teste)', '1. Animais de teste e figuras de prova', '1.2–1.3 Figuras de prova e sinais de teste'])
   await semRolagemHorizontal(page, 'Objeto da subcoleção')
   await foto(page, 'subcolecoes-9-objeto-topo')

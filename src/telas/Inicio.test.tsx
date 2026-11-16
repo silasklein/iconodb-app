@@ -45,6 +45,13 @@ describe('Início', () => {
     expect(within(contagens).getByText('Verbetes').nextElementSibling).toHaveTextContent('10') // com o GL-900010 (Tarefa 16)
   })
 
+  it('o resumo diz o alcance do catálogo (texto do usuário, 16/11)', () => {
+    abrir()
+    expect(document.querySelector('.inicio-resumo')).toHaveTextContent(
+      /^Do Natufiano ao Período Persa\. Catálogo pessoal de iconografia do Levante Meridional antigo\.$/,
+    )
+  })
+
   it('tem o campo de busca com nome visível "Buscar" e o placeholder genérico', () => {
     abrir()
     const campo = screen.getByRole('combobox', { name: 'Buscar' })

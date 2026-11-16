@@ -12,9 +12,11 @@ function tituloDaSubcolecao(s: NonNullable<LugarNoLivro['subcolecao']>, idioma: 
 }
 
 /**
- * «No livro» (quadro `Objeto`): uma linha por lugar do objeto nos livros, com o caminho em links: o período (a obra nas
- * Coleções) › o grupo › a subcoleção, quando há. Com o original alemão ligado, os títulos do livro em alemão; o período não
- * tem original no pacote e fica em português. Sem lugar (objeto fora de grupo), nada.
+ * «No livro» (quadro `Objeto`): uma linha por lugar do objeto nos livros. A linha começa com o nome do livro em texto
+ * («IPIAO III · …», decisões 83 e 87), para distinguir as linhas quando o objeto está em mais de um livro, e segue com o
+ * caminho em links: o período (a obra nas Coleções) › o grupo › a subcoleção, quando há. Sem período, o link já mostra o
+ * nome do livro, que então não se repete. Com o original alemão ligado, os títulos do livro em alemão; o nome do livro e o
+ * período não têm original no pacote e ficam como estão. Sem lugar (objeto fora de grupo), nada.
  */
 export function NoLivro({ lugares, idioma }: { lugares: readonly LugarNoLivro[]; idioma: Idioma }) {
   const id = useId()
@@ -27,9 +29,19 @@ export function NoLivro({ lugares, idioma }: { lugares: readonly LugarNoLivro[];
       {lugares.map((l) => {
         const grupo = tituloDoGrupo(l.grupo, idioma)
         const sub = l.subcolecao ? { id: l.subcolecao.id, ...tituloDaSubcolecao(l.subcolecao, idioma) } : null
+        // Um período vazio ('' no pacote) conta como sem período: o nome do livro vira o link, sem repetir.
+        const periodo = l.periodo?.trim() || null
         return (
           <p className="no-livro-caminho" key={`${l.grupo.id}|${l.subcolecao?.id ?? ''}`}>
-            <Link to={`/colecoes?obra=${encodeURIComponent(chaveDaObra(l.publicacao, l.volume))}`}>{l.periodo ?? rotuloDaObra(l.publicacao, l.volume)}</Link>
+            {periodo && (
+              <>
+                <span className="no-livro-livro">{rotuloDaObra(l.publicacao, l.volume)}</span>
+                <span className="no-livro-sep" aria-hidden="true">
+                  {' · '}
+                </span>
+              </>
+            )}
+            <Link to={`/colecoes?obra=${encodeURIComponent(chaveDaObra(l.publicacao, l.volume))}`}>{periodo ?? rotuloDaObra(l.publicacao, l.volume)}</Link>
             <Separador />
             <Link to={`/grupo/${encodeURIComponent(l.grupo.id)}`} lang={grupo.lang}>
               {grupo.texto}

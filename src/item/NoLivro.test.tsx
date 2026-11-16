@@ -30,14 +30,63 @@ describe('NoLivro', () => {
       ['1. Animais de teste e figuras de prova', '/grupo/GR-TESTE-I-01'],
       ['1.2–1.3 Figuras de prova e sinais de teste', '/grupo/GR-TESTE-I-01-02'],
     ])
-    expect(bloco().querySelector('p')).toHaveTextContent('Calcolítico (fase de teste) › 1. Animais de teste e figuras de prova › 1.2–1.3 Figuras de prova e sinais de teste')
+    expect(bloco().querySelector('p')).toHaveTextContent('TESTE I · Calcolítico (fase de teste) › 1. Animais de teste e figuras de prova › 1.2–1.3 Figuras de prova e sinais de teste')
+  })
+
+  it('a linha começa com o nome do livro, em texto, e « · » antes do período', () => {
+    mostrar([NA_SUBCOLECAO])
+    const linha = bloco().querySelector('p') as HTMLElement
+    expect(linha).toHaveTextContent(/^TESTE I · Calcolítico \(fase de teste\) › /)
+    // o nome do livro não é link: os links continuam os três de hoje
+    expect(within(linha).getAllByRole('link').map((l) => l.textContent)).toEqual([
+      'Calcolítico (fase de teste)',
+      '1. Animais de teste e figuras de prova',
+      '1.2–1.3 Figuras de prova e sinais de teste',
+    ])
+    const ponto = linha.querySelector('.no-livro-livro + .no-livro-sep')
+    expect(ponto).toHaveTextContent('·')
+    expect(ponto).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('sem período, o nome do livro é o link e não se repete', () => {
+    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null }
+    mostrar([outro])
+    const linha = bloco().querySelector('p') as HTMLElement
+    expect(linha).toHaveTextContent(/^OUTRO › Grupo de teste$/)
+    expect(within(linha).getByRole('link', { name: 'OUTRO' })).toHaveAttribute('href', '/colecoes?obra=OUTRO')
+    expect(linha.textContent?.split('OUTRO')).toHaveLength(2)
+  })
+
+  it('um período vazio conta como sem período: o nome do livro é o link, sem link vazio', () => {
+    mostrar([{ ...NO_GRUPO, publicacao: 'GGG', volume: '', periodo: '' }])
+    const linha = bloco().querySelector('p') as HTMLElement
+    expect(linha).toHaveTextContent(/^GGG › 1\. Animais de teste e figuras de prova$/)
+    expect(within(linha).getAllByRole('link').map((l) => l.textContent)).toEqual(['GGG', '1. Animais de teste e figuras de prova'])
+    expect(linha.querySelector('.no-livro-livro')).toBeNull()
+  })
+
+  it('dois livros, cada linha com o seu nome', () => {
+    mostrar([NA_SUBCOLECAO, { ...NO_GRUPO, publicacao: 'GGG', volume: '', periodo: 'Ferro de teste', grupo: { ...NO_GRUPO.grupo, id: 'GR-GGG-01' } }])
+    const linhas = bloco().querySelectorAll('p')
+    expect(linhas).toHaveLength(2)
+    expect(linhas[0]?.textContent?.startsWith('TESTE I · ')).toBe(true)
+    expect(linhas[1]?.textContent?.startsWith('GGG · Ferro de teste › ')).toBe(true)
+  })
+
+  it('com o original alemão, o nome do livro não muda', () => {
+    mostrar([NA_SUBCOLECAO], 'de')
+    const linha = bloco().querySelector('p') as HTMLElement
+    expect(linha.textContent?.startsWith('TESTE I · Calcolítico (fase de teste) › 1. Testtiere und Probefiguren')).toBe(true)
+    const nome = linha.querySelector('.no-livro-livro')
+    expect(nome).toHaveTextContent('TESTE I')
+    expect(nome).not.toHaveAttribute('lang')
   })
 
   it('o objeto direto no grupo: dois níveis, sem subcoleção', () => {
     mostrar([NO_GRUPO])
     const links = within(bloco()).getAllByRole('link')
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['/colecoes?obra=TESTE-I', '/grupo/GR-TESTE-I-01'])
-    expect(bloco()).toHaveTextContent(/› 1\. Animais de teste e figuras de prova$/)
+    expect(bloco().querySelector('p')).toHaveTextContent(/^TESTE I · Calcolítico \(fase de teste\) › 1\. Animais de teste e figuras de prova$/)
   })
 
   it('com o original alemão: os títulos do livro (tituloDe), marcados em alemão; o período continua', () => {

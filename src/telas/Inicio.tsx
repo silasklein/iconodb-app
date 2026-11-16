@@ -129,7 +129,7 @@ export function Inicio() {
           />
         </div>
 
-        <p className="inicio-resumo">Do Natufiano ao Bronze Antigo. Leituras das fontes em alemão, com tradução em português.</p>
+        <p className="inicio-resumo">Do Natufiano ao Período Persa. Catálogo pessoal de iconografia do Levante Meridional antigo.</p>
 
         <nav aria-label="Entradas" className="inicio-entradas">
           {ENTRADAS.map((e) => (
