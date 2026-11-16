@@ -87,7 +87,7 @@ describe('Exportar', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Cópias e exportação' })).toBeInTheDocument()
     expect(screen.getByText('Os arquivos são gerados neste aparelho, com o que está gravado nele.')).toBeInTheDocument()
     const copia = secao('Cópia de segurança')
-    expect(within(copia).getByText('Tudo o que é seu, num arquivo JSON: notas, coleções, hipóteses, regiões, objetos SKC, sítios e verbetes. As fotos não vão dentro: para levá-las junto, use a cópia completa.')).toBeInTheDocument()
+    expect(within(copia).getByText('Tudo o que é seu, num arquivo JSON: notas, coleções, hipóteses, regiões, objetos SKC, sítios, verbetes, obras, ligações de citação e níveis revistos. As fotos não vão dentro: para levá-las junto, use a cópia completa.')).toBeInTheDocument()
     expect(await within(copia).findByText('4 eventos de 2 aparelhos · 1 por enviar')).toBeInTheDocument()
     expect(within(copia).getByRole('button', { name: 'Baixar cópia' })).toHaveAccessibleDescription('4 eventos de 2 aparelhos · 1 por enviar')
 

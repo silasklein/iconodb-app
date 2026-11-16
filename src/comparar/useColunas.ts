@@ -19,6 +19,7 @@ import { aoReabrir } from '../banco/cliente'
 import { item } from '../banco/consultas'
 import type { ItemDetalhe } from '../banco/tipos'
 import { hipotesesSkcDosObjetos, porNivel as agruparPorNivel, type PorNivel } from '../hipoteses/doUsuario'
+import { comNiveisRevistos, useNiveisDaCamada } from '../hipoteses/niveis'
 import { semPonto, textoDaData } from '../item/ficha'
 import { textoSemLinks } from '../notas/links'
 import { useGrupos, useNumeracao } from '../objetos-skc/atual'
@@ -190,6 +191,7 @@ export function useColunas(refs: readonly string[]): Colunas {
   // Os objetos SKC, as hipóteses SKC e as imagens do usuário vêm do estado: a tela refaz quando os registros deles mudam.
   const mapaDosObjetos = useEstado((e) => e.registros.get('objeto'))
   const mapaDasHipoteses = useEstado((e) => e.registros.get('hipotese'))
+  const mapaDosNiveis = useNiveisDaCamada()
   const pacote = carga.fase === 'ok' ? carga.dados : null
   const colunas = useMemo(() => {
     const estado = estadoAtual()
@@ -215,8 +217,9 @@ export function useColunas(refs: readonly string[]): Colunas {
         return semDados(ref, 'nao-encontrado', 'não encontrado', false, x.numero)
       }
       const g = doSkc(d.numero)
-      return colunaDoLivro(ref, d, sitios, g.hip, g.ligadoA)
+      // As contagens por nível com o nível que vale de cada hipótese do livro (Tarefa 13).
+      return colunaDoLivro(ref, comNiveisRevistos(mapaDosNiveis, d), sitios, g.hip, g.ligadoA)
     })
-  }, [refs, resolvidas, pacote, mapaDosObjetos, mapaDasHipoteses, numeracao, grupos, sitios])
+  }, [refs, resolvidas, pacote, mapaDosObjetos, mapaDasHipoteses, mapaDosNiveis, numeracao, grupos, sitios])
   return { colunas, carregando: numeros.length > 0 && carga.fase === 'carregando' }
 }

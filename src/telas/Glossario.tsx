@@ -3,7 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { verbetes, type VerbeteDaLista } from '../banco/consultas'
 import { tabelaDoPacote, type FoldTabela } from '../busca/fold'
 import { useDuplicadosDoGlossario, useFormasEmUso, useObjetosPorVerbeteSkc, useEdicoesDosVerbetes, useVerbeteSkc, useVerbetesSkc } from '../glossario/doUsuario'
-import { ROTULO_DO_STATUS, situacaoDoVerbete } from '../glossario/modelo'
+import { formasDaBusca, ROTULO_DO_STATUS, situacaoDoVerbete } from '../glossario/modelo'
 import { restaurarVerbete } from '../glossario/operacoes'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Contagem } from '../ui/Contagem'
@@ -32,14 +32,17 @@ const TIPOS = [
 const plural = (n: number, um: string, varios: string) => `${numeroPtBr(n)} ${n === 1 ? um : varios}`
 
 /**
- * Um verbete da lista: do pacote, ou do usuário (decisão 41: `skc`, sem tipo ainda; a forma em uso no lugar do `pt`, e a
- * contagem dos objetos com hipótese SKC nele).
+ * Um verbete da lista: do pacote, ou do usuário (decisão 41: `skc`; a forma em uso no lugar do `pt`, e a contagem dos
+ * objetos com hipótese SKC nele). Tarefa 12 (bloco 3): o tipo do verbete do usuário é o que a pessoa deu (sem ele, só em
+ * "Todos"), e as formas dele em outras línguas e as variantes entram no filtro.
  */
 type VerbeteNaLista = Omit<VerbeteDaLista, 'tipo'> & {
   tipo: VerbeteDaLista['tipo'] | null
   skc: boolean
   /** A forma de antes, quando a pessoa mudou a forma em uso (Tarefa 11): não aparece, mas o filtro da lista a acha. */
   antes?: string | null
+  /** As formas que o filtro acha além do `pt`: árabe, hebraico, outras línguas, variantes (e, no verbete do usuário, alemão e inglês). */
+  formas?: readonly string[]
 }
 
 const indexarVerbetes = (lista: readonly VerbeteNaLista[], tabela: FoldTabela) =>
@@ -47,7 +50,7 @@ const indexarVerbetes = (lista: readonly VerbeteNaLista[], tabela: FoldTabela) =
     lista,
     tabela,
     (v) => v.pt ?? v.de ?? v.id,
-    (v) => [v.pt, v.antes, v.de, v.en, v.id].filter(Boolean).join(' '),
+    (v) => [v.pt, v.antes, v.de, v.en, ...(v.formas ?? []), v.id].filter(Boolean).join(' '),
   )
 
 async function carregar() {
@@ -118,7 +121,8 @@ const LinhaDoVerbete = memo(function LinhaDoVerbete({ v, duplicado, atual, busca
  * É também a tela de /verbete/:id: no computador a lista fica à esquerda e o verbete à direita, sem remontar
  * a lista; no celular o verbete ocupa a tela. As abas são por tipo; "a revisar" fica no ícone de filtro; o
  * texto filtra a lista pela dobra do pacote ("mahtes" acha "Maḥteṣ"). Os verbetes do usuário (decisão 41) entram na
- * ordem, com a marca SKC e o estado; ainda sem tipo, só aparecem em "Todos" (e em "a revisar").
+ * ordem, com a marca SKC e o estado; sem tipo, só aparecem em "Todos" (e em "a revisar"); com o tipo que a pessoa deu
+ * (Tarefa 12), também na aba dele.
  */
 export function Glossario() {
   const { id } = useParams()
@@ -184,9 +188,21 @@ export function Glossario() {
       }),
       doPacote.tabela,
     )
-    // Verbetes do usuário (decisão 41): a forma em uso no lugar do nome; a criada só para o filtro.
+    // Verbetes do usuário (decisão 41): a forma em uso no lugar do nome; a criada e as formas dos campos completos (Tarefa 12)
+    // só para o filtro.
     const skc = indexarVerbetes(
-      doUsuario.map((v) => ({ id: v.id, tipo: null, pt: v.emUso, antes: v.emUso === v.forma ? null : v.forma, de: null, en: null, status: v.status, objetos: objetosDoUsuario.get(v.id) ?? 0, skc: true })),
+      doUsuario.map((v) => ({
+        id: v.id,
+        tipo: v.campos.tipo,
+        pt: v.emUso,
+        antes: v.emUso === v.forma ? null : v.forma,
+        de: null,
+        en: null,
+        formas: formasDaBusca(v.campos),
+        status: v.status,
+        objetos: objetosDoUsuario.get(v.id) ?? 0,
+        skc: true,
+      })),
       doPacote.tabela,
     )
     const entradas = mexidos.length === 0 && skc.length === 0 ? doPacote.entradas : [...doPacote.entradas.filter((e) => !mexidos.includes(e)), ...refeitos, ...skc].sort(porOrdem)

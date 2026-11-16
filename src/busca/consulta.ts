@@ -7,7 +7,7 @@
  * Este e o `consultas.ts` são os únicos lugares com SQL; as telas só chamam funções.
  */
 import { consultarUsuario, executar, publicacoesAbertas, type PublicacaoAberta } from '../banco/cliente'
-import { obrasDoPacote, resumosDosItens, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
+import { obrasDoPacote, resumosDosItens, temNivelAutomatico, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
 import type { Tipo } from '../usuario/eventos'
 import { estadoAtual, type Estado } from '../usuario/estado'
 import type { Registro } from '../usuario/fusao'
@@ -17,6 +17,7 @@ import { indiceDeNotas } from '../notas/indiceDeNotas'
 import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
 import { garantirOsDonosDosTrechos } from '../hipoteses/garantirDonos'
 import { lerAncora, objetoDaHipotese } from '../hipoteses/modelo'
+import { nivelDaHipoteseDoLivro, type NiveisDaCamada } from '../hipoteses/niveis'
 import { lerFicha, textoDaOrigem, tipoCurtoDe } from '../objetos-skc/modelo'
 import { edicoesDosVerbetes, formasEmUso } from '../glossario/doUsuario'
 import { eVerbeteSkc, situacaoDoVerbete, type EdicaoDoVerbete, type StatusDoVerbete } from '../glossario/modelo'
@@ -502,7 +503,8 @@ function passa(c: Candidato, filtros: Filtros, ignorar?: ChaveDeFiltro): boolean
   })
 }
 
-async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly string[]): Promise<Map<string, Candidato>> {
+/** `niveis`: os níveis revistos da camada; a faceta Nível conta o nível que vale de cada hipótese do livro (Tarefa 13). */
+async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly string[], niveis: NiveisDaCamada): Promise<Map<string, Candidato>> {
   const itensPorNumero = await itensDosNumeros(numeros)
   const todosOsItens = unicos([...itensPorNumero.values()].flat())
   const resumos = new Map((await resumosDosItens(todosOsItens, 'fonte')).map((r) => [r.numero, r]))
@@ -510,6 +512,7 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
   for (const [numero, itens] of itensPorNumero) for (const i of itens) donoDoItem.set(i, numero)
 
   const p = { $ids: lista(todosOsItens) }
+  const nivelAuto = await temNivelAutomatico()
   const [itens, hipoteses, periodos] = await Promise.all([
     porPublicacao(
       pubs,
@@ -528,8 +531,9 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
     porPublicacao(
       pubs,
       (esq) => `
-        SELECT DISTINCT item_id, level, modality FROM (
-          SELECT ${ITEM_DA_HIPOTESE} AS item_id, h.level, h.modality FROM ${esq}.hypothesis h ${JUNTA_ELEMENTO(esq)}
+        SELECT item_id, id, level, level_auto, modality FROM (
+          SELECT ${ITEM_DA_HIPOTESE} AS item_id, h.id, h.level, ${nivelAuto ? 'h.level_auto' : 'NULL'} AS level_auto, h.modality
+          FROM ${esq}.hypothesis h ${JUNTA_ELEMENTO(esq)}
         ) WHERE item_id IN ${EM_IDS}`,
       p,
     ),
@@ -558,7 +562,7 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
   for (const l of hipoteses) {
     const c = mapa.get(donoDoItem.get(s(l.item_id)!) ?? '')
     if (!c) continue
-    c.niveis.add(s(l.level)!)
+    c.niveis.add(nivelDaHipoteseDoLivro(niveis, { id: s(l.id)!, nivel: s(l.level) as Nivel, nivelAutomatico: s(l.level_auto) as Nivel | null }).efetivo)
     c.modalidades.add(s(l.modality)!)
   }
   return mapa
@@ -849,7 +853,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     for (const e of doUsuario(a)) for (const nr of objetos) porEscopo[e].add(nr)
   }
 
-  const todos = await candidatos(pubs, [...porEscopo.tudo])
+  const todos = await candidatos(pubs, [...porEscopo.tudo], estadoDoUsuario.registros.get('nivel'))
   for (const nr of porEscopo.tudo) {
     const r = skc.get(nr)
     if (r && !todos.has(nr)) todos.set(nr, candidatoSkc(nr, r, estadoDoUsuario, livro, destinos))

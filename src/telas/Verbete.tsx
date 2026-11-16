@@ -1,14 +1,17 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 import { LinkComOrigem } from '../app/OrigemDosLinks'
 import { verbete, type Verbete as VerbeteCompleto } from '../banco/consultas'
 import { AvisoDeDuplicado } from '../glossario/AvisoDeDuplicado'
-import { useDuplicadosDoGlossario, useEdicaoDoVerbete, useFormasEmUso, useHipotesesDoVerbete, useNomeVivo } from '../glossario/doUsuario'
+import { useDuplicadosDoGlossario, useEdicaoDoVerbete, useEdicaoPublicada, useFormasEmUso, useHipotesesDoVerbete, useNomeVivo } from '../glossario/doUsuario'
 import { situacaoDoVerbete } from '../glossario/modelo'
 import { EditorDaForma } from '../glossario/EditorDaForma'
 import { LinhasDeHipoteseSkc } from '../glossario/LinhasDeHipoteseSkc'
-import { eVerbeteSkc } from '../glossario/modelo'
+import { eVerbeteSkc, outrasInteiras, type CamposCompletos, ROTULO_DO_GENERO, ROTULO_DO_NUMERO, ROTULO_DO_TIPO } from '../glossario/modelo'
 import { VerbeteSkc } from '../glossario/VerbeteSkc'
+import { nivelDaHipoteseDoLivro, useNiveisDaCamada } from '../hipoteses/niveis'
+import { EditarCamposDoVerbete, FormaNaLingua, ListaDeOutras } from '../glossario/CamposDoVerbete'
+import { Icon } from '../ui/Icon'
 import { formatarLocalizador } from '../banco/referencias'
 import { useRedirecionamentos } from '../pacote/redirecionamentos'
 import { caminhoDaBusca } from '../busca/url'
@@ -22,9 +25,9 @@ import { Contagem } from '../ui/Contagem'
 import { VeioDeVoce } from './VeioDeVoce'
 import './Lista.css'
 
-export const TIPO_DO_VERBETE: Record<VerbeteCompleto['tipo'], string> = { concept: 'Conceito', name: 'Nome', technical: 'Técnico' }
-const GENERO = { m: 'masculino', f: 'feminino' } as const
-const NUMERO = { sg: 'singular', pl: 'plural' } as const
+export const TIPO_DO_VERBETE: Record<VerbeteCompleto['tipo'], string> = ROTULO_DO_TIPO
+const GENERO = ROTULO_DO_GENERO
+const NUMERO = ROTULO_DO_NUMERO
 
 interface Props {
   id: string
@@ -38,7 +41,9 @@ interface Props {
 /**
  * O Verbete (Verbete.dc.html no celular, o painel de PC-Glossario.dc.html no computador): a forma em português, que se
  * edita no lugar (a forma em uso, "Voltar à proposta original" e Aprovar; Tarefa 11, src/glossario/EditorDaForma.tsx), o
- * alemão, o inglês, o pai, Iconclass e SSSL (do livro, só leitura), os objetos e as hipóteses com o termo (as do livro e
+ * alemão, o inglês, o árabe, o hebraico, as outras línguas (`other_forms`, pacote 10), o pai, Iconclass e SSSL (do livro, só
+ * leitura; fix round 1 da Tarefa 12: o verbete que o pacote criou de um verbete seu tem «Editar os dados», e o que a camada
+ * escreveu depois vale sobre o pacote, campo a campo, `useEdicaoPublicada`), os objetos e as hipóteses com o termo (as do livro e
  * as SKC). O gênero e "No texto corrido" do desenho ficam como texto: o registro da edição não tem esses campos.
  */
 export function Verbete(props: Props) {
@@ -57,6 +62,24 @@ function VerbeteDoUsuario(props: Props) {
   return <VerbeteSkc {...props} />
 }
 
+/** Os campos completos como o pacote os traz, com os nomes do registro do app (para a camada valer por cima, campo a campo). */
+function camposDoPacote(v: VerbeteCompleto): CamposCompletos {
+  return {
+    tipo: v.tipo,
+    genero: v.genero,
+    numero: v.numeroGramatical,
+    de: v.de,
+    en: v.en,
+    he: v.he,
+    ar: v.ar,
+    outras: v.outras,
+    variantes: v.variantes,
+    pai: v.pai?.id ?? null,
+    iconclass: v.iconclass.map((i) => i.notacao),
+    sssl: v.sssl.map((x) => x.codigo),
+  }
+}
+
 function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
   const carga = useCarregar(() => verbete(id), id, { manter: !pagina })
   const nomeRef = useRef<HTMLHeadingElement>(null)
@@ -67,8 +90,15 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
   // O que a pessoa escreveu neste verbete (forma em uso e estado) vale sobre o do pacote.
   const edicao = useEdicaoDoVerbete(id)
   const formas = useFormasEmUso()
+  // O nível que vale de cada hipótese do livro (Tarefa 13): o revisto pela pessoa, ou o do pacote.
+  const niveis = useNiveisDaCamada()
   const nomeDe = useNomeVivo()
   const parecidos = useDuplicadosDoGlossario().get(id) ?? []
+  // Fix round 1 da Tarefa 12: o verbete que o pacote criou de um verbete seu continua editável («Editar os dados»), e o que a
+  // camada escreveu depois vale sobre o pacote, campo a campo.
+  const publicada = useEdicaoPublicada(id)
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const editando = publicada !== null && editandoId === id
 
   if (carga.fase === 'carregando') return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
   if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
@@ -79,6 +109,11 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
 
   const original = v.pt ?? v.de ?? v.id
   const nome = edicao?.formaEmUso ?? original
+  const doPacote = camposDoPacote(v)
+  const campos: CamposCompletos = publicada ? { ...doPacote, ...publicada.campos } : doPacote
+  const outras = outrasInteiras(campos.outras)
+  const rotuloDaIconclass = new Map(v.iconclass.map((i) => [i.notacao, i.pt ?? i.en ?? i.de] as const))
+  const rotuloDoSssl = new Map(v.sssl.map((x) => [x.codigo, x.rotulo] as const))
   const { status, aprovacaoDesatualizada } = situacaoDoVerbete(edicao, original, v.status)
   const acoes = (
     <>
@@ -91,7 +126,7 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
     <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Verbete: ${nome}`}>
       <CabecalhoDoDetalhe
         pagina={pagina}
-        etiqueta={`${TIPO_DO_VERBETE[v.tipo]} · ${status === 'approved' ? 'aprovado' : 'a revisar'}`}
+        etiqueta={`${TIPO_DO_VERBETE[campos.tipo ?? v.tipo]} · ${status === 'approved' ? 'aprovado' : 'a revisar'}`}
         titulo={nome}
         codigo={v.id}
         acoes={acoes}
@@ -109,59 +144,78 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
           <Linha rotulo="No texto corrido" vazio={!v.ptTexto}>
             {v.ptTexto}
           </Linha>
-          <Linha rotulo="Gênero" vazio={!v.genero}>
-            {v.genero ? GENERO[v.genero] : null}
-          </Linha>
-          <Linha rotulo="Número" vazio={!v.numeroGramatical}>
-            {v.numeroGramatical ? NUMERO[v.numeroGramatical] : null}
-          </Linha>
+          {!editando && (
+            <>
+              <Linha rotulo="Gênero" vazio={!campos.genero}>
+                {campos.genero ? GENERO[campos.genero] : null}
+              </Linha>
+              <Linha rotulo="Número" vazio={!campos.numero}>
+                {campos.numero ? NUMERO[campos.numero] : null}
+              </Linha>
+            </>
+          )}
         </dl>
       </section>
 
+      {publicada && (
+        <div className="detalhe-fila">
+          <button type="button" className="detalhe-botao-botao" aria-pressed={editando} onClick={() => setEditandoId(editando ? null : id)}>
+            <Icon name="editarFicha" size={18} />
+            Editar os dados
+          </button>
+        </div>
+      )}
       <section className="detalhe-bloco" aria-label="Dados do verbete">
-        <dl className="detalhe-dl">
-          <Linha rotulo="Alemão" lang="de" vazio={!v.de}>
-            {v.de}
-          </Linha>
-          <Linha rotulo="Inglês" lang="en" vazio={!v.en}>
-            {v.en}
-          </Linha>
-          <Linha rotulo="Árabe" lang="ar" dir="auto" vazio={!v.ar}>
-            {v.ar}
-          </Linha>
-          <Linha rotulo="Hebraico" lang="he" dir="auto" vazio={!v.he}>
-            {v.he}
-          </Linha>
-          <Linha rotulo="Pai" vazio={!v.pai}>
-            {v.pai && <Link to={`/verbete/${encodeURIComponent(v.pai.id)}`}>{nomeDe(v.pai.id, v.pai.pt ?? v.pai.id)}</Link>}
-          </Linha>
-          <Linha rotulo="Iconclass" vazio={v.iconclass.length === 0}>
-            <ul>
-              {v.iconclass.map((i) => (
-                <li key={i.notacao}>
-                  <span className="codigo">{i.notacao}</span>
-                  {(i.pt ?? i.en ?? i.de) && ` · ${i.pt ?? i.en ?? i.de}`}
-                </li>
-              ))}
-            </ul>
-          </Linha>
-          <Linha rotulo="SSSL" vazio={v.sssl.length === 0}>
-            <ul>
-              {v.sssl.map((s) => (
-                <li key={s.codigo}>
-                  <span className="codigo">{s.codigo}</span>
-                  {s.rotulo && ` · ${s.rotulo}`}
-                </li>
-              ))}
-            </ul>
-          </Linha>
-          <Linha rotulo="Definição" vazio={!v.definicao}>
-            {v.definicao}
-          </Linha>
-          <Linha rotulo="Grafias" lang="de" vazio={!v.variantes.some((g) => g !== v.de)}>
-            {v.variantes.join(', ')}
-          </Linha>
-        </dl>
+        {editando && publicada ? (
+          <EditarCamposDoVerbete key={publicada.alvo} id={publicada.alvo} campos={campos} criaRegistro={publicada.criaRegistro} excluirDoPai={[id, ...publicada.origens]} />
+        ) : (
+          <dl className="detalhe-dl">
+            <Linha rotulo="Alemão" lang="de" vazio={!campos.de}>
+              {campos.de}
+            </Linha>
+            <Linha rotulo="Inglês" lang="en" vazio={!campos.en}>
+              {campos.en}
+            </Linha>
+            <Linha rotulo="Árabe" lang="ar" vazio={!campos.ar}>
+              <FormaNaLingua texto={campos.ar ?? ''} rtl="auto" />
+            </Linha>
+            <Linha rotulo="Hebraico" lang="he" vazio={!campos.he}>
+              <FormaNaLingua texto={campos.he ?? ''} rtl="auto" />
+            </Linha>
+            <Linha rotulo="Outras línguas" vazio={outras.length === 0}>
+              <ListaDeOutras outras={outras} />
+            </Linha>
+            <Linha rotulo="Pai" vazio={!campos.pai}>
+              {campos.pai && <Link to={`/verbete/${encodeURIComponent(campos.pai)}`}>{nomeDe(campos.pai, campos.pai === v.pai?.id ? (v.pai.pt ?? campos.pai) : campos.pai)}</Link>}
+            </Linha>
+            <Linha rotulo="Iconclass" vazio={campos.iconclass.length === 0}>
+              <ul>
+                {campos.iconclass.map((n) => (
+                  <li key={n}>
+                    <span className="codigo">{n}</span>
+                    {rotuloDaIconclass.get(n) && ` · ${rotuloDaIconclass.get(n)}`}
+                  </li>
+                ))}
+              </ul>
+            </Linha>
+            <Linha rotulo="SSSL" vazio={campos.sssl.length === 0}>
+              <ul>
+                {campos.sssl.map((c) => (
+                  <li key={c}>
+                    <span className="codigo">{c}</span>
+                    {rotuloDoSssl.get(c) && ` · ${rotuloDoSssl.get(c)}`}
+                  </li>
+                ))}
+              </ul>
+            </Linha>
+            <Linha rotulo="Definição" vazio={!v.definicao}>
+              {v.definicao}
+            </Linha>
+            <Linha rotulo="Grafias" lang="de" vazio={!campos.variantes.some((g) => g !== campos.de)}>
+              {campos.variantes.join(', ')}
+            </Linha>
+          </dl>
+        )}
       </section>
 
       <SecaoDeObjetos rotulo="Objetos com este termo" titulo="Objetos" objetos={v.objetos} computador={computador} />
@@ -186,7 +240,7 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
                   <span className="hipotese-citacao">{nomeDaHipotese(h, formas)}</span>
                 )}
                 <span className="hipotese-meta">
-                  {[ROTULO_DO_NIVEL[h.nivel].toLowerCase(), ROTULO_DA_MODALIDADE[h.modalidade], fonte].filter(Boolean).join(' · ')}
+                  {[ROTULO_DO_NIVEL[nivelDaHipoteseDoLivro(niveis, h).efetivo].toLowerCase(), ROTULO_DA_MODALIDADE[h.modalidade], fonte].filter(Boolean).join(' · ')}
                 </span>
               </span>
             </>

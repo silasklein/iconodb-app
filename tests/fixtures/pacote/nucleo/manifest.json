@@ -1,6 +1,6 @@
 {
- "schema": 9,
- "gerado_em": "2026-11-15T03:16:26+00:00",
+ "schema": 10,
+ "gerado_em": "2026-11-15T18:33:33+00:00",
  "publicacoes": [
   {
    "sigla": "TESTE",
@@ -73,11 +73,11 @@
    "bytes": 1080
   },
   "nucleo/busca.sqlite": {
-   "sha256": "78840a1f1241935e09dc4557549de66921fb24d167413e83bc1cf78e70287a88",
-   "bytes": 40960
+   "sha256": "c2eb0177d4b939e97817d161b07ad586ec40b6d8e6acff444f1bc1162da6cea9",
+   "bytes": 45056
   },
   "nucleo/comum.sqlite": {
-   "sha256": "35f4c39d66b7e1564fadd5688685ec2ac94259c111331dec5c0fdc6cf99f0228",
+   "sha256": "1a0cb9ebcb127f5d215a076739d71209ffc900a7f31808e2adbba96898ca9d30",
    "bytes": 385024
   },
   "nucleo/fold.json": {
@@ -85,7 +85,7 @@
    "bytes": 1194
   },
   "nucleo/pub-TESTE.sqlite": {
-   "sha256": "d53e6dc0a6adb4930fa91ee67890c2ed7e4a3403f0e66024cee7fa792d07c4c9",
+   "sha256": "7482f0aceb22cbc9aba7213b14e53105d649ad2805e3bebf7d6d88f6726907e7",
    "bytes": 393216
   }
  }

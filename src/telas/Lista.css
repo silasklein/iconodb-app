@@ -214,6 +214,56 @@
 .obra-linha .lista-nome {
   font-weight: 600;
 }
+.obra-linha .obra-linha-skc {
+  margin-left: 8px;
+  vertical-align: 1px;
+  font-weight: 500;
+  border-color: var(--secundario);
+  color: var(--texto);
+}
+
+/* «Nova obra» (Parte 2C, bloco 3): o botão da lista, como «Novo sítio» — à direita do título no computador, embaixo da
+ * contagem no celular. */
+.lista-titulo-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.lista-novo {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  margin: 14px 0 0;
+  padding: 0 16px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+  color: var(--texto);
+  font-size: 15px;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.lista-titulo-linha .lista-novo {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+/* A coluna da lista é estreita: o título cede, e o botão nunca passa da borda. */
+.lista-titulo-linha h1 {
+  min-width: 0;
+}
+.lista-novo:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .lista-novo {
+    min-height: 36px;
+  }
+}
 .obra-linha .lista-sub {
   grid-column: 1 / -1;
   font-size: 13px;
@@ -570,5 +620,19 @@
   }
   .obra-chicago {
     font-size: 17px;
+  }
+}
+
+/* Tarefa 14: o «‹ <origem>» (decisão 85) no alto de um detalhe aberto de outra tela (a obra, da Revisão). */
+.detalhe > .item-volta-nav {
+  padding-top: 8px;
+}
+@media (min-width: 768px) {
+  .detalhe > .item-volta-nav {
+    padding: 0 0 8px;
+  }
+  .detalhe > .item-volta-nav .item-volta {
+    min-height: var(--alvo-mouse);
+    font-size: 14px;
   }
 }

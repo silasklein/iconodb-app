@@ -229,8 +229,8 @@ export async function resumosDosObjetos(numeros: readonly string[]): Promise<Obj
  */
 const ALVO_ITEM = `CASE WHEN h.target_type = 'element' AND e.target_type = 'item' THEN e.target_id WHEN h.target_type = 'item' THEN h.target_id END`
 
-const SQL_HIPOTESE = (esq: string, onde: string) => `
-  SELECT h.id, h.target_type, h.target_id, h.level, h.modality, h.publication, h.locator, h.passage_id,
+const SQL_HIPOTESE = (esq: string, onde: string, nivelAuto: boolean) => `
+  SELECT h.id, h.target_type, h.target_id, h.level, ${nivelAuto ? 'h.level_auto' : 'NULL'} AS level_auto, h.modality, h.publication, h.locator, h.passage_id,
     h.quote, h.quote_start, h.quote_end, h.cited_from_item, h.verification, h.religiosity,
     e.label AS el_label, e.label_pt AS el_label_pt, om.object_id AS alvo_numero, ${ALVO_ITEM} AS alvo_item,
     a.unit_id, a.gl_id, a.pt_start, a.pt_end, a.metodo,
@@ -252,6 +252,7 @@ function hipoteseDe(l: L): Hipotese {
   return {
     id: s(l.id)!,
     nivel: s(l.level) as Hipotese['nivel'],
+    nivelAutomatico: s(l.level_auto) as Hipotese['nivelAutomatico'],
     modalidade: s(l.modality) as Hipotese['modalidade'],
     publicacao: s(l.publication),
     locator: s(l.locator),
@@ -278,7 +279,7 @@ function hipoteseDe(l: L): Hipotese {
 }
 
 /** Ordem de leitura: trecho, posição da citação, id. */
-function ordenarHipoteses(hs: Hipotese[]): Hipotese[] {
+export function ordenarHipoteses(hs: Hipotese[]): Hipotese[] {
   return hs.sort(
     (x, y) =>
       (x.passagemId ?? '').localeCompare(y.passagemId ?? '') ||
@@ -289,10 +290,12 @@ function ordenarHipoteses(hs: Hipotese[]): Hipotese[] {
 
 async function hipotesesOnde(onde: string | ((esq: string) => string), parametros: Params): Promise<Hipotese[]> {
   const condicao = typeof onde === 'string' ? () => onde : onde
-  return ordenarHipoteses((await linhasPorPublicacao((esq) => SQL_HIPOTESE(esq, condicao(esq)), parametros)).map(hipoteseDe))
+  const auto = await temNivelAutomatico()
+  return ordenarHipoteses((await linhasPorPublicacao((esq) => SQL_HIPOTESE(esq, condicao(esq), auto), parametros)).map(hipoteseDe))
 }
 
-function porNivel(hs: Hipotese[]): HipotesesPorNivel {
+/** As hipóteses agrupadas pelo nível (`h.nivel`), na ordem em que vêm. */
+export function porNivel(hs: readonly Hipotese[]): HipotesesPorNivel {
   const r = Object.fromEntries(NIVEIS.map((nv) => [nv, [] as Hipotese[]])) as HipotesesPorNivel
   for (const h of hs) r[h.nivel]?.push(h)
   return r
@@ -340,6 +343,148 @@ export async function linhasDaFila(): Promise<LinhaDaFila[]> {
     const entidadeId = s(l.entity_id)
     return { tipo: s(l.reason)!, entidade, entidadeId, detalhe: s(l.detail) ?? '', numero: entidade === 'item' && entidadeId ? (numeros.get(entidadeId) ?? entidadeId) : null }
   })
+}
+
+/**
+ * Uma citação dos livros que a Revisão pode ligar a uma obra (Parte 2C, bloco 3, Tarefa 11): uma linha de `bib_ref` não
+ * resolvida, ou resolvida por uma ligação do usuário (pacote 10, `resolved_by 'user'`: se a camada a desfaz, ela volta à
+ * fila). O `id` é o da publicação (`sigla`): o par identifica a linha dentro do pacote, nunca entre pacotes.
+ */
+export interface CitacaoDoPacote {
+  id: number
+  sigla: string
+  itemId: string | null
+  passagemId: string | null
+  hipoteseId: string | null
+  categoria: number | null
+  bruto: string
+  curta: string | null
+  obraId: string | null
+  resolvida: boolean
+  resolvidaPor: 'auto' | 'user' | null
+  /**
+   * A citação da posição relatada (`hipoteseId`): os autores relatados (`hypothesis_author`, `role 'reported'`, na ordem em
+   * que o build os gravou), para a Revisão refazer o texto da linha como o build. Nas outras, ausente.
+   */
+  relatadoPor?: string[]
+}
+
+let resolvidoPorGuardado: { motor: number; pedido: Promise<boolean> } | null = null
+aoReabrir(() => {
+  resolvidoPorGuardado = null
+})
+
+/** O pacote tem `bib_ref.resolved_by` (schema 10)? Olhado na primeira publicação, uma vez por pacote, como `temNivelAutomatico`. */
+async function temResolvidoPor(): Promise<boolean> {
+  const motor = geracaoDoBanco()
+  if (resolvidoPorGuardado?.motor === motor) return resolvidoPorGuardado.pedido
+  const pedido = (async () => {
+    const [pub] = await publicacoesAbertas()
+    if (!pub) return false
+    const [l] = await executar<L>(`SELECT count(*) AS n FROM pragma_table_info('bib_ref', $esq) WHERE name = 'resolved_by'`, { $esq: pub.esquema })
+    return n(l?.n) === 1
+  })()
+  const entrada = { motor, pedido }
+  resolvidoPorGuardado = entrada
+  pedido.catch(() => {
+    if (resolvidoPorGuardado === entrada) resolvidoPorGuardado = null
+  })
+  return pedido
+}
+
+/**
+ * As citações que a Revisão pode ligar: as não resolvidas de todas as publicações e, no pacote 10, as resolvidas por uma
+ * ligação do usuário. Na ordem das publicações e, em cada uma, do `id` (a ordem em que o build as gravou).
+ */
+export function citacoesNaoResolvidasNoPacote(): Promise<CitacaoDoPacote[]> {
+  // Revisão final (M3): uma leitura por pacote, que a fila (o Menu, a barra, a Revisão) e a Bibliografia dividem
+  const motor = geracaoDoBanco()
+  if (citacoesGuardadas?.motor === motor) return citacoesGuardadas.pedido
+  const pedido = lerCitacoesNaoResolvidas()
+  citacoesGuardadas = { motor, pedido }
+  pedido.catch(() => {
+    if (citacoesGuardadas?.pedido === pedido) citacoesGuardadas = null
+  })
+  return pedido
+}
+
+let citacoesGuardadas: { motor: number; pedido: Promise<CitacaoDoPacote[]> } | null = null
+aoReabrir(() => {
+  citacoesGuardadas = null
+})
+
+async function lerCitacoesNaoResolvidas(): Promise<CitacaoDoPacote[]> {
+  const comUsuario = await temResolvidoPor()
+  const linhas = await linhasPorPublicacao(
+    (esq, sigla) => `SELECT * FROM (
+      SELECT '${sigla.replace(/'/g, "''")}' AS sigla, id, item_id, passage_id, hypothesis_id, category, raw, short_cite, bib_entry_id, status,
+             ${comUsuario ? 'resolved_by' : 'NULL AS resolved_by'}
+      FROM ${esq}.bib_ref WHERE status <> 'resolved'${comUsuario ? " OR resolved_by = 'user'" : ''} ORDER BY id)`,
+  )
+  const hipoteses = [...new Set(linhas.map((l) => s(l.hypothesis_id)).filter((h): h is string => h !== null))]
+  const relatados = new Map<string, string[]>()
+  if (hipoteses.length > 0) {
+    const autores = await linhasPorPublicacao(
+      (esq) => `SELECT * FROM (SELECT hypothesis_id, author FROM ${esq}.hypothesis_author WHERE role = 'reported' AND hypothesis_id IN ${EM_IDS} ORDER BY rowid)`,
+      { $ids: ids(hipoteses) },
+    )
+    for (const a of autores) relatados.set(s(a.hypothesis_id)!, [...(relatados.get(s(a.hypothesis_id)!) ?? []), s(a.author)!])
+  }
+  return linhas.map(
+    (l): CitacaoDoPacote => ({
+      ...(s(l.hypothesis_id) ? { relatadoPor: relatados.get(s(l.hypothesis_id)!) ?? [] } : {}),
+      id: n(l.id)!,
+      sigla: s(l.sigla)!,
+      itemId: s(l.item_id),
+      passagemId: s(l.passage_id),
+      hipoteseId: s(l.hypothesis_id),
+      categoria: n(l.category),
+      bruto: s(l.raw) ?? '',
+      curta: s(l.short_cite),
+      obraId: s(l.bib_entry_id),
+      resolvida: l.status === 'resolved',
+      resolvidaPor: l.resolved_by === 'auto' || l.resolved_by === 'user' ? l.resolved_by : null,
+    }),
+  )
+}
+
+/** Onde a citação aparece: o texto original do trecho, ou o do campo do catálogo (o aparato não dividido é o campo 0). */
+export interface OndeAparece {
+  tipo: 'trecho' | 'campo'
+  /** O número do campo (0: o aparato não dividido); null num trecho. */
+  campo: number | null
+  texto: string
+  /** A língua do texto (`passage.language`; no campo do catálogo, a da publicação), ou null. */
+  lingua: string | null
+}
+
+/**
+ * O texto em que a citação está, para a Revisão a mostrar com a citação marcada: o do trecho (`passage.text`), ou o do
+ * campo do catálogo do item (`catalog_field.literal`). A citação da posição relatada (só hipótese) não tem: null.
+ */
+export async function ondeApareceACitacao(c: Pick<CitacaoDoPacote, 'sigla' | 'itemId' | 'passagemId' | 'hipoteseId' | 'categoria'>): Promise<OndeAparece | null> {
+  const pub = (await publicacoesAbertas()).find((p) => p.sigla === c.sigla)
+  if (!pub) return null
+  if (c.passagemId) {
+    const [l] = await executar<L>(`SELECT text, language FROM ${pub.esquema}.passage WHERE id = $id`, { $id: c.passagemId })
+    return l && s(l.text) ? { tipo: 'trecho', campo: null, texto: s(l.text)!, lingua: s(l.language) } : null
+  }
+  if (c.hipoteseId || !c.itemId) return null
+  const campo = c.categoria ?? 0
+  const [l] = await executar<L>(
+    `SELECT literal, (SELECT language FROM ${pub.esquema}.publication LIMIT 1) AS language FROM ${pub.esquema}.catalog_field WHERE item_id = $item AND category = $cat ORDER BY id LIMIT 1`,
+    { $item: c.itemId, $cat: campo },
+  )
+  return l && s(l.literal) ? { tipo: 'campo', campo, texto: s(l.literal)!, lingua: s(l.language) } : null
+}
+
+/** A forma Chicago das obras dos livros pedidas (id → texto e HTML): a referência de uma citação que a pessoa ligou no app. */
+export async function chicagoDasObras(idsDasObras: readonly string[]): Promise<Map<string, { chicago: string | null; chicagoHtml: string | null }>> {
+  const saida = new Map<string, { chicago: string | null; chicagoHtml: string | null }>()
+  if (idsDasObras.length === 0) return saida
+  for (const l of await executar<L>(`SELECT id, chicago, chicago_html FROM main.bib_entry WHERE id IN ${EM_IDS}`, { $ids: ids([...new Set(idsDasObras)]) }))
+    saida.set(s(l.id)!, { chicago: s(l.chicago), chicagoHtml: s(l.chicago_html) })
+  return saida
 }
 
 /** Um elemento do livro (uma parte do desenho: «Testlöwe») que ainda não tem região desenhada em nenhuma imagem. */
@@ -554,6 +699,32 @@ async function temSubcolecoes(): Promise<boolean> {
   subcolecoesGuardado = entrada
   pedido.catch(() => {
     if (subcolecoesGuardado === entrada) subcolecoesGuardado = null
+  })
+  return pedido
+}
+
+let nivelAutoGuardado: { motor: number; pedido: Promise<boolean> } | null = null
+aoReabrir(() => {
+  nivelAutoGuardado = null
+})
+
+/**
+ * O pacote tem `hypothesis.level_auto` (schema 10, o nível automático de uma hipótese cujo nível o usuário reviu)? Olhado no
+ * esquema da primeira publicação, como `temSubcolecoes`. Num pacote 5–9, não: `nivelAutomatico` é null. Uma vez por pacote.
+ */
+export async function temNivelAutomatico(): Promise<boolean> {
+  const motor = geracaoDoBanco()
+  if (nivelAutoGuardado?.motor === motor) return nivelAutoGuardado.pedido
+  const pedido = (async () => {
+    const [pub] = await publicacoesAbertas()
+    if (!pub) return false
+    const [l] = await executar<L>(`SELECT count(*) AS n FROM pragma_table_info('hypothesis', $esq) WHERE name = 'level_auto'`, { $esq: pub.esquema })
+    return n(l?.n) === 1
+  })()
+  const entrada = { motor, pedido }
+  nivelAutoGuardado = entrada
+  pedido.catch(() => {
+    if (nivelAutoGuardado === entrada) nivelAutoGuardado = null
   })
   return pedido
 }
@@ -1003,6 +1174,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     bibliografia: bib.map(
       (l): ReferenciaBibliografica => ({
         id: n(l.id)!,
+        sigla: s(l.publication) ?? '',
         itemId: s(l.item_id),
         categoria: n(l.category),
         bruto: s(l.raw)!,
@@ -1010,6 +1182,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
         paginas: s(l.pages),
         obraId: s(l.bib_entry_id),
         resolvida: l.status === 'resolved',
+        resolvidaPor: l.resolved_by === 'auto' || l.resolved_by === 'user' ? l.resolved_by : null,
         chicago: s(l.chicago),
         chicagoHtml: s(l.chicago_html),
         hipoteseId: s(l.hypothesis_id),
@@ -1050,13 +1223,19 @@ export async function verbetes(): Promise<VerbeteDaLista[]> {
               WHERE a.subject_type = 'item' AND a.field = 'findspot' AND st.name_entry_id IS NOT NULL`,
   )
   const linhas = await executar<L>(
-    `SELECT g.id, g.kind, g.pt, g.de, g.en, g.status,
+    // g.*: o árabe, o hebraico, as outras línguas (pacote 10; um pacote 5–9 não tem a coluna) e as variantes entram no filtro
+    `SELECT g.*,
        ${pares ? `(SELECT count(DISTINCT coalesce(om.object_id, p.item_id)) FROM (${pares}) p
                     LEFT JOIN main.object_member om ON om.item_id = p.item_id WHERE p.gl = g.id AND p.item_id IS NOT NULL)` : '0'} AS objetos
      FROM main.glossary_entry g`,
   )
   return linhas
-    .map((l): VerbeteDaLista => ({ ...verbeteResumoDe(l), en: s(l.en), objetos: n(l.objetos) ?? 0 }))
+    .map((l): VerbeteDaLista => ({
+      ...verbeteResumoDe(l),
+      en: s(l.en),
+      objetos: n(l.objetos) ?? 0,
+      formas: [s(l.ar), s(l.he), ...outrasFormas(l.other_forms).map((o) => o.forma), ...json<unknown[]>(l.variants, []).filter((x): x is string => typeof x === 'string')].filter((x): x is string => !!x),
+    }))
     .sort((x, y) => (x.pt ?? x.de ?? '').localeCompare(y.pt ?? y.de ?? '', 'pt'))
 }
 
@@ -1064,8 +1243,9 @@ export async function verbetes(): Promise<VerbeteDaLista[]> {
  * Os redirecionamentos do pacote (Tarefa 16; `redirecionamento` do comum.sqlite, schema 6): o verbete ou o sítio que a pessoa
  * criou e o pipeline publicou com um id do livro. Um pacote do schema 5 não tem a tabela: nenhum. `verbeteExiste`: o destino
  * é um verbete do pacote (m7; o de um sítio quem confere é src/pacote/redirecionamentos.ts, pela lista dos sítios).
+ * `obraExiste` (pacote 10, `tipo 'obra'`): o destino é uma obra do pacote (`bib_entry`).
  */
-export async function redirecionamentos(): Promise<{ de: string; para: string; tipo: string; verbeteExiste: boolean; criado: boolean }[]> {
+export async function redirecionamentos(): Promise<{ de: string; para: string; tipo: string; verbeteExiste: boolean; obraExiste: boolean; criado: boolean }[]> {
   const [t] = await executar<L>("SELECT count(*) AS n FROM main.sqlite_master WHERE type = 'table' AND name = 'redirecionamento'")
   if (!n(t?.n)) return []
   // `criado` (decisão 50; revisão 2 da Tarefa 16): o destino foi criado do registro do usuário. Uma tabela sem a coluna
@@ -1073,9 +1253,18 @@ export async function redirecionamentos(): Promise<{ de: string; para: string; t
   const [c] = await executar<L>("SELECT count(*) AS n FROM pragma_table_info('redirecionamento', 'main') WHERE name = 'criado'")
   const criado = n(c?.n) ? 'r.criado' : '0'
   const linhas = await executar<L>(
-    `SELECT r.de, r.para, r.tipo, ${criado} AS criado, EXISTS (SELECT 1 FROM main.glossary_entry g WHERE g.id = r.para) AS existe FROM main.redirecionamento r ORDER BY r.de`,
+    `SELECT r.de, r.para, r.tipo, ${criado} AS criado, EXISTS (SELECT 1 FROM main.glossary_entry g WHERE g.id = r.para) AS existe,
+       EXISTS (SELECT 1 FROM main.bib_entry b WHERE b.id = r.para) AS obra
+     FROM main.redirecionamento r ORDER BY r.de`,
   )
-  return linhas.map((l) => ({ de: s(l.de) ?? '', para: s(l.para) ?? '', tipo: s(l.tipo) ?? '', verbeteExiste: !!n(l.existe), criado: n(l.criado) === 1 }))
+  return linhas.map((l) => ({
+    de: s(l.de) ?? '',
+    para: s(l.para) ?? '',
+    tipo: s(l.tipo) ?? '',
+    verbeteExiste: !!n(l.existe),
+    obraExiste: !!n(l.obra),
+    criado: n(l.criado) === 1,
+  }))
 }
 
 /** A tabela existe no comum.sqlite? (As do schema 8 faltam num pacote 5–7: quem lê dá a lista vazia, F11.) */
@@ -1160,6 +1349,7 @@ export async function verbete(glId: string): Promise<Verbete | null> {
     ar: s(l.ar),
     he: s(l.he),
     variantes: json<string[]>(l.variants, []),
+    outras: outrasFormas(l.other_forms),
     definicao: s(l.definition),
     pai: s(l.parent_id) ? { id: s(l.parent_id)!, pt: s(l.pai_pt) } : null,
     iconclass: json<[string, string | null, string | null, string | null][]>(l.iconclass_json, []).map(([notacao, pt, de, en]) => ({ notacao, pt, de, en })),
@@ -1167,6 +1357,17 @@ export async function verbete(glId: string): Promise<Verbete | null> {
     hipoteses,
     objetos: await resumosDosItens(itens, 'fonte'),
   }
+}
+
+/** As formas em outras línguas (`other_forms`, pacote 10: `[{"lingua", "forma"}]`); só as bem formadas; [] sem a coluna. */
+function outrasFormas(texto: unknown): { lingua: string; forma: string }[] {
+  const lista = json<unknown>(texto, [])
+  if (!Array.isArray(lista)) return []
+  return lista.flatMap((x) =>
+    x && typeof x === 'object' && typeof (x as Record<string, unknown>).lingua === 'string' && typeof (x as Record<string, unknown>).forma === 'string'
+      ? [{ lingua: (x as { lingua: string }).lingua, forma: (x as { forma: string }).forma }]
+      : [],
+  )
 }
 
 /** Primeira citação curta de bib_entry.short_cites ({"TESTE": ["Autor 1999"]}). */
@@ -1177,15 +1378,20 @@ function citadaComoDe(texto: unknown): Record<string, string[]> {
   )
 }
 const primeiraCitacao = (c: Record<string, string[]>) => Object.values(c).flat()[0] ?? null
+const todasAsCitacoes = (c: Record<string, string[]>) => [...new Set(Object.values(c).flat())]
 const tituloDoCsl = (csl: Record<string, unknown> | null) => (csl && typeof csl.title === 'string' ? csl.title : null)
 
 const SQL_REFS = (esq: string) => `SELECT bib_entry_id, item_id FROM ${esq}.bib_ref WHERE bib_entry_id IS NOT NULL AND item_id IS NOT NULL`
 
-/** As obras da bibliografia, pela citação curta, com quantos objetos citam cada uma. */
+/**
+ * As obras da bibliografia DO PACOTE, pela citação curta, com quantos objetos citam cada uma. NÃO traz as obras do usuário
+ * (`BIB-<aparelho>-<n>`, que moram na camada): a lista viva das telas é `useObrasDaBibliografia()` (src/bibliografia/
+ * doUsuario.ts), que junta as duas e tira a obra do usuário já publicada (o redirecionamento `obra`).
+ */
 export async function obras(): Promise<ObraResumo[]> {
   const refs = porPublicacao(await publicacoesAbertas(), SQL_REFS)
   const linhas = await executar<L>(
-    `SELECT b.id, b.csl_json, b.short_cites,
+    `SELECT b.id, b.csl_json, b.short_cites, b.origin,
        ${refs ? `(SELECT count(DISTINCT coalesce(om.object_id, r.item_id)) FROM (${refs}) r
                   LEFT JOIN main.object_member om ON om.item_id = r.item_id WHERE r.bib_entry_id = b.id)` : '0'} AS objetos
      FROM main.bib_entry b`,
@@ -1193,11 +1399,35 @@ export async function obras(): Promise<ObraResumo[]> {
   return linhas
     .map((l): ObraResumo => {
       const csl = json<Record<string, unknown> | null>(l.csl_json, null)
-      return { id: s(l.id)!, curta: primeiraCitacao(citadaComoDe(l.short_cites)), titulo: tituloDoCsl(csl), objetos: n(l.objetos) ?? 0 }
+      const citadaComo = citadaComoDe(l.short_cites)
+      return { id: s(l.id)!, curta: primeiraCitacao(citadaComo), titulo: tituloDoCsl(csl), origem: s(l.origin), objetos: n(l.objetos) ?? 0, curtas: todasAsCitacoes(citadaComo), csl }
     })
     .sort((x, y) => (x.curta ?? x.id).localeCompare(y.curta ?? y.id, 'pt'))
 }
 
+/**
+ * Revisão final do bloco 3 (M3): os itens de cada obra de `ligados` (obra → os itens das citações que a pessoa ligou a ela no
+ * app, `itensLigadosNoApp`) juntos aos que o pacote liga a ela (`bib_ref`), e quantos objetos eles são (um por objeto, como a
+ * seção da página da obra, `resumosDosItens`, e a contagem da lista, `obras()`).
+ */
+export async function objetosDasObrasComLigados(ligados: ReadonlyMap<string, readonly string[]>): Promise<Map<string, { itens: string[]; objetos: number }>> {
+  const saida = new Map<string, { itens: string[]; objetos: number }>()
+  if (ligados.size === 0) return saida
+  const linhas = await linhasPorPublicacao(
+    (esq) => `SELECT DISTINCT bib_entry_id, item_id FROM ${esq}.bib_ref WHERE bib_entry_id IN ${EM_IDS} AND item_id IS NOT NULL`,
+    { $ids: ids([...ligados.keys()]) },
+  )
+  const doPacote = new Map<string, string[]>()
+  for (const l of linhas) doPacote.set(s(l.bib_entry_id)!, [...(doPacote.get(s(l.bib_entry_id)!) ?? []), s(l.item_id)!])
+  const porObra = [...ligados].map(([obra, itens]): [string, string[]] => [obra, [...new Set([...(doPacote.get(obra) ?? []), ...itens])]])
+  const numeros = await numerosDosItens([...new Set(porObra.flatMap(([, itens]) => itens))])
+  for (const [obra, itens] of porObra) {
+    saida.set(obra, { itens, objetos: new Set(itens.map((i) => numeros.get(i)).filter((x) => x !== undefined)).size })
+  }
+  return saida
+}
+
+/** Uma obra DO PACOTE (`bib_entry`). A obra do usuário (`BIB-<aparelho>-<n>`) se lê da camada (`useObraSkc`). */
 export async function obra(bibId: string): Promise<Obra | null> {
   const [l] = await executar<L>('SELECT * FROM main.bib_entry WHERE id = $id', { $id: bibId })
   if (!l) return null
@@ -1211,6 +1441,7 @@ export async function obra(bibId: string): Promise<Obra | null> {
     chicago: s(l.chicago),
     chicagoHtml: s(l.chicago_html),
     citadaComo,
+    curtas: todasAsCitacoes(citadaComo),
     origem: s(l.origin),
     csl,
     objetos: await resumosDosItens([...new Set(refs.map((r) => s(r.item_id)!))], 'fonte'),

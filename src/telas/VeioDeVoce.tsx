@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { lerObra } from '../bibliografia/modelo'
 import { lerVerbeteSkc } from '../glossario/modelo'
 import { guardarNomes } from '../excluidos/nomesGuardados'
 import { useOrigensQueCriaram } from '../pacote/redirecionamentos'
@@ -13,8 +14,8 @@ import './Lista.css'
 import './VeioDeVoce.css'
 
 interface Props {
-  tipo: 'verbete' | 'sitio'
-  /** O id do livro (`GL-<dígitos>` ou `<SIGLA>-<n>`). */
+  tipo: 'verbete' | 'sitio' | 'obra'
+  /** O id do livro (`GL-<dígitos>`, `<SIGLA>-<n>` ou `BIB-<dígitos>`). */
   id: string
   /**
    * O nome da entrada dos livros (a página aberta). Não é mostrado (uma origem que só tem a marca é dita sem nome, N-2), mas
@@ -34,10 +35,24 @@ interface Origem {
   soMarca: boolean
 }
 
+/** As palavras que concordam com a entrada (o verbete e o sítio no masculino, a obra no feminino). */
+const MASCULINO = { o: 'o', os: 'os', seu: 'seu', seus: 'seus', ele: 'ele', eles: 'eles', do: 'do', um: 'um deles', outros: 'outros', juntos: 'excluídos juntos', publicado: 'Publicado', lo: 'lo', los: 'los', todos: 'todos', Os: 'Os' }
+const FEMININO = { o: 'a', os: 'as', seu: 'sua', seus: 'suas', ele: 'ela', eles: 'elas', do: 'da', um: 'uma delas', outros: 'outras', juntos: 'excluídas juntas', publicado: 'Publicada', lo: 'la', los: 'las', todos: 'todas', Os: 'As' }
+
 const TEXTO = {
-  verbete: { titulo: 'Este verbete veio de você', singular: 'verbete', plural: 'verbetes', este: 'este verbete', ligado: 'as notas e hipóteses ligadas a este verbete ficam guardadas' },
-  sitio: { titulo: 'Este sítio veio de você', singular: 'sítio', plural: 'sítios', este: 'este sítio', ligado: 'os objetos, as notas e as correções ligados a este sítio ficam guardados' },
+  verbete: { titulo: 'Este verbete veio de você', singular: 'verbete', plural: 'verbetes', este: 'este verbete', ligado: 'as notas e hipóteses ligadas a este verbete ficam guardadas', g: MASCULINO },
+  sitio: { titulo: 'Este sítio veio de você', singular: 'sítio', plural: 'sítios', este: 'este sítio', ligado: 'os objetos, as notas e as correções ligados a este sítio ficam guardados', g: MASCULINO },
+  // Parte 2C, bloco 3 (Tarefa 14): a obra do usuário que o pacote publicou (`redirecionamento tipo 'obra'`, `criado`)
+  obra: { titulo: 'Esta obra veio de você', singular: 'obra', plural: 'obras', este: 'esta obra', ligado: 'as citações ligadas a esta obra, os objetos que a citam e as notas ficam guardados', g: FEMININO },
 } as const
+
+/** O nome de uma origem: a forma em uso do verbete, o nome de agora do sítio, a citação curta (ou o título) da obra. */
+function nomeDaOrigem(tipo: Props['tipo'], r: Parameters<typeof lerObra>[0]): string {
+  if (tipo === 'verbete') return lerVerbeteSkc(r).emUso
+  if (tipo === 'sitio') return lerSitioSkc(r).nomeDeAgora
+  const o = lerObra(r)
+  return (o && (o.curta || o.csl.title)) || r.id
+}
 
 const ROTULO_RETIRAR = 'Retirar dos livros mesmo assim'
 
@@ -67,6 +82,9 @@ const queNaoChegou = (n: number) => (n === 1 ? 'que não chegou' : 'que não che
  *
  * Revisão 4 (m-M): com uma origem já excluída e outra viva, o botão e a confirmação contam só as vivas (as que «Excluir»
  * exclui), e o texto diz qual já foi excluída.
+ *
+ * Parte 2C, bloco 3 (Tarefa 14): também a obra dos livros que veio de uma obra sua (`BIB-<aparelho>-<n>` → `BIB-<dígitos>`,
+ * `tipo 'obra'`): «Esta obra veio de você», «Excluir a sua obra», o mesmo comportamento, com as palavras no feminino.
  */
 export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
   const ids = useOrigensQueCriaram(id) ?? []
@@ -79,7 +97,7 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
       const soMarca = Object.keys(r.campos).length === 0
       // Uma origem restaurada que só tem a marca continua sem chegar: não conta como presente (§5).
       if (soMarca && !r.excluido) return []
-      const nome = soMarca ? '' : tipo === 'verbete' ? lerVerbeteSkc(r).emUso : lerSitioSkc(r).nomeDeAgora
+      const nome = soMarca ? '' : nomeDaOrigem(tipo, r)
       return [{ id: o, nome, excluido: r.excluido, soMarca }]
     }),
   )
@@ -114,6 +132,7 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
   }, [soComMarca, nomeDoLivro])
 
   const t = TEXTO[tipo]
+  const g = t.g
   const faltam = Math.max(0, ids.length - origens.length)
   // §5: só com a sincronização em dia, que já rodou ao menos uma vez neste aparelho (`'sincronizado'` também é o estado
   // inicial), e nada por enviar; fora disso o bloco pede para sincronizar, como antes.
@@ -124,14 +143,14 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
   const depoisDeRestaurar = restaurou && faltam > 0
   if (origens.length === 0 && !podeRetirar && !depoisDeRestaurar) return null
   const varias = origens.length > 1
-  const nDe = (n: number) => (n === 1 ? `1 ${t.singular} seu` : `${n} ${t.plural} seus`)
+  const nDe = (n: number) => (n === 1 ? `1 ${t.singular} ${g.seu}` : `${n} ${t.plural} ${g.seus}`)
   // Revisão 4 (m-M): uma origem já excluída (noutro aparelho, antes do pacote) não conta no botão nem na confirmação:
   // «Excluir» só exclui as vivas.
   const vivas = origens.filter((o) => !o.excluido)
   const jaExcluidas = origens.filter((o) => o.excluido)
   const nomesVivos = vivas.map((o) => o.nome)
   const variasVivas = vivas.length > 1
-  const rotuloExcluir = variasVivas ? `Excluir os seus ${vivas.length} ${t.plural}` : `Excluir o seu ${t.singular}`
+  const rotuloExcluir = variasVivas ? `Excluir ${g.os} ${g.seus} ${vivas.length} ${t.plural}` : `Excluir ${g.o} ${g.seu} ${t.singular}`
   // N-2: as que só têm a marca não têm nome visível: ««x» e 1 que não chegou», «1 verbete seu que não chegou».
   const comNome = (os: Origem[]) => os.filter((o) => !o.soMarca).map((o) => o.nome)
   const semNome = (os: Origem[]) => os.filter((o) => o.soMarca).length
@@ -149,10 +168,14 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
       ? `de ${nDe(origens.length)} ${queNaoChegou(origens.length)}`
       : `de ${nDe(origens.length)} (${lista(comNome(origens))}${semNome(origens) > 0 ? ` e ${semNome(origens)} ${queNaoChegou(semNome(origens))}` : ''})`
     : um?.soMarca
-      ? `do seu ${t.singular} ${queNaoChegou(1)}`
-      : `do seu ${t.singular} ${lista(comNome(origens))}`
-  const quem = varias ? `os seus ${origens.length} ${t.plural}` : um?.soMarca ? `o seu ${t.singular} ${queNaoChegou(1)}` : `o seu ${t.singular} ${lista(comNome(origens))}`
-  const faltaTexto = `${faltam === 1 ? 'Falta' : 'Faltam'} neste aparelho ${nDe(faltam)} que ${faltam === 1 ? 'leva' : 'levam'} a esta entrada. Se ${faltam === 1 ? 'ele não chegou' : 'eles não chegaram'} depois de sincronizar, ${faltam === 1 ? 'pode' : 'podem'} ter se perdido. Você pode retirar a entrada dos livros mesmo assim: os seus ${t.plural} que levam a ela vão para Excluídos, e ela sai dos livros na próxima importação.`
+      ? `${g.do} ${g.seu} ${t.singular} ${queNaoChegou(1)}`
+      : `${g.do} ${g.seu} ${t.singular} ${lista(comNome(origens))}`
+  const quem = varias
+    ? `${g.os} ${g.seus} ${origens.length} ${t.plural}`
+    : um?.soMarca
+      ? `${g.o} ${g.seu} ${t.singular} ${queNaoChegou(1)}`
+      : `${g.o} ${g.seu} ${t.singular} ${lista(comNome(origens))}`
+  const faltaTexto = `${faltam === 1 ? 'Falta' : 'Faltam'} neste aparelho ${nDe(faltam)} que ${faltam === 1 ? 'leva' : 'levam'} a esta entrada. Se ${faltam === 1 ? `${g.ele} não chegou` : `${g.eles} não chegaram`} depois de sincronizar, ${faltam === 1 ? 'pode' : 'podem'} ter se perdido. Você pode retirar a entrada dos livros mesmo assim: ${g.os} ${g.seus} ${t.plural} que levam a ela vão para Excluídos, e ela sai dos livros na próxima importação.`
   const ainda = faltam === 1 ? 'que ainda não chegou' : 'que ainda não chegaram'
   const aviso = !excluidas
     ? ''
@@ -164,7 +187,7 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
         )
       : podeRetirar
         ? faltaTexto
-        : `Você excluiu ${quem}. Mais ${nDe(faltam)} ${faltam === 1 ? 'leva' : 'levam'} a ${t.este} e ainda não ${faltam === 1 ? 'chegou' : 'chegaram'} a este aparelho: enquanto ${faltam === 1 ? 'ele existir' : 'um deles existir'}, ${t.este} continua nos livros. Sincronize para ${faltam === 1 ? 'vê-lo' : 'vê-los'}.`
+        : `Você excluiu ${quem}. Mais ${nDe(faltam)} ${faltam === 1 ? 'leva' : 'levam'} a ${t.este} e ainda não ${faltam === 1 ? 'chegou' : 'chegaram'} a este aparelho: enquanto ${faltam === 1 ? `${g.ele} existir` : `${g.um} existir`}, ${t.este} continua nos livros. Sincronize para ${faltam === 1 ? `vê-${g.lo}` : `vê-${g.los}`}.`
   const statusId = `veio-de-voce-status-${id}`
 
   // Excluir: as vivas que este aparelho tem. Retirar: todas as vivas, inclusive as que faltam (os ids vêm do pacote).
@@ -201,8 +224,8 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
     <div role="group" aria-label={rotuloDoGrupo} className="veio-de-voce-confirmar">
       <p>
         {juntos}
-        <span className="veio-de-voce-id">{id}</span> fica reservado para ele. Nada se apaga: {t.ligado}, mas sem ele até você restaurar. Ao restaurar, ele volta com o mesmo{' '}
-        <span className="veio-de-voce-id">{id}</span> e tudo volta a se ligar a ele.
+        <span className="veio-de-voce-id">{id}</span> fica reservado para {g.ele}. Nada se apaga: {t.ligado}, mas sem {g.ele} até você restaurar. Ao restaurar, {g.ele} volta com o mesmo{' '}
+        <span className="veio-de-voce-id">{id}</span> e tudo volta a se ligar a {g.ele}.
       </p>
       <div className="veio-de-voce-botoes">
         <button
@@ -270,26 +293,26 @@ export function VeioDeVoce({ tipo, id, nomeDoLivro }: Props) {
         // N-1: só depois de restaurar a que só tinha a marca, com algo por enviar: pede para sincronizar
         <p ref={textoRef} tabIndex={-1} className="veio-de-voce-texto">
           {faltam === 1 ? 'Falta' : 'Faltam'} neste aparelho {nDe(faltam)} que {faltam === 1 ? 'leva' : 'levam'} a esta entrada. Sincronize para{' '}
-          {faltam === 1 ? 'vê-lo' : 'vê-los'}; enquanto {faltam === 1 ? 'ele existir' : 'um deles existir'}, {t.este} continua nos livros.
+          {faltam === 1 ? `vê-${g.lo}` : `vê-${g.los}`}; enquanto {faltam === 1 ? `${g.ele} existir` : `${g.um} existir`}, {t.este} continua nos livros.
         </p>
       ) : faltam > 0 ? (
         <p className="veio-de-voce-texto">
-          Publicado a partir {de} e de mais {nDe(faltam)} {ainda} a este aparelho. Sincronize para ver todos; enquanto um deles existir, {t.este} continua nos livros.
+          {g.publicado} a partir {de} e de mais {nDe(faltam)} {ainda} a este aparelho. Sincronize para ver {g.todos}; enquanto {g.um} existir, {t.este} continua nos livros.
         </p>
       ) : (
         <>
           <p className="veio-de-voce-texto">
-            Publicado a partir {de}.{' '}
+            {g.publicado} a partir {de}.{' '}
             {jaExcluidas.length > 0
-              ? `Você já excluiu ${quais(jaExcluidas)}; se excluir ${variasVivas ? `os outros ${vivas.length}` : lista(nomesVivos)}, ele sai dos livros na próxima importação.`
-              : `Se você ${varias ? 'os' : 'o'} excluir, ele sai dos livros na próxima importação.`}
+              ? `Você já excluiu ${quais(jaExcluidas)}; se excluir ${variasVivas ? `${g.os} ${g.outros} ${vivas.length}` : lista(nomesVivos)}, ${g.ele} sai dos livros na próxima importação.`
+              : `Se você ${varias ? g.os : g.o} excluir, ${g.ele} sai dos livros na próxima importação.`}
           </p>
           {confirmando === 'excluir'
             ? confirmacao(
                 variasVivas ? `${rotuloExcluir}?` : `${rotuloExcluir} ${lista(nomesVivos)}?`,
                 variasVivas && (
                   <>
-                    Os {nDe(vivas.length)} ({lista(nomesVivos)}) são excluídos juntos: enquanto um deles existir, {t.este} continua nos livros.{' '}
+                    {g.Os} {nDe(vivas.length)} ({lista(nomesVivos)}) são {g.juntos}: enquanto {g.um} existir, {t.este} continua nos livros.{' '}
                   </>
                 ),
                 () => excluir(),

@@ -4,6 +4,7 @@ import { acharLinks, numeroDoCatalogo } from './links'
 function ref(parcial: Partial<ReferenciaBibliografica>): ReferenciaBibliografica {
   return {
     id: 1,
+    sigla: 'TESTE',
     itemId: 'T-1',
     categoria: 7,
     bruto: 'Autor 1999: 12 Nr. 3',
@@ -11,6 +12,7 @@ function ref(parcial: Partial<ReferenciaBibliografica>): ReferenciaBibliografica
     paginas: '12 Nr. 3',
     obraId: 'BIB-1',
     resolvida: true,
+    resolvidaPor: 'auto',
     chicago: null,
     chicagoHtml: null,
     hipoteseId: null,

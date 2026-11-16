@@ -33,7 +33,7 @@ async function abrirPar(page: Page, chave: string) {
 test('os pares de sítios: lugares diferentes (e a tecla U), um é parte do outro, e «Mesclar…» até a caixa', async ({ page }) => {
   await entrar(page)
   await page.goto('#/revisao')
-  await total(page, 9)
+  await total(page, 12)
   await expect(grupo(page).locator('.revisao-grupo-quantidade')).toHaveText('2')
   await alvoOk(grupo(page), page, 'o grupo dos pares')
   await grupo(page).click()
@@ -70,7 +70,7 @@ test('os pares de sítios: lugares diferentes (e a tecla U), um é parte do outr
   await expect(resolvidos(page)).toContainText('Maḥteṣ Teste e Maḥtiṣ Teste')
   await expect(resolvidos(page)).toContainText('lugares diferentes')
   await expect(grupo(page).locator('.revisao-grupo-quantidade')).toHaveText('1')
-  await total(page, 8)
+  await total(page, 11)
   // o foco vai ao par vizinho (o cabeçalho dele), não se perde
   await expect(par(page, POR_COORDENADA).locator('.revisao-par-cabeca')).toBeFocused()
   await semRolagemHorizontal(page, 'o par resolvido')
@@ -80,13 +80,13 @@ test('os pares de sítios: lugares diferentes (e a tecla U), um é parte do outr
   await apertarAteAparecer(page, 'u', par(page, POR_NOME))
   await expect(resolvidos(page)).toHaveCount(0)
   await expect(grupo(page).locator('.revisao-grupo-quantidade')).toHaveText('2')
-  await total(page, 9)
+  await total(page, 12)
 
   // 4. De novo, e fica (recarregando).
   await (await abrirPar(page, POR_NOME)).getByRole('button', { name: 'São lugares diferentes' }).click()
   await expect(resolvidos(page)).toContainText('Maḥteṣ Teste e Maḥtiṣ Teste')
   await page.reload()
-  await total(page, 8)
+  await total(page, 11)
   await expect(grupo(page).locator('.revisao-grupo-quantidade')).toHaveText('1')
   if ((await grupo(page).getAttribute('aria-expanded')) !== 'true') await grupo(page).click()
   await expect(par(page, POR_NOME)).toHaveCount(0)
@@ -113,13 +113,13 @@ test('os pares de sítios: lugares diferentes (e a tecla U), um é parte do outr
   await expect(par(page, POR_COORDENADA)).toHaveCount(0)
   const linhaParte = resolvidos(page).getByRole('listitem').filter({ hasText: 'Ḫirbet Vizinha Teste' })
   await expect(linhaParte).toContainText('um é parte do outro')
-  await total(page, 7)
+  await total(page, 10)
   // «Desfazer» na linha: o par volta.
   const desfazerParte = linhaParte.getByRole('button', { name: 'Desfazer: Maḥteṣ Teste e Ḫirbet Vizinha Teste' })
   await alvoOk(desfazerParte, page, '«Desfazer» na linha')
   await desfazerParte.click()
   await expect(par(page, POR_COORDENADA)).toBeVisible()
-  await total(page, 8)
+  await total(page, 11)
 
   // 6. «Mesclar…» leva à página do sugerido para ficar, já em «Qual fica?» (no computador, no painel à direita da lista).
   await (await abrirPar(page, POR_COORDENADA)).getByRole('link', { name: 'Mesclar…' }).click()
@@ -143,7 +143,7 @@ test('os pares de sítios: lugares diferentes (e a tecla U), um é parte do outr
 
   // De volta à Revisão: o par está entre os resolvidos, como mesclado.
   await page.goto(`#/revisao?abrir=sitios-que-podem-ser-o-mesmo`)
-  await total(page, 7)
+  await total(page, 10)
   await expect(resolvidos(page).getByRole('listitem').filter({ hasText: 'Ḫirbet Vizinha Teste' })).toContainText('mesclados')
   await semRolagemHorizontal(page, 'a Revisão com os dois pares resolvidos')
   await foto(page, 'pares-6-resolvidos', resolvidos(page))

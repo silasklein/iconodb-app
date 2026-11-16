@@ -13,6 +13,7 @@
  */
 import { consultarUsuario, executar, geracaoDoBanco, publicacoesAbertas } from '../banco/cliente'
 import { resumosDosItens, sitios as listaDosSitios } from '../banco/consultas'
+import { eObraSkc, lerObra } from '../bibliografia/modelo'
 import { lerColecao } from '../colecoes/modelo'
 import { semMembrosExcluidos } from '../colecoes/visiveis'
 import { formasEmUso } from '../glossario/doUsuario'
@@ -360,20 +361,23 @@ interface DoUsuario {
   objetos: Sugestao[]
   sitios: Sugestao[]
   colecoes: Sugestao[]
+  /** As obras do usuário (Parte 2C, bloco 3). */
+  obras: Sugestao[]
 }
 
 async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise<DoUsuario> {
-  const dos = async (tipo: 'objeto' | 'sitio' | 'colecao' | 'verbete'): Promise<L[]> =>
+  const dos = async (tipo: 'objeto' | 'sitio' | 'colecao' | 'verbete' | 'obra'): Promise<L[]> =>
     consultarUsuario<L>(
       `SELECT d.ref, d.rotulo, d.objeto FROM fts AS f JOIN doc AS d ON d.rowid = f.rowid
        WHERE f.fts MATCH $q AND d.tipo = $t AND ${tipo === 'objeto' ? 'd.objeto IS NOT NULL' : '1'} ORDER BY f.rank, d.rotulo LIMIT $n`,
       { $q: consulta, $t: tipo, $n: c.limite },
     )
-  const [linhasObjeto, linhasSitioTodas, linhasColecao, linhasVerbeteTodas, redirecionamentos] = await Promise.all([
+  const [linhasObjeto, linhasSitioTodas, linhasColecao, linhasVerbeteTodas, linhasObraTodas, redirecionamentos] = await Promise.all([
     dos('objeto'),
     dos('sitio'),
     dos('colecao'),
     dos('verbete'),
+    dos('obra'),
     Promise.resolve(c.redirecionamentos),
   ])
   // O verbete ou sítio do usuário que o pacote publicou (Tarefa 16) é sugerido como o do livro (pela lista do pacote), nunca aqui.
@@ -391,6 +395,9 @@ async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise
     return [{ ...l, ref: destino, rotulo: r ? (lerDadosDoSitio(r).nome ?? destino) : s(l.rotulo) }]
   })
   const linhasVerbete = linhasVerbeteTodas.filter((l) => !publicado(l))
+  // Parte 2C, bloco 3: as obras do usuário, como em `obrasSkc` (src/bibliografia/doUsuario.ts): vivas, que se formatam, sem
+  // a publicada pelo pacote (essa vem pelo `BIB-` do livro, nas obras do pacote).
+  const linhasObra = linhasObraTodas.filter((l) => !publicado(l) && eObraSkc(s(l.ref) ?? ''))
 
   const objetos = linhasObjeto.flatMap((l) => {
     const r: Registro | undefined = estado.registro('objeto', s(l.ref)!)
@@ -398,11 +405,11 @@ async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise
     if (!r || r.excluido || !numero) return []
     return objetoSkc(c, estado, r, numero)
   })
-  const comRegistro = (tipo: 'sitio' | 'colecao' | 'verbete', linhas: L[], categoria: 'sitios' | 'colecoes' | 'verbetes', complemento: (r: Registro) => string | null) =>
+  const comRegistro = (tipo: 'sitio' | 'colecao' | 'verbete' | 'obra', linhas: L[], categoria: 'sitios' | 'colecoes' | 'verbetes' | 'obras', complemento: (r: Registro) => string | null) =>
     linhas.flatMap((l) => {
       const r = estado.registro(tipo, s(l.ref)!)
       const rotulo = s(l.rotulo) ?? ''
-      if (!r || r.excluido || rotulo === '') return []
+      if (!r || r.excluido || rotulo === '' || (tipo === 'obra' && !lerObra(r))) return []
       return montar(c, {
         categoria,
         alvoTipo: tipo,
@@ -421,6 +428,11 @@ async function doUsuario(c: Contexto, consulta: string, estado: Estado): Promise
       const ref = s(l.ref)
       const rotulo = s(l.rotulo)
       return ref && rotulo ? [{ ref, rotulo }] : []
+    }),
+    // A citação curta de rótulo, o título de complemento, como as obras do pacote.
+    obras: comRegistro('obra', linhasObra, 'obras', (r) => {
+      const o = lerObra(r)
+      return o && o.curta ? o.csl.title : null
     }),
     objetos,
     // A correção de um sítio do LIVRO já está na lista do pacote (`sitios()`, com o nome de agora): só os sítios novos entram aqui.
@@ -540,7 +552,7 @@ export async function sugerir(digitado: string, opcoes: OpcoesDeSugestao = {}): 
       verbetes: juntar(await comFormasEmUso(c, ve.verbetes, usuario.verbetesDoLivro, formasEmUso(estado)), usuario.verbetes, c.limite),
       objetos: juntar(pacoteObjetos, usuario.objetos, c.limite),
       sitios: juntar(pacoteSitios, usuario.sitios, c.limite),
-      obras: ve.obras,
+      obras: juntar(ve.obras, usuario.obras, c.limite),
       colecoes: usuario.colecoes.slice(0, c.limite),
     }
   } catch (erro) {

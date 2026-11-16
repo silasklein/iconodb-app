@@ -18,6 +18,7 @@ import { PainelHipotese } from '../item/PainelHipotese'
 import { BotaoDoTrecho } from '../hipoteses/BotaoDoTrecho'
 import { chaveDoTexto } from '../hipoteses/ConteudoSkc'
 import { ancorasDasHipoteses, porNivel, useElementosSkc, useHipotesesSkc } from '../hipoteses/doUsuario'
+import { useItensComNiveisRevistos } from '../hipoteses/niveis'
 import { eHipoteseSkc, type AncoraDaHipoteseSkc, type HipoteseSkc } from '../hipoteses/modelo'
 import { NovaHipotese } from '../hipoteses/NovaHipotese'
 import { guardarRascunhoDaHipotese, type RascunhoDaHipotese } from '../hipoteses/rascunho'
@@ -743,7 +744,8 @@ function Ficha({ o }: { o: ReturnType<typeof lerObjeto> }) {
 export function useLivrosLigados(numeros: readonly string[]): readonly ItemDetalhe[] | null {
   const chave = numeros.join('|')
   const carga = useCarregar(async () => (await Promise.all(numeros.map((n) => itemDoPacote(n).catch(() => null)))).filter((d): d is ItemDetalhe => d !== null), chave)
-  return carga.fase === 'ok' ? carga.dados : null
+  // O nível que vale das hipóteses do livro (Tarefa 13): o marcador das âncoras nas leituras dos livros ligados.
+  return useItensComNiveisRevistos(carga.fase === 'ok' ? carga.dados : null)
 }
 
 /**

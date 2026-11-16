@@ -16,9 +16,14 @@ import { arquivosDoBanco } from '../banco/arquivos'
  * - 9: as subcoleções (decisões 79 e 80): `author_group.parent_id` e `numero`, e a tabela `author_group_passage` com os
  *   trechos da introdução de cada subcoleção. Num pacote 5–8, nenhuma subcoleção: o grupo, a introdução dele (um trecho)
  *   e o objeto ficam como antes (src/banco/consultas.ts, `temSubcolecoes`).
+ * - 10: a camada do usuário do bloco 3: `glossary_entry.other_forms` (e `pt_number`, `he`, `ar` gravados), `hypothesis.level_auto`
+ *   (o nível automático quando o usuário reviu o nível), `bib_ref.resolved_by` ('auto' | 'user' | NULL), `bib_entry.origin`
+ *   'SKC' (a obra do usuário publicada) e `redirecionamento.tipo` 'obra'. Num pacote 5–9 as colunas faltam: as consultas dão
+ *   null (src/banco/consultas.ts: `temNivelAutomatico` olha `level_auto`; as outras colunas vêm de `SELECT g.*`/`r.*`/`b.origin`
+ *   e dão null quando faltam).
  */
-export const SCHEMA_ESPERADO = 9
-export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8, 9]
+export const SCHEMA_ESPERADO = 10
+export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8, 9, 10]
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
 export const MSG_SCHEMA = 'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.'
 

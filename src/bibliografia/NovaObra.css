@@ -1,0 +1,321 @@
+/*
+ * «Nova obra» (quadro 2 do canvas «Bloco 3: telas»): os campos à esquerda e, no computador, a prévia em Chicago e as
+ * parecidas numa coluna à direita, com o filete; no celular, tudo numa coluna, a prévia e as parecidas antes do «Salvar».
+ * Os campos, os botões e as pílulas do tipo são os dos formulários de objeto SKC (src/objetos-skc/Formulario.css).
+ */
+.nova-obra-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.nova-obra-colar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.nova-obra-colar .form-botao {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.nova-obra-colunas {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 20px 16px 40px;
+}
+.nova-obra-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.nova-obra-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.nova-obra-campo-ano input {
+  max-width: 12ch;
+}
+.form-campo textarea.nova-obra-nomes {
+  min-height: 76px;
+}
+.nova-obra-dica {
+  margin: 0;
+}
+
+.nova-obra-colar-caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+}
+.nova-obra-colar-caixa textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  font-family: var(--fonte-codigo);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--texto);
+  background: var(--fundo);
+  resize: vertical;
+}
+.nova-obra-colar-caixa textarea:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.nova-obra-colar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.nova-obra .nova-obra-lido {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 0;
+  text-align: left;
+}
+.nova-obra-lido p {
+  margin: 0;
+}
+.nova-obra-lido ul {
+  margin: 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+.nova-obra-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--filete);
+}
+.nova-obra-rotulo {
+  margin: 0;
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.nova-obra-rotulo-parecidas {
+  margin-top: 18px;
+}
+.nova-obra-previa {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.nova-obra-sem-previa,
+.nova-obra-nenhuma {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.nova-obra-nenhuma {
+  margin: 0;
+}
+
+/* A «quase igual» (a mesma chave, o mesmo ano e o mesmo título): a moldura forte, o aviso em cima. */
+.nova-obra-quase {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 2px solid var(--texto);
+  border-radius: 8px;
+}
+.nova-obra-quase h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nova-obra-quase > p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nova-obra-parecidas {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nova-obra-parecida {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--filete);
+}
+.nova-obra-quase .nova-obra-parecida:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+.nova-obra-parecida-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.nova-obra-parecida-nome {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nova-obra-parecida-ref {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.nova-obra-e-esta {
+  min-height: 44px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.nova-obra-confirmar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--texto);
+  border-radius: 8px;
+}
+.nova-obra-confirmar p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nova-obra-confirmar-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nova-obra-pe {
+  margin-top: 0;
+}
+.nova-obra-pe .novo-acoes-pe {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.nova-obra-pe .novo-acoes-pe .form-botao {
+  flex: 1 1 auto;
+}
+.nova-obra-pe .form-nota {
+  text-align: left;
+}
+
+@media (pointer: fine) {
+  .nova-obra-colar .form-botao,
+  .nova-obra-e-esta {
+    min-height: 36px;
+  }
+}
+
+@media (min-width: 768px) {
+  .nova-obra-cabecalho {
+    padding-bottom: 20px;
+  }
+  .nova-obra-cabecalho h1 {
+    margin-top: 0;
+  }
+  .nova-obra-colunas {
+    display: grid;
+    grid-template-columns: minmax(0, 720px) minmax(300px, 400px);
+    grid-template-areas:
+      'campos lado'
+      'pe lado';
+    align-items: start;
+    column-gap: 48px;
+    row-gap: 24px;
+    padding: 24px 48px 48px;
+  }
+  .nova-obra-campos {
+    grid-area: campos;
+  }
+  .nova-obra-lado {
+    grid-area: lado;
+    padding-top: 0;
+    padding-left: 32px;
+    border-top: 0;
+    border-left: 1px solid var(--filete);
+    align-self: stretch;
+  }
+  .nova-obra-pe {
+    grid-area: pe;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .nova-obra-pe .novo-acoes-pe .form-botao {
+    flex: 0 0 auto;
+    padding-inline: 22px;
+  }
+  .nova-obra-grade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+  }
+  .nova-obra-campo-autores,
+  .nova-obra-campo-organizadores,
+  .nova-obra-campo-titulo,
+  .nova-obra-campo-fonte {
+    grid-column: 1 / -1;
+  }
+  .nova-obra-campo-curta {
+    max-width: calc(50% - 8px);
+  }
+  .nova-obra-campo-ano input {
+    max-width: none;
+  }
+  .nova-obra-previa {
+    font-size: 16px;
+  }
+}
+
+/* A obra do usuário na Bibliografia (ObraSkcDetalhe): o aviso de «quase igual» e os botões, nas margens do detalhe. */
+.obra-skc-quase {
+  margin: 16px 24px 0;
+  max-width: 640px;
+}
+.obra-skc-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.obra-skc-botoes .form-botao {
+  gap: 8px;
+}
+@media (min-width: 768px) {
+  .obra-skc-quase {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .obra-skc-acoes {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

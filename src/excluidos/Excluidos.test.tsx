@@ -283,3 +283,71 @@ describe('revisão 1', () => {
     }
   })
 })
+
+describe('Parte 2C, bloco 3: a obra, a ligação de citação e o nível revisto', () => {
+  it('aparecem nos seus grupos e voltam com «Restaurar»: a obra devolve as ligações dela, o nível revisto volta a valer', async () => {
+    const usuario = userEvent.setup()
+    const { obraLigada } = await import('../revisao/ligacoes')
+    const { nivelRevisto } = await import('../hipoteses/niveis')
+    const obra = 'BIB-texcl003-1'
+    const citacao = { sigla: 'TESTE', alvo: 'TESTE-0004', raw: 'Inventado 2001: 5', curta: 'Inventado 2001', resolvida: false }
+    await registrar('obra', obra, 'criar', { csl: { type: 'book', title: 'Selos inventados de teste' }, curta: 'Inventado 2001' })
+    await registrar('citacao', 'inventado 2001', 'criar', { obra })
+    await registrar('obra', obra, 'excluir')
+    await registrar('nivel', 'HY-900006', 'criar', { nivel: 'iconological' })
+    await registrar('nivel', 'HY-900006', 'excluir')
+    await registrar('citacao', '-@TESTE|TESTE-0006|1999: 12', 'criar', { obra: null })
+    await registrar('citacao', '-@TESTE|TESTE-0006|1999: 12', 'excluir')
+    expect(obraLigada(estadoAtual(), citacao)).toBeNull()
+    renderizarRota('/excluidos')
+    const obras = await screen.findByRole('region', { name: 'Obras' })
+    expect(within(obras).getByRole('link', { name: 'Inventado 2001' })).toHaveAttribute('href', `/obra/${obra}`)
+    expect(within(obras).getByText(/^Selos inventados de teste · 1 ligação de citação · hoje, \d\d:\d\d$/)).toBeInTheDocument()
+    const ligacoes = screen.getByRole('region', { name: 'Ligações de citação' })
+    expect(within(ligacoes).getByText('«1999: 12»')).toBeInTheDocument()
+    const niveis = screen.getByRole('region', { name: 'Níveis revistos' })
+    expect(within(niveis).getByText('Nível iconológico')).toBeInTheDocument()
+
+    await usuario.click(within(obras).getByRole('button', { name: 'Restaurar' }))
+    const caixa = within(obras).getByRole('group', { name: 'Restaurar a obra «Inventado 2001»?' })
+    expect(caixa).toHaveTextContent('As citações ligadas a ela voltam a abri-la.')
+    await usuario.click(within(caixa).getByRole('button', { name: 'Restaurar' }))
+    await waitFor(() => expect(excluido('obra', obra)).toBe(false))
+    expect(obraLigada(estadoAtual(), citacao)).toBe(obra)
+
+    await usuario.click(within(niveis).getByRole('button', { name: 'Restaurar' }))
+    await usuario.click(within(within(niveis).getByRole('group')).getByRole('button', { name: 'Restaurar' }))
+    await waitFor(() => expect(nivelRevisto(estadoAtual(), 'HY-900006')).toBe('iconological'))
+  })
+
+  it('N3 (revisão final): a ligação por chave aparece pela citação curta impressa, como na Revisão', async () => {
+    // desligada (obra null): o `beforeEach` dos testes seguintes a restaura sem ligar nada
+    await registrar('citacao', 'inventado 2001', 'criar', { obra: null })
+    await registrar('citacao', 'inventado 2001', 'excluir')
+    renderizarRota('/excluidos')
+    const ligacoes = await screen.findByRole('region', { name: 'Ligações de citação' })
+    expect(await within(ligacoes).findByText('«Inventado 2001»')).toBeInTheDocument()
+    expect(within(ligacoes).queryByText('«inventado 2001»')).toBeNull()
+  })
+
+  it('uma obra trocada por outra («É esta» ao editar) diz por qual, e «Restaurar» devolve as ligações e os objetos', async () => {
+    const usuario = userEvent.setup()
+    const { trocarPorEsta } = await import('../bibliografia/operacoes')
+    const obra = 'BIB-texcl004-1'
+    await registrar('obra', obra, 'criar', { csl: { type: 'book', title: 'Trocável de teste' }, curta: 'Trocável 2002' })
+    await registrar('citacao', 'trocavel 2002', 'criar', { obra })
+    await registrar('objeto', 'OB-texcl004-1', 'criar', { periodo: 'CA', titulo: 'Objeto da troca', origemTipo: 'publicacao', obra, obraRotulo: 'Trocável 2002' })
+    await trocarPorEsta(obra, 'BIB-900001', 'Autor 1999')
+    expect(estadoAtual().registro('citacao', 'trocavel 2002')!.campos.obra).toBe('BIB-900001')
+    renderizarRota('/excluidos')
+    const obras = await screen.findByRole('region', { name: 'Obras' })
+    expect(within(obras).getByText(/^Trocável de teste · trocada por «Autor 1999» · hoje, \d\d:\d\d$/)).toBeInTheDocument()
+    await usuario.click(within(obras).getAllByRole('button', { name: 'Restaurar' })[0]!)
+    const caixa = within(obras).getByRole('group', { name: 'Restaurar a obra «Trocável 2002»?' })
+    expect(caixa).toHaveTextContent('Ela foi trocada por «Autor 1999»: 1 ligação de citação e 1 objeto SKC que passaram voltam para ela.')
+    await usuario.click(within(caixa).getByRole('button', { name: 'Restaurar' }))
+    await waitFor(() => expect(excluido('obra', obra)).toBe(false))
+    expect(estadoAtual().registro('citacao', 'trocavel 2002')!.campos.obra).toBe(obra)
+    expect(estadoAtual().registro('objeto', 'OB-texcl004-1')!.campos).toMatchObject({ obra, obraRotulo: 'Trocável 2002' })
+  })
+})

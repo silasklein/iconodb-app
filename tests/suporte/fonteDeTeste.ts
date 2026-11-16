@@ -13,6 +13,12 @@ export const RAIZ_DO_PACOTE_SINTETICO = join(import.meta.dirname, '..', 'fixture
  * no Dropbox da pessoa: o app novo tem de continuar a abri-lo (sem as tabelas do schema 7 e 8, só a camada).
  */
 export const RAIZ_DO_PACOTE_6 = join(import.meta.dirname, '..', 'fixtures', 'pacote-6')
+/**
+ * Parte 2C, bloco 3 (Tarefa 7): os pacotes sintéticos de antes do 10, só o núcleo: o 8 (sítios, 536b6de) e o 9 (subcoleções,
+ * 4aa2297). O app novo continua a abri-los (sem `other_forms`, `level_auto`, `resolved_by` e as obras SKC).
+ */
+export const RAIZ_DO_PACOTE_8 = join(import.meta.dirname, '..', 'fixtures', 'pacote-8')
+export const RAIZ_DO_PACOTE_9 = join(import.meta.dirname, '..', 'fixtures', 'pacote-9')
 
 function arquivosEm(pasta: string): string[] {
   return readdirSync(pasta).flatMap((nome) => {

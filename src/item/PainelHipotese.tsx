@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { formatarLocalizador } from '../banco/referencias'
 import { hipotese } from '../banco/consultas'
@@ -7,6 +7,8 @@ import { caminhoDaBusca } from '../busca/url'
 import { useFormasEmUso, useNomeVivo } from '../glossario/doUsuario'
 import { ConteudoSkc, etiquetaDaHipoteseSkc, nomeDaHipoteseSkc, useHipoteseSkc, type TextosDasLeituras } from '../hipoteses/ConteudoSkc'
 import { eHipoteseSkc } from '../hipoteses/modelo'
+import { comNivelRevisto, useNiveisDaCamada } from '../hipoteses/niveis'
+import { NivelDaHipotese } from '../hipoteses/NivelDaHipotese'
 import { PosicaoNaHipotese } from '../hipoteses/PosicaoNaHipotese'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { MarcadorDeNivel } from '../ui/MarcadorDeNivel'
@@ -64,6 +66,9 @@ const SEM_TEXTOS: TextosDasLeituras = new Map()
  *
  * Tarefa 10: uma hipótese do livro tem, no fim, "Sua posição" (concordo, discordo, em aberto); uma hipótese SKC
  * (`HY-<aparelho>-<n>`) vem da camada do usuário, com o rótulo SKC (ConteudoSkc).
+ *
+ * Parte 2C, bloco 3 (Tarefa 13): antes de "Sua posição", o nível da hipótese do livro, que a pessoa pode rever
+ * (NivelDaHipotese); o cabeçalho leva o nível que vale.
  */
 export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = null, aoIr, regiaoAcesa = false, verbetes = SEM_VERBETES, textos = SEM_TEXTOS, rotulosDasFontes = SEM_TEXTOS }: Props) {
   const skc = eHipoteseSkc(id)
@@ -74,7 +79,10 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
   const atual = { ordem, aoIr }
   const folha = variante === 'folha'
 
-  const h = !skc && carga.fase === 'ok' ? carga.dados : null
+  // O nível que vale da hipótese do livro (Tarefa 13): o revisto pela pessoa muda o cabeçalho na hora.
+  const niveis = useNiveisDaCamada()
+  const doPacote = !skc && carga.fase === 'ok' ? carga.dados : null
+  const h = useMemo(() => doPacote && comNivelRevisto(niveis, doPacote), [niveis, doPacote])
   const nome = skc ? (hSkc ? nomeDaHipoteseSkc(hSkc, nomeDe) : null) : h ? nomeDaHipotese(h, formas) : null
   const etiqueta = skc ? (hSkc ? etiquetaDaHipoteseSkc(hSkc) : '') : h ? `${ROTULO_DO_NIVEL[h.nivel]} · ${ROTULO_DA_MODALIDADE[h.modalidade]}` : ''
 
@@ -125,7 +133,7 @@ export function PainelHipotese({ id, variante, aoFechar, devolverFoco, ordem = n
           <>
             {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
             {carga.fase === 'ok' && h === null && <p>Hipótese não encontrada.</p>}
-            {h && <Conteudo h={h} regiaoAcesa={regiaoAcesa} verbetes={verbetes} formas={formas} />}
+            {h && doPacote && <Conteudo h={h} doPacote={doPacote} regiaoAcesa={regiaoAcesa} verbetes={verbetes} formas={formas} />}
           </>
         )}
       </div>
@@ -148,7 +156,20 @@ function BotaoDeOrdem({ icone, rotulo, atalho, destino, aoIr }: { icone: 'anteri
   return <IconButton icon={icone} label={rotulo} shortcut={atalho} tipPosition={icone === 'anterior' ? 'start' : 'end'} onClick={() => aoIr?.(destino)} />
 }
 
-function Conteudo({ h, regiaoAcesa, verbetes, formas }: { h: Hipotese; regiaoAcesa: boolean; verbetes: readonly VerbeteDoTrecho[]; formas: ReadonlyMap<string, string> }) {
+function Conteudo({
+  h,
+  doPacote,
+  regiaoAcesa,
+  verbetes,
+  formas,
+}: {
+  h: Hipotese
+  /** A hipótese como o pacote a traz (`nivel` e `nivelAutomatico` do pacote), para o seletor do nível. */
+  doPacote: Hipotese
+  regiaoAcesa: boolean
+  verbetes: readonly VerbeteDoTrecho[]
+  formas: ReadonlyMap<string, string>
+}) {
   const termo = h.termos[0] ?? null
   // Os verbetes do trecho e, depois, os termos da hipótese que não estão nele.
   // Cada um com a forma em uso de agora (Tarefa 11); o texto do trecho é o do pacote.
@@ -213,6 +234,7 @@ function Conteudo({ h, regiaoAcesa, verbetes, formas }: { h: Hipotese; regiaoAce
           </Link>
         </div>
       )}
+      <NivelDaHipotese h={doPacote} />
       <PosicaoNaHipotese hipotese={h.id} />
     </>
   )

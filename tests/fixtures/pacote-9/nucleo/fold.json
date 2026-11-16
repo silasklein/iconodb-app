@@ -1,0 +1,77 @@
+{
+ "ordem": [
+  "normalizacao",
+  "remover_marcas",
+  "casefold",
+  "extra",
+  "espacos"
+ ],
+ "normalizacao": "NFKD",
+ "remover_marcas": true,
+ "marcas": [
+  "Mn",
+  "Mc",
+  "Me"
+ ],
+ "casefold": true,
+ "extra": {
+  "ʿ": "",
+  "ʾ": "",
+  "'": " ",
+  "’": " ",
+  "ʼ": " ",
+  "ʻ": " ",
+  "ß": "ss",
+  "ı": "i",
+  "ł": "l",
+  "ø": "o",
+  "æ": "ae",
+  "œ": "oe",
+  "đ": "d"
+ },
+ "espacos": {
+  "caracteres": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   28,
+   29,
+   30,
+   31,
+   32,
+   133,
+   160,
+   5760,
+   8192,
+   8193,
+   8194,
+   8195,
+   8196,
+   8197,
+   8198,
+   8199,
+   8200,
+   8201,
+   8202,
+   8232,
+   8233,
+   8239,
+   8287,
+   12288,
+   65279
+  ],
+  "substituto": " ",
+  "aparar_pontas": true
+ },
+ "forma_colada": {
+  "apostrofos": [
+   "'",
+   "’",
+   "ʼ",
+   "ʻ"
+  ],
+  "regra": "Só no texto indexado (não na consulta), antes da dobra: o texto é dividido nas sequências sem caractere de `espacos.caracteres`; cada sequência que contém um dos `apostrofos` é seguida, separada por um espaço, de uma cópia dela sem esses apóstrofos; depois o texto inteiro passa pela dobra (`ordem`). \"Marduk's\" -> \"marduk s marduks\"; \"As'ad\" -> \"as ad asad\"."
+ }
+}

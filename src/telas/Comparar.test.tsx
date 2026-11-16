@@ -418,6 +418,18 @@ describe('as ligações e os números da Tarefa 9', () => {
     expect(within(outra).getByRole('link', { name: /Abrir o item/ })).toHaveAttribute('href', livroEhPrincipal ? '/item/CA00001' : `/item/${encodeURIComponent(numeroSkc)}`)
   })
 
+  it('as hipóteses contam o nível revisto de uma hipótese do livro (Parte 2C, bloco 3, Tarefa 13), na hora', async () => {
+    await acrescentarVariasABandeja(['CA00001', 'CA00002'])
+    abrir()
+    await pronto()
+    const hip = () => linhasDe(coluna('CA00001')).find((l) => l.querySelector('dt')!.textContent!.startsWith('Hipóteses'))!
+    await waitFor(() => expect(hip()).toHaveTextContent('1 pré-iconográfica · 1 iconográfica · 0 iconológicas'))
+    await registrar('nivel', 'HY-900001', 'criar', { nivel: 'iconological' })
+    await waitFor(() => expect(hip()).toHaveTextContent('1 pré-iconográfica · 0 iconográficas · 1 iconológica'))
+    await registrar('nivel', 'HY-900001', 'excluir')
+    await waitFor(() => expect(hip()).toHaveTextContent('1 pré-iconográfica · 1 iconográfica · 0 iconológicas'))
+  })
+
   it('as hipóteses da coluna principal contam as do grupo, como o Item; a secundária conta só as dela (m8)', async () => {
     const id = await objetoSkc({ titulo: 'Com hipótese' })
     await ligarObjetos(id, 'CA00001')

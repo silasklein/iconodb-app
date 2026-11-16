@@ -473,3 +473,66 @@ describe('m-6 (re-revisão 2): atualizar vai numa frase própria', () => {
     )
   })
 })
+
+describe('Parte 2C, bloco 3: a cópia e a restauração levam a obra, a ligação de citação e o nível revisto', () => {
+  const conferido = { conferido: true, voltam: [], semArquivo: [], arquivos: {}, listagem: null }
+  const OBRA = 'BIB-aaaaaaaa-1'
+  const OCORRENCIA = 'ficticio 2009@TESTE|TESTE-0004|Fictício 2009: 5'
+  const eventos = [
+    ev({ ap: A, seq: 1, tipo: 'obra', reg: OBRA, op: 'criar', campos: { csl: { type: 'book', title: 'Selos sonhados de teste', issued: { 'date-parts': [[2009]] } }, curta: 'Fictício 2009' } }),
+    ev({ ap: A, seq: 2, tipo: 'citacao', reg: 'ficticio 2009', op: 'criar', campos: { obra: OBRA } }),
+    ev({ ap: A, seq: 3, tipo: 'citacao', reg: OCORRENCIA, op: 'criar', campos: { obra: null } }),
+    ev({ ap: A, seq: 4, tipo: 'nivel', reg: 'HY-900006', op: 'criar', campos: { nivel: 'iconological' } }),
+    ev({ ap: A, seq: 5, tipo: 'nivel', reg: 'HY-900001', op: 'criar', campos: { nivel: 'pre_iconographic' } }),
+    ev({ ap: A, seq: 6, tipo: 'nivel', reg: 'HY-900001', op: 'excluir' }),
+  ]
+
+  it('todo tipo de registro tem lugar no resumo da restauração (um nome próprio ou «outros registros»)', async () => {
+    const { NOMES_DOS_TIPOS, OUTROS_TIPOS } = await import('./restaurar')
+    const { TIPOS } = await import('../usuario/eventos')
+    const ditos = [...NOMES_DOS_TIPOS.map(([t]) => t), ...OUTROS_TIPOS, 'imagem']
+    expect([...TIPOS].sort()).toEqual([...new Set(ditos)].sort())
+  })
+
+  it('a cópia leva os três tipos e a fusão dela os reproduz; restaurar num aparelho vazio os traz com os mesmos valores', () => {
+    const copia = copiaDe(eventos)
+    expect(copia.estado.registros.map((r) => `${r.tipo} ${r.id}`)).toEqual([
+      'citacao ficticio 2009',
+      `citacao ${OCORRENCIA}`,
+      'nivel HY-900001',
+      'nivel HY-900006',
+      `obra ${OBRA}`,
+    ])
+    const plano = planoDeRestauracao(copia, fundir([]))
+    expect(plano.pedidos.map((p) => `${p.tipo} ${p.reg} ${p.op}`)).toEqual([
+      'citacao ficticio 2009 criar',
+      `citacao ${OCORRENCIA} criar`,
+      'nivel HY-900001 criar',
+      'nivel HY-900001 excluir',
+      'nivel HY-900006 criar',
+      `obra ${OBRA} criar`,
+    ])
+    expect(plano.trazidos).toEqual({ citacao: 2, nivel: 2, obra: 1 })
+    expect(plano.voltamExcluidos).toEqual({ nivel: 1 })
+    expect(plano.naoDitos).toEqual({})
+    const depois = fundir(comoEventos(plano.pedidos, 1))
+    const daCopia = fundir(eventos)
+    for (const [tipo, id] of [['obra', OBRA], ['citacao', 'ficticio 2009'], ['citacao', OCORRENCIA], ['nivel', 'HY-900006'], ['nivel', 'HY-900001']] as const) {
+      expect(depois.registro(tipo, id)?.campos, `${tipo} ${id}`).toEqual(daCopia.registro(tipo, id)?.campos)
+      expect(depois.registro(tipo, id)?.excluido, `${tipo} ${id}`).toBe(daCopia.registro(tipo, id)?.excluido)
+    }
+    expect(textoDoResumo({ copia, plano, conferencia: conferido, comFotos: false, esteAparelho: D }).replace(/^Cópia de [^.]*\. /, '')).toBe(
+      'Vai trazer de volta 1 obra e 3 outros registros que faltam aqui, e 1 outro registro que volta para Excluídos. O que você mudou depois dessa data continua valendo.',
+    )
+    // de novo: nada a trazer
+    expect(planoDeRestauracao(copia, fundir([...eventos, ...comoEventos(plano.pedidos, 1)])).pedidos).toEqual([])
+  })
+
+  it('uma ligação mais nova aqui não é trocada pela da cópia; a da cópia mais nova vence', () => {
+    const copia = copiaDe(eventos)
+    const aqui = [...eventos, ev({ ap: B, seq: 1, tipo: 'citacao', reg: 'ficticio 2009', op: 'alterar', campos: { obra: 'BIB-900001' }, ms: T0 + 50_000 })]
+    expect(planoDeRestauracao(copia, fundir(aqui)).pedidos).toEqual([])
+    const maisNova = copiaDe([...eventos, ev({ ap: A, seq: 7, tipo: 'citacao', reg: 'ficticio 2009', op: 'alterar', campos: { obra: 'BIB-900002' }, ms: T0 + 60_000 })])
+    expect(planoDeRestauracao(maisNova, fundir(aqui)).pedidos).toEqual([{ tipo: 'citacao', reg: 'ficticio 2009', op: 'alterar', campos: { obra: 'BIB-900002' } }])
+  })
+})

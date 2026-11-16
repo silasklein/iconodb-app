@@ -101,7 +101,7 @@ it('o nome do ícone de voltar do celular diz a origem', () => {
 
 describe('encurtarRotulo: um rótulo longo encurta, a origem não some (revisão M1)', () => {
   it('até 120 caracteres fica; passando, corta com «…»', () => {
-    expect(encurtarRotulo('Obra: Boyd 1992')).toBe('Obra: Boyd 1992')
+    expect(encurtarRotulo('Obra: Probe 1992')).toBe('Obra: Probe 1992')
     const longo = `Obra: ${'Título muito longo de uma obra de teste '.repeat(10)}`
     const curto = encurtarRotulo(longo)
     expect([...curto]).toHaveLength(120)

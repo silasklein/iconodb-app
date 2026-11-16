@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { dobrar } from '../glossario/modelo'
 import './Formulario.css'
+import '../imagens-usuario/MarcaSkc.css'
 
 export interface OpcaoDeEscolha {
   id: string
@@ -8,6 +9,8 @@ export interface OpcaoDeEscolha {
   apoio?: string
   /** O recuo da opção numa árvore (0 ou ausente: sem recuo; cada nível, um passo). */
   nivel?: number
+  /** A opção é do usuário (uma obra SKC na escolha de obra): a marca SKC ao lado do rótulo. */
+  skc?: boolean
 }
 
 interface Props {
@@ -208,7 +211,10 @@ export function CampoDeEscolha({ rotulo, valor, aoMudarTexto, opcoes, aoEscolher
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => escolher(o)}
             >
-              <span className="form-escolha-rotulo">{o.rotulo}</span>
+              <span className="form-escolha-rotulo">
+                {o.rotulo}
+                {o.skc && <span className="marca-skc form-escolha-skc">SKC</span>}
+              </span>
               {o.apoio && <span className="form-escolha-apoio">{o.apoio}</span>}
             </li>
           ))}

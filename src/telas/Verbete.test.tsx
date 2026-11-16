@@ -130,6 +130,16 @@ describe('Verbete (celular)', () => {
     expect(hipoteses).not.toHaveTextContent('Nr.')
   })
 
+  it('a hipótese do livro com o nível revisto pela pessoa mostra o nível que vale (Parte 2C, bloco 3, Tarefa 13)', async () => {
+    await registrar('nivel', 'HY-900001', 'criar', { nivel: 'iconological' })
+    renderizarRota('/verbete/GL-900001')
+    const hipoteses = await screen.findByRole('region', { name: 'Hipóteses com este termo' })
+    await waitFor(() => expect(within(hipoteses).getAllByRole('link')[0]).toHaveTextContent(/iconológico · afirmada/))
+    expect(within(hipoteses).getAllByRole('link')[1]).toHaveTextContent(/iconográfico · provável/)
+    await registrar('nivel', 'HY-900001', 'excluir')
+    await waitFor(() => expect(within(hipoteses).getAllByRole('link')[0]).toHaveTextContent(/iconográfico · afirmada/))
+  })
+
   it('um verbete de sítio lista os objetos achados lá', async () => {
     renderizarRota('/verbete/GL-900004')
     const objetos = await screen.findByRole('region', { name: 'Objetos com este termo' })
@@ -171,15 +181,16 @@ describe('Verbete (computador)', () => {
 })
 
 describe('Verbete: direção do texto e unidades', () => {
-  it('as formas em árabe e hebraico levam dir="auto" (e a língua)', async () => {
+  it('as formas em árabe e hebraico levam dir="auto" num <bdi> (e a língua no dd)', async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     await executar("UPDATE main.glossary_entry SET ar = 'مرد', he = 'מרדוך' WHERE id = 'GL-900004'")
     renderizarRota('/verbete/GL-900004')
     await screen.findByRole('heading', { level: 1, name: 'Maḥteṣ Teste' })
-    expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
-    expect(screen.getByText('מרדוך', { selector: 'dd' })).toHaveAttribute('dir', 'auto')
-    expect(screen.getByText('مرد', { selector: 'dd' })).toHaveAttribute('lang', 'ar')
-    expect(screen.getByText('מרדוך', { selector: 'dd' })).toHaveAttribute('lang', 'he')
+    // fix round 1 da Tarefa 12 (N2): a direção num <bdi>, para o texto correr rtl sem ir para a borda da coluna
+    expect(screen.getByText('مرد', { selector: 'bdi' })).toHaveAttribute('dir', 'auto')
+    expect(screen.getByText('מרדוך', { selector: 'bdi' })).toHaveAttribute('dir', 'auto')
+    expect(screen.getByText('مرد', { selector: 'bdi' }).closest('dd')).toHaveAttribute('lang', 'ar')
+    expect(screen.getByText('מרדוך', { selector: 'bdi' }).closest('dd')).toHaveAttribute('lang', 'he')
     usarMotor(await bancoDeTeste())
   })
 

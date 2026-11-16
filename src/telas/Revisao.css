@@ -402,3 +402,270 @@
     max-width: 520px;
   }
 }
+
+/*
+ * Parte 2C, bloco 3 (Tarefa 11): a Revisão no computador (quadro 1 do canvas «Bloco 3: telas»). A lista de 400 px à esquerda,
+ * presa abaixo da barra superior e com a sua rolagem (como o grupo dividido), e o caso escolhido à direita.
+ */
+.revisao-dividida {
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+  min-height: calc(100dvh - var(--barra-superior));
+  padding-bottom: 0;
+}
+.revisao-lateral {
+  position: sticky;
+  top: var(--barra-superior);
+  align-self: start;
+  height: calc(100dvh - var(--barra-superior));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 24px 96px 32px;
+  border-right: 1px solid var(--filete);
+}
+.revisao-lateral h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.revisao-lateral .pagina-consulta-apoio {
+  margin: 0;
+  font-size: 14px;
+}
+.revisao-filtro {
+  margin: 6px 0 2px;
+}
+.revisao-lateral .revisao-tipos {
+  margin-top: 8px;
+}
+.revisao-lateral .revisao-grupo-apoio {
+  display: none; /* a coluna é estreita: o apoio do grupo está no detalhe */
+}
+
+/* A linha do caso no computador: a linha inteira escolhe; a escolhida invertida (fundo do texto), um pouco além da coluna. */
+.revisao-caso-mac {
+  display: block;
+  padding: 0;
+}
+.revisao-caso-linha {
+  color: inherit;
+  text-decoration: none;
+}
+.revisao-caso-mac .revisao-caso-linha {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: var(--alvo-mouse);
+  box-sizing: border-box;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 6px;
+}
+.revisao-caso-mac .revisao-caso-linha:hover:not([aria-current]) .revisao-caso-o-que {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.revisao-caso-mac .revisao-caso-linha[aria-current] {
+  background: var(--texto);
+  color: var(--fundo);
+}
+.revisao-caso-mac .revisao-caso-linha[aria-current] .revisao-caso-onde,
+.revisao-caso-mac.revisao-caso-resolvido .revisao-caso-linha[aria-current] .revisao-caso-o-que {
+  color: inherit;
+}
+.revisao-caso-linha:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.revisao-caso-mac .revisao-caso-linha[aria-current]:focus-visible {
+  outline-offset: 2px;
+}
+/* No celular o texto da linha abre a página do caso. */
+.revisao-caso-texto.revisao-caso-linha {
+  min-height: var(--alvo-toque);
+  justify-content: center;
+}
+
+/* O detalhe (à direita no computador; a página do caso no celular). */
+.revisao-detalhe {
+  min-width: 0;
+  padding: 24px 40px 120px;
+}
+.revisao-detalhe-vazio {
+  margin: 0;
+  font-size: 14px;
+  color: var(--secundario);
+}
+.revisao-pagina-do-caso .revisao-detalhe-vazio {
+  display: grid;
+  gap: 8px;
+}
+.revisao-detalhe-caso {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+}
+.revisao-detalhe-cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.revisao-detalhe-sobre,
+.revisao-detalhe-secao {
+  margin: 0;
+  font-family: var(--fonte-codigo);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secundario);
+}
+.revisao-detalhe-cabeca h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.revisao-detalhe-cabeca h2:focus {
+  outline: none;
+}
+.revisao-detalhe-cabeca h2:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 4px;
+}
+.revisao-detalhe-apoio {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.revisao-detalhe-apoio:empty {
+  display: none;
+}
+.revisao-detalhe-quadro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--filete);
+  border-radius: 8px;
+}
+.revisao-detalhe-onde {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.revisao-detalhe-texto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+/* A citação marcada: sem cor de destaque (tokens em preto e branco), um fundo de superfície e um filete embaixo. */
+.revisao-marca {
+  padding: 0 2px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--texto);
+}
+.revisao-detalhe-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo-toque);
+  font-size: 14px;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.revisao-detalhe-ligar,
+.revisao-detalhe-ligada {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.revisao-detalhe-ligada p {
+  margin: 0;
+}
+.revisao-detalhe-obras {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--filete);
+}
+.revisao-detalhe-obras li {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--filete);
+}
+.revisao-detalhe-obra {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.revisao-detalhe-obra-curta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.revisao-detalhe-obra-titulo {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.revisao-detalhe-ligar-botao {
+  font-size: 14px;
+  white-space: normal;
+  text-align: left;
+}
+.revisao-detalhe-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.revisao-detalhe-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+@media (min-width: 768px) {
+  .revisao-detalhe-obras li {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .revisao-detalhe-obra {
+    flex: 1;
+  }
+  .revisao-detalhe-ligar-botao {
+    flex: none;
+    max-width: 50%;
+  }
+  .revisao-detalhe-botoes {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .revisao-detalhe-link {
+    min-height: var(--alvo-mouse);
+  }
+}

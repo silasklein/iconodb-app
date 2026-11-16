@@ -76,6 +76,23 @@
  *   ela, se nada mais o usa (src/hipoteses/operacoes.ts, `desfazerRegistro`).
  * - Leitura: `forma` que não é texto ou é vazia = o id; `status` fora da lista = `"proposed"`; `formaEmUso` que não é
  *   texto ou é vazia = null; `formaAprovada` que não é texto ou é vazia = null (a original).
+ * - CAMPOS COMPLETOS (Parte 2C, bloco 3, Tarefa 12; os nomes e as formas são os do `user-import`, `CAMPOS_DO_VERBETE` em
+ *   iconodb/usuario_import.py, que leva cada um para a coluna do `glossary_entry`). Um `alterar` por campo, gravado na hora
+ *   (`alterarCamposDoVerbete`); ganha, por campo, a escrita de maior hlc. Uma escrita `null` limpa o campo. Quem escreve
+ *   grava só a forma normalizada (`camposParaGravar`); quem lê aceita o que vier e deixa de fora o que não está no formato.
+ *   - `tipo`: `"concept"` | `"name"` | `"technical"` (→ `kind`); `genero`: `"m"` | `"f"` (→ `pt_gender`); `numero`:
+ *     `"sg"` | `"pl"` (→ `pt_number`). Outro valor não é gravado.
+ *   - `de`, `en`, `he`, `ar` (texto, `normalizarForma`; vazio = `null`). O hebraico e o árabe são mostrados com `dir="rtl"`.
+ *   - `outras` («Outra língua»): `[{"lingua": texto, "forma": texto}]`, na ordem (→ `other_forms`). A língua é o nome dela
+ *     como a pessoa escreve («francês»), não um código. Uma linha ainda pela metade (só a língua, ou só a forma) é gravada
+ *     assim, para não se perder; o `user-import` a deixa de fora sem aviso, e a página e a busca só usam as linhas inteiras.
+ *     Linhas vazias e repetidas não são gravadas; a lista vazia é `null`.
+ *   - `variantes`, `iconclass`, `sssl`: listas de textos (→ `variants`, `iconclass`, `sssl`), sem vazios nem repetidos; a
+ *     lista vazia é `null`. Na publicação, as variantes se juntam às do verbete de destino (união).
+ *   - `pai` («Termo mais geral»): o id de outro verbete, do livro (`GL-<dígitos>`) ou do usuário (`GL-<aparelho>-<n>`; o
+ *     `user-import` o troca pelo id do livro dele) (→ `parent_id`). Nunca o próprio verbete.
+ *   - Os campos são escritos no registro do verbete do usuário. Depois de publicado (o pacote o redireciona para um
+ *     `GL-<dígitos>`), o `user-import` também lê os campos escritos no registro com o id do livro.
  *
  * DOIS APARELHOS sem internet criando o "mesmo" termo (a mesma `chaveDaForma`): são DOIS verbetes, com ids diferentes
  * (o aparelho está no id), e os dois aparecem em "a revisar" no Glossário. A fusão não tenta juntá-los. Tarefa 11: a lista
@@ -138,9 +155,168 @@ export interface VerbeteSkc {
   /** hlc do `criar`. */
   criadoEm: string
   excluido: boolean
+  /** Os campos completos (Tarefa 12): tipo, gênero, número, as outras línguas, as variantes, o pai, Iconclass e SSSL. */
+  campos: CamposCompletos
 }
 
 const textoNaoVazio = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null)
+
+// ---- Os campos completos (Parte 2C, bloco 3, Tarefa 12; o formato está no cabeçalho)
+
+export const TIPOS_DO_VERBETE = ['concept', 'name', 'technical'] as const
+export type TipoDoVerbete = (typeof TIPOS_DO_VERBETE)[number]
+/** O tipo como a etiqueta do verbete o diz (o mesmo do verbete dos livros). */
+export const ROTULO_DO_TIPO: Record<TipoDoVerbete, string> = { concept: 'Conceito', name: 'Nome', technical: 'Técnico' }
+export const GENEROS_DO_VERBETE = ['m', 'f'] as const
+export type GeneroDoVerbete = (typeof GENEROS_DO_VERBETE)[number]
+export const NUMEROS_DO_VERBETE = ['sg', 'pl'] as const
+export type NumeroDoVerbete = (typeof NUMEROS_DO_VERBETE)[number]
+export const ROTULO_DO_GENERO: Record<GeneroDoVerbete, string> = { m: 'masculino', f: 'feminino' }
+export const ROTULO_DO_NUMERO: Record<NumeroDoVerbete, string> = { sg: 'singular', pl: 'plural' }
+
+/** Uma linha de «Outra língua»: o nome da língua, como a pessoa o escreve, e a forma nela. */
+export interface OutraForma {
+  lingua: string
+  forma: string
+}
+
+export interface CamposCompletos {
+  tipo: TipoDoVerbete | null
+  genero: GeneroDoVerbete | null
+  numero: NumeroDoVerbete | null
+  de: string | null
+  en: string | null
+  he: string | null
+  ar: string | null
+  /** Na ordem; pode ter uma linha pela metade (só a língua ou só a forma): veja `outrasInteiras`. */
+  outras: OutraForma[]
+  variantes: string[]
+  /** O id do termo mais geral (`GL-<dígitos>` ou `GL-<aparelho>-<n>`). */
+  pai: string | null
+  iconclass: string[]
+  sssl: string[]
+}
+
+/** Os nomes dos campos completos, os mesmos do `user-import` (`CAMPOS_DO_VERBETE`). */
+export const CAMPOS_COMPLETOS = ['tipo', 'genero', 'numero', 'de', 'en', 'he', 'ar', 'outras', 'variantes', 'pai', 'iconclass', 'sssl'] as const satisfies readonly (keyof CamposCompletos)[]
+
+export const CAMPOS_VAZIOS: CamposCompletos = { tipo: null, genero: null, numero: null, de: null, en: null, he: null, ar: null, outras: [], variantes: [], pai: null, iconclass: [], sssl: [] }
+
+const umDe = <T extends string>(lista: readonly T[], v: unknown): T | null => ((lista as readonly unknown[]).includes(v) ? (v as T) : null)
+const eIdDeVerbete = (v: unknown): v is string => typeof v === 'string' && (RE_VERBETE_SKC.test(v) || RE_VERBETE_DO_PACOTE.test(v))
+
+/** Os textos de uma lista, normalizados, sem vazios nem repetidos (o que não é texto fica de fora). */
+export function listaDeTextos(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  const saida: string[] = []
+  for (const x of v) {
+    if (typeof x !== 'string') continue
+    const t = normalizarForma(x)
+    if (t !== '' && !saida.includes(t)) saida.push(t)
+  }
+  return saida
+}
+
+/** As linhas de «Outra língua», normalizadas; sem as vazias e as repetidas (uma pela metade fica). */
+export function listaDeOutras(v: unknown): OutraForma[] {
+  if (!Array.isArray(v)) return []
+  const saida: OutraForma[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
+    const { lingua, forma } = x as Record<string, unknown>
+    if ((lingua != null && typeof lingua !== 'string') || (forma != null && typeof forma !== 'string')) continue
+    const linha = { lingua: normalizarForma(typeof lingua === 'string' ? lingua : ''), forma: normalizarForma(typeof forma === 'string' ? forma : '') }
+    if ((linha.lingua !== '' || linha.forma !== '') && !saida.some((o) => o.lingua === linha.lingua && o.forma === linha.forma)) saida.push(linha)
+  }
+  return saida
+}
+
+const textoDoCampo = (v: unknown): string | null => (typeof v === 'string' && normalizarForma(v) !== '' ? normalizarForma(v) : null)
+
+/** Os campos completos de um registro `verbete`, lidos com folga: o que não está no formato fica vazio. */
+export function lerCamposCompletos(c: Campos): CamposCompletos {
+  return {
+    tipo: umDe(TIPOS_DO_VERBETE, c.tipo),
+    genero: umDe(GENEROS_DO_VERBETE, c.genero),
+    numero: umDe(NUMEROS_DO_VERBETE, c.numero),
+    de: textoDoCampo(c.de),
+    en: textoDoCampo(c.en),
+    he: textoDoCampo(c.he),
+    ar: textoDoCampo(c.ar),
+    outras: listaDeOutras(c.outras),
+    variantes: listaDeTextos(c.variantes),
+    pai: eIdDeVerbete(c.pai) ? c.pai : null,
+    iconclass: listaDeTextos(c.iconclass),
+    sssl: listaDeTextos(c.sssl),
+  }
+}
+
+/** As linhas de «Outra língua» com a língua E a forma (as que a página mostra, a busca acha e o `user-import` publica). */
+export const outrasInteiras = (outras: readonly OutraForma[]): OutraForma[] => outras.filter((o) => o.lingua !== '' && o.forma !== '')
+
+/** Algum campo completo está preenchido (a página mostra «Dados do verbete»). */
+export const temCamposCompletos = (c: CamposCompletos): boolean =>
+  CAMPOS_COMPLETOS.some((k) => {
+    const v = c[k]
+    return Array.isArray(v) ? v.length > 0 : v !== null
+  })
+
+/** As formas que a busca acha num verbete: alemão, inglês, hebraico, árabe, as outras línguas (inteiras) e as variantes. */
+export const formasDaBusca = (c: CamposCompletos): string[] =>
+  [c.de, c.en, c.he, c.ar, ...outrasInteiras(c.outras).map((o) => o.forma), ...c.variantes].filter((x): x is string => x !== null)
+
+/**
+ * O evento que grava `campos` (um ou mais campos completos): cada um normalizado como o cabeçalho diz; vazio = `null`.
+ * Um valor fora do formato é erro (nada é gravado), inclusive uma lista com um item fora do formato: a folga é só da leitura. `id`: o verbete, para recusar ser o próprio pai.
+ */
+export function camposParaGravar(id: string, campos: Partial<CamposCompletos>): Campos {
+  const saida: Campos = {}
+  for (const [k, v] of Object.entries(campos) as [keyof CamposCompletos, unknown][]) {
+    if (!(CAMPOS_COMPLETOS as readonly string[]).includes(k)) throw new Error(`campo desconhecido: ${k}`)
+    if (v === undefined) continue
+    switch (k) {
+      case 'tipo':
+      case 'genero':
+      case 'numero': {
+        const lista = k === 'tipo' ? TIPOS_DO_VERBETE : k === 'genero' ? GENEROS_DO_VERBETE : NUMEROS_DO_VERBETE
+        if (v !== null && umDe(lista, v) === null) throw new Error(`${k} desconhecido: ${String(v)}`)
+        saida[k] = v as string | null
+        break
+      }
+      case 'pai':
+        if (v !== null && !eIdDeVerbete(v)) throw new Error(`pai não é o id de um verbete: ${String(v)}`)
+        if (v === id) throw new Error('o verbete não é o termo mais geral dele mesmo')
+        saida.pai = v as string | null
+        break
+      case 'outras': {
+        if (v !== null && !Array.isArray(v)) throw new Error('outras: esperada uma lista')
+        // na escrita não há folga: um item fora do formato recusa a lista inteira (nada é apagado em silêncio)
+        for (const x of (v as unknown[] | null) ?? []) {
+          const o = x as Record<string, unknown> | null
+          if (typeof o !== 'object' || o === null || Array.isArray(o) || Object.keys(o).some((c) => c !== 'lingua' && c !== 'forma') || (o.lingua != null && typeof o.lingua !== 'string') || (o.forma != null && typeof o.forma !== 'string'))
+            throw new Error(`outras: item fora do formato (esperado {lingua, forma}): ${JSON.stringify(x)}`)
+        }
+        const l = listaDeOutras(v)
+        saida.outras = l.length > 0 ? l.map((o) => ({ lingua: o.lingua, forma: o.forma })) : null
+        break
+      }
+      case 'variantes':
+      case 'iconclass':
+      case 'sssl': {
+        if (v !== null && !Array.isArray(v)) throw new Error(`${k}: esperada uma lista`)
+        if (((v as unknown[] | null) ?? []).some((x) => typeof x !== 'string')) throw new Error(`${k}: só textos na lista`)
+        const l = listaDeTextos(v)
+        saida[k] = l.length > 0 ? l : null
+        break
+      }
+      default:
+        if (v !== null && typeof v !== 'string') throw new Error(`${k}: esperado um texto`)
+        saida[k] = textoDoCampo(v)
+    }
+  }
+  if (Object.keys(saida).length === 0) throw new Error('nenhum campo para gravar')
+  return saida
+}
 
 export function lerVerbeteSkc(r: Registro): VerbeteSkc {
   const c = r.campos
@@ -157,6 +333,7 @@ export function lerVerbeteSkc(r: Registro): VerbeteSkc {
     aprovacaoDesatualizada: situacao.aprovacaoDesatualizada,
     criadoEm: r.criadoEm,
     excluido: r.excluido,
+    campos: lerCamposCompletos(c),
   }
 }
 

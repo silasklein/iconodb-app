@@ -46,10 +46,11 @@ const EXTRAS: [string, string, string, string][] = [
   ['item', 'TESTE-0002', 'sitio_nao_normalizado', 'Tell?'],
 ]
 // De fábrica: 1 citação + 1 tradução com termo alterado = 2; +4 extras = 6; + 4 verbetes a revisar = 10; + 1 elemento sem região = 11;
-// + 2 pares de sítios que podem ser o mesmo (`sitio_par_sugerido`: TESTE-1 ~ TESTE-7, TESTE-1 ~ TESTE-8; Tarefa 15) = 13.
+// + 2 pares de sítios que podem ser o mesmo (`sitio_par_sugerido`: TESTE-1 ~ TESTE-7, TESTE-1 ~ TESTE-8; Tarefa 15) = 13;
+// + as 3 citações não resolvidas de item do pacote 10 (TESTE-0004, TESTE-0005 e TESTE-0006, a sem autor) = 16.
 // As 29 traduções de máquina (26 + os 3 trechos das introduções das subcoleções, pacote 9) ficam fora: «Traduções não
 // revisadas» é só consulta.
-const TOTAL = 13
+const TOTAL = 16
 const CHAVE_MEDIDA = chaveDoCaso({ tipo: 'medidas_nao_normalizadas', entidade: 'item', entidadeId: 'TESTE-0004', detalhe: '5 cm?' })
 
 async function limpar() {
@@ -73,17 +74,17 @@ describe('a lista dos tipos', () => {
     expect(await screen.findByText(`${TOTAL} casos · o que o processamento não decidiu sozinho`)).toBeInTheDocument()
     const grupos = [...screen.getByRole('list', { name: 'Casos por tipo' }).querySelectorAll<HTMLElement>(':scope > li')]
     expect(grupos.map((li) => li.dataset.grupo)).toEqual([
+      'citacoes-nao-resolvidas', // pacote 10: 4 citações, empatadas com os verbetes
       'verbetes-a-revisar',
       'sitios-que-podem-ser-o-mesmo', // Tarefa 15: logo antes de «Sítios não resolvidos»
       'sitios-nao-resolvidos',
-      'citacoes-nao-resolvidas',
       'medidas-nao-organizadas',
       'regioes-a-desenhar',
       'traducoes-com-termo-alterado',
       'traducoes-desatualizadas',
       'traducoes-nao-revisadas', // só consulta: por último, e fora do total
     ])
-    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '2', '2', '1', '1', '1', '1', '1', '29'])
+    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '4', '2', '2', '1', '1', '1', '1', '29'])
   })
 
   it('os grupos abrem e fecham pelo botão, e o que está aberto fica no endereço', async () => {
@@ -143,11 +144,14 @@ describe('cada tipo tem a sua ação (o lugar certo)', () => {
     return within(screen.getByRole('list', { name: new RegExp(`^Casos de ${grupo}`) })).getAllByRole('listitem')[0]!
   }
 
-  it('citação: resolve na bibliografia, procurando o autor; o trecho sem item não tem número para abrir', async () => {
+  it('citação: abre o caso para ligar a uma obra (Tarefa 11); o trecho sem item não tem número para abrir', async () => {
     abrir()
     const li = await caso('Citações não resolvidas')
     expect(within(li).getByText('Fantasma 1888: 3: obra fora da bibliografia')).toBeInTheDocument()
-    expect(within(li).getByRole('link', { name: 'Resolver na bibliografia' })).toHaveAttribute('href', '#/bibliografia?filtro=Fantasma')
+    const chave = chaveDoCaso({ tipo: 'citacao_nao_resolvida', entidade: 'passage', entidadeId: 'PA-TESTE-I.S.9-cap-1', detalhe: 'Fantasma 1888: 3: obra fora da bibliografia' })
+    const doCaso = `/revisao?${new URLSearchParams({ abrir: 'citacoes-nao-resolvidas', caso: chave })}`
+    expect(within(li).getByRole('link', { name: 'Ligar a uma obra' })).toHaveAttribute('href', `#${doCaso}`)
+    expect(within(li).getByRole('link', { name: /^Fantasma 1888: 3/ })).toHaveAttribute('href', doCaso)
     expect(within(li).getByText('—')).toBeInTheDocument()
     expect(within(li).queryByRole('link', { name: /Abrir —/ })).toBeNull() // sem número, nada de link «Abrir —»
     expect(within(li).getByText(/TESTE I · introdução, seção 9 · /)).toBeInTheDocument()
@@ -323,7 +327,7 @@ describe('Deixar como está e Desfazer', () => {
     // O aviso vem depois da gravação (uma atualização à parte da contagem): espera por ele, não confere de imediato.
     expect(await screen.findByRole('status')).toHaveTextContent('CA00004: marcado como resolvido.')
     // Desfazer pelo aviso
-    await userEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Desfazer' }))
+    await userEvent.click(within(screen.getByText('CA00004: marcado como resolvido.').parentElement!).getByRole('button', { name: 'Desfazer' }))
     await waitFor(() => expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`))
     expect(estadoAtual().registro('revisao', CHAVE_MEDIDA)!.excluido).toBe(true)
     expect(screen.getByRole('list', { name: 'Casos de Medidas não organizadas' })).toBeInTheDocument()
@@ -538,12 +542,14 @@ describe('uma conta só: página, Menu e ponto da barra', () => {
     await waitFor(() => expect(menu()).toContain(`${TOTAL} casos`))
     expect(barra()).toBe(`Revisão, ${TOTAL} pendências`)
     expect(apoio()).toContain(`${TOTAL} casos`)
-    await userEvent.click(screen.getByRole('button', { name: 'Deixar como está: CA00004' }))
+    // no computador: escolher o caso na lista e «Marcar como resolvido» no detalhe
+    await userEvent.click(screen.getByRole('link', { name: /^5 cm\?/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Marcar como resolvido' }))
     // um só waitFor: quando a página mudou, o Menu e a barra já mudaram junto
     await waitFor(() => expect(apoio()).toContain(`${TOTAL - 1} casos`))
     expect(menu()).toContain(`${TOTAL - 1} casos`)
     expect(barra()).toBe(`Revisão, ${TOTAL - 1} pendências`)
-    await userEvent.click(screen.getByRole('button', { name: 'Desfazer: CA00004' }))
+    await userEvent.click(within(screen.getByText('CA00004: marcado como resolvido.').parentElement!).getByRole('button', { name: 'Desfazer' }))
     await waitFor(() => expect(apoio()).toContain(`${TOTAL} casos`))
     expect(menu()).toContain(`${TOTAL} casos`)
     expect(barra()).toBe(`Revisão, ${TOTAL} pendências`)
@@ -560,7 +566,8 @@ describe('uma conta só: página, Menu e ponto da barra', () => {
     await waitFor(() => expect(apoio()).toContain(`${TOTAL - 1} casos`))
     expect(menu()).toContain(`${TOTAL - 1} casos`)
     expect(barra()).toBe(`Revisão, ${TOTAL - 1} pendências`)
-    expect(screen.getByRole('button', { name: 'Desfazer: CA00004' })).toBeInTheDocument()
+    // no computador a linha resolvida só escolhe o caso (o «Desfazer» está no detalhe)
+    expect(within(screen.getByRole('list', { name: 'Resolvidos de Medidas não organizadas' })).getByText('5 cm?')).toBeInTheDocument()
     // e o outro aparelho desfaz: volta nos três
     const desfaz = ev({ ap: B, seq: 2, ms: Date.now() + 120_000, tipo: 'revisao', reg: CHAVE_MEDIDA, op: 'excluir' })
     await act(async () => {

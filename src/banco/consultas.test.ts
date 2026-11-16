@@ -7,7 +7,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { armazemComPacote, bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
-import { RAIZ_DO_PACOTE_6 } from '../../tests/suporte/fonteDeTeste'
+import { RAIZ_DO_PACOTE_6, RAIZ_DO_PACOTE_8, RAIZ_DO_PACOTE_9 } from '../../tests/suporte/fonteDeTeste'
 import { tituloDoGrupo } from '../ui/tituloDoGrupo'
 import { mesclasDoPacote } from '../pacote/redirecionamentos'
 import { pacoteDeSitios } from '../sitios/pacote'
@@ -15,6 +15,7 @@ import { armazemMemoria } from '../pacote/armazem'
 import { abrirBanco, aoReabrir, ErroSemPacote, executar, reabrirBanco, usarMotor } from './cliente'
 import {
   alvosDoPacote,
+  citacoesNaoResolvidasNoPacote,
   compararNoLivro,
   contagens,
   elementosSemRegiaoNoPacote,
@@ -91,6 +92,10 @@ describe('consultas sobre o pacote sintético', () => {
     expect(l).toEqual([
       { tipo: 'citacao_nao_resolvida', entidade: 'passage', entidadeId: 'PA-TESTE-I.S.9-cap-1', detalhe: 'Fantasma 1888: 3: obra fora da bibliografia', numero: null },
       { tipo: 'traducao_termo_alterado', entidade: 'passage', entidadeId: 'PA-TESTE-0003-cat-1', detalhe: "GL-900003: 'olhos de botão' (m) -> 'olho em forma de botão' (m)", numero: null },
+      // pacote 10: as citações não resolvidas de item, depois das duas de antes (a «Imaginária 2010: 3» ligada pelo usuário saiu)
+      { tipo: 'citacao_nao_resolvida', entidade: 'item', entidadeId: 'TESTE-0004', detalhe: 'campo 7: Inventado 2001: 5', numero: 'CA00004' },
+      { tipo: 'citacao_nao_resolvida', entidade: 'item', entidadeId: 'TESTE-0005', detalhe: 'campo 7: Inventado 2001: 9', numero: 'BA00001' },
+      { tipo: 'citacao_nao_resolvida', entidade: 'item', entidadeId: 'TESTE-0006', detalhe: 'campo 7: 1999: 12; sem autor na citação', numero: 'BA00002' },
     ])
   })
 
@@ -281,9 +286,9 @@ describe('consultas sobre o pacote sintético', () => {
   })
 
   describe('subcoleções (schema 9)', () => {
-    it('o pacote sintético é do schema 9', async () => {
+    it('o pacote sintético é do schema 10 (com as subcoleções do 9)', async () => {
       const [l] = await executar<{ user_version: number }>('PRAGMA pub_TESTE.user_version')
-      expect(l!.user_version).toBe(9)
+      expect(l!.user_version).toBe(10)
     })
 
     it('grupos() dá só os grupos de cima, com o número de subcoleções', async () => {
@@ -405,8 +410,10 @@ describe('consultas sobre o pacote sintético', () => {
     expect(o!.titulo).toContain('Marduk')
     expect(o!.objetos.map((x) => x.numero)).toEqual(['BA00001', 'BA00002'])
     expect(await obras()).toEqual([
-      expect.objectContaining({ id: 'BIB-900001', curta: 'Autor 1999', objetos: 4 }),
-      expect.objectContaining({ id: 'BIB-900002', curta: 'Autora 2004', objetos: 2 }),
+      expect.objectContaining({ id: 'BIB-900001', curta: 'Autor 1999', origem: 'TESTE I', objetos: 4 }),
+      expect.objectContaining({ id: 'BIB-900002', curta: 'Autora 2004', origem: 'TESTE I', objetos: 2 }),
+      // pacote 10: a obra do usuário publicada (origin 'SKC'), citada pela «Imaginária 2010: 3» de BA00002
+      expect.objectContaining({ id: 'BIB-900090', curta: 'Imaginária 2010', origem: 'SKC', objetos: 1 }),
     ])
 
     const ss = await sitios()
@@ -426,6 +433,51 @@ describe('consultas sobre o pacote sintético', () => {
     expect(s!.objetos.map((x) => x.numero)).toEqual(['CA00003', 'CA00004', 'BA00002'])
     expect(await sitio('TESTE-99')).toBeNull()
     expect(await sitio('lixo')).toBeNull()
+  })
+
+  describe('pacote 10 (Parte 2C, bloco 3): other_forms, level_auto, resolved_by e a obra SKC', () => {
+    it('o verbete traz as outras línguas, o hebraico e o árabe; os outros, a lista vazia', async () => {
+      const v = await verbete('GL-900010')
+      expect(v).toMatchObject({ he: 'קמע ניסיון', ar: 'تميمة تجريبية' })
+      expect(v!.outras).toEqual([
+        { lingua: 'grego', forma: 'φυλακτήριον δοκιμῆς' },
+        { lingua: 'latim', forma: 'amuletum probationis' },
+      ])
+      expect((await verbete('GL-900001'))!.outras).toEqual([])
+    })
+
+    it('a hipótese de nível revisto traz o automático; as outras, null', async () => {
+      expect(await hipotese('HY-900006')).toMatchObject({ nivel: 'iconographic', nivelAutomatico: 'pre_iconographic' })
+      expect(await hipotese('HY-900005')).toMatchObject({ nivel: 'pre_iconographic', nivelAutomatico: null })
+      // os níveis por objeto não mudam: CA00003 tem uma pré-iconográfica e duas iconográficas
+      const i = (await item('CA00003'))!
+      expect(Object.fromEntries(Object.entries(i.hipotesesPorNivel).map(([k, hs]) => [k, hs.map((h) => h.id)]))).toEqual({
+        pre_iconographic: ['HY-900005'],
+        iconographic: ['HY-900007', 'HY-900006'],
+        iconological: [],
+      })
+    })
+
+    it('as citações dizem quem as resolveu: o processamento, o usuário, ou ninguém', async () => {
+      const bib = (await item('BA00002'))!.bibliografia
+      expect(bib.map((r) => [r.bruto, r.resolvida, r.resolvidaPor, r.obraId])).toEqual([
+        ['Autora 2004: 8', true, 'auto', 'BIB-900002'],
+        ['1999: 12', false, null, null],
+        ['Imaginária 2010: 3', true, 'user', 'BIB-900090'],
+      ])
+      expect((await item('CA00004'))!.bibliografia.map((r) => [r.bruto, r.resolvidaPor])).toEqual([
+        ['Autor 1999: 20', 'auto'],
+        ['Inventado 2001: 5', null],
+      ])
+    })
+
+    it('a obra SKC publicada e o redirecionamento de obra', async () => {
+      const o = await obra('BIB-900090')
+      expect(o).toMatchObject({ id: 'BIB-900090', curta: 'Imaginária 2010', origem: 'SKC', citadaComo: { SKC: ['Imaginária 2010'] }, titulo: 'Selos sonhados no planalto fictício' })
+      expect(o!.chicago).toBe('Imaginária, Cicrana. 2010. Selos sonhados no planalto fictício. Cidade Fictícia.')
+      expect(o!.objetos.map((x) => x.numero)).toEqual(['BA00002'])
+      expect((await redirecionamentos()).find((r) => r.de === 'BIB-teste123-1')).toEqual({ de: 'BIB-teste123-1', para: 'BIB-900090', tipo: 'obra', verbeteExiste: false, obraExiste: true, criado: true })
+    })
   })
 
   it('verbetes() traz o inglês e quantos objetos cada verbete tem (hipótese no termo ou sítio de mesmo nome)', async () => {
@@ -880,7 +932,8 @@ describe('Parte 2C, bloco 2: as tabelas dos sítios do pacote 8', () => {
 describe('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6) continua a abrir com as consultas de hoje', () => {
   let v9: Record<string, unknown>
   beforeAll(async () => {
-    usarMotor(await bancoDeTeste())
+    // o pacote 9 de antes (tests/fixtures/pacote-9): o 10 traz também as citações e as obras do bloco 3
+    usarMotor(await bancoDeTeste({ raiz: RAIZ_DO_PACOTE_9 }))
     v9 = semSubcolecoes(await doPacote())
     usarMotor(await bancoDeTeste({ raiz: RAIZ_DO_PACOTE_6 }))
   })
@@ -976,5 +1029,44 @@ describe('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6) continua 
     expect(p.partes.size).toBe(0)
     expect(p.grafias).toEqual([])
     expect(p.pares).toEqual([])
+  })
+})
+
+describe.each([
+  [8, RAIZ_DO_PACOTE_8],
+  [9, RAIZ_DO_PACOTE_9],
+] as const)('Tarefa 7: o pacote %s de antes continua a abrir com as consultas de hoje (sem as colunas do schema 10)', (schema, raiz) => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ raiz }))
+  })
+  afterAll(() => usarMotor(null))
+
+  it('abre, e é desse schema', async () => {
+    expect(await abrirBanco()).toMatchObject({ estado: 'aberto', publicacoes: [{ sigla: 'TESTE', esquema: 'pub_TESTE' }] })
+    const [l] = await executar<{ user_version: number }>('PRAGMA pub_TESTE.user_version')
+    expect(l!.user_version).toBe(schema)
+    const [c] = await executar<{ n: number }>("SELECT count(*) AS n FROM pragma_table_info('hypothesis', 'pub_TESTE') WHERE name = 'level_auto'")
+    expect(c!.n).toBe(0)
+  })
+
+  it('sem level_auto, resolved_by nem other_forms: null e listas vazias, sem erro de SQL', async () => {
+    const i = (await item('CA00003'))!
+    const todas = [...Object.values(i.hipotesesPorNivel).flat(), ...i.outrasHipoteses]
+    expect(todas.length).toBeGreaterThan(0)
+    expect(todas.every((h) => h.nivelAutomatico === null)).toBe(true)
+    expect(await hipotese('HY-900006')).toMatchObject({ nivelAutomatico: null })
+    const bib = (await item('CA00001'))!.bibliografia
+    expect(bib.length).toBeGreaterThan(0)
+    expect(bib.every((r) => r.resolvidaPor === null)).toBe(true)
+    expect((await verbete('GL-900010'))!.outras).toEqual([])
+    const os = await obras()
+    expect(os.map((o) => [o.id, o.origem])).toEqual([
+      ['BIB-900001', 'TESTE I'],
+      ['BIB-900002', 'TESTE I'],
+    ])
+    expect((await redirecionamentos()).some((r) => r.tipo === 'obra')).toBe(false)
+    expect((await linhasDaFila()).filter((l) => l.tipo === 'citacao_nao_resolvida').map((l) => l.entidadeId)).toEqual(['PA-TESTE-I.S.9-cap-1'])
+    // Tarefa 11: as citações que a Revisão pode ligar, sem `resolved_by` (só as não resolvidas)
+    expect((await citacoesNaoResolvidasNoPacote()).map((c) => [c.bruto, c.resolvidaPor])).toEqual([['Fantasma 1888: 3', null]])
   })
 })

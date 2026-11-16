@@ -23,7 +23,7 @@
 }
 .segmento {
   min-height: 40px;
-  padding: 4px 2px;
+  padding: 4px 3px;
   border: 0;
   border-left: 1px solid var(--controle);
   background: var(--fundo-consulta);
@@ -434,4 +434,51 @@
   margin-bottom: 16px;
   padding-left: 10px;
   border-left: 2px solid currentColor;
+}
+
+/* O nível revisto de uma hipótese dos livros (Parte 2C, bloco 3, Tarefa 13; Nivel.dc.html). */
+.nivel-revisto {
+  /* o gap da coluna: a nota vazia o desconta (revisão final, N1: um valor só, nos dois lugares) */
+  --nivel-gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nivel-gap);
+  padding-top: 16px;
+  border-top: 1px solid var(--filete-consulta);
+}
+.nivel-revisto-nota {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--superficie);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nivel-revisto-nota:empty {
+  /* a região viva sem texto: sem altura, e sem o espaço do gap da coluna */
+  margin-top: calc(-1 * var(--nivel-gap));
+  padding: 0;
+  background: none;
+}
+.nivel-revisto-voltar {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--controle);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.nivel-revisto-voltar:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.nivel-revisto-ajuda {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario-consulta);
 }

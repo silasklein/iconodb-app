@@ -443,8 +443,8 @@ describe('a Revisão: "sítios não resolvidos" desconta o que a pessoa ligou e 
     expect(screen.getByText(/2 resolvidos por você/)).toBeInTheDocument()
     // as duas linhas do pacote que não são de sítio, mais o sítio que sobrou
     // (e os 4 verbetes do pacote ainda a revisar, o elemento do pacote sem região e os 2 pares de sítios que podem ser o mesmo,
-    // Tarefa 15)
-    expect(screen.getByText(/^10 casos · /)).toBeInTheDocument()
+    // Tarefa 15; e, no pacote 10, as 3 citações não resolvidas de item)
+    expect(screen.getByText(/^13 casos · /)).toBeInTheDocument()
   })
 
   it('objetos SKC com nome livre (ou com o sítio excluído) contam e aparecem na lista, com o nome de agora, até serem ligados', async () => {

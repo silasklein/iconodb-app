@@ -80,7 +80,7 @@ const registro = (tipo: Tipo, id: string, campos: Record<string, Json>): Registr
 })
 
 describe('camposIndexaveis: o que cada tipo de registro põe no índice', () => {
-  it('há uma regra (ou null) para cada um dos 13 tipos', () => {
+  it('há uma regra (ou null) para cada um dos 16 tipos', () => {
     expect(Object.keys(m.indice.camposIndexaveis).sort()).toEqual([...TIPOS].sort())
   })
 
@@ -327,6 +327,29 @@ describe('buscar() junta o pacote e a camada do usuário', () => {
     // excluído, sai
     await m.estado.receberEventos([e('verbete', 'GL-aaaaaaaa-1', {}, 'excluir')])
     expect((await m.consulta.buscar('termo novo de teste', opcoes)).usuario).toEqual([])
+  })
+
+  it('Parte 2C, bloco 3: a obra do usuário é achada no escopo Bibliografia, com a rota da página dela; excluída, sai', async () => {
+    const csl = { type: 'book', author: [{ family: 'Buscável', given: 'Ana' }], title: 'Selos de prova achados', publisher: 'Editora Imaginária' }
+    expect(m.indice.camposIndexaveis.obra(registro('obra', 'BIB-aaaaaaaa-1', { csl, curta: 'Buscável 2001' }))).toEqual({
+      rotulo: 'Buscável 2001',
+      texto: 'Buscável 2001\nBuscável, Ana\nSelos de prova achados\nEditora Imaginária',
+      escopo: 'bibliografia',
+    })
+    // sem CSL (a edição de uma obra dos livros) ou com o id de uma obra dos livros, não entra
+    expect(m.indice.camposIndexaveis.obra(registro('obra', 'BIB-aaaaaaaa-2', { curta: 'Só curta 2001' }))).toBeNull()
+    expect(m.indice.camposIndexaveis.obra(registro('obra', 'BIB-900001', { csl, curta: 'x' }))).toBeNull()
+    await m.estado.receberEventos([e('obra', 'BIB-aaaaaaaa-1', { csl, curta: 'Buscável 2001' }, 'criar')])
+    for (const escopo of ['tudo', 'bibliografia'] as const) {
+      const r = await m.consulta.buscar('selos de prova achados', { ...opcoes, escopo })
+      expect(r.usuario).toEqual([expect.objectContaining({ tipo: 'obra', ref: 'BIB-aaaaaaaa-1', rotulo: 'Buscável 2001', skc: true })])
+    }
+    expect((await m.consulta.buscar('buscavel', { ...opcoes, escopo: 'termo' })).usuario).toEqual([])
+    const { rotaDoAcertoDoUsuario, ROTULO_DO_TIPO_DO_USUARIO } = await import('../busca/rotasDoUsuario')
+    expect(rotaDoAcertoDoUsuario('obra', 'BIB-aaaaaaaa-1')).toBe('/obra/BIB-aaaaaaaa-1')
+    expect(ROTULO_DO_TIPO_DO_USUARIO.obra).toBe('Obra')
+    await m.estado.receberEventos([e('obra', 'BIB-aaaaaaaa-1', {}, 'excluir')])
+    expect((await m.consulta.buscar('selos de prova achados', opcoes)).usuario).toEqual([])
   })
 
   it('Tarefa 11: um verbete do LIVRO com forma em uso é achado pela forma nova e pela antiga, com os objetos dele e a forma nova na tela', async () => {

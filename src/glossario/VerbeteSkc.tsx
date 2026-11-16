@@ -10,9 +10,10 @@ import { AvisoDeCopia, useCopiar } from '../ui/useCopiar'
 import { estadoAtual } from '../usuario/estado'
 import { AvisoDeDuplicado } from './AvisoDeDuplicado'
 import { useDuplicadosDoGlossario, useHipotesesDoVerbete, useVerbeteSkc, usosDoVerbete } from './doUsuario'
+import { DadosDoVerbeteSkc, EditarCamposDoVerbete, GeneroENumero } from './CamposDoVerbete'
 import { EditorDaForma } from './EditorDaForma'
 import { LinhasDeHipoteseSkc } from './LinhasDeHipoteseSkc'
-import { ROTULO_DO_STATUS } from './modelo'
+import { ROTULO_DO_STATUS, ROTULO_DO_TIPO, temCamposCompletos } from './modelo'
 import { excluirVerbete, restaurarVerbete } from './operacoes'
 import '../telas/Lista.css'
 import '../imagens-usuario/MarcaSkc.css'
@@ -40,9 +41,11 @@ const dataDoHlc = (hlc: string) => {
 
 /**
  * A página de um verbete do usuário (decisão 41; `GL-<aparelho>-<n>`), no lugar do Verbete do pacote: a forma, a marca
- * SKC, o estado ("a revisar" ou "aprovado"), quando foi criado e as hipóteses SKC que o usam. As seções que só os
- * verbetes dos livros têm (alemão, inglês, Iconclass, SSSL, definição, objetos com miniatura) não aparecem: não ficam
- * vazias. Tarefa 11: a forma se edita no lugar, como a de um verbete do livro (EditorDaForma, com a forma criada como
+ * SKC, o estado ("a revisar" ou "aprovado"), quando foi criado e as hipóteses SKC que o usam. Parte 2C, bloco 3, Tarefa 12:
+ * os campos completos (tipo, gênero, número, alemão, inglês, hebraico, árabe, outras línguas, variantes, pai, Iconclass e
+ * SSSL) aparecem como no verbete dos livros, só os preenchidos; «Editar os dados» os abre no lugar (quadro «Verbete seu,
+ * completo»), e cada mudança se grava na hora. O que só os verbetes dos livros têm (definição, objetos com miniatura) não
+ * aparece. Tarefa 11: a forma se edita no lugar, como a de um verbete do livro (EditorDaForma, com a forma criada como
  * proposta original); "Excluir o verbete" (reversível, com a confirmação nomeada); e o aviso de "possível duplicado" quando
  * dois aparelhos criaram o mesmo termo sem internet.
  */
@@ -53,6 +56,9 @@ export function VerbeteSkc({ id, pagina, voltarPara }: Props) {
   const { aviso, copiar } = useCopiar(nomeRef)
   const [falhou, setFalhou] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
+  // «Editar os dados» vale para este verbete (no computador a página fica montada de um verbete para outro)
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const editando = editandoId === id
   const duplicados = useDuplicadosDoGlossario().get(id) ?? []
   const navegar = useNavigate()
   // O foco (revisão 1, M4): vai a "Cancelar" quando a confirmação abre e volta ao botão quando ela fecha sem excluir.
@@ -80,11 +86,13 @@ export function VerbeteSkc({ id, pagina, voltarPara }: Props) {
     </>
   )
   const criadoEm = dataDoHlc(v.criadoEm)
+  const { campos } = v
+  const comDados = temCamposCompletos({ ...campos, tipo: null, genero: null, numero: null })
 
   return (
     <MolduraDoDetalhe pagina={pagina} voltar={voltar} acoes={acoes} origem={`Verbete: ${nome}`}>
       <div className="verbete-skc">
-        <CabecalhoDoDetalhe pagina={pagina} etiqueta={`Verbete do SKC · ${ROTULO_DO_STATUS[v.status]}`} titulo={nome} codigo={v.id} acoes={acoes} tituloRef={nomeRef} />
+        <CabecalhoDoDetalhe pagina={pagina} etiqueta={`${campos.tipo ? `${ROTULO_DO_TIPO[campos.tipo]} · SKC` : 'Verbete do SKC'} · ${ROTULO_DO_STATUS[v.status]}`} titulo={nome} codigo={v.id} acoes={acoes} tituloRef={nomeRef} />
         <AvisoDeCopia aviso={aviso} />
 
         {v.excluido && (
@@ -110,6 +118,7 @@ export function VerbeteSkc({ id, pagina, voltarPara }: Props) {
           <EditorDaForma key={id} id={id} original={v.forma} emUso={nome} status={v.status} aprovacaoDesatualizada={v.aprovacaoDesatualizada} statusDoPacote="proposed" doPacote={false} />
           <AvisoDeDuplicado parecidos={duplicados} doUsuario />
           <dl className="detalhe-dl detalhe-dl-depois-do-editor">
+            {!editando && <GeneroENumero campos={campos} />}
             <Linha rotulo="Fonte">
               <span className="marca-skc">SKC</span> sua, criada numa hipótese (não publicada)
             </Linha>
@@ -118,6 +127,26 @@ export function VerbeteSkc({ id, pagina, voltarPara }: Props) {
             </Linha>
           </dl>
         </section>
+
+        {!v.excluido && (
+          <div className="detalhe-fila">
+            <button type="button" className="detalhe-botao-botao" aria-pressed={editando} onClick={() => setEditandoId(editando ? null : id)}>
+              <Icon name="editarFicha" size={18} />
+              Editar os dados
+            </button>
+          </div>
+        )}
+        {editando && !v.excluido ? (
+          <section className="detalhe-bloco" aria-label="Dados do verbete">
+            <EditarCamposDoVerbete key={id} id={id} campos={campos} />
+          </section>
+        ) : (
+          comDados && (
+            <section className="detalhe-bloco" aria-label="Dados do verbete">
+              <DadosDoVerbeteSkc campos={campos} />
+            </section>
+          )
+        )}
 
         <section className="detalhe-secao" aria-label="Hipóteses com este termo">
           <div className="detalhe-secao-topo">

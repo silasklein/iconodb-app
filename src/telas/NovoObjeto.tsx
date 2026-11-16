@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { obras } from '../banco/consultas'
+import { useOpcoesDeObra } from '../bibliografia/doUsuario'
 import { CampoDaNota, type FonteDoCampo } from '../notas/CampoDaNota'
-import { CampoDeEscolha, type OpcaoDeEscolha } from '../objetos-skc/CampoDeEscolha'
+import { CampoDeEscolha } from '../objetos-skc/CampoDeEscolha'
 import { EscolhaDoPeriodo, type ManejoDoPeriodo } from '../objetos-skc/EscolhaDoPeriodo'
 import { ImagensDoNovo, type ImagemDoNovo } from '../objetos-skc/ImagensDoNovo'
 import { useNumeracao } from '../objetos-skc/atual'
@@ -15,7 +15,6 @@ import { eSitioNovoEscolhido, nomeDoSitioNovoEscolhido, useEscolhaDeSitio } from
 import { Icon } from '../ui/Icon'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
-import { useCarregar } from '../ui/useCarregar'
 import '../objetos-skc/Formulario.css'
 import './NovoObjeto.css'
 
@@ -126,11 +125,8 @@ export function NovoObjeto() {
   // Sítios (do pacote e SKC, com o nome de agora) e obras (Bibliografia), para as sugestões. A última opção do Sítio é
   // "Novo sítio «…»" (Tarefa 12): cria um sítio do usuário com esse nome, na mesma gravação do objeto.
   const { opcoes: opcoesDeSitio, livre: sitioNovoLivre } = useEscolhaDeSitio()
-  const cargaDasObras = useCarregar(() => obras(), 'obras')
-  const opcoesDeObra = useMemo<OpcaoDeEscolha[]>(
-    () => (cargaDasObras.fase === 'ok' ? cargaDasObras.dados.map((o) => ({ id: o.id, rotulo: o.curta ?? o.titulo ?? o.id, apoio: o.curta && o.titulo ? o.titulo : undefined })) : []),
-    [cargaDasObras],
-  )
+  // As obras da Bibliografia: as dos livros e as do usuário (marca SKC), juntas (Parte 2C, bloco 3).
+  const opcoesDeObra = useOpcoesDeObra()
 
   // A leitura: o campo das notas (Tarefa 6), com `[[`, sobre o estado do formulário.
   const fonteDaLeitura = useMemo<FonteDoCampo>(

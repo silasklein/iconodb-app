@@ -13,17 +13,26 @@
  */
 import { validoHlc } from './hlc'
 
-export const TIPOS = ['nota', 'colecao', 'hipotese', 'regiao', 'posicao', 'verbete', 'sitio', 'item-sitio', 'revisao', 'objeto', 'imagem', 'ligacao', 'comparar'] as const
+/**
+ * Os tipos de registro. Parte 2C, bloco 3 (Tarefa 7): `obra` (a obra do usuário, `BIB-<aparelho>-<n>`, campos `csl` e `curta`;
+ * src/bibliografia/modelo.ts), `citacao` (a ligação de uma citação a uma obra; o id é a chave da citação ou a ocorrência;
+ * src/revisao/ligacoes.ts) e `nivel` (o nível revisto de uma hipótese dos livros; o id é o `HY-…` do livro, campo `nivel`;
+ * src/hipoteses/niveis.ts). O porte em Python (`iconodb/usuario.py`, `TIPOS`) já os tem, na mesma ordem.
+ */
+export const TIPOS = ['nota', 'colecao', 'hipotese', 'regiao', 'posicao', 'verbete', 'sitio', 'item-sitio', 'revisao', 'objeto', 'imagem', 'ligacao', 'comparar', 'obra', 'citacao', 'nivel'] as const
 export type Tipo = (typeof TIPOS)[number]
 
 export const OPS = ['criar', 'alterar', 'excluir', 'restaurar'] as const
 export type Op = (typeof OPS)[number]
 
-/** Prefixos dos ids de registro "<PREFIXO>-<aparelho>-<n>" (`GL`: os verbetes do usuário, decisão 41; src/glossario/modelo.ts). */
-export const PREFIXOS = ['NT', 'CO', 'HY', 'RG', 'SI', 'OB', 'IM', 'GL'] as const
+/**
+ * Prefixos dos ids de registro "<PREFIXO>-<aparelho>-<n>" (`GL`: os verbetes do usuário, decisão 41; src/glossario/modelo.ts;
+ * `BIB`: as obras do usuário, bloco 3, src/bibliografia/modelo.ts).
+ */
+export const PREFIXOS = ['NT', 'CO', 'HY', 'RG', 'SI', 'OB', 'IM', 'GL', 'BIB'] as const
 export type Prefixo = (typeof PREFIXOS)[number]
 /** O prefixo de cada tipo que cria registros com id próprio. */
-export const PREFIXO_DO_TIPO: Partial<Record<Tipo, Prefixo>> = { nota: 'NT', colecao: 'CO', hipotese: 'HY', regiao: 'RG', sitio: 'SI', objeto: 'OB', imagem: 'IM', verbete: 'GL' }
+export const PREFIXO_DO_TIPO: Partial<Record<Tipo, Prefixo>> = { nota: 'NT', colecao: 'CO', hipotese: 'HY', regiao: 'RG', sitio: 'SI', objeto: 'OB', imagem: 'IM', verbete: 'GL', obra: 'BIB' }
 
 export type Json = null | boolean | number | string | Json[] | { [chave: string]: Json }
 export type Campos = { [campo: string]: Json }

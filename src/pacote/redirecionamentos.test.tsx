@@ -26,7 +26,7 @@ import { ev } from '../../tests/suporte/eventosDeTeste'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { estadoAtual, registrar } from '../usuario/estado'
-import { destinoDe, mesclasDoPacote, origensDe, redirecionamentosDoPacote, useRedirecionamentos } from './redirecionamentos'
+import { destinoDe, destinosCriadosOuNenhum, mesclasDoPacote, origensDe, redirecionamentosDoPacote, useRedirecionamentos } from './redirecionamentos'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
 vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/suporte/syncSimulada')).modulo)
@@ -54,8 +54,9 @@ afterEach(() => instalarMatchMedia(375))
 const endereco = () => screen.getByTestId('endereco').textContent
 
 describe('a tabela do pacote', () => {
-  it('lê os quatro redirecionamentos do pacote sintético', async () => {
+  it('lê os cinco redirecionamentos do pacote sintético (pacote 10: a obra do usuário publicada)', async () => {
     expect(Object.fromEntries(await redirecionamentosDoPacote())).toEqual({
+      'BIB-teste123-1': 'BIB-900090',
       'GL-teste123-1': 'GL-900010',
       'GL-teste123-2': 'GL-900002',
       'SI-teste123-1': 'TESTE-3',
@@ -73,7 +74,7 @@ describe('a tabela do pacote', () => {
     } finally {
       usarMotor(await bancoDeTeste())
     }
-    expect((await redirecionamentosDoPacote()).size).toBe(4)
+    expect((await redirecionamentosDoPacote()).size).toBe(5)
   })
 
   it('só aceita de um id do usuário para um id do livro', async () => {
@@ -81,7 +82,47 @@ describe('a tabela do pacote', () => {
     try {
       await executar(`INSERT INTO main.redirecionamento (de, para, tipo) VALUES ('GL-900001', 'GL-900003', 'verbete'), ('GL-bbbbbbbb-1', 'GL-cccccccc-1', 'verbete'),
         ('SI-bbbbbbbb-1', 'SI-cccccccc-1', 'sitio'), ('GL-bbbbbbbb-2', 'TESTE-1', 'verbete'), ('SI-bbbbbbbb-2', 'GL-900001', 'sitio')`)
-      expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
+      expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['BIB-teste123-1', 'GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+  })
+})
+
+describe('revisão final (N2): destinosCriadosOuNenhum', () => {
+  it('só os redirecionamentos com `criado` (o destino foi criado do registro do usuário)', async () => {
+    expect(Object.fromEntries(await destinosCriadosOuNenhum())).toEqual({
+      'BIB-teste123-1': 'BIB-900090',
+      'GL-teste123-1': 'GL-900010',
+      'SI-teste123-1': 'TESTE-3',
+    })
+  })
+
+  it('a leitura que falha dá o mapa vazio, sem rejeição solta', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    try {
+      // a consulta dos redirecionamentos lê `bib_entry`: sem a tabela, ela falha
+      await executar('DROP TABLE main.bib_entry')
+      await expect(redirecionamentosDoPacote()).rejects.toThrow()
+      expect((await destinosCriadosOuNenhum()).size).toBe(0)
+    } finally {
+      usarMotor(await bancoDeTeste())
+    }
+    expect((await destinosCriadosOuNenhum()).size).toBe(3)
+  })
+})
+
+describe('Parte 2C, bloco 3: a obra do usuário publicada (tipo obra)', () => {
+  it('só de um BIB-<aparelho>-<n> para um BIB-<dígitos> que existe em bib_entry', async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    try {
+      await executar(`INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('BIB-bbbbbbbb-1', 'BIB-999999', 'obra', 1),
+        ('BIB-bbbbbbbb-2', 'BIB-cccccccc-1', 'obra', 1), ('BIB-900001', 'BIB-900002', 'obra', 0), ('BIB-bbbbbbbb-3', 'BIB-900001', 'verbete', 0),
+        ('GL-bbbbbbbb-4', 'BIB-900001', 'obra', 0), ('BIB-bbbbbbbb-5', 'BIB-900002', 'obra', 0)`)
+      expect(Object.fromEntries([...(await redirecionamentosDoPacote())].filter(([de]) => de.startsWith('BIB-')))).toEqual({
+        'BIB-bbbbbbbb-5': 'BIB-900002',
+        'BIB-teste123-1': 'BIB-900090',
+      })
     } finally {
       usarMotor(await bancoDeTeste())
     }
@@ -105,7 +146,7 @@ describe('Parte 2C, bloco 2: a mescla de um sítio do livro em outro (tipo sitio
       await executar(`INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('GL-12', 'TESTE-2', 'sitio', 0), ('TESTE-5', 'GL-9', 'sitio', 0),
         ('TESTE-6', 'TESTE-99', 'sitio', 0), ('TESTE-99', 'TESTE-1', 'sitio', 0), ('TESTE-7', 'TESTE-7', 'sitio', 0), ('TESTE-8', 'TESTE-1', 'verbete', 0)`)
       expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2' })
-      expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
+      expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['BIB-teste123-1', 'GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
     } finally {
       usarMotor(await bancoDeTeste())
     }

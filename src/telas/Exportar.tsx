@@ -565,7 +565,7 @@ export function Exportar() {
         </div>
         <Secao
           titulo="Cópia de segurança"
-          texto="Tudo o que é seu, num arquivo JSON: notas, coleções, hipóteses, regiões, objetos SKC, sítios e verbetes. As fotos não vão dentro: para levá-las junto, use a cópia completa."
+          texto="Tudo o que é seu, num arquivo JSON: notas, coleções, hipóteses, regiões, objetos SKC, sítios, verbetes, obras, ligações de citação e níveis revistos. As fotos não vão dentro: para levá-las junto, use a cópia completa."
           numeros={resumo ? textoDaCopia(resumo.copia) : CONTANDO}
           botao="Baixar cópia"
           principal

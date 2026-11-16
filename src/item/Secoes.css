@@ -327,3 +327,59 @@
   color: var(--secundario);
   overflow-wrap: anywhere;
 }
+/* Parte 2C, bloco 3 (Tarefa 11): a citação ligada (ou desligada) por você, com a marca discreta e a ação. */
+.bibliografia-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.bibliografia-sua {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.bibliografia-acao {
+  align-self: flex-start;
+  min-height: var(--alvo-toque);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--secundario);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.bibliografia-acao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+@media (pointer: fine) {
+  .bibliografia-acao {
+    min-height: var(--alvo-mouse);
+  }
+}
+.bibliografia-erro {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--texto);
+  font-weight: 600;
+}
+.bibliografia-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.bibliografia-aviso:empty {
+  display: none;
+}
+.bibliografia-citacao:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}

@@ -28,6 +28,8 @@ const CAMINHOS = [
   '/verbete/:id',
   '/bibliografia',
   '/obra/:id',
+  '/obra/nova',
+  '/obra/:id/editar',
   '/sitios',
   '/sitios/novo',
   '/sitio/:id',

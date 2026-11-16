@@ -8,13 +8,15 @@ interface Props<T extends string> {
   aoEscolher: (v: T) => void
   /** Id do rótulo visível (senão o `rotulo` vira aria-label). */
   rotuloId?: string
+  /** Ids (separados por espaço) do que descreve o grupo: vira `aria-describedby`. */
+  descricaoId?: string
 }
 
 /**
  * Um grupo de rádio em segmentos (NovaHipotese.dc.html: Nível e Certeza; a posição sobre a hipótese do livro). Teclado
  * de grupo de rádio: Tab entra no escolhido (ou no primeiro), as setas andam e escolhem.
  */
-export function Segmentos<T extends string>({ rotulo, opcoes, valor, aoEscolher, rotuloId }: Props<T>) {
+export function Segmentos<T extends string>({ rotulo, opcoes, valor, aoEscolher, rotuloId, descricaoId }: Props<T>) {
   const grupo = useRef<HTMLDivElement>(null)
   const marcado = opcoes.findIndex((o) => o.valor === valor)
   const focoEm = marcado >= 0 ? marcado : 0
@@ -27,7 +29,7 @@ export function Segmentos<T extends string>({ rotulo, opcoes, valor, aoEscolher,
     grupo.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[j]?.focus()
   }
   return (
-    <div ref={grupo} role="radiogroup" aria-label={rotuloId ? undefined : rotulo} aria-labelledby={rotuloId} className="segmentos" style={{ ['--n' as string]: opcoes.length }}>
+    <div ref={grupo} role="radiogroup" aria-label={rotuloId ? undefined : rotulo} aria-labelledby={rotuloId} aria-describedby={descricaoId} className="segmentos" style={{ ['--n' as string]: opcoes.length }}>
       {opcoes.map((o, i) => (
         <button
           key={o.valor}

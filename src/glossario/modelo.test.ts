@@ -1,7 +1,7 @@
 import { ev, A, B, T0 } from '../../tests/suporte/eventosDeTeste'
 import { fundir, estadoCanonico } from '../usuario/fusao'
 import { PREFIXOS } from '../usuario/eventos'
-import { camposDoVerbeteNovo, chaveDaForma, eVerbeteSkc, lerVerbeteSkc, normalizarForma, RE_VERBETE_SKC, ROTULO_DO_STATUS } from './modelo'
+import { CAMPOS_VAZIOS, camposDoVerbeteNovo, chaveDaForma, eVerbeteSkc, lerVerbeteSkc, normalizarForma, RE_VERBETE_SKC, ROTULO_DO_STATUS } from './modelo'
 
 describe('o verbete do usuário (decisão 41)', () => {
   it('o id segue o padrão dos registros do usuário, com o prefixo GL (o gerador de ids o conhece)', () => {
@@ -43,7 +43,7 @@ describe('o verbete do usuário (decisão 41)', () => {
     expect(() => camposDoVerbeteNovo('   ')).toThrow()
     const est = fundir([ev({ ap: A, seq: 1, tipo: 'verbete', reg: 'GL-aaaaaaaa-1', op: 'criar', campos: camposDoVerbeteNovo('termo novo') })])
     const v = lerVerbeteSkc(est.registro('verbete', 'GL-aaaaaaaa-1')!)
-    expect(v).toEqual({ id: 'GL-aaaaaaaa-1', forma: 'termo novo', formaEmUso: null, emUso: 'termo novo', status: 'proposed', aprovacaoDesatualizada: false, criadoEm: est.registro('verbete', 'GL-aaaaaaaa-1')!.criadoEm, excluido: false })
+    expect(v).toEqual({ id: 'GL-aaaaaaaa-1', forma: 'termo novo', formaEmUso: null, emUso: 'termo novo', status: 'proposed', aprovacaoDesatualizada: false, criadoEm: est.registro('verbete', 'GL-aaaaaaaa-1')!.criadoEm, excluido: false, campos: CAMPOS_VAZIOS })
     expect(ROTULO_DO_STATUS[v.status]).toBe('a revisar')
   })
 

@@ -152,3 +152,94 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/*
+ * Os campos completos do verbete do usuário (Parte 2C, bloco 3, Tarefa 12; quadro «Verbete seu, completo»): uma coluna no
+ * celular, duas a partir de 768 px (tipo, outras línguas, variantes e o termo mais geral ocupam a linha).
+ */
+.verbete-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-width: 640px;
+}
+@media (min-width: 768px) {
+  .verbete-campos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+  }
+  .verbete-campos-largo {
+    grid-column: 1 / -1;
+  }
+}
+.verbete-campos-largo > .form-ajuda,
+.verbete-campos > p.form-ajuda {
+  margin: 0;
+}
+.verbete-campos input,
+.verbete-campos textarea {
+  box-sizing: border-box;
+}
+.verbete-campos .form-campo textarea.verbete-lista {
+  min-height: 76px;
+}
+.verbete-lista-codigo {
+  font-family: var(--fonte-codigo, 'Geist Mono', monospace);
+}
+.verbete-escolha {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--controle);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 16px;
+}
+.verbete-escolha:focus-visible {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+.verbete-outras-edicao {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.verbete-outras-edicao > legend {
+  margin-bottom: 6px;
+}
+.verbete-outra-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.verbete-outra-linha .verbete-outra-lingua {
+  flex: 0 0 34%;
+  max-width: 160px;
+}
+.verbete-outra-linha input:not(.verbete-outra-lingua) {
+  flex: 1 1 auto;
+}
+.verbete-outra-mais {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+}
+.verbete-pai .form-ajuda[role='status'] {
+  display: block;
+  margin: 6px 0 0;
+}
+
+/* «Outras línguas» na leitura: a língua em cinza, a forma ao lado. */
+.verbete-outras {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.verbete-outras-lingua {
+  color: var(--secundario);
+}

@@ -23,10 +23,10 @@ describe('validarEvento', () => {
     expect(r.ok && 'extra' in r.evento).toBe(false)
   })
 
-  it('tem os 13 tipos e as 4 operações do contrato', () => {
-    expect(TIPOS).toEqual(['nota', 'colecao', 'hipotese', 'regiao', 'posicao', 'verbete', 'sitio', 'item-sitio', 'revisao', 'objeto', 'imagem', 'ligacao', 'comparar'])
+  it('tem os 16 tipos e as 4 operações do contrato (bloco 3: obra, citacao, nivel; o prefixo BIB)', () => {
+    expect(TIPOS).toEqual(['nota', 'colecao', 'hipotese', 'regiao', 'posicao', 'verbete', 'sitio', 'item-sitio', 'revisao', 'objeto', 'imagem', 'ligacao', 'comparar', 'obra', 'citacao', 'nivel'])
     expect(OPS).toEqual(['criar', 'alterar', 'excluir', 'restaurar'])
-    expect(PREFIXOS).toEqual(['NT', 'CO', 'HY', 'RG', 'SI', 'OB', 'IM', 'GL'])
+    expect(PREFIXOS).toEqual(['NT', 'CO', 'HY', 'RG', 'SI', 'OB', 'IM', 'GL', 'BIB'])
   })
 
   const base = ev({ seq: 1 }) as unknown as Record<string, unknown>

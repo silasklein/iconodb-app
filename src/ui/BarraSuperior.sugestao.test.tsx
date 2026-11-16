@@ -18,7 +18,7 @@ vi.mock('../busca/useSugestoes', () => ({
 vi.mock('../banco/consultas', async (original) => ({
   ...(await original<typeof import('../banco/consultas')>()),
   linhasDaFila: vi.fn(async () => []),
-  verbetesAReverNoPacote: vi.fn(async () => []),
+  verbetesAReverNoPacote: vi.fn(async () => []), citacoesNaoResolvidasNoPacote: vi.fn(async () => []),
   elementosSemRegiaoNoPacote: vi.fn(async () => []),
   traducoesNaoRevisadasNoPacote: vi.fn(async () => []),
   lugaresDosCasos: vi.fn(async () => new Map()),

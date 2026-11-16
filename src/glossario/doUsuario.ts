@@ -6,12 +6,12 @@
 import { useCallback, useMemo } from 'react'
 import { useDonosDosTrechos } from '../hipoteses/garantirDonos'
 import { lerHipotese, objetoDaHipotese, type HipoteseSkc } from '../hipoteses/modelo'
-import { destinoDe, origensDe, useDestinosCriados, useRedirecionamentos, type Redirecionamentos } from '../pacote/redirecionamentos'
+import { destinoDe, origensDe, useDestinosCriados, useOrigensQueCriaram, useRedirecionamentos, type Redirecionamentos } from '../pacote/redirecionamentos'
 import type { Estado } from '../usuario/estado'
 import { refsDeObjetosExcluidos } from '../colecoes/visiveis'
 import { useLido } from '../usuario/useLido'
 import { nomeVivo, useFormasDoPacote } from './formasDoPacote'
-import { chaveDaForma, eVerbeteSkc, lerEdicaoDoVerbete, lerVerbeteSkc, type EdicaoDoVerbete, type VerbeteSkc } from './modelo'
+import { CAMPOS_COMPLETOS, chaveDaForma, eVerbeteSkc, lerCamposCompletos, lerEdicaoDoVerbete, lerVerbeteSkc, type CamposCompletos, type EdicaoDoVerbete, type VerbeteSkc } from './modelo'
 
 const porCriacao = (a: VerbeteSkc, b: VerbeteSkc) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 
@@ -223,4 +223,67 @@ export function useNomeVivo(): (id: string, guardado: string) => string {
   const redirecionados = useRedirecionamentos()
   // Um verbete do usuário que o pacote publicou (Tarefa 16) tem o nome do verbete do livro.
   return useCallback((id, guardado) => nomeVivo(destinoDe(redirecionados, id), guardado, formas, pacote), [formas, pacote, redirecionados])
+}
+
+/**
+ * Fix round 1 da Tarefa 12: os campos completos que a camada escreveu nos registros `regs` (as origens vivas de um verbete
+ * publicado e o registro com o id do livro), campo a campo a escrita mais nova: a regra de `dados_do_verbete` do
+ * `user-import`. Só entram os campos escritos (uma escrita `null` também: limpa). Um registro excluído não conta.
+ */
+export function camposDaCamada(estado: Estado, regs: readonly string[]): Partial<CamposCompletos> {
+  const saida: Partial<Record<keyof CamposCompletos, unknown>> = {}
+  const maisNova: Partial<Record<keyof CamposCompletos, string>> = {}
+  for (const reg of regs) {
+    const r = estado.registro('verbete', reg)
+    if (!r || r.excluido) continue
+    for (const k of CAMPOS_COMPLETOS) {
+      if (!(k in r.campos)) continue
+      const hlc = estado.hlcDoCampo('verbete', reg, k) ?? r.criadoEm
+      const atual = maisNova[k]
+      if (atual === undefined || hlc > atual) {
+        maisNova[k] = hlc
+        saida[k] = lerCamposCompletos({ [k]: r.campos[k]! })[k]
+      }
+    }
+  }
+  return saida as Partial<CamposCompletos>
+}
+
+/** A edição de um verbete dos livros que veio de você: onde a tela grava e o que a camada já escreveu. */
+export interface EdicaoPublicada {
+  /** As origens que criaram o verbete (do pacote; algumas podem faltar neste aparelho). */
+  origens: string[]
+  /** As origens vivas que este aparelho tem. Sem nenhuma, o verbete não se edita (excluídas, ele sai dos livros). */
+  vivas: string[]
+  /**
+   * Onde gravar: a origem, quando é uma só; com duas ou mais, o registro com o id do livro, o único que o `user-import` lê
+   * junto com cada uma (escrever numa só deixaria as outras publicando os valores antigos).
+   */
+  alvo: string
+  /** O alvo é o id do livro: o primeiro `alterar` cria o registro (como o da forma em uso de um verbete do livro). */
+  criaRegistro: boolean
+  /** O que a camada escreveu (`camposDaCamada`), por cima do pacote. */
+  campos: Partial<CamposCompletos>
+}
+
+/**
+ * Fix round 1 da Tarefa 12: a edição dos campos completos de um verbete dos livros que o pacote CRIOU de verbetes do usuário
+ * (decisão 50; `useOrigensQueCriaram`). null se não veio do usuário (um que só redireciona para um verbete que já era dos
+ * livros também não: os campos dele só preenchem os vazios), se nenhuma origem viva está neste aparelho, ou enquanto o pacote
+ * é lido.
+ */
+export function useEdicaoPublicada(id: string): EdicaoPublicada | null {
+  const origens = useOrigensQueCriaram(id)
+  const chave = `publicada:${id}:${(origens ?? []).join('|')}`
+  const lido = useLido(['verbete'], chave, (e) => {
+    if (!origens || origens.length === 0) return null
+    const vivas = origens.filter((o) => {
+      const r = e.registro('verbete', o)
+      return !!r && !r.excluido
+    })
+    if (vivas.length === 0) return null
+    const alvo = origens.length === 1 ? origens[0]! : id
+    return { origens, vivas, alvo, criaRegistro: alvo === id, campos: camposDaCamada(e, [...vivas, id]) }
+  })
+  return lido
 }

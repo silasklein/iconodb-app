@@ -6,15 +6,19 @@
  * - Só registros com a marca própria: o que saiu junto com um objeto excluído (a foto, a nota dele) não tem marca e volta com
  *   ele. Um item com marca própria cujo objeto também está excluído aparece com «o objeto dela também está excluído» e
  *   `alvoExcluido` (a tela oferece também «Restaurar o objeto»).
- * - Origem publicada (`verbete`/`sitio` que o pacote ainda redireciona a uma entrada dos livros): «sai dos livros na próxima
+ * - Origem publicada (`verbete`/`sitio`/`obra` que o pacote ainda redireciona a uma entrada dos livros): «sai dos livros na próxima
  *   importação». O pacote não guarda as que já saíram: depois da importação a linha fica sem essa nota (nunca «saiu dos
  *   livros»).
  * - Origem que nunca chegou a este aparelho (só a marca, sem campos; §5): o nome é o da entrada dos livros (`nomeNoLivro`).
  */
+import { RE_OCORRENCIA } from '../bibliografia/chave'
+import { lerObra, lerTroca } from '../bibliografia/modelo'
+import { textoDaVolta } from '../bibliografia/textos'
 import { lerColecao } from '../colecoes/modelo'
 import { refsDeObjetosExcluidos } from '../colecoes/visiveis'
 import { lerVerbeteSkc } from '../glossario/modelo'
 import { lerHipotese, nomeDaHipoteseSkc } from '../hipoteses/modelo'
+import { ROTULO_DO_NIVEL } from '../item/rotulos'
 import { numeracaoDe } from '../objetos-skc/atual'
 import { eObjetoSkc, lerObjeto, tituloDe } from '../objetos-skc/modelo'
 import { juncaoNoPlural, oQueVaiJunto, textoDaJuncao } from '../objetos-skc/oQueVaiJunto'
@@ -26,8 +30,11 @@ import type { Tipo } from '../usuario/eventos'
 import type { Estado, Registro } from '../usuario/fusao'
 import { caminhoDoRegistro, descreverRegistro, plural, quando } from '../usuario/textosDaSync'
 
-/** Os tipos que a pessoa exclui como itens, na ordem dos grupos. */
-export const TIPOS_EXCLUIVEIS = ['objeto', 'nota', 'colecao', 'hipotese', 'regiao', 'imagem', 'sitio', 'verbete'] as const satisfies readonly Tipo[]
+/**
+ * Os tipos que a pessoa exclui como itens, na ordem dos grupos. Parte 2C, bloco 3: a obra do usuário, a ligação de uma citação
+ * (a chave ou a exceção de uma ocorrência) e o nível revisto de uma hipótese dos livros («Voltar ao nível automático»).
+ */
+export const TIPOS_EXCLUIVEIS = ['objeto', 'nota', 'colecao', 'hipotese', 'regiao', 'imagem', 'sitio', 'verbete', 'obra', 'citacao', 'nivel'] as const satisfies readonly Tipo[]
 export type TipoExcluivel = (typeof TIPOS_EXCLUIVEIS)[number]
 
 const TITULOS: Record<TipoExcluivel, string> = {
@@ -39,6 +46,9 @@ const TITULOS: Record<TipoExcluivel, string> = {
   imagem: 'Fotos',
   sitio: 'Sítios',
   verbete: 'Verbetes',
+  obra: 'Obras',
+  citacao: 'Ligações de citação',
+  nivel: 'Níveis revistos',
 }
 
 export interface LinhaExcluida {
@@ -88,6 +98,11 @@ export interface ContextoDosExcluidos {
    * existe volta mesclado nele (a aprovação diz em qual). Sem ela (ainda não chegou), a aprovação de sempre.
    */
   resolucao?: Resolucao | null
+  /**
+   * Revisão final do bloco 3 (N3): a citação curta impressa de uma chave de citação (`chave_da_citacao`), quando o pacote está
+   * à mão (as citações que a fila carrega). Sem ela, a ligação por chave aparece pela chave dobrada.
+   */
+  curtaDaChave?: (chave: string) => string | null
 }
 
 export const SAI_DOS_LIVROS = 'sai dos livros na próxima importação'
@@ -195,6 +210,9 @@ interface Peca {
   alvo: string | null
 }
 
+/** Os tipos cuja origem o pacote publica como uma entrada dos livros (o verbete, o sítio e, no pacote 10, a obra). */
+const eDosLivros = (tipo: Tipo): tipo is 'sitio' | 'verbete' | 'obra' => tipo === 'sitio' || tipo === 'verbete' || tipo === 'obra'
+
 export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): GrupoDeExcluidos[] {
   const objetos = new Objetos(estado)
   const destino = (id: string) => destinoDe(ctx.redirecionamentos, id)
@@ -216,6 +234,20 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
     if (tipo === 'verbete') return nomeDoVerbete(ref, null) ?? ref
     if (tipo === 'colecao-item') return ref.split('/').at(-1) ?? ref
     return ref
+  }
+
+  /** O nome de uma obra do usuário (a citação curta, senão o título); null para uma obra que ele não tem. */
+  const nomeDaObra = (id: string): string | null => {
+    const r = estado.registro('obra', id)
+    const o = r ? lerObra(r) : null
+    // P5: a origem publicada que só tem a marca (retirada sem ter chegado) tem o nome dos livros guardado neste aparelho
+    return o ? o.curta || o.csl.title.trim() : (ctx.nomeGuardado?.(id) ?? null)
+  }
+  /** Quantas ligações vivas apontam para a obra (as que voltam a valer com «Restaurar», foco 3). */
+  const ligacoesDa = (id: string): number => {
+    let n = 0
+    for (const l of estado.registros.get('citacao')?.values() ?? []) if (!l.excluido && l.campos.obra === id) n++
+    return n
   }
 
   const peca = (r: Registro): Peca => {
@@ -278,6 +310,40 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
         const nome = nomeDoVerbete(r.id, null) ?? descreverRegistro('verbete', r.id)
         return { nome, onde: null, descricao: `o verbete ${aspas(nome)}`, caminho, alvo: null }
       }
+      case 'obra': {
+        const nome = nomeDaObra(r.id) ?? descreverRegistro('obra', r.id)
+        const o = lerObra(r)
+        const titulo = o && o.curta !== '' ? o.csl.title.trim() : null
+        const n = ligacoesDa(r.id)
+        const ligadas = n > 0 ? plural(n, 'ligação de citação', 'ligações de citação') : null
+        const troca = lerTroca(r)
+        const trocada = troca ? `trocada por ${aspas(troca.rotulo)}` : null
+        return { nome, onde: [titulo, trocada ?? ligadas].filter(Boolean).join(' · ') || null, descricao: `a obra ${aspas(nome)}`, caminho, alvo: null }
+      }
+      case 'citacao': {
+        const m = RE_OCORRENCIA.exec(r.id)
+        // a ocorrência mostra o `raw` impresso; a chave, a citação curta impressa (N3), se o pacote está à mão
+        const citacao = m ? m[4]! : (ctx.curtaDaChave?.(r.id) ?? r.id)
+        const obra = texto(c.obra)
+        const ligada = obra ? `ligada a ${aspas(nomeDaObra(obra) ?? obra)}` : 'desligada'
+        return {
+          nome: aspas(citacao),
+          onde: m ? `${ligada} · só em ${m[2]!} ${m[3]!}` : `${ligada} · todas as citações iguais`,
+          descricao: `a ligação da citação ${aspas(citacao)}`,
+          caminho: null,
+          alvo: null,
+        }
+      }
+      case 'nivel': {
+        const nivel = typeof c.nivel === 'string' && c.nivel in ROTULO_DO_NIVEL ? ROTULO_DO_NIVEL[c.nivel as keyof typeof ROTULO_DO_NIVEL].toLowerCase() : null
+        return {
+          nome: nivel ? `Nível ${nivel}` : 'Nível revisto',
+          onde: `hipótese ${r.id}`,
+          descricao: `o nível revisto${nivel ? ` (${nivel})` : ''} da hipótese ${r.id}`,
+          caminho: null,
+          alvo: null,
+        }
+      }
       default:
         return { nome: descreverRegistro(r.tipo, r.id, c), onde: null, descricao: descreverRegistro(r.tipo, r.id, c), caminho, alvo: null }
     }
@@ -298,27 +364,30 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
   const origensPorDestino = new Map<string, { id: string; nome: string }[]>()
   const chaveDaOrigem = (r: Registro) => `${r.tipo}:${destino(r.id)}`
   for (const r of estado.excluidos) {
-    if ((r.tipo !== 'sitio' && r.tipo !== 'verbete') || !publicado(r.id) || estado.marcaDeExclusao(r.tipo, r.id)?.op !== 'excluir') continue
+    if (!eDosLivros(r.tipo) || !publicado(r.id) || estado.marcaDeExclusao(r.tipo, r.id)?.op !== 'excluir') continue
     const lista = origensPorDestino.get(chaveDaOrigem(r)) ?? []
     lista.push({ id: r.id, nome: peca(r).nome })
     origensPorDestino.set(chaveDaOrigem(r), lista)
   }
   for (const lista of origensPorDestino.values()) lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR') || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 
+  // Parte 2C, bloco 3 (Tarefa 14): a obra publicada que veio de uma obra sua, com as palavras no feminino.
   const PUBLICADO = {
-    sitio: { plural: 'sítios', ligados: 'os objetos e notas ligados' },
-    verbete: { plural: 'verbetes', ligados: 'as hipóteses e notas ligadas' },
+    sitio: { plural: 'sítios', ligados: 'os objetos e notas ligados', os: 'os', seus: 'seus', ele: 'ele', eles: 'eles' },
+    verbete: { plural: 'verbetes', ligados: 'as hipóteses e notas ligadas', os: 'os', seus: 'seus', ele: 'ele', eles: 'eles' },
+    obra: { plural: 'obras', ligados: 'as citações, os objetos e as notas ligados', os: 'as', seus: 'suas', ele: 'ela', eles: 'elas' },
   } as const
+  const maiuscula = (x: string) => `${x[0]!.toUpperCase()}${x.slice(1)}`
 
   const confirmacao = (r: Registro, p: Peca, origens: readonly { id: string; nome: string }[], ficaEscondida: boolean): string => {
     if (r.tipo === 'objeto') return confirmacaoDoObjeto(r, p.descricao)
-    if ((r.tipo === 'sitio' || r.tipo === 'verbete') && publicado(r.id)) {
+    if (eDosLivros(r.tipo) && publicado(r.id)) {
       const t = PUBLICADO[r.tipo]
       const numero = destino(r.id)
       if (origens.length > 1) {
-        return `Restaurar os seus ${origens.length} ${t.plural} ${listaComE(origens.map((o) => o.nome))}? Eles continuam nos livros, com o mesmo ${numero}, e ${t.ligados} a eles voltam a se ligar a eles.`
+        return `Restaurar ${t.os} ${t.seus} ${origens.length} ${t.plural} ${listaComE(origens.map((o) => o.nome))}? ${maiuscula(t.eles)} continuam nos livros, com o mesmo ${numero}, e ${t.ligados} a ${t.eles} voltam a se ligar a ${t.eles}.`
       }
-      return `${pergunta(`Restaurar ${p.descricao}`)} Ele continua nos livros, com o mesmo ${numero}, e ${t.ligados} a ele voltam a se ligar a ele.`
+      return `${pergunta(`Restaurar ${p.descricao}`)} ${maiuscula(t.ele)} continua nos livros, com o mesmo ${numero}, e ${t.ligados} a ${t.ele} voltam a se ligar a ${t.ele}.`
     }
     if (r.tipo === 'sitio') {
       // Um sítio seu que estava mesclado em outro (texto proposto): volta mesclado no destino de agora daquele.
@@ -330,6 +399,9 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
         return `${pergunta(`Restaurar ${p.descricao}`)} Ele volta mesclado em ${aspas(nome)}, como estava.`
       }
     }
+    if (r.tipo === 'obra' && lerTroca(r)) return `${pergunta(`Restaurar ${p.descricao}`)} ${textoDaVolta(lerTroca(r)!)}`
+    if (r.tipo === 'obra' && ligacoesDa(r.id) > 0) return `${pergunta(`Restaurar ${p.descricao}`)} As citações ligadas a ela voltam a abri-la.`
+    if (r.tipo === 'nivel') return `${pergunta(`Restaurar ${p.descricao}`)} O nível automático deixa de valer.`
     if (ficaEscondida) return `${pergunta(`Restaurar ${p.descricao}`)} Ela fica escondida até o objeto voltar.`
     return pergunta(`Restaurar ${p.descricao}`)
   }
@@ -342,7 +414,7 @@ export function gruposDeExcluidos(estado: Estado, ctx: ContextoDosExcluidos): Gr
     if (marca?.op !== 'excluir') continue
     const p = peca(r)
     const alvoExcluido = r.tipo !== 'objeto' && p.alvo ? objetos.excluido(p.alvo) : null
-    const eOrigem = (r.tipo === 'sitio' || r.tipo === 'verbete') && publicado(r.id)
+    const eOrigem = eDosLivros(r.tipo) && publicado(r.id)
     const origens = eOrigem ? (origensPorDestino.get(chaveDaOrigem(r)) ?? []) : []
     const notas = [p.onde, alvoExcluido ? ALVO_TAMBEM_EXCLUIDO : null, eOrigem ? SAI_DOS_LIVROS : null].filter((x): x is string => !!x)
     const linha: LinhaExcluida = {

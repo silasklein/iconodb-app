@@ -195,7 +195,7 @@ export function montarCopia(i: Instantaneo, agora: Date, naFila: ReadonlySet<str
     numerosConfirmados: { ...i.confirmados },
     imagens: imagensDe(estado, naFila),
     observacoes: [
-      'Cópia de segurança da camada do usuário do IconoDB (notas, coleções, hipóteses, regiões, objetos SKC, sítios, verbetes, revisão).',
+      'Cópia de segurança da camada do usuário do IconoDB (notas, coleções, hipóteses, regiões, objetos SKC, sítios, verbetes, revisão, obras, ligações de citação, níveis revistos).',
       'O estado é a fusão dos eventos sobre a base: fundir(eventos, base) reproduz exatamente "estado".',
       'As imagens não estão dentro deste arquivo: continuam na pasta usuario/imagens/ do Dropbox (os caminhos estão em "imagens").',
       'Uma imagem com enviada false ainda não subiu: está só no aparelho que gerou a cópia, na fila de envio.',

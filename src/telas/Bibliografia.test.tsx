@@ -4,6 +4,8 @@ import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
 import { irPara, renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { excluirLigacao, ligar } from '../revisao/ligacoes'
+import { estadoAtual, registrar } from '../usuario/estado'
 import { chicagoEmTexto } from './Bibliografia'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -18,7 +20,8 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-const linhas = () => screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/obra/'))
+// as linhas da lista (o «Nova obra», /obra/nova, é o botão do topo)
+const linhas = () => screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/obra/') && a.getAttribute('href') !== '/obra/nova')
 
 function comAreaDeTransferencia() {
   const writeText = vi.fn(async () => undefined)
@@ -31,11 +34,12 @@ describe('Bibliografia (celular)', () => {
     renderizarRota('/bibliografia')
     expect(screen.getByRole('heading', { level: 1, name: 'Bibliografia' })).toBeInTheDocument()
     await screen.findByRole('link', { name: /Autor 1999/ })
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002'])
+    // pacote 10: a obra do usuário publicada (BIB-900090, «Imaginária 2010») vem por último, pelo autor
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/BIB-900090'])
     const primeira = screen.getByRole('link', { name: /Autor 1999/ })
     expect(within(primeira).getByText('Achados de teste no vale de prova')).toBeInTheDocument()
     expect(within(primeira).getByText('4')).toBeInTheDocument()
-    expect(screen.getByText('2 obras · Chicago autor-data')).toBeInTheDocument()
+    expect(screen.getByText('3 obras · Chicago autor-data')).toBeInTheDocument()
   })
 
   it('busca por autor, ano ou título, com a dobra do pacote', async () => {
@@ -59,8 +63,8 @@ describe('Bibliografia (celular)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ordenar por ano' }))
     expect(screen.getByRole('button', { name: 'Ordenar por autor' })).toBeInTheDocument()
     // a ordem escolhida segue nos links, para a lista continuar assim ao voltar da obra
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001?ordem=ano', '/obra/BIB-900002?ordem=ano'])
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['1999', '2004'])
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001?ordem=ano', '/obra/BIB-900002?ordem=ano', '/obra/BIB-900090?ordem=ano'])
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['1999', '2004', '2010'])
   })
 
   it('por ano a ordem segue o ano da citação, não o autor', async () => {
@@ -68,10 +72,10 @@ describe('Bibliografia (celular)', () => {
     await executar(`UPDATE main.bib_entry SET short_cites = '{"TESTE": ["Autor 2010"]}' WHERE id = 'BIB-900001'`)
     renderizarRota('/bibliografia?ordem=ano')
     await screen.findByRole('link', { name: /Autor 2010/ })
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900002?ordem=ano', '/obra/BIB-900001?ordem=ano'])
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900002?ordem=ano', '/obra/BIB-900001?ordem=ano', '/obra/BIB-900090?ordem=ano'])
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['2004', '2010'])
     await userEvent.click(screen.getByRole('button', { name: 'Ordenar por autor' }))
-    await waitFor(() => expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002']))
+    await waitFor(() => expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/BIB-900090']))
     usarMotor(await bancoDeTeste())
   })
 
@@ -207,6 +211,41 @@ describe('Bibliografia: filtro no endereço, contagens e seleção', () => {
     solta()
     expect(await screen.findByRole('heading', { level: 2, name: 'Autora 2004' })).toBeInTheDocument()
     usarMotor(await bancoDeTeste())
+  })
+})
+
+describe('M3 (revisão final): as citações que você ligou a uma obra no app', () => {
+  afterEach(async () => {
+    for (const r of estadoAtual().registros.get('citacao')?.values() ?? []) if (!r.excluido && r.id !== 'imaginaria 2010') await excluirLigacao(r.id)
+  })
+  const hrefs = (regiao: HTMLElement) => within(regiao).getAllByRole('link').map((a) => a.getAttribute('href'))
+
+  it('a página da obra dos livros lista os objetos delas junto aos do pacote, e a contagem da lista concorda', async () => {
+    // «Inventado 2001» (não resolvida em CA00004 e em BA00001, que já cita «Autora 2004») ligada a «Autora 2004»: o objeto
+    // novo é CA00004, e BA00001 conta uma vez só (como na página e na contagem do pacote, um por objeto)
+    await ligar('inventado 2001', 'BIB-900002')
+    renderizarRota('/obra/BIB-900002')
+    const objetos = await screen.findByRole('region', { name: 'Objetos que citam esta obra' })
+    await waitFor(() => expect(hrefs(objetos).sort()).toEqual(['/item/BA00001', '/item/BA00002', '/item/CA00004']))
+    expect(objetos).toHaveTextContent('3 objetos')
+    renderizarRota('/bibliografia')
+    const linha = await screen.findByRole('link', { name: /Autora 2004/ })
+    await waitFor(() => expect(linha).toHaveTextContent('3 objetos'))
+    // desfeita a ligação, as duas voltam ao que o pacote traz
+    await act(() => excluirLigacao('inventado 2001'))
+    await waitFor(() => expect(screen.getByRole('link', { name: /Autora 2004/ })).toHaveTextContent('2 objetos'))
+  })
+
+  it('a obra sua ainda não publicada lista os objetos dos livros ligados a ela, e a lista os soma', async () => {
+    await registrar('obra', 'BIB-tbibl001-1', 'criar', { csl: { type: 'book', title: 'Ligada de teste' }, curta: 'Ligada 2020' })
+    await ligar('inventado 2001', 'BIB-tbibl001-1')
+    renderizarRota('/obra/BIB-tbibl001-1')
+    const dosLivros = await screen.findByRole('region', { name: 'Objetos dos livros que citam esta obra' })
+    expect(hrefs(dosLivros).sort()).toEqual(['/item/BA00001', '/item/CA00004'])
+    renderizarRota('/bibliografia')
+    const linha = await screen.findByRole('link', { name: /Ligada 2020/ })
+    await waitFor(() => expect(linha).toHaveTextContent('2 objetos'))
+    await registrar('obra', 'BIB-tbibl001-1', 'excluir')
   })
 })
 

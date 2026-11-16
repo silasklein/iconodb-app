@@ -8,6 +8,7 @@
  * de "não encontrado".
  */
 import { aoReabrir } from '../banco/cliente'
+import { eObraSkc, lerObra } from '../bibliografia/modelo'
 import { alvosDoPacote, type AlvoDoPacote } from '../banco/consultas'
 import { rotaDoAcertoDoUsuario } from '../busca/rotasDoUsuario'
 import type { Estado } from '../usuario/estado'
@@ -63,7 +64,8 @@ export function rotaDoAlvo(tipo: TipoDeRef, ref: string): string | null {
 }
 
 /** Do pacote? Os tipos da camada do usuário não estão nele (nem os verbetes do usuário, `GL-<aparelho>-<n>`, decisão 41). */
-const doPacote = (tipo: TipoDeRef, ref: string) => (tipo === 'verbete' && !eVerbeteSkc(ref)) || tipo === 'obra' || tipo === 'objeto' || tipo === 'grupo' || (tipo === 'sitio' && !ref.startsWith('SI-'))
+const doPacote = (tipo: TipoDeRef, ref: string) =>
+  (tipo === 'verbete' && !eVerbeteSkc(ref)) || (tipo === 'obra' && !eObraSkc(ref)) || tipo === 'objeto' || tipo === 'grupo' || (tipo === 'sitio' && !ref.startsWith('SI-'))
 
 // Cache das respostas do pacote: chave do alvo → o que o pacote disse (null: não existe). Esquecido quando o pacote é reaberto.
 const cache = new Map<string, AlvoDoPacote | null>()
@@ -122,6 +124,13 @@ function noEstado(estado: Estado, tipo: TipoDeRef, ref: string, nomeDe: (id: str
     // O primeiro termo pelo nome de AGORA (forma em uso, senão o do livro, senão o rótulo guardado; T17-B-12).
     const r = vivo('hipotese')
     return { existe: !!r, rotulo: r && lerHipotese(r).termos.length > 0 ? nomeDaHipoteseSkc(lerHipotese(r), nomeDe) : null }
+  }
+  if (tipo === 'obra' && eObraSkc(ref)) {
+    // Uma obra sua (Parte 2C, bloco 3): a citação curta, senão o título. Excluída, abre (a página oferece «Restaurar a obra»).
+    const r = estado.registro('obra', ref)
+    const o = r ? lerObra(r) : null
+    const nome = o ? o.curta || o.csl.title : null
+    return { existe: !!o, rotulo: nome !== null && r?.excluido ? `${nome} (excluída)` : nome }
   }
   if (tipo === 'verbete' && eVerbeteSkc(ref)) {
     const r = estado.registro('verbete', ref)

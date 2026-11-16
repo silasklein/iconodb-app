@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { aoReabrir } from '../banco/cliente'
-import { elementosSemRegiaoNoPacote, linhasDaFila, lugaresDosCasos, traducoesNaoRevisadasNoPacote, verbetesAReverNoPacote, type ElementoSemRegiao, type LinhaDaFila, type LugarDoCaso, type TraducaoNaoRevisada } from '../banco/consultas'
+import { citacoesNaoResolvidasNoPacote, elementosSemRegiaoNoPacote, linhasDaFila, lugaresDosCasos, traducoesNaoRevisadasNoPacote, verbetesAReverNoPacote, type CitacaoDoPacote, type ElementoSemRegiao, type LinhaDaFila, type LugarDoCaso, type TraducaoNaoRevisada } from '../banco/consultas'
 import { useNumeracao } from '../objetos-skc/atual'
 import { lerEstado } from '../pacote/local'
-import { redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
+import { destinosCriadosOuNenhum, redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
 import type { Pendencias } from '../banco/tipos'
 import type { Carga } from '../ui/useCarregar'
 import { estadoAtual, useEstado } from '../usuario/estado'
@@ -31,6 +31,10 @@ interface DadosDoPacote {
   redirecionamentos: Redirecionamentos
   /** O pacote dos sítios (Parte 2C, bloco 2): os sítios não resolvidos valem pelo destino. */
   pacoteDeSitios: PacoteDeSitios
+  /** As citações que a Revisão pode ligar (Parte 2C, bloco 3): a citação ligada sai da fila, e a desfeita volta. */
+  citacoes: CitacaoDoPacote[]
+  /** As obras dos livros criadas de obras suas (Tarefa 14, fix round 1; `obraPublicadaSai`). */
+  obrasCriadas: Redirecionamentos
 }
 
 interface Opcoes {
@@ -55,18 +59,24 @@ export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPaco
     let vivo = true
     const buscar = async (): Promise<DadosDoPacote | null> => {
       if (!exigirBanco && !(await lerEstado())) return null
-      const [linhas, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios] = await Promise.all([
+      const [linhas, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios, citacoes, obrasCriadas] = await Promise.all([
         linhasDaFila(),
         verbetesAReverNoPacote(),
         elementosSemRegiaoNoPacote(),
         comLugares ? traducoesNaoRevisadasNoPacote() : Promise.resolve([]),
         redirecionamentosOuNenhum(),
         pacoteDeSitiosOuVazio(),
+        citacoesNaoResolvidasNoPacote(),
+        destinosCriadosOuNenhum(),
       ])
       // Onde cada caso está: os da fila, os itens dos elementos sem região e as traduções (trecho ou campo do catálogo).
-      const pares = comLugares ? [...linhas, ...elementos.map((e) => ({ entidade: 'item', entidadeId: e.itemId })), ...traducoes] : []
+      // As citações ligadas pelo usuário no pacote podem voltar à fila (a camada as desfaz): o lugar delas também.
+      const doUsuario = citacoes
+        .filter((c) => c.resolvidaPor === 'user')
+        .map((c) => (c.passagemId ? { entidade: 'passage', entidadeId: c.passagemId } : c.hipoteseId ? { entidade: 'hypothesis', entidadeId: c.hipoteseId } : { entidade: 'item', entidadeId: c.itemId }))
+      const pares = comLugares ? [...linhas, ...elementos.map((e) => ({ entidade: 'item', entidadeId: e.itemId })), ...traducoes, ...doUsuario] : []
       const lugares = comLugares ? await lugaresDosCasos(pares) : null
-      return { linhas, lugares, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios }
+      return { linhas, lugares, verbetesDoPacote, elementos, traducoes, redirecionamentos, pacoteDeSitios, citacoes, obrasCriadas }
     }
     buscar().then(
       (dados) => vivo && setCarga({ fase: 'ok', dados }),
@@ -88,6 +98,8 @@ export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPaco
   const objetos = useEstado((e) => e.registros.get('objeto'))
   const verbetes = useEstado((e) => e.registros.get('verbete'))
   const regioes = useEstado((e) => e.registros.get('regiao'))
+  const ligacoes = useEstado((e) => e.registros.get('citacao'))
+  const obras = useEstado((e) => e.registros.get('obra'))
   const numeracao = useNumeracao()
   const dados = carga.fase === 'ok' ? carga.dados : null
   const conta = useMemo(
@@ -101,7 +113,7 @@ export function useFilaComCarga(opcoes: Opcoes = {}): { carga: Carga<DadosDoPaco
     },
     // os mapas são o que `estadoAtual()` tem de novo para esta conta
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dados, numeracao, resolvidos, trocas, sitios, objetos, verbetes, regioes],
+    [dados, numeracao, resolvidos, trocas, sitios, objetos, verbetes, regioes, ligacoes, obras],
   )
   return { carga, fila: conta?.fila ?? null, pares: conta?.pares ?? null }
 }

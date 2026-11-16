@@ -130,6 +130,17 @@ describe('horas, nomes e mudanças', () => {
       expect(longo.length).toBeLessThanOrEqual(70)
       expect(longo.endsWith('…»')).toBe(true)
     })
+    it('Parte 2C, bloco 3: a obra pela citação curta (ou o título), a ligação pela citação, o nível pela hipótese', () => {
+      expect(descreverRegistro('obra', 'BIB-a-1', { csl: { type: 'book', title: 'Selos de teste' }, curta: 'Fictício 2009' })).toBe('Obra «Fictício 2009»')
+      expect(descreverRegistro('obra', 'BIB-a-1', { csl: { type: 'book', title: 'Selos de teste' } })).toBe('Obra «Selos de teste»')
+      expect(descreverRegistro('obra', 'BIB-a-1', { csl: 'quebrado' })).toBe('Obra BIB-a-1')
+      expect(descreverMudanca('obra', 'BIB-a-1', 'excluir', { curta: 'Fictício 2009' })).toBe('Obra «Fictício 2009» — excluída')
+      expect(descreverRegistro('citacao', 'inventado 2001', { obra: 'BIB-900001' })).toBe('Ligação de citação «inventado 2001»')
+      expect(descreverRegistro('citacao', '-@TESTE|TESTE-0006|1999: 12', { obra: null })).toBe('Ligação de citação «1999: 12»')
+      expect(descreverMudanca('nivel', 'HY-900006', 'criar', { nivel: 'iconological' })).toBe('Nível revisto de HY-900006 — novo')
+      expect(caminhoDoRegistro('obra', 'BIB-a-1')).toBe('/obra/BIB-a-1')
+      expect(caminhoDoRegistro('citacao', 'inventado 2001')).toBeNull()
+    })
     it('hipótese e região: o termo ou o elemento, e o objeto', () => {
       expect(descreverRegistro('hipotese', 'HY-a-1', { termosRotulos: ['leão-de-teste'], objeto: 'CA00002' })).toBe('Hipótese sobre «leão-de-teste» em CA00002')
       expect(descreverRegistro('hipotese', 'HY-a-1', { termosRotulos: [], objeto: 'OB-a-1' }, numeroDe)).toBe('Hipótese em CA00023')

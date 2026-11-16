@@ -111,8 +111,10 @@ export const CATALOGO: readonly Declaracao[] = [
   { contexto: 'visualizador', teclas: ['Enter'], descricao: 'Concluir a região que está sendo marcada' },
   { contexto: 'visualizador', teclas: ['Control+Z', 'Meta+Z'], descricao: 'Desfazer o último ponto da região (fora de um campo de texto)' },
 
+  { contexto: 'revisao', teclas: ['ArrowDown', 'ArrowUp'], juntas: true, descricao: 'Ir ao caso (ou ao grupo) seguinte ou anterior da lista (com um caso ou um grupo em foco)' },
+  { contexto: 'revisao', teclas: ['Enter'], descricao: 'Abrir o caso em foco: no computador, no detalhe à direita (de novo, o foco vai ao detalhe); no celular, na página do caso' },
   { contexto: 'revisao', teclas: ['d'], descricao: 'Deixar como está o caso em foco (o foco passa ao caso seguinte)' },
-  { contexto: 'revisao', teclas: ['u'], descricao: 'Desfazer o último «Deixar como está» (vale também depois que o aviso some)' },
+  { contexto: 'revisao', teclas: ['u'], descricao: 'Desfazer o último «Deixar como está» ou «Ligar» (vale também depois que o aviso some)' },
 
   { contexto: 'comparar', teclas: ['ArrowLeft'], descricao: 'No celular (um objeto por vez): o objeto anterior da comparação' },
   { contexto: 'comparar', teclas: ['ArrowRight'], descricao: 'No celular (um objeto por vez): o objeto seguinte da comparação' },

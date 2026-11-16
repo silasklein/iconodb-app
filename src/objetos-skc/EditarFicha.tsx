@@ -1,6 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { obras } from '../banco/consultas'
-import { useCarregar } from '../ui/useCarregar'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useOpcoesDeObra } from '../bibliografia/doUsuario'
 import { useCampoSalvo } from '../usuario/campoSalvo'
 import { criarSitio, pedidoDeFicha, reservarIdDoSitio } from '../sitios/operacoes'
 import { eSitioNovoEscolhido, nomeDoSitioNovoEscolhido, useEscolhaDeSitio } from '../sitios/escolha'
@@ -138,11 +137,8 @@ export function EditarFicha({ id, aoFechar, foco }: { id: string; aoFechar: () =
   }, [foco])
   // Os sítios com o nome de agora e "Novo sítio «…»" (Tarefa 12).
   const { opcoes: opcoesDeSitio, livre: sitioNovoLivre } = useEscolhaDeSitio()
-  const cargaDasObras = useCarregar(() => obras(), 'obras')
-  const opcoesDeObra = useMemo<OpcaoDeEscolha[]>(
-    () => (cargaDasObras.fase === 'ok' ? cargaDasObras.dados.map((o) => ({ id: o.id, rotulo: o.curta ?? o.titulo ?? o.id, apoio: o.curta && o.titulo ? o.titulo : undefined })) : []),
-    [cargaDasObras],
-  )
+  // As obras da Bibliografia: as dos livros e as do usuário (marca SKC), juntas (Parte 2C, bloco 3).
+  const opcoesDeObra = useOpcoesDeObra()
   if (!registro) return null
   const o = lerObjeto(registro)
   const teclar = (e: KeyboardEvent) => {

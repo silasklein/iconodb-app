@@ -3,6 +3,7 @@
  * Main.dc.html): o título e a dica de cada estado, as horas, os nomes dos aparelhos e a descrição do que
  * vai subir. Puro (sem React, sem IndexedDB).
  */
+import { rawDaOcorrencia } from '../bibliografia/chave'
 import type { Campos, Op, Tipo } from './eventos'
 
 export const numero = (n: number) => n.toLocaleString('pt-BR')
@@ -51,6 +52,9 @@ const TIPOS: Record<Tipo, { nome: string; feminino: boolean }> = {
   imagem: { nome: 'Imagem', feminino: true },
   ligacao: { nome: 'Ligação de objetos', feminino: true },
   comparar: { nome: 'Bandeja de comparação', feminino: true },
+  obra: { nome: 'Obra', feminino: true },
+  citacao: { nome: 'Ligação de citação', feminino: true },
+  nivel: { nome: 'Nível revisto', feminino: false },
 }
 
 const PARTICIPIOS: Record<Op, [string, string]> = {
@@ -121,6 +125,18 @@ export function descreverRegistro(tipo: Tipo, reg: string, campos?: Readonly<Cam
     }
     case 'item-sitio':
       return `${nome} ${numeroDe?.(reg) ?? reg}`
+    case 'obra': {
+      // a citação curta, senão o título do CSL
+      const csl = campos.csl
+      const n = texto(campos.curta) ?? (csl && typeof csl === 'object' && !Array.isArray(csl) ? texto(csl.title) : null)
+      return n ? `${nome} ${entreAspas(n)}` : padrao
+    }
+    case 'citacao': {
+      // a chave, ou o `raw` da ocorrência (`<chave>@<SIGLA>|<alvo>|<raw>`)
+      return `${nome} ${entreAspas(rawDaOcorrencia(reg) ?? reg)}`
+    }
+    case 'nivel':
+      return `${nome} de ${reg}`
     default:
       return padrao
   }
@@ -153,6 +169,8 @@ export function caminhoDoRegistro(tipo: Tipo, reg: string, campos?: Readonly<Cam
       return objeto ? `/item/${encodeURIComponent(objeto)}?hipotese=${id}` : null
     case 'regiao':
       return objeto ? `/item/${encodeURIComponent(objeto)}` : null
+    case 'obra':
+      return `/obra/${id}`
     default:
       return null
   }

@@ -10,9 +10,9 @@ const nota = (e: Estado, reg = NOTA) => e.registros.get('nota')!.get(reg)
 const semIgnorados = (e: Estado) => jsonCanonico(consolidar(e))
 
 describe('fundir: forma do estado', () => {
-  it('estado vazio tem um mapa (vazio) para cada um dos 13 tipos', () => {
+  it('estado vazio tem um mapa (vazio) para cada um dos 16 tipos', () => {
     const e = fundir([])
-    expect(e.registros.size).toBe(13)
+    expect(e.registros.size).toBe(16)
     expect([...e.registros.values()].every((m) => m.size === 0)).toBe(true)
     expect(e.excluidos).toEqual([])
     expect(e.ignorados).toEqual({ total: 0, motivos: {} })

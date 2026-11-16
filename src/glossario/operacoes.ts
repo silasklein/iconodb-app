@@ -3,9 +3,10 @@
  * `alterar` (ou `excluir`/`restaurar`) no `verbete`, pelo `registrar` de sempre (IndexedDB primeiro). Os verbetes do
  * pacote e os do usuário são editados do mesmo jeito; o formato está em src/glossario/modelo.ts.
  */
+import { criadosDoPacote, destinoDe, origensDe, redirecionamentosDoPacote, SEM_REDIRECIONAMENTOS } from '../pacote/redirecionamentos'
 import { registrar } from '../usuario/estado'
 import type { Evento } from '../usuario/eventos'
-import { eVerbeteSkc, normalizarForma } from './modelo'
+import { camposParaGravar, eVerbeteSkc, normalizarForma, RE_VERBETE_DO_PACOTE, type CamposCompletos } from './modelo'
 
 /**
  * Grava a forma em uso. `original` é a forma a que "voltar à proposta" volta (a `forma` criada de um verbete do usuário,
@@ -45,4 +46,29 @@ export function excluirVerbete(id: string): Promise<Evento> {
 export function restaurarVerbete(id: string): Promise<Evento> {
   const erro = soDoUsuario(id)
   return erro ? Promise.reject(erro) : registrar('verbete', id, 'restaurar')
+}
+
+/**
+ * Grava campos completos de um verbete (Tarefa 12; o formato está em src/glossario/modelo.ts): um `alterar` com os campos
+ * dados, normalizados (vazio = `null`, que limpa o campo). A tela grava um campo por vez, na hora. Nada é gravado (erro)
+ * com um valor fora do formato, nenhum campo, ou o próprio verbete como termo mais geral (também pelo id do livro que o
+ * pacote deu a ele: o `user-import` o deixaria de fora).
+ *
+ * O id: um verbete do usuário (`GL-<aparelho>-<n>`) ou, fix round 1 da Tarefa 12, o id do livro (`GL-<dígitos>`) de um
+ * verbete que o pacote CRIOU de verbetes do usuário (redirecionamento com `criado`): o `user-import` lê, para cada origem
+ * viva, o registro dela e o do id do livro (`dados_do_verbete`, a escrita mais nova de cada campo). Um verbete puro dos
+ * livros não aceita: os campos ficariam na camada sem nunca chegar aos dados.
+ */
+export async function alterarCamposDoVerbete(id: string, campos: Partial<CamposCompletos>): Promise<Evento> {
+  const doLivro = RE_VERBETE_DO_PACOTE.test(id)
+  if (!eVerbeteSkc(id) && !doLivro) throw new Error(`não é o id de um verbete: ${id}`)
+  const gravar = camposParaGravar(id, campos)
+  if (doLivro || typeof gravar.pai === 'string') {
+    // sem pacote (ou a leitura falhou): nenhum redirecionamento
+    const [mapa, criados] = await Promise.all([redirecionamentosDoPacote().catch(() => SEM_REDIRECIONAMENTOS), criadosDoPacote().catch(() => new Set<string>())])
+    if (doLivro && !origensDe(mapa, id).some((o) => criados.has(o)))
+      throw new Error(`${id} não veio de um verbete seu: os campos de um verbete dos livros não se editam no app`)
+    if (typeof gravar.pai === 'string' && destinoDe(mapa, gravar.pai) === destinoDe(mapa, id)) throw new Error('o verbete não é o termo mais geral dele mesmo')
+  }
+  return registrar('verbete', id, 'alterar', gravar)
 }

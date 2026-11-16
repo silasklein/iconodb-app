@@ -1,5 +1,8 @@
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { citacoesNaoResolvidasNoPacote } from '../banco/consultas'
+import { chaveDaCitacao } from '../bibliografia/chave'
+import { restaurarObra } from '../bibliografia/operacoes'
 import { restaurarColecao } from '../colecoes/operacoes'
 import { nomeDoPacote, useFormasDoPacote } from '../glossario/formasDoPacote'
 import { restaurarVerbete } from '../glossario/operacoes'
@@ -12,6 +15,7 @@ import { useSitiosDoPacote } from '../sitios/pacote'
 import { restaurarSitio } from '../sitios/operacoes'
 import { Icon } from '../ui/Icon'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
+import { useCarregar } from '../ui/useCarregar'
 import { registrar, registrarVarios, useEstado } from '../usuario/estado'
 import type { Tipo } from '../usuario/eventos'
 import { useResolucaoDeSitios } from '../sitios/useResolucao'
@@ -42,6 +46,9 @@ function restaurar(tipo: Tipo, id: string): Promise<unknown> {
       return restaurarSitio(id)
     case 'verbete':
       return restaurarVerbete(id)
+    case 'obra':
+      // a obra trocada por outra («É esta» ao editar) recebe de volta as ligações e os objetos que passaram para a outra
+      return restaurarObra(id)
     default:
       return registrar(tipo, id, 'restaurar')
   }
@@ -115,10 +122,20 @@ export function Excluidos() {
   }, [estado, redirecionamentos, nomeNoLivro])
   // Parte 2C, bloco 2: um sítio seu excluído que estava mesclado em outro volta mesclado nele (a aprovação diz em qual).
   const resolucao = useResolucaoDeSitios()
+  // N3 (revisão final): a ligação por chave aparece pela citação curta impressa, pelas citações que a fila já carrega
+  const citacoes = useCarregar(() => citacoesNaoResolvidasNoPacote().catch(() => []), 'citacoes-ligaveis')
+  const curtaDaChave = useMemo(() => {
+    const curtas = new Map<string, string>()
+    for (const c of citacoes.fase === 'ok' ? citacoes.dados : []) {
+      const chave = c.curta ? chaveDaCitacao(c.curta) : null
+      if (chave && !curtas.has(chave)) curtas.set(chave, c.curta!.trim())
+    }
+    return (chave: string) => curtas.get(chave) ?? null
+  }, [citacoes])
   const grupos = useMemo(
-    () => gruposDeExcluidos(estado, { redirecionamentos, nomeNoLivro, nomeGuardado, agora: Date.now(), resolucao }),
+    () => gruposDeExcluidos(estado, { redirecionamentos, nomeNoLivro, nomeGuardado, agora: Date.now(), resolucao, curtaDaChave }),
     // A numeração muda com os números confirmados (que não estão no estado).
-    [estado, numeracao, redirecionamentos, nomeNoLivro, nomeGuardado, resolucao], // eslint-disable-line react-hooks/exhaustive-deps
+    [estado, numeracao, redirecionamentos, nomeNoLivro, nomeGuardado, resolucao, curtaDaChave], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const linhas = useMemo(() => grupos.flatMap((g) => g.linhas), [grupos])
   const porChave = useMemo(() => new Map(linhas.map((l) => [chaveDe(l), l] as const)), [linhas])

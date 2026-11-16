@@ -25,12 +25,14 @@
  * - Parte 2C, bloco 2 (Tarefa 15): os pares de sítios que podem ser o mesmo (src/revisao/pares.ts) não são linhas da fila: a
  *   página os mostra num grupo próprio, e quem monta a fila dá quantos estão abertos (`paresAbertos`), que somam no total.
  */
-import type { ElementoSemRegiao, LinhaDaFila, LugarDoCaso, TraducaoNaoRevisada } from '../banco/consultas'
+import type { CitacaoDoPacote, ElementoSemRegiao, LinhaDaFila, LugarDoCaso, TraducaoNaoRevisada } from '../banco/consultas'
+import { indiceDasCitacoes, linhasDesfeitas, obraAgora, separarLugarDaCitacao, TIPO_DA_CITACAO } from './citacoes'
 import { lerRegiao, RE_ELEMENTO_DO_LIVRO } from '../hipoteses/modelo'
 import { rotuloDaPendencia } from './rotulos'
 import { situacaoDoVerbete } from '../glossario/modelo'
 import { edicoesDosVerbetes, verbetesSkc } from '../glossario/doUsuario'
 import type { Redirecionamentos } from '../pacote/redirecionamentos'
+import type { ObrasCriadas } from './ligacoes'
 import { lerObjeto, tituloDe } from '../objetos-skc/modelo'
 import type { Numeracao } from '../objetos-skc/numeracao'
 import { ROTULO_DOS_SITIOS, ehMotivoDeSitio } from '../sitios/pendencias'
@@ -38,7 +40,7 @@ import { sitiosNaoResolvidos, type LinhaDeSitioNaoResolvido } from '../sitios/do
 import { resolverSitios, type PacoteDeSitios } from '../sitios/resolucao'
 import { destinosDosSitios } from '../sitios/useResolucao'
 import type { Estado } from '../usuario/estado'
-import { chaveDoElementoSemRegiao, chaveDoRascunho, chaveDoSitioSolto, chavesDosCasos } from './chave'
+import { chaveDoCaso, chaveDoElementoSemRegiao, chaveDoRascunho, chaveDoSitioSolto, chavesDosCasos } from './chave'
 
 /** Para onde uma ação leva: um caminho do app (com `?corrigir=` quando a tela de destino deve abrir já no que falta). */
 export interface Destino {
@@ -96,9 +98,25 @@ export interface GrupoDaFila {
   soConsulta: boolean
 }
 
+/** Um caso de citação que a camada do usuário já liga (todas as citações dele): saiu da fila, com a obra. */
+export interface CasoLigado {
+  caso: Caso
+  /** A obra da primeira citação do caso. */
+  obra: string
+}
+
 export interface Fila {
   total: number
   grupos: GrupoDaFila[]
+  /**
+   * As citações dos livros de cada caso `citacao_nao_resolvida` (a chave do caso → as `bib_ref` da linha): o detalhe da
+   * citação e o «Ligar». Nos abertos, nos resolvidos por você e nos ligados.
+   */
+  citacoes: Map<string, CitacaoDoPacote[]>
+  /** Os casos de citação que a pessoa ligou a uma obra no app: fora da fila e da contagem (Tarefa 11). */
+  ligadas: CasoLigado[]
+  /** As citações do pacote por chave (`chaveDaCitacao`): as iguais que um «Ligar» alcança. */
+  citacoesPorChave: ReadonlyMap<string, readonly CitacaoDoPacote[]>
   /** Quantos casos a pessoa marcou como resolvidos (em todos os grupos). */
   resolvidosPelaPessoa: number
   /** Quantos objetos do livro a pessoa resolveu ligando o sítio (já descontados). */
@@ -132,6 +150,16 @@ export interface EntradaDaFila {
   pacoteDeSitios?: PacoteDeSitios | null
   /** Tarefa 15: quantos pares de sítios que podem ser o mesmo estão abertos (`paresDaRevisao(…).abertos`); somam no total. */
   paresAbertos?: number
+  /**
+   * Parte 2C, bloco 3 (Tarefa 11): as citações do pacote que a Revisão pode ligar (`citacoesNaoResolvidasNoPacote`). Com elas,
+   * o caso de citação que a camada liga sai da fila, e a citação ligada pelo usuário no pacote que a camada desfez volta.
+   */
+  citacoes?: readonly CitacaoDoPacote[]
+  /**
+   * Tarefa 14 (fix round 1): as obras dos livros criadas de obras suas (os redirecionamentos com `criado`). A ligação a uma
+   * delas cujas origens estão todas excluídas não vale (`obraPublicadaSai`): a citação volta à fila na hora.
+   */
+  obrasCriadas?: ObrasCriadas
 }
 
 export const ROTULO_DOS_RASCUNHOS = 'Objetos sem número'
@@ -194,17 +222,7 @@ const ROTULO_DA_ENTIDADE: Record<string, string> = {
   subgroups_file: 'arquivo das subcoleções',
 }
 
-/**
- * O lugar que o pipeline escreve na frente do texto de uma citação não resolvida (`detail`): «campo 7: …» (item),
- * «aparato não dividido: …» (item) e «posição relatada de <nomes>: …» (hipótese). O resto é a citação.
- */
-const LUGAR_DA_CITACAO = /^(campo \d+|aparato não dividido|posição relatada de [^:]+): /u
-
-/** Separa o lugar («campo 7») da citação. Sem prefixo, o lugar é null e a citação é o texto todo. */
-export function separarLugarDaCitacao(detalhe: string): { lugar: string | null; citacao: string } {
-  const m = LUGAR_DA_CITACAO.exec(detalhe)
-  return m ? { lugar: m[1]!, citacao: detalhe.slice(m[0].length) } : { lugar: null, citacao: detalhe }
-}
+export { separarLugarDaCitacao } from './citacoes'
 
 /**
  * O primeiro sobrenome de uma citação curta («campo 7: Amostra/Fulano [ed.] 1999» → «Amostra»): o que procurar na
@@ -361,6 +379,8 @@ function chavesDas(linhas: readonly LinhaDaFila[]): string[] {
   return c
 }
 
+const SEM_CITACOES: ReadonlyMap<string, readonly CitacaoDoPacote[]> = new Map()
+
 export function montarFila(entrada: EntradaDaFila): Fila {
   const { linhas, lugares, estado, numeracao } = entrada
   const resolvidas = chavesResolvidas(estado)
@@ -384,10 +404,32 @@ export function montarFila(entrada: EntradaDaFila): Fila {
   const sitioEmAberto = new Set(sitios.pacote.map((p) => (p as LinhaDeSitioNaoResolvido & { i: number }).i))
   const ehSitioDoItem = new Set(linhasDeSitio.map((p) => p.i))
 
+  // As citações (Tarefa 11): o caso cujas citações a camada liga todas sai da fila (como `_Queue.sem_as_ligadas` do build).
+  const ind = entrada.citacoes ? indiceDasCitacoes(linhas, entrada.citacoes) : null
+  const citacoes = new Map<string, CitacaoDoPacote[]>()
+  const ligadas: CasoLigado[] = []
   linhas.forEach((l, i) => {
     if (ehSitioDoItem.has(i) && !sitioEmAberto.has(i)) return // ligado pela pessoa
-    colocar(grupo(rotuloDaPendencia(l.tipo)), casoDaLinha(l, chaves[i]!, lugares))
+    const caso = casoDaLinha(l, chaves[i]!, lugares)
+    const daLinha = l.tipo === TIPO_DA_CITACAO ? ind?.porLinha.get(i) : undefined
+    if (daLinha) {
+      citacoes.set(caso.chave, daLinha)
+      const obras = daLinha.map((c) => obraAgora(estado, c, entrada.obrasCriadas))
+      if (obras.every((o) => o !== null)) {
+        ligadas.push({ caso, obra: obras[0]! })
+        return
+      }
+    }
+    colocar(grupo(rotuloDaPendencia(l.tipo)), caso)
   })
+  // As citações que o pacote traz ligadas pelo usuário e que a camada desfez (a obra excluída, a ligação desfeita): voltam.
+  if (ind) {
+    for (const { linha, citacoes: daLinha } of linhasDesfeitas(estado, ind.doUsuario, entrada.obrasCriadas)) {
+      const caso = casoDaLinha(linha, chaveDoCaso(linha), lugares)
+      citacoes.set(caso.chave, daLinha)
+      colocar(grupo(rotuloDaPendencia(linha.tipo)), caso)
+    }
+  }
 
   // Objetos SKC com o sítio solto (nome livre ou sítio excluído): no mesmo grupo dos sítios.
   for (const s of sitios.skc) {
@@ -460,5 +502,8 @@ export function montarFila(entrada: EntradaDaFila): Fila {
     resolvidosPelaPessoa: lista.reduce((soma, g) => soma + g.resolvidos.length, 0),
     sitiosLigados: sitios.resolvidasPeloUsuario,
     paresAbertos,
+    citacoes,
+    ligadas,
+    citacoesPorChave: ind?.porChave ?? SEM_CITACOES,
   }
 }

@@ -378,21 +378,58 @@ export function Relacoes({ relacoes }: { relacoes: ItemDetalhe['relacoes'] }) {
   )
 }
 
-/** As referências do objeto: a citação como impressa (link à obra quando resolvida) e a forma Chicago. */
-export function Bibliografia({ referencias }: { referencias: ItemDetalhe['bibliografia'] }) {
+/** Uma referência com o que a camada do usuário diz dela (src/revisao/referencias.ts): ligada ou desligada por você. */
+type ReferenciaDaSecao = ItemDetalhe['bibliografia'][number] & {
+  ligadaPorVoce?: boolean
+  ocorrencia?: string | null
+  desligadaPorVoce?: string | null
+  religavel?: boolean
+}
+
+/**
+ * As referências do objeto: a citação como impressa (link à obra quando resolvida) e a forma Chicago. A citação que você ligou
+ * (Parte 2C, bloco 3) abre a obra com a marca «ligada por você» e «Desligar esta citação» (a exceção nula, só esta
+ * ocorrência); a que você desligou diz «desligada por você» e, quando a chave ainda a liga, «Religar». Cada linha leva
+ * `data-ref` (`<sigla>:<id>`), para quem grava devolver o foco a ela.
+ */
+export function Bibliografia({
+  referencias,
+  aoDesligar,
+  aoReligar,
+}: {
+  referencias: readonly ReferenciaDaSecao[]
+  aoDesligar?: (ocorrencia: string, r: ReferenciaDaSecao) => void
+  aoReligar?: (excecao: string, r: ReferenciaDaSecao) => void
+}) {
   if (referencias.length === 0) return <p className="secao-vazia">Sem referências.</p>
   return (
     <ul className="bibliografia-item">
       {referencias.map((r) => (
-        <li key={r.id}>
-          {r.resolvida && r.obraId ? (
-            <Link to={`/obra/${encodeURIComponent(r.obraId)}`} className="bibliografia-citacao">
-              {r.bruto}
-            </Link>
-          ) : (
-            <span className="bibliografia-citacao">{r.bruto}</span>
-          )}
+        <li key={`${r.sigla}:${r.id}`} data-ref={`${r.sigla}:${r.id}`}>
+          <span className="bibliografia-linha">
+            {r.resolvida && r.obraId ? (
+              <Link to={`/obra/${encodeURIComponent(r.obraId)}`} className="bibliografia-citacao">
+                {r.bruto}
+              </Link>
+            ) : (
+              <span className="bibliografia-citacao" tabIndex={-1}>
+                {r.bruto}
+              </span>
+            )}
+            {r.ligadaPorVoce && <span className="bibliografia-sua">ligada por você</span>}
+            {r.desligadaPorVoce && <span className="bibliografia-sua">desligada por você</span>}
+          </span>
           {(r.chicagoHtml || r.chicago) && <span className="bibliografia-chicago">{r.chicagoHtml ? htmlComItalico(r.chicagoHtml) : r.chicago}</span>}
+          {r.ligadaPorVoce && r.ocorrencia && aoDesligar && (
+            <button type="button" className="bibliografia-acao" onClick={() => aoDesligar(r.ocorrencia!, r)} aria-label={`Desligar esta citação: ${r.bruto}`}>
+              Desligar esta citação
+            </button>
+          )}
+          {r.desligadaPorVoce && r.religavel && aoReligar && (
+            <button type="button" className="bibliografia-acao" onClick={() => aoReligar(r.desligadaPorVoce!, r)} aria-label={`Religar: ${r.bruto}`}>
+              Religar
+            </button>
+          )}
         </li>
       ))}
     </ul>
@@ -403,11 +440,21 @@ const ENTIDADES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"
 /** As entidades HTML que a forma Chicago usa, em texto. */
 export const decodificar = (s: string) => s.replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (_, e: string) => ENTIDADES[e]!)
 
-/** O HTML da forma Chicago só usa <i>: desenha o itálico e descarta qualquer outra marcação (sem innerHTML). */
-export function htmlComItalico(html: string): ReactNode[] {
-  return html.split(/(<i>[\s\S]*?<\/i>)/).map((parte, i) => {
+/** As partes do HTML da forma Chicago: o texto (sem marcação, entidades decodificadas) e se é itálico. */
+function partesComItalico(html: string): { texto: string; italico: boolean }[] {
+  return html.split(/(<i>[\s\S]*?<\/i>)/).map((parte) => {
     const italico = /^<i>([\s\S]*)<\/i>$/.exec(parte)
-    const texto = decodificar((italico ? italico[1]! : parte).replace(/<[^>]*>/g, ''))
-    return italico ? <i key={i}>{texto}</i> : <Fragment key={i}>{texto}</Fragment>
+    return { texto: decodificar((italico ? italico[1]! : parte).replace(/<[^>]*>/g, '')), italico: !!italico }
   })
 }
+
+/** O HTML da forma Chicago só usa <i>: desenha o itálico e descarta qualquer outra marcação (sem innerHTML). */
+export function htmlComItalico(html: string): ReactNode[] {
+  return partesComItalico(html).map(({ texto, italico }, i) => (italico ? <i key={i}>{texto}</i> : <Fragment key={i}>{texto}</Fragment>))
+}
+
+/** O texto que `htmlComItalico` desenha (sem o itálico). */
+export const textoDeHtmlComItalico = (html: string): string =>
+  partesComItalico(html)
+    .map((p) => p.texto)
+    .join('')

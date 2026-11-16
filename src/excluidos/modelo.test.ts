@@ -518,3 +518,54 @@ describe('Parte 2C, bloco 2: um sítio seu excluído que estava mesclado em outr
     expect(linha(gruposDeExcluidos(estado, ctx()), X).confirmacao).toBe('Restaurar o sítio «Tell Exemplo»?')
   })
 })
+
+describe('gruposDeExcluidos: a obra, a ligação de citação e o nível revisto (Parte 2C, bloco 3)', () => {
+  const OBRA = 'BIB-aaaaaaaa-1'
+  const csl = { type: 'book', title: 'Selos sonhados de teste' }
+
+  it('três grupos depois dos verbetes, com os nomes, onde estavam e a aprovação de «Restaurar»', () => {
+    const estado = fundir([
+      e('obra', OBRA, 'criar', { csl, curta: 'Fictício 2009' }),
+      e('citacao', 'ficticio 2009', 'criar', { obra: OBRA }),
+      e('citacao', 'ficticio 2009@TESTE|TESTE-0004|Fictício 2009: 5', 'criar', { obra: OBRA }),
+      e('obra', OBRA, 'excluir'),
+      e('obra', 'BIB-aaaaaaaa-2', 'criar', { csl: { type: 'book', title: 'Outra obra de teste' } }),
+      e('obra', 'BIB-aaaaaaaa-2', 'excluir'),
+      e('citacao', 'inventado 2001', 'criar', { obra: 'BIB-900001' }),
+      e('citacao', 'inventado 2001', 'excluir'),
+      e('citacao', '-@TESTE|TESTE-0006|1999: 12', 'criar', { obra: null }),
+      e('citacao', '-@TESTE|TESTE-0006|1999: 12', 'excluir'),
+      e('nivel', 'HY-900006', 'criar', { nivel: 'iconological' }),
+      e('nivel', 'HY-900006', 'excluir'),
+      e('verbete', 'GL-aaaaaaaa-1', 'criar', { forma: 'amuleto de prova' }),
+      e('verbete', 'GL-aaaaaaaa-1', 'excluir'),
+    ])
+    const grupos = gruposDeExcluidos(estado, ctx())
+    expect(grupos.map((g) => [g.tipo, g.titulo, g.linhas.length])).toEqual([
+      ['verbete', 'Verbetes', 1],
+      ['obra', 'Obras', 2],
+      ['citacao', 'Ligações de citação', 2],
+      ['nivel', 'Níveis revistos', 1],
+    ])
+    expect(linha(grupos, OBRA)).toMatchObject({
+      nome: 'Fictício 2009',
+      onde: 'Selos sonhados de teste · 2 ligações de citação',
+      caminho: `/obra/${OBRA}`,
+      confirmacao: 'Restaurar a obra «Fictício 2009»? As citações ligadas a ela voltam a abri-la.',
+      juntas: [OBRA],
+    })
+    expect(linha(grupos, 'BIB-aaaaaaaa-2')).toMatchObject({ nome: 'Outra obra de teste', onde: null, confirmacao: 'Restaurar a obra «Outra obra de teste»?' })
+    expect(linha(grupos, 'inventado 2001')).toMatchObject({
+      nome: '«inventado 2001»',
+      onde: 'ligada a «BIB-900001» · todas as citações iguais',
+      caminho: null,
+      confirmacao: 'Restaurar a ligação da citação «inventado 2001»?',
+    })
+    expect(linha(grupos, '-@TESTE|TESTE-0006|1999: 12')).toMatchObject({ nome: '«1999: 12»', onde: 'desligada · só em TESTE TESTE-0006' })
+    expect(linha(grupos, 'HY-900006')).toMatchObject({
+      nome: 'Nível iconológico',
+      onde: 'hipótese HY-900006',
+      confirmacao: 'Restaurar o nível revisto (iconológico) da hipótese HY-900006? O nível automático deixa de valer.',
+    })
+  })
+})

@@ -158,6 +158,31 @@ describe('NovoObjeto', () => {
   })
 })
 
+describe('a escolha de obra com as obras do usuário (Parte 2C, bloco 3)', () => {
+  it('a obra SKC aparece junto às dos livros, com a marca SKC, e escolhê-la grava o id dela', async () => {
+    await registrar('obra', 'BIB-testeaaa-1', 'criar', { csl: { type: 'book', title: 'Obra do usuário de prova' }, curta: 'Usuária 2024' })
+    abrir('/objeto/novo')
+    await userEvent.click(await screen.findByRole('radio', { name: /Calcolítico/ }))
+    const obra = screen.getByRole('combobox', { name: 'Obra' })
+    await userEvent.type(obra, 'Usuária')
+    const opcao = await screen.findByRole('option', { name: /Usuária 2024/ })
+    expect(within(opcao).getByText('SKC')).toBeInTheDocument()
+    expect(within(opcao).getByText('Obra do usuário de prova')).toBeInTheDocument()
+    await userEvent.click(opcao)
+    expect(obra).toHaveValue('Usuária 2024')
+    await userEvent.clear(obra)
+    await userEvent.type(obra, 'Autor')
+    expect(await screen.findByRole('option', { name: /Autor 1999/ })).toBeInTheDocument()
+    await userEvent.clear(obra)
+    await userEvent.type(obra, 'Usuária')
+    await userEvent.click(await screen.findByRole('option', { name: /Usuária 2024/ }))
+    await userEvent.click(screen.getAllByRole('button', { name: /Salvar objeto/ })[0]!)
+    await waitFor(() => expect(local()).toMatch(/^\/item\/OB-/))
+    const id = decodeURIComponent(local()!.slice('/item/'.length))
+    expect(estadoAtual().registro('objeto', id)!.campos).toMatchObject({ obra: 'BIB-testeaaa-1', obraRotulo: 'Usuária 2024' })
+  })
+})
+
 describe('ObjetoSKC pelo Item', () => {
   it('/item/<número> de um objeto SKC: o número grande com "provisório"; confirmado, sem a marca', async () => {
     const id = await objeto({ periodo: 'CA', titulo: 'Cabeça de maça. Cobre.', material: 'Cobre', obraRotulo: 'Artigo 2025', pagina: '12', figura: '3' })

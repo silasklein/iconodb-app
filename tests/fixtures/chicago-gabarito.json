@@ -1,0 +1,1659 @@
+{
+  "versao": 1,
+  "casos": [
+    {
+      "csl": {
+        "id": "TESTE-01",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1991
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "title": "Selos imaginários do vale inventado"
+      },
+      "chicago": "Amostra, Ana. 1991. Selos imaginários do vale inventado. Vila Imaginária.",
+      "chicago_html": "Amostra, Ana. 1991. <i>Selos imaginários do vale inventado</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-02",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2003
+            ]
+          ]
+        },
+        "publisher-place": "Porto Fictício",
+        "publisher": "Editora Exemplar",
+        "title": "Amuletos de ensaio"
+      },
+      "chicago": "Exemplo, Bruno. 2003. Amuletos de ensaio. Editora Exemplar.",
+      "chicago_html": "Exemplo, Bruno. 2003. <i>Amuletos de ensaio</i>. Editora Exemplar."
+    },
+    {
+      "csl": {
+        "id": "TESTE-03",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1997
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "title": "Duas mãos sobre o selo de teste"
+      },
+      "chicago": "Amostra, Ana, and Bruno Exemplo. 1997. Duas mãos sobre o selo de teste. Vila Imaginária.",
+      "chicago_html": "Amostra, Ana, and Bruno Exemplo. 1997. <i>Duas mãos sobre o selo de teste</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-04",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          },
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2008
+            ]
+          ]
+        },
+        "publisher-place": "Cidade Modelo",
+        "title": "Três leituras de um escaravelho que não existe"
+      },
+      "chicago": "Fictícia, Carla, Davi Modelo, and Elisa Ensaio. 2008. Três leituras de um escaravelho que não existe. Cidade Modelo.",
+      "chicago_html": "Fictícia, Carla, Davi Modelo, and Elisa Ensaio. 2008. <i>Três leituras de um escaravelho que não existe</i>. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-05",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          },
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2015
+            ]
+          ]
+        },
+        "publisher-place": "Cidade Modelo",
+        "title": "Quatro autores e um catálogo de mentira"
+      },
+      "chicago": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2015. Quatro autores e um catálogo de mentira. Cidade Modelo.",
+      "chicago_html": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2015. <i>Quatro autores e um catálogo de mentira</i>. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-06",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          }
+        ],
+        "et-al": true,
+        "issued": {
+          "date-parts": [
+            [
+              1984
+            ]
+          ]
+        },
+        "publisher-place": "Porto Fictício",
+        "title": "Glíptica de laboratório"
+      },
+      "chicago": "Protótipo, Fábio, et al. 1984. Glíptica de laboratório. Porto Fictício.",
+      "chicago_html": "Protótipo, Fábio, et al. 1984. <i>Glíptica de laboratório</i>. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-07",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1999
+            ]
+          ]
+        },
+        "publisher-place": "Freiburg Erfunden",
+        "collection-title": "Cadernos de Teste",
+        "collection-number": "12",
+        "title": "O cilindro hipotético"
+      },
+      "chicago": "Rascunho, Gabriela M. 1999. O cilindro hipotético. Cadernos de Teste 12. Freiburg Erfunden.",
+      "chicago_html": "Rascunho, Gabriela M. 1999. <i>O cilindro hipotético</i>. Cadernos de Teste 12. Freiburg Erfunden."
+    },
+    {
+      "csl": {
+        "id": "TESTE-08",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Esboço",
+            "given": "Heitor"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2011
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "collection-title": "Série Fictícia",
+        "title": "Notas sobre selos que ninguém viu"
+      },
+      "chicago": "Esboço, Heitor. 2011. Notas sobre selos que ninguém viu. Série Fictícia. Vila Imaginária.",
+      "chicago_html": "Esboço, Heitor. 2011. <i>Notas sobre selos que ninguém viu</i>. Série Fictícia. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-09",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Übungsmann",
+            "given": "Jörg"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1982
+            ]
+          ]
+        },
+        "edition": "2",
+        "original-date": {
+          "date-parts": [
+            [
+              1971
+            ]
+          ]
+        },
+        "publisher-place": "Probestadt",
+        "title": "Das erfundene Siegel und seine Abdrücke"
+      },
+      "chicago": "Übungsmann, Jörg. 1982. Das erfundene Siegel und seine Abdrücke. 2nd ed. Probestadt.",
+      "chicago_html": "Übungsmann, Jörg. 1982. <i>Das erfundene Siegel und seine Abdrücke</i>. 2nd ed. Probestadt."
+    },
+    {
+      "csl": {
+        "id": "TESTE-10",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Dupont-Essai",
+            "given": "Élodie"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1993
+            ]
+          ]
+        },
+        "edition": "3",
+        "publisher-place": "Paris-sur-Essai",
+        "title": "Le sceau imaginaire à l’époque fictive"
+      },
+      "chicago": "Dupont-Essai, Élodie. 1993. Le sceau imaginaire à l’époque fictive. 3rd ed. Paris-sur-Essai.",
+      "chicago_html": "Dupont-Essai, Élodie. 1993. <i>Le sceau imaginaire à l’époque fictive</i>. 3rd ed. Paris-sur-Essai."
+    },
+    {
+      "csl": {
+        "id": "TESTE-11",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Øvelse",
+            "given": "Åse"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1966
+            ]
+          ]
+        },
+        "number-of-volumes": "3",
+        "publisher-place": "Øvingsby",
+        "title": "Øvelser i oppdiktet glyptikk"
+      },
+      "chicago": "Øvelse, Åse. 1966. Øvelser i oppdiktet glyptikk. 3 vols. Øvingsby.",
+      "chicago_html": "Øvelse, Åse. 1966. <i>Øvelser i oppdiktet glyptikk</i>. 3 vols. Øvingsby."
+    },
+    {
+      "csl": {
+        "id": "TESTE-12",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1988
+            ]
+          ]
+        },
+        "number-of-volumes": "1",
+        "publisher-place": "Cidade Modelo",
+        "title": "Um só volume de exemplo"
+      },
+      "chicago": "Modelo, Davi. 1988. Um só volume de exemplo. 1 vol. Cidade Modelo.",
+      "chicago_html": "Modelo, Davi. 1988. <i>Um só volume de exemplo</i>. 1 vol. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-13",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          }
+        ],
+        "publisher-place": "Vila Imaginária",
+        "title": "Sem data e sem pressa"
+      },
+      "chicago": "Ensaio, Elisa. n.d. Sem data e sem pressa. Vila Imaginária.",
+      "chicago_html": "Ensaio, Elisa. n.d. <i>Sem data e sem pressa</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-14",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "van der Probe",
+            "given": "Lotte"
+          }
+        ],
+        "issued": {
+          "literal": "1971-1973"
+        },
+        "number-of-volumes": "2",
+        "publisher-place": "Proefdorp",
+        "title": "Verzonnen stempels"
+      },
+      "chicago": "van der Probe, Lotte. 1971-1973. Verzonnen stempels. 2 vols. Proefdorp.",
+      "chicago_html": "van der Probe, Lotte. 1971-1973. <i>Verzonnen stempels</i>. 2 vols. Proefdorp."
+    },
+    {
+      "csl": {
+        "id": "TESTE-15",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1991
+            ]
+          ]
+        },
+        "year-suffix": "b",
+        "publisher-place": "Vila Imaginária",
+        "title": "Mais selos do vale inventado"
+      },
+      "chicago": "Amostra, Ana. 1991b. Mais selos do vale inventado. Vila Imaginária.",
+      "chicago_html": "Amostra, Ana. 1991b. <i>Mais selos do vale inventado</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-16",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "literal": "Instituto de Estudos Inventados"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2020
+            ]
+          ]
+        },
+        "publisher-place": "Cidade Modelo",
+        "title": "Relatório anual de escavações simuladas"
+      },
+      "chicago": "Instituto de Estudos Inventados. 2020. Relatório anual de escavações simuladas. Cidade Modelo.",
+      "chicago_html": "Instituto de Estudos Inventados. 2020. <i>Relatório anual de escavações simuladas</i>. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-17",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2001
+            ]
+          ]
+        },
+        "title": "Um livro sem lugar"
+      },
+      "chicago": "Exemplo, Bruno. 2001. Um livro sem lugar.",
+      "chicago_html": "Exemplo, Bruno. 2001. <i>Um livro sem lugar</i>."
+    },
+    {
+      "csl": {
+        "id": "TESTE-18",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "ʿAyin-Dugma",
+            "given": "Yaʾel"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1979
+            ]
+          ]
+        },
+        "publisher-place": "Qiryat Dugma",
+        "title": "Ḥotamot ha-dugma: ʿiyyun ri’šon"
+      },
+      "chicago": "ʿAyin-Dugma, Yaʾel. 1979. Ḥotamot ha-dugma: ʿiyyun ri’šon. Qiryat Dugma.",
+      "chicago_html": "ʿAyin-Dugma, Yaʾel. 1979. <i>Ḥotamot ha-dugma: ʿiyyun ri’šon</i>. Qiryat Dugma."
+    },
+    {
+      "csl": {
+        "id": "TESTE-19",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2005
+            ]
+          ]
+        },
+        "publisher-place": "Porto Fictício",
+        "title": "Atas do colóquio de iconografia inventada"
+      },
+      "chicago": "Fictícia, Carla, ed. 2005. Atas do colóquio de iconografia inventada. Porto Fictício.",
+      "chicago_html": "Fictícia, Carla, ed. 2005. <i>Atas do colóquio de iconografia inventada</i>. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-20",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          },
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2012
+            ]
+          ]
+        },
+        "publisher-place": "Cidade Modelo",
+        "publisher": "Imprensa Modelar",
+        "title": "Estudos em honra de ninguém"
+      },
+      "chicago": "Modelo, Davi, and Elisa Ensaio, eds. 2012. Estudos em honra de ninguém. Imprensa Modelar.",
+      "chicago_html": "Modelo, Davi, and Elisa Ensaio, eds. 2012. <i>Estudos em honra de ninguém</i>. Imprensa Modelar."
+    },
+    {
+      "csl": {
+        "id": "TESTE-21",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          }
+        ],
+        "et-al": true,
+        "issued": {
+          "literal": "1962-1965"
+        },
+        "number-of-volumes": "4",
+        "publisher-place": "Vila Imaginária",
+        "title": "Atlas de um mundo que não houve"
+      },
+      "chicago": "Protótipo, Fábio, et al., eds. 1962-1965. Atlas de um mundo que não houve. 4 vols. Vila Imaginária.",
+      "chicago_html": "Protótipo, Fábio, et al., eds. 1962-1965. <i>Atlas de um mundo que não houve</i>. 4 vols. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-22",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          },
+          {
+            "family": "Esboço",
+            "given": "Heitor"
+          },
+          {
+            "family": "Übungsmann",
+            "given": "Jörg"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1995
+            ]
+          ]
+        },
+        "publisher-place": "Freiburg Erfunden",
+        "collection-title": "Cadernos de Teste",
+        "collection-number": "IV",
+        "title": "Siegel, Stempel und Proben"
+      },
+      "chicago": "Rascunho, Gabriela M., Heitor Esboço, and Jörg Übungsmann, eds. 1995. Siegel, Stempel und Proben. Cadernos de Teste, IV. Freiburg Erfunden.",
+      "chicago_html": "Rascunho, Gabriela M., Heitor Esboço, and Jörg Übungsmann, eds. 1995. <i>Siegel, Stempel und Proben</i>. Cadernos de Teste, IV. Freiburg Erfunden."
+    },
+    {
+      "csl": {
+        "id": "TESTE-23",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1994
+            ]
+          ]
+        },
+        "title": "Um selo de argila que nunca foi achado",
+        "container-title": "Revista de Estudos Inventados",
+        "volume": "7",
+        "page": "12-34"
+      },
+      "chicago": "Amostra, Ana. 1994. “Um selo de argila que nunca foi achado.” Revista de Estudos Inventados 7: 12–34.",
+      "chicago_html": "Amostra, Ana. 1994. “Um selo de argila que nunca foi achado.” <i>Revista de Estudos Inventados</i> 7: 12–34."
+    },
+    {
+      "csl": {
+        "id": "TESTE-24",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2002
+            ]
+          ]
+        },
+        "title": "Breve nota de laboratório",
+        "container-title": "RTI",
+        "page": "5-9"
+      },
+      "chicago": "Exemplo, Bruno. 2002. “Breve nota de laboratório.” RTI, 5–9.",
+      "chicago_html": "Exemplo, Bruno. 2002. “Breve nota de laboratório.” <i>RTI</i>, 5–9."
+    },
+    {
+      "csl": {
+        "id": "TESTE-25",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2016
+            ]
+          ]
+        },
+        "title": "Contagem de escaravelhos simulados",
+        "container-title": "Zeitschrift für Probeforschung",
+        "volume": "41",
+        "issue": "2",
+        "page": "1102-1108"
+      },
+      "chicago": "Fictícia, Carla, and Davi Modelo. 2016. “Contagem de escaravelhos simulados.” Zeitschrift für Probeforschung 41 (2): 1102–8.",
+      "chicago_html": "Fictícia, Carla, and Davi Modelo. 2016. “Contagem de escaravelhos simulados.” <i>Zeitschrift für Probeforschung</i> 41 (2): 1102–8."
+    },
+    {
+      "csl": {
+        "id": "TESTE-26",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          },
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          }
+        ],
+        "issued": {
+          "literal": "1990/91"
+        },
+        "title": "Pátio de ensaio",
+        "container-title": "BEI",
+        "volume": "5-6",
+        "page": "41f"
+      },
+      "chicago": "Ensaio, Elisa, and Fábio Protótipo. 1990/91. “Pátio de ensaio.” BEI 5-6 (1990/91): 41f.",
+      "chicago_html": "Ensaio, Elisa, and Fábio Protótipo. 1990/91. “Pátio de ensaio.” <i>BEI</i> 5-6 (1990/91): 41f."
+    },
+    {
+      "csl": {
+        "id": "TESTE-27",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2007
+            ]
+          ]
+        },
+        "title": "Existe um selo fictício?",
+        "container-title": "Revista de Estudos Inventados",
+        "volume": "20",
+        "page": "101-130"
+      },
+      "chicago": "Rascunho, Gabriela M. 2007. “Existe um selo fictício?” Revista de Estudos Inventados 20: 101–30.",
+      "chicago_html": "Rascunho, Gabriela M. 2007. “Existe um selo fictício?” <i>Revista de Estudos Inventados</i> 20: 101–30."
+    },
+    {
+      "csl": {
+        "id": "TESTE-28",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Dupont-Essai",
+            "given": "Élodie"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1975
+            ]
+          ]
+        },
+        "title": "Le prétendu \"modèle\" d’atelier",
+        "container-title": "Revue d’Essais",
+        "volume": "3",
+        "page": "1-17"
+      },
+      "chicago": "Dupont-Essai, Élodie. 1975. “Le prétendu ‘modèle’ d’atelier.” Revue d’Essais 3: 1–17.",
+      "chicago_html": "Dupont-Essai, Élodie. 1975. “Le prétendu ‘modèle’ d’atelier.” <i>Revue d’Essais</i> 3: 1–17."
+    },
+    {
+      "csl": {
+        "id": "TESTE-29",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Esboço",
+            "given": "Heitor"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1977
+            ]
+          ]
+        },
+        "note": "(hebr.).",
+        "title": "Um templo de papelão",
+        "container-title": "Cad. Ens.",
+        "volume": "11",
+        "page": "140-147"
+      },
+      "chicago": "Esboço, Heitor. 1977. “Um templo de papelão.” Cad. Ens. 11: 140–47.",
+      "chicago_html": "Esboço, Heitor. 1977. “Um templo de papelão.” <i>Cad. Ens.</i> 11: 140–47."
+    },
+    {
+      "csl": {
+        "id": "TESTE-30",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Übungsmann",
+            "given": "Jörg"
+          },
+          {
+            "family": "Øvelse",
+            "given": "Åse"
+          },
+          {
+            "family": "van der Probe",
+            "given": "Lotte"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1986
+            ]
+          ]
+        },
+        "year-suffix": "a",
+        "title": "Über erfundene Rollsiegel",
+        "container-title": "Mitteilungen der Probegesellschaft",
+        "volume": "118",
+        "page": "201-220"
+      },
+      "chicago": "Übungsmann, Jörg, Åse Øvelse, and Lotte van der Probe. 1986a. “Über erfundene Rollsiegel.” Mitteilungen der Probegesellschaft 118: 201–20.",
+      "chicago_html": "Übungsmann, Jörg, Åse Øvelse, and Lotte van der Probe. 1986a. “Über erfundene Rollsiegel.” <i>Mitteilungen der Probegesellschaft</i> 118: 201–20."
+    },
+    {
+      "csl": {
+        "id": "TESTE-31",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          },
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2021
+            ]
+          ]
+        },
+        "title": "Quatro mãos e mais quatro",
+        "container-title": "Revista de Estudos Inventados",
+        "volume": "34",
+        "page": "1-2"
+      },
+      "chicago": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2021. “Quatro mãos e mais quatro.” Revista de Estudos Inventados 34: 1–2.",
+      "chicago_html": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2021. “Quatro mãos e mais quatro.” <i>Revista de Estudos Inventados</i> 34: 1–2."
+    },
+    {
+      "csl": {
+        "id": "TESTE-32",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2005
+            ]
+          ]
+        },
+        "title": "O selo e a sombra",
+        "container-title": "Atas do colóquio de iconografia inventada",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "page": "45-67",
+        "publisher-place": "Porto Fictício"
+      },
+      "chicago": "Modelo, Davi. 2005. “O selo e a sombra.” In Atas do colóquio de iconografia inventada, edited by Carla Fictícia. Porto Fictício.",
+      "chicago_html": "Modelo, Davi. 2005. “O selo e a sombra.” In <i>Atas do colóquio de iconografia inventada</i>, edited by Carla Fictícia. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-33",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2012
+            ]
+          ]
+        },
+        "title": "Um capítulo de exemplo",
+        "container-title": "Estudos em honra de ninguém",
+        "editor": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          },
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          }
+        ],
+        "page": "301-322",
+        "publisher-place": "Cidade Modelo",
+        "publisher": "Imprensa Modelar"
+      },
+      "chicago": "Ensaio, Elisa. 2012. “Um capítulo de exemplo.” In Estudos em honra de ninguém, edited by Davi Modelo and Elisa Ensaio. Imprensa Modelar.",
+      "chicago_html": "Ensaio, Elisa. 2012. “Um capítulo de exemplo.” In <i>Estudos em honra de ninguém</i>, edited by Davi Modelo and Elisa Ensaio. Imprensa Modelar."
+    },
+    {
+      "csl": {
+        "id": "TESTE-34",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1985
+            ]
+          ]
+        },
+        "year-suffix": "a",
+        "title": "Figurinhas de papel machê",
+        "container-key": "Fictícia [ed.] 1985",
+        "page": "21-30",
+        "container-title": "Imagens de ensaio: homenagem a ninguém",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "publisher-place": "Vila Imaginária"
+      },
+      "chicago": "Protótipo, Fábio. 1985a. “Figurinhas de papel machê.” In Imagens de ensaio: homenagem a ninguém, edited by Carla Fictícia. Vila Imaginária.",
+      "chicago_html": "Protótipo, Fábio. 1985a. “Figurinhas de papel machê.” In <i>Imagens de ensaio: homenagem a ninguém</i>, edited by Carla Fictícia. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-35",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1998
+            ]
+          ]
+        },
+        "title": "Capítulo sem organizador",
+        "container-title": "Livro coletivo de teste",
+        "page": "88-90",
+        "publisher-place": "Porto Fictício"
+      },
+      "chicago": "Rascunho, Gabriela M. 1998. “Capítulo sem organizador.” In Livro coletivo de teste. Porto Fictício.",
+      "chicago_html": "Rascunho, Gabriela M. 1998. “Capítulo sem organizador.” In <i>Livro coletivo de teste</i>. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-36",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Esboço",
+            "given": "Heitor"
+          },
+          {
+            "family": "Übungsmann",
+            "given": "Jörg"
+          },
+          {
+            "family": "Øvelse",
+            "given": "Åse"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2009
+            ]
+          ]
+        },
+        "title": "Drei Hände, ein Kapitel",
+        "container-title": "Siegel, Stempel und Proben",
+        "editor": [
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          }
+        ],
+        "et-al": true,
+        "volume": "2",
+        "page": "11-29",
+        "publisher-place": "Freiburg Erfunden",
+        "collection-title": "Cadernos de Teste",
+        "collection-number": "13"
+      },
+      "chicago": "Esboço, Heitor, Jörg Übungsmann, Åse Øvelse, et al. 2009. “Drei Hände, ein Kapitel.” In Siegel, Stempel und Proben, edited by Gabriela M. Rascunho, vol. 2. Cadernos de Teste 13. Freiburg Erfunden.",
+      "chicago_html": "Esboço, Heitor, Jörg Übungsmann, Åse Øvelse, et al. 2009. “Drei Hände, ein Kapitel.” In <i>Siegel, Stempel und Proben</i>, edited by Gabriela M. Rascunho, vol. 2. Cadernos de Teste 13. Freiburg Erfunden."
+    },
+    {
+      "csl": {
+        "id": "TESTE-37",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "van der Probe",
+            "given": "Lotte"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1990
+            ]
+          ]
+        },
+        "title": "Een verzonnen hoofdstuk",
+        "container-title": "Verzameld werk van de proef",
+        "editor": [
+          {
+            "family": "van der Probe",
+            "given": "Lotte"
+          }
+        ],
+        "publisher-place": "Proefdorp"
+      },
+      "chicago": "van der Probe, Lotte. 1990. “Een verzonnen hoofdstuk.” In Verzameld werk van de proef, edited by Lotte van der Probe. Proefdorp.",
+      "chicago_html": "van der Probe, Lotte. 1990. “Een verzonnen hoofdstuk.” In <i>Verzameld werk van de proef</i>, edited by Lotte van der Probe. Proefdorp."
+    },
+    {
+      "csl": {
+        "id": "TESTE-38",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          },
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2018
+            ]
+          ]
+        },
+        "title": "Quatro autores num só capítulo",
+        "container-title": "Livro coletivo de teste",
+        "editor": [
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          },
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          },
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          },
+          {
+            "family": "Esboço",
+            "given": "Heitor"
+          }
+        ],
+        "page": "1-40",
+        "publisher-place": "Cidade Modelo"
+      },
+      "chicago": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2018. “Quatro autores num só capítulo.” In Livro coletivo de teste, edited by Elisa Ensaio, Fábio Protótipo, Gabriela M. Rascunho, and Heitor Esboço. Cidade Modelo.",
+      "chicago_html": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, and Davi Modelo. 2018. “Quatro autores num só capítulo.” In <i>Livro coletivo de teste</i>, edited by Elisa Ensaio, Fábio Protótipo, Gabriela M. Rascunho, and Heitor Esboço. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-39",
+        "type": "chapter",
+        "language": "und",
+        "author": [
+          {
+            "literal": "Instituto de Estudos Inventados"
+          }
+        ],
+        "title": "Capítulo sem data",
+        "container-title": "Livro coletivo de teste",
+        "editor": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "page": "3-4",
+        "publisher-place": "Porto Fictício"
+      },
+      "chicago": "Instituto de Estudos Inventados. n.d. “Capítulo sem data.” In Livro coletivo de teste, edited by Bruno Exemplo. Porto Fictício.",
+      "chicago_html": "Instituto de Estudos Inventados. n.d. “Capítulo sem data.” In <i>Livro coletivo de teste</i>, edited by Bruno Exemplo. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-40",
+        "type": "document",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Dupont-Essai",
+            "given": "Élodie"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2012
+            ]
+          ]
+        },
+        "title": "Cerâmica pintada de um reino imaginário"
+      },
+      "chicago": "Amostra, Ana, and Élodie Dupont-Essai. 2012. “Cerâmica pintada de um reino imaginário.”",
+      "chicago_html": "Amostra, Ana, and Élodie Dupont-Essai. 2012. “Cerâmica pintada de um reino imaginário.”"
+    },
+    {
+      "csl": {
+        "id": "TESTE-41",
+        "type": "book",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1991
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "title": "Selos imaginários do vale inventado"
+      },
+      "chicago": "Amostra, Ana. 1991. Selos imaginários do vale inventado. Vila Imaginária.",
+      "chicago_html": "Amostra, Ana. 1991. <i>Selos imaginários do vale inventado</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-42",
+        "type": "article-journal",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              1994
+            ]
+          ]
+        },
+        "title": "Um selo de argila que nunca foi achado",
+        "container-title": "Revista de Estudos Inventados",
+        "volume": "7",
+        "page": "12-34",
+        "language": "en"
+      },
+      "chicago": "Amostra, Ana. 1994. “Um selo de argila que nunca foi achado.” Revista de Estudos Inventados 7: 12–34.",
+      "chicago_html": "Amostra, Ana. 1994. “Um selo de argila que nunca foi achado.” <i>Revista de Estudos Inventados</i> 7: 12–34."
+    },
+    {
+      "csl": {
+        "id": "TESTE-43",
+        "type": "chapter",
+        "author": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2005
+            ]
+          ]
+        },
+        "title": "O selo e a sombra",
+        "container-title": "Atas do colóquio de iconografia inventada",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "page": "45-67",
+        "publisher-place": "Porto Fictício"
+      },
+      "chicago": "Modelo, Davi. 2005. “O selo e a sombra.” In Atas do colóquio de iconografia inventada, edited by Carla Fictícia. Porto Fictício.",
+      "chicago_html": "Modelo, Davi. 2005. “O selo e a sombra.” In <i>Atas do colóquio de iconografia inventada</i>, edited by Carla Fictícia. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-44",
+        "type": "book",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2005
+            ]
+          ]
+        },
+        "publisher-place": "Porto Fictício",
+        "title": "Atas do colóquio de iconografia inventada",
+        "language": "en"
+      },
+      "chicago": "Fictícia, Carla, ed. 2005. Atas do colóquio de iconografia inventada. Porto Fictício.",
+      "chicago_html": "Fictícia, Carla, ed. 2005. <i>Atas do colóquio de iconografia inventada</i>. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-45",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          },
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          },
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          },
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          },
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2010
+            ]
+          ]
+        },
+        "publisher-place": "Cidade Modelo",
+        "title": "Sete mãos num catálogo"
+      },
+      "chicago": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, et al. 2010. Sete mãos num catálogo. Cidade Modelo.",
+      "chicago_html": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, et al. 2010. <i>Sete mãos num catálogo</i>. Cidade Modelo."
+    },
+    {
+      "csl": {
+        "id": "TESTE-46",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          },
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          },
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          },
+          {
+            "family": "Ensaio",
+            "given": "Elisa"
+          },
+          {
+            "family": "Protótipo",
+            "given": "Fábio"
+          },
+          {
+            "family": "Rascunho",
+            "given": "Gabriela M."
+          },
+          {
+            "family": "Teste",
+            "given": "Ivo"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2003
+            ]
+          ]
+        },
+        "title": "Oito organizadores de ensaio"
+      },
+      "chicago": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, et al, eds. 2003. Oito organizadores de ensaio.",
+      "chicago_html": "Amostra, Ana, Bruno Exemplo, Carla Fictícia, et al, eds. 2003. <i>Oito organizadores de ensaio</i>."
+    },
+    {
+      "csl": {
+        "id": "TESTE-47",
+        "type": "chapter",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          },
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2005
+            ]
+          ]
+        },
+        "title": "Capítulo só de organizadores",
+        "container-title": "Livro coletivo de teste",
+        "page": "3-9",
+        "publisher-place": "Porto Fictício"
+      },
+      "chicago": "Ana Amostra, Bruno Exemplo. 2005. “Capítulo só de organizadores.” In Livro coletivo de teste, edited by Ana Amostra and Bruno Exemplo. Porto Fictício.",
+      "chicago_html": "Ana Amostra, Bruno Exemplo. 2005. “Capítulo só de organizadores.” In <i>Livro coletivo de teste</i>, edited by Ana Amostra and Bruno Exemplo. Porto Fictício."
+    },
+    {
+      "csl": {
+        "id": "TESTE-48",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2000
+            ]
+          ]
+        },
+        "volume": "3",
+        "publisher": "Editora Exemplar",
+        "title": "O terceiro volume de teste"
+      },
+      "chicago": "Modelo, Davi. 2000. O terceiro volume de teste. Vol. 3. Editora Exemplar.",
+      "chicago_html": "Modelo, Davi. 2000. <i>O terceiro volume de teste</i>. Vol. 3. Editora Exemplar."
+    },
+    {
+      "csl": {
+        "id": "TESTE-49",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Exemplo & <b>Filho</b>",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              2001
+            ]
+          ]
+        },
+        "publisher": "Editora A&B",
+        "title": "Selos & sinetes <script>alert(1)</script> com <i>itálico</i>"
+      },
+      "chicago": "Exemplo & <b>Filho</b>, Bruno. 2001. Selos & sinetes <script>alert(1)</script> com <i>itálico</i>. Editora A&B.",
+      "chicago_html": "Exemplo & <b>Filho</b>, Bruno. 2001. <i>Selos & sinetes <script>alert(1)</script> com <i>itálico</i></i>. Editora A&B."
+    },
+    {
+      "csl": {
+        "id": "TESTE-50",
+        "type": "article-journal",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "issued": {
+          "literal": "1990/91"
+        },
+        "title": "Número sem volume",
+        "container-title": "Revista de Estudos Inventados",
+        "issue": "3",
+        "page": "7-9"
+      },
+      "chicago": "Fictícia, Carla, ed. 1990/91. “Número sem volume.” Revista de Estudos Inventados, no. 3 (1990/91): 7–9.",
+      "chicago_html": "Fictícia, Carla, ed. 1990/91. “Número sem volume.” <i>Revista de Estudos Inventados</i>, no. 3 (1990/91): 7–9."
+    },
+    {
+      "csl": {
+        "id": "TESTE-51",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Amostra",
+            "given": "Ana"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "2000"
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "title": "Ano em texto"
+      },
+      "chicago": "Amostra, Ana. 2000. Ano em texto. Vila Imaginária.",
+      "chicago_html": "Amostra, Ana. 2000. <i>Ano em texto</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-52",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "2000"
+            ]
+          ]
+        },
+        "publisher-place": "Vila Imaginária",
+        "title": "Ano em texto com organizador"
+      },
+      "chicago": "Exemplo, Bruno, ed. 2000. Ano em texto com organizador. Vila Imaginária.",
+      "chicago_html": "Exemplo, Bruno, ed. 2000. <i>Ano em texto com organizador</i>. Vila Imaginária."
+    },
+    {
+      "csl": {
+        "id": "TESTE-53",
+        "type": "article-journal",
+        "language": "und",
+        "author": [
+          {
+            "family": "Fictícia",
+            "given": "Carla"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "2000",
+              "3"
+            ]
+          ]
+        },
+        "title": "Mês em texto",
+        "container-title": "Revista de Estudos Inventados",
+        "page": "1-4"
+      },
+      "chicago": "Fictícia, Carla. 2000. “Mês em texto.” Revista de Estudos Inventados, March, 1–4.",
+      "chicago_html": "Fictícia, Carla. 2000. “Mês em texto.” <i>Revista de Estudos Inventados</i>, March, 1–4."
+    },
+    {
+      "csl": {
+        "id": "TESTE-54",
+        "type": "book",
+        "language": "und",
+        "author": [
+          {
+            "family": "Modelo",
+            "given": "Davi"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              "1990"
+            ],
+            [
+              "1991"
+            ]
+          ]
+        },
+        "title": "Intervalo em texto"
+      },
+      "chicago": "Modelo, Davi. 1990–1991. Intervalo em texto.",
+      "chicago_html": "Modelo, Davi. 1990–1991. <i>Intervalo em texto</i>."
+    },
+    {
+      "csl": {
+        "id": "TESTE-55",
+        "type": "book",
+        "language": "und",
+        "editor": [
+          {
+            "family": "Exemplo",
+            "given": "Bruno"
+          }
+        ],
+        "issued": {
+          "date-parts": [
+            [
+              " 2000"
+            ]
+          ]
+        },
+        "title": "Ano com espaço"
+      },
+      "chicago": "Exemplo, Bruno. 2000. Ano com espaço.",
+      "chicago_html": "Exemplo, Bruno. 2000. <i>Ano com espaço</i>."
+    }
+  ],
+  "chaves": [
+    {
+      "short_cite": "Amostra 1992a: 29–32",
+      "chave": "amostra 1992a"
+    },
+    {
+      "short_cite": " Exemplo-Modelo  1993 ",
+      "chave": "exemplo-modelo 1993"
+    },
+    {
+      "short_cite": "Fictícia/Modelo [ed.] 2002: 196",
+      "chave": "ficticia/modelo [ed.] 2002"
+    },
+    {
+      "short_cite": "1997: 96",
+      "chave": null
+    },
+    {
+      "short_cite": "1997",
+      "chave": null
+    },
+    {
+      "short_cite": null,
+      "chave": null
+    },
+    {
+      "short_cite": "",
+      "chave": null
+    },
+    {
+      "short_cite": "   ",
+      "chave": null
+    },
+    {
+      "short_cite": ": 12",
+      "chave": null
+    },
+    {
+      "short_cite": "Amostra 1990 : 12",
+      "chave": "amostra 1990"
+    },
+    {
+      "short_cite": "Amostra 1990: 12: 3",
+      "chave": "amostra 1990"
+    },
+    {
+      "short_cite": "Amostra 1990: 4",
+      "chave": "amostra 1990"
+    },
+    {
+      "short_cite": "Amostra\t1990:\t4",
+      "chave": "amostra 1990"
+    },
+    {
+      "short_cite": "Ámóstra Çedilha 1990",
+      "chave": "amostra cedilha 1990"
+    },
+    {
+      "short_cite": "Amélia 1990",
+      "chave": "amelia 1990"
+    },
+    {
+      "short_cite": "O’Exemplo 2001",
+      "chave": "oexemplo 2001"
+    },
+    {
+      "short_cite": "O'Exemplo 2001",
+      "chave": "oexemplo 2001"
+    },
+    {
+      "short_cite": "ʿAyin-Dugma 1979: 3",
+      "chave": "ayin-dugma 1979"
+    },
+    {
+      "short_cite": "AMOSTRA et al. 2004: 7",
+      "chave": "amostra et al. 2004"
+    },
+    {
+      "short_cite": "Übungsmann – Øvelse [Hg.] 1977b",
+      "chave": "ubungsmann – øvelse [hg.] 1977b"
+    },
+    {
+      "short_cite": "Amostra 1991b: Taf. 3",
+      "chave": "amostra 1991b"
+    }
+  ]
+}

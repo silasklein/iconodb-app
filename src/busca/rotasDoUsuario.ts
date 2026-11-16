@@ -15,6 +15,8 @@ export const rotasDoUsuario: Partial<Record<Tipo, (ref: string) => string>> = {
   verbete: (ref) => `/verbete/${encodeURIComponent(ref)}`,
   // Um sítio (Tarefa 12), novo (`SI-…`) ou do livro com correção (`TESTE-2`), abre a página do sítio.
   sitio: (ref) => `/sitio/${encodeURIComponent(ref)}`,
+  // Uma obra do usuário (Parte 2C, bloco 3) abre na Bibliografia, como as dos livros.
+  obra: (ref) => `/obra/${encodeURIComponent(ref)}`,
 }
 
 export function rotaDoAcertoDoUsuario(tipo: Tipo, ref: string): string | null {
@@ -28,4 +30,5 @@ export const ROTULO_DO_TIPO_DO_USUARIO: Partial<Record<Tipo, string>> = {
   hipotese: 'Hipótese',
   objeto: 'Objeto',
   verbete: 'Verbete',
+  obra: 'Obra',
 }

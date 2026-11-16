@@ -186,6 +186,20 @@ describe('sugerir(): a camada do usuário (SKC)', () => {
     expect(r.sitios[0]!.destino).toBe('/sitio/SI-aaaaaaaa-1')
   })
 
+  it('Parte 2C, bloco 3: a obra do usuário é sugerida entre as obras, com SKC e a página dela; a publicada vem pela do livro', async () => {
+    await receber(
+      e('obra', 'BIB-aaaaaaaa-1', { csl: { type: 'book', title: 'Selos sugeridos de prova', author: [{ family: 'Sugerível' }] }, curta: 'Sugerível 2005' }),
+      // a publicada (BIB-teste123-1 → BIB-900090): não aparece como do usuário
+      e('obra', 'BIB-teste123-1', { csl: { type: 'book', title: 'Selos sonhados no planalto fictício' }, curta: 'Imaginária 2010' }),
+    )
+    const r = await sugerir('sugerivel')
+    expect(r.obras).toEqual([
+      expect.objectContaining({ categoria: 'obras', alvoTipo: 'obra', ref: 'BIB-aaaaaaaa-1', rotulo: 'Sugerível 2005', complemento: 'Selos sugeridos de prova', skc: true, destino: '/obra/BIB-aaaaaaaa-1' }),
+    ])
+    const publicada = await sugerir('imaginaria')
+    expect(publicada.obras.map((o) => [o.ref, o.skc])).toEqual([['BIB-900090', false]])
+  })
+
   it('decisão 41: um verbete do usuário é sugerido entre os verbetes, com a marca SKC, "a revisar" e a página dele', async () => {
     await receber(e('verbete', 'GL-aaaaaaaa-1', { forma: 'Termo-Novo-de-Teste', status: 'proposed' }))
     const r = await sugerir('termo novo')

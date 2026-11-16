@@ -66,7 +66,7 @@ export interface PlanoDeRestauracao {
 const comparar = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
 /** I-1: os tipos que a tela «Excluídos» lista (src/excluidos/modelo.ts, TIPOS_EXCLUIVEIS; o objeto só se for SKC). */
-const LISTADOS_EM_EXCLUIDOS: readonly Tipo[] = ['objeto', 'nota', 'colecao', 'hipotese', 'regiao', 'imagem', 'sitio', 'verbete']
+const LISTADOS_EM_EXCLUIDOS: readonly Tipo[] = ['objeto', 'nota', 'colecao', 'hipotese', 'regiao', 'imagem', 'sitio', 'verbete', 'obra', 'citacao', 'nivel']
 const listadoEmExcluidos = (tipo: Tipo, id: string) => LISTADOS_EM_EXCLUIDOS.includes(tipo) && (tipo !== 'objeto' || id.startsWith('OB-'))
 
 /** A marca `a` vence `b`? Por (hlc, id do evento, op), como `compararMarcas` da fusão (`restaurar` > `excluir`). */
@@ -341,7 +341,7 @@ export async function aplicarRestauracao(
 
 // ---------------------------------------------------------------------------------------------------------------- textos
 
-const NOMES_DOS_TIPOS: readonly [Tipo, string, string][] = [
+export const NOMES_DOS_TIPOS: readonly [Tipo, string, string][] = [
   ['nota', 'nota', 'notas'],
   ['colecao', 'coleção', 'coleções'],
   ['hipotese', 'hipótese', 'hipóteses'],
@@ -349,9 +349,13 @@ const NOMES_DOS_TIPOS: readonly [Tipo, string, string][] = [
   ['objeto', 'objeto SKC', 'objetos SKC'],
   ['sitio', 'sítio', 'sítios'],
   ['verbete', 'verbete', 'verbetes'],
+  ['obra', 'obra', 'obras'],
 ]
-/** Os tipos sem nome próprio no resumo (posições, sítios de objetos, revisão, ligações, a bandeja de comparação). */
-const OUTROS_TIPOS: readonly Tipo[] = ['posicao', 'item-sitio', 'revisao', 'ligacao', 'comparar']
+/**
+ * Os tipos sem nome próprio no resumo (posições, sítios de objetos, revisão, ligações, a bandeja de comparação; Parte 2C,
+ * bloco 3: as ligações de citação e os níveis revistos). Todo tipo está aqui ou em `NOMES_DOS_TIPOS`.
+ */
+export const OUTROS_TIPOS: readonly Tipo[] = ['posicao', 'item-sitio', 'revisao', 'ligacao', 'comparar', 'citacao', 'nivel']
 
 const quantos = (n: number, um: string, varios: string) => `${n.toLocaleString('pt-BR')} ${n === 1 ? um : varios}`
 

@@ -273,6 +273,10 @@
 .form-escolha-rotulo {
   font-size: 15px;
 }
+.form-escolha-skc {
+  margin-left: 8px;
+  vertical-align: 1px;
+}
 .form-escolha-apoio {
   /* O apoio do Sítio leva as grafias todas (o campo as procura); mostra duas linhas. */
   display: -webkit-box;

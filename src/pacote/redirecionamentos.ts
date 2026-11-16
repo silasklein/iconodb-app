@@ -2,7 +2,9 @@
  * Os redirecionamentos do pacote (Tarefa 16): a tabela `redirecionamento` do comum.sqlite (schema 6), que o pipeline grava
  * quando publica um verbete ou um sítio que a pessoa criou no app (`python -m iconodb user-import`, depois o build):
  *   `GL-<aparelho>-<n>` → `GL-<dígitos>` (o verbete do usuário virou um verbete do livro, novo ou um que já existia);
- *   `SI-<aparelho>-<n>` → `<SIGLA>-<n>` (o sítio do usuário virou um sítio do livro).
+ *   `SI-<aparelho>-<n>` → `<SIGLA>-<n>` (o sítio do usuário virou um sítio do livro);
+ *   `BIB-<aparelho>-<n>` → `BIB-<dígitos>` (pacote 10, `tipo 'obra'`: a obra do usuário virou uma obra dos livros; a
+ *   Bibliografia e a escolha de obra mostram só a do livro, e o destino tem de existir em `bib_entry`).
  * O registro do usuário continua na camada (nada é reescrito), mas o app o trata como o do livro: ele some das listas
  * (Glossário, Sítios, campo Termo, Revisão, busca) e tudo o que aponta para ele (as hipóteses, os `[[…]]`, o sítio de um
  * objeto, o endereço antigo `/verbete/GL-…` e `/sitio/SI-…`) leva ao destino. Lidos uma vez por pacote aberto; sem pacote,
@@ -22,6 +24,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { aoReabrir, geracaoDoBanco } from '../banco/cliente'
 import { redirecionamentos } from '../banco/consultas'
+import { RE_OBRA_DO_LIVRO, RE_OBRA_SKC } from '../bibliografia/modelo'
 import { sitiosDoPacote } from '../sitios/pacote'
 
 export type Redirecionamentos = ReadonlyMap<string, string>
@@ -48,7 +51,8 @@ const eSitioDoLivro = (id: string) => RE_SITIO_DO_LIVRO.test(id) && !RE_ID_SEQUE
 
 const valida = (de: string, para: string, tipo: string) =>
   (tipo === 'verbete' && RE_VERBETE_DO_USUARIO.test(de) && RE_VERBETE_DO_LIVRO.test(para)) ||
-  (tipo === 'sitio' && RE_SITIO_DO_USUARIO.test(de) && eSitioDoLivro(para))
+  (tipo === 'sitio' && RE_SITIO_DO_USUARIO.test(de) && eSitioDoLivro(para)) ||
+  (tipo === 'obra' && RE_OBRA_SKC.test(de) && RE_OBRA_DO_LIVRO.test(para))
 
 /** Uma mescla do processamento: de um sítio do livro para outro (a lista dos sítios confere que os dois existem). */
 const eMescla = (de: string, para: string, tipo: string) => tipo === 'sitio' && de !== para && eSitioDoLivro(de) && eSitioDoLivro(para)
@@ -80,7 +84,7 @@ function lerDoPacote(): NonNullable<typeof guardado> {
       const validas = linhas.filter((l) => valida(l.de, l.para, l.tipo))
       const mesclas = linhas.filter((l) => eMescla(l.de, l.para, l.tipo))
       const sitios = validas.some((l) => l.tipo === 'sitio') || mesclas.length > 0 ? await sitiosDoPacote() : null
-      const vivas = validas.filter((l) => (l.tipo === 'verbete' ? l.verbeteExiste : !!sitios?.has(l.para)))
+      const vivas = validas.filter((l) => (l.tipo === 'verbete' ? l.verbeteExiste : l.tipo === 'obra' ? l.obraExiste : !!sitios?.has(l.para)))
       const leitura: Leitura = {
         mapa: new Map(vivas.map((l) => [l.de, l.para] as const)),
         criados: new Set(vivas.filter((l) => l.criado).map((l) => l.de)),
@@ -114,6 +118,18 @@ export function criadosDoPacote(): Promise<ReadonlySet<string>> {
 export function mesclasDoPacote(): Promise<Redirecionamentos> {
   return lerDoPacote().mesclas
 }
+
+/**
+ * Os redirecionamentos com `criado` (de → para; os de `useDestinosCriados`), ou nenhum se não há pacote ou a leitura falhou.
+ * Tarefa 14 (fix round 1): a fila os usa para a obra publicada cujas origens estão todas excluídas (`obraPublicadaSai`).
+ */
+export const destinosCriadosOuNenhum = (): Promise<Redirecionamentos> =>
+  Promise.resolve()
+    .then(() => lerDoPacote().pedido)
+    .then(
+      (l) => new Map([...l.mapa].filter(([de]) => l.criados.has(de))),
+      () => SEM_REDIRECIONAMENTOS,
+    )
 
 /** Os redirecionamentos, ou nenhum se não há pacote ou a leitura falhou. */
 export const redirecionamentosOuNenhum = (): Promise<Redirecionamentos> => redirecionamentosDoPacote().catch(() => SEM_REDIRECIONAMENTOS)

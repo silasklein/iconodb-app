@@ -19,10 +19,12 @@
  */
 import { aoReabrir, consultarUsuario, escreverUsuario, geracaoDoBanco, type Instrucao } from '../banco/cliente'
 import { textoIndexado, tabelaDoPacote, type FoldTabela } from '../busca/fold'
+import { textoDoNome } from '../bibliografia/formulario'
+import { eObraSkc, lerObra } from '../bibliografia/modelo'
 import { lerColecao } from '../colecoes/modelo'
 import { formasEmUso } from '../glossario/doUsuario'
 import { formasDoPacote, nomeDoPacote, type FormasDoPacote } from '../glossario/formasDoPacote'
-import { eVerbeteSkc, lerEdicaoDoVerbete, lerVerbeteSkc } from '../glossario/modelo'
+import { eVerbeteSkc, formasDaBusca, lerEdicaoDoVerbete, lerVerbeteSkc } from '../glossario/modelo'
 import { versaoDosDonos } from '../hipoteses/donos'
 import { lerAncora, objetoDaHipotese } from '../hipoteses/modelo'
 import { numeracaoDe } from '../objetos-skc/atual'
@@ -239,13 +241,28 @@ export const camposIndexaveis: Record<Tipo, CampoIndexavel> = {
       return formaEmUso === null ? null : { rotulo: formaEmUso, texto: formaEmUso, escopo: 'termo' }
     }
     const v = lerVerbeteSkc(r)
-    return { rotulo: v.emUso, texto: [v.forma, v.formaEmUso].filter((x) => x !== null).join('\n'), escopo: 'termo' }
+    // Tarefa 12 (bloco 3): as formas dos campos completos (outras línguas, variantes) também acham o verbete do usuário.
+    return { rotulo: v.emUso, texto: [v.forma, v.formaEmUso, ...formasDaBusca(v.campos)].filter((x) => x !== null).join('\n'), escopo: 'termo' }
   },
   'item-sitio': () => null,
   revisao: () => null,
   imagem: () => null,
   ligacao: () => null,
   comparar: () => null,
+  // Parte 2C, bloco 3 (Tarefa 10): a obra do usuário (`BIB-<aparelho>-<n>`) entra no escopo Bibliografia, pela citação curta,
+  // os nomes, o título, a revista ou o livro, a editora e a série; o rótulo é a citação curta (senão o título). A edição de
+  // uma obra dos livros (só a `curta`, sem CSL) não entra. A obra que o pacote publicou some de `buscar()` pelo
+  // redirecionamento, como os verbetes e os sítios. A ligação e o nível não têm texto.
+  obra: (r) => {
+    if (!eObraSkc(r.id)) return null
+    const o = lerObra(r)
+    if (!o) return null
+    const nomes = [o.csl.author, o.csl.editor].flatMap((l) => (Array.isArray(l) ? l.map(textoDoNome) : []))
+    const corpo = [o.curta, nomes.join('\n'), o.csl.title, ...['container-title', 'publisher', 'collection-title'].map((c) => comoTexto(o.csl[c]))].filter((t) => t.trim() !== '').join('\n')
+    return { rotulo: o.curta || o.csl.title, texto: semLinks(corpo), escopo: 'bibliografia' }
+  },
+  citacao: () => null,
+  nivel: () => null,
 }
 
 /**

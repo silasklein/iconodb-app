@@ -14,6 +14,7 @@ import { contarHipoteses, HipotesesPorNivel } from './Secoes'
 const livro = (id: string, nivel: Nivel, nome: string, extra: Partial<Hipotese> = {}): Hipotese => ({
   id,
   nivel,
+  nivelAutomatico: null,
   modalidade: 'asserted',
   publicacao: 'TESTE',
   locator: null,

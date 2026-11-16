@@ -86,7 +86,7 @@ export interface Ignorados {
 }
 
 export interface Estado {
-  /** Um mapa por tipo (os 13 sempre presentes), com todos os registros, inclusive os excluídos. */
+  /** Um mapa por tipo (os 16 sempre presentes), com todos os registros, inclusive os excluídos. */
   readonly registros: ReadonlyMap<Tipo, ReadonlyMap<string, Registro>>
   /** Os registros excluídos (marca vencedora = excluir), em ordem (tipo, id). */
   readonly excluidos: readonly Registro[]

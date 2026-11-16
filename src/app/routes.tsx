@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Busca } from '../telas/Busca'
 import { Bibliografia } from '../telas/Bibliografia'
+import { EditarObra, NovaObra } from '../bibliografia/NovaObra'
 import { Colecoes } from '../telas/Colecoes'
 import { Comparar } from '../telas/Comparar'
 import { Entrar } from '../telas/Entrar'
@@ -55,6 +56,9 @@ export const ROTAS: Rota[] = [
   { path: '/verbete/:id', elemento: <Glossario /> },
   { path: '/bibliografia', elemento: <Bibliografia /> },
   { path: '/obra/:id', elemento: <Bibliografia /> },
+  // A obra nova do usuário (Parte 2C, bloco 3). `?citacao=<chave>&volta=<caminho>` vem da Revisão: liga a citação ao salvar.
+  { path: '/obra/nova', elemento: <NovaObra /> },
+  { path: '/obra/:id/editar', elemento: <EditarObra /> },
   { path: '/sitios', elemento: <Sitios /> },
   // Criar um sítio do usuário (Tarefa 12). `?nome=` e `?para=<objeto>` vêm de "Novo sítio com mais dados…" na ficha de um objeto.
   { path: '/sitios/novo', elemento: <NovoSitio /> },

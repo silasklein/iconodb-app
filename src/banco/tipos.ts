@@ -185,6 +185,11 @@ export interface AncoraDaHipotese {
 export interface Hipotese {
   id: string
   nivel: Nivel
+  /**
+   * O nível automático quando o processamento aplicou um nível revisto pelo usuário (pacote 10, `hypothesis.level_auto`): então
+   * `nivel` é o do usuário e este é o que a atribuição automática deu. null: o nível não foi revisto (ou o pacote é anterior).
+   */
+  nivelAutomatico: Nivel | null
   modalidade: Modalidade
   publicacao: string | null
   locator: string | null
@@ -229,6 +234,8 @@ export interface Relacoes {
 
 export interface ReferenciaBibliografica {
   id: number
+  /** A sigla da publicação (`bib_ref.publication`): com o trecho ou o item e o `raw`, identifica a citação entre os pacotes. */
+  sigla: string
   itemId: string | null
   categoria: number | null
   bruto: string
@@ -236,6 +243,8 @@ export interface ReferenciaBibliografica {
   paginas: string | null
   obraId: string | null
   resolvida: boolean
+  /** Quem resolveu (pacote 10, `bib_ref.resolved_by`): o processamento ('auto') ou uma ligação do usuário ('user'); null antes. */
+  resolvidaPor: 'auto' | 'user' | null
   chicago: string | null
   chicagoHtml: string | null
   hipoteseId: string | null
@@ -380,6 +389,8 @@ export interface VerbeteResumo {
 /** Um verbete na lista do Glossário: o resumo, o inglês (a busca da lista) e quantos objetos ele tem. */
 export interface VerbeteDaLista extends VerbeteResumo {
   en: string | null
+  /** O que o filtro da lista acha além do `pt`, `de` e `en`: árabe, hebraico, as outras línguas e as variantes (fix round 1 da Tarefa 12). */
+  formas: string[]
   /** Objetos com hipótese no termo, mais os achados no sítio cujo nome é este verbete (o mesmo de `Verbete.objetos`). */
   objetos: number
 }
@@ -393,6 +404,8 @@ export interface Verbete extends VerbeteResumo {
   ar: string | null
   he: string | null
   variantes: string[]
+  /** As formas em outras línguas (pacote 10, `glossary_entry.other_forms`), na ordem; [] sem elas. */
+  outras: { lingua: string; forma: string }[]
   definicao: string | null
   pai: { id: string; pt: string | null } | null
   iconclass: { notacao: string; pt: string | null; de: string | null; en: string | null }[]
@@ -406,8 +419,14 @@ export interface ObraResumo {
   /** Primeira citação curta ("Autor 1999"). */
   curta: string | null
   titulo: string | null
+  /** `bib_entry.origin`: a publicação («TESTE I») ou 'SKC' (a obra do usuário publicada, pacote 10). */
+  origem: string | null
   /** Objetos que citam a obra. */
   objetos: number
+  /** Todas as citações curtas da obra, de todas as publicações, sem repetir (para as obras parecidas da Nova obra). */
+  curtas: string[]
+  /** O CSL JSON (`bib_entry.csl_json`), ou null. */
+  csl: Record<string, unknown> | null
 }
 
 export interface Obra extends Omit<ObraResumo, 'objetos'> {
@@ -415,8 +434,6 @@ export interface Obra extends Omit<ObraResumo, 'objetos'> {
   chicagoHtml: string | null
   /** Sigla → citações curtas como impressas nessa publicação. */
   citadaComo: Record<string, string[]>
-  origem: string | null
-  csl: Record<string, unknown> | null
   objetos: ObjetoResumo[]
 }
 

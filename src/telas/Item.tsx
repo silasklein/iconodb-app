@@ -18,10 +18,13 @@ import { LARGURA_DO_PAINEL_LATERAL } from '../item/CascaDoPainel'
 import { NoLivro } from '../item/NoLivro'
 import { semPonto, textoDaData } from '../item/ficha'
 import { useResumoDasHipoteses } from '../item/resumoDasHipoteses'
-import { Bibliografia, Catalogo, contarHipoteses, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
+import { Catalogo, contarHipoteses, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
+import { BibliografiaDoObjeto } from '../revisao/BibliografiaDoObjeto'
+import { useReferenciasComLigacoes } from '../revisao/referencias'
 import { BotaoDoTrecho } from '../hipoteses/BotaoDoTrecho'
 import { chaveDoTexto } from '../hipoteses/ConteudoSkc'
 import { ancorasDasHipoteses, porNivel as agruparPorNivel, useElementosSkc, useHipotesesSkc } from '../hipoteses/doUsuario'
+import { useComNiveisRevistos } from '../hipoteses/niveis'
 import { eHipoteseSkc, type AncoraDaHipoteseSkc } from '../hipoteses/modelo'
 import { NovaHipotese, type ElementoParaEscolher } from '../hipoteses/NovaHipotese'
 import { desfazerRegistro, type Reserva } from '../hipoteses/operacoes'
@@ -109,6 +112,9 @@ export function Item() {
 function ItemDoLivro({ numero, ligados, ligadoDe }: { numero: string; ligados: readonly string[]; ligadoDe: string | null }) {
   const { search, state } = useLocation()
   const carga = useCarregar(() => item(numero), numero)
+  // O nível que vale de cada hipótese do livro (Parte 2C, bloco 3, Tarefa 13): o revisto pela pessoa, nos blocos, nas
+  // contagens, no marcador do texto e no painel.
+  const comNiveis = useComNiveisRevistos(carga.fase === 'ok' ? carga.dados : null)
 
   if (carga.fase === 'carregando') return <div className="item" aria-busy="true" />
   if (carga.fase === 'erro') {
@@ -121,7 +127,7 @@ function ItemDoLivro({ numero, ligados, ligadoDe }: { numero: string; ligados: r
       </div>
     )
   }
-  const d = carga.dados
+  const d = comNiveis
   if (d === null) {
     return (
       <div className="item">
@@ -161,6 +167,8 @@ export { LARGURA_DO_PAINEL_LATERAL }
 
 function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; ligados?: readonly string[]; ligadoDe?: string | null }) {
   const numeracao = useNumeracao()
+  // As referências com as ligações do usuário (Parte 2C, bloco 3): a citação ligada abre a obra, no texto e na seção.
+  const bibliografia = useReferenciasComLigacoes(d.bibliografia)
   const skcLigados = ligados.filter((m) => m.startsWith('OB-'))
   const livrosLigados = useMemo(() => ligados.filter((m) => !m.startsWith('OB-')), [ligados])
   // Os livros ligados (revisão 3 da Tarefa 10, M13): as leituras, e o rótulo e o texto guardado de cada trecho.
@@ -324,9 +332,9 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       d.leituras.map((l, i): LinkNoTexto[] => {
         if (l.texto === null) return []
         const ocupados = trechosEmUtf16(l.texto, [...l.termos, ...ancorasDaLeitura[i]!])
-        return acharLinks(l.texto, ocupados, { fonte: l.fonte, itemId: l.itemId, bibliografia: d.bibliografia, remissoes: d.relacoes.remissoes })
+        return acharLinks(l.texto, ocupados, { fonte: l.fonte, itemId: l.itemId, bibliografia, remissoes: d.relacoes.remissoes })
       }),
-    [d, ancorasDaLeitura],
+    [d, ancorasDaLeitura, bibliografia],
   )
 
   const irPara = useCallback(
@@ -730,7 +738,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
           <Relacoes relacoes={d.relacoes} />
         </Secao>
         <Secao id="bibliografia" titulo="Bibliografia" contagem={d.bibliografia.length || null} aberta={!!secoes.bibliografia} aoAlternar={() => alternar('bibliografia')}>
-          <Bibliografia referencias={d.bibliografia} />
+          <BibliografiaDoObjeto referencias={bibliografia} />
         </Secao>
       </div>
     </>
