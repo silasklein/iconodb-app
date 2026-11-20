@@ -12,10 +12,13 @@ import { caminhoDoGrupo, livrosEmParagrafos, numerosDosItens, resumosDosItens, t
 import { dividirEmFrases } from './paragrafos'
 import { formatarReferencias } from './referencias'
 import type { EstadoDaTraducao, LinhaDaLeitura, ObraDeLeitura, PassoDetalhe, ReferenciaDoParagrafo, VizinhoDaLeitura } from './tipos'
+import { entradasDoMapa, MAPAS_DO_LIVRO } from '../leitura/mapasDoLivro'
 import {
   ordemDaObra,
   paginaDoLocator,
+  partesDoVolume,
   type EntradaParaOrdem,
+  type ParteDoVolume,
   type GrupoParaOrdem,
   type PassoDaLeitura,
   type TipoDeTexto,
@@ -62,6 +65,11 @@ interface VolumeDaObra {
   ano: number | null
 }
 
+interface ParteDaLegenda extends ParteDoVolume {
+  volume: string
+  numero: number
+}
+
 interface OrdemDaObra {
   sigla: string
   esquema: string
@@ -75,6 +83,13 @@ interface OrdemDaObra {
   porItem: Map<string, number>
   /** Os grupos da obra (todos os volumes). */
   grupos: Map<string, GrupoParaOrdem>
+  /**
+   * Cada legenda (`caption`) → a parte do volume em que ela está (as entradas do mapa dela; § 9 do desenho), com o volume e o
+   * número da parte nele (1, 2, …; para a conferência). As legendas da mesma parte têm o mesmo objeto. Na ordem de leitura.
+   */
+  parteDaLegenda: Map<string, ParteDaLegenda>
+  /** O esquema tem `dating_ebw` e `dating.subject_id` (os pacotes de antes podem não ter: as entradas ficam sem código). */
+  temEbw: boolean
 }
 
 let obrasGuardadas: { motor: number; pedido: Promise<PublicacaoAberta[]> } | null = null
@@ -256,6 +271,13 @@ async function lerOrdem(pub: PublicacaoAberta): Promise<OrdemDaObra> {
   })
 
   const passos = ordemDaObra(volumesParaOrdem)
+  const parteDaLegenda = new Map<string, ParteDaLegenda>()
+  for (const v of volumesParaOrdem)
+    partesDoVolume(v).forEach((p, i) => {
+      const parte = { ...p, volume: v.volume, numero: i + 1 }
+      for (const l of p.legendas) parteDaLegenda.set(l, parte)
+    })
+  const temEbw = (await temColuna(esq, 'dating_ebw', 'ebw_code')) && (await temColuna(esq, 'dating', 'subject_id'))
   const porTrecho = new Map<string, number>()
   const porEntrada = new Map<string, number>()
   const porItem = new Map<string, number>()
@@ -266,7 +288,7 @@ async function lerOrdem(pub: PublicacaoAberta): Promise<OrdemDaObra> {
       porItem.set(p.itemId, i)
     }
   })
-  return { sigla, esquema: esq, volumes, passos, porTrecho, porEntrada, porItem, grupos }
+  return { sigla, esquema: esq, volumes, passos, porTrecho, porEntrada, porItem, grupos, parteDaLegenda, temEbw }
 }
 
 /** As obras de leitura abertas, com os volumes na ordem de `volume.ordinal` e a rota do 1º passo de cada um. */
@@ -447,7 +469,7 @@ export async function passoDaLeitura(sigla: string, alvo: { trecho: string } | {
     p.grupo ? caminhoDoGrupo(esq, p.grupo) : Promise.resolve({ caminho: [], grupos: [] }),
     vizinho(ordem, ordem.passos[i - 1], p.volume),
     vizinho(ordem, ordem.passos[i + 1], p.volume),
-    p.tipo === 'texto' ? corpoDoTexto(esq, p) : corpoDaEntrada(ordem, p),
+    p.tipo === 'texto' ? corpoDoTexto(ordem, p) : corpoDaEntrada(ordem, p),
   ])
 
   const de: PassoDetalhe['posicao']['de'] =
@@ -477,9 +499,72 @@ export async function passoDaLeitura(sigla: string, alvo: { trecho: string } | {
 
 type Corpo = Pick<PassoDetalhe, 'pagina' | 'linhas' | 'figuras' | 'entrada' | 'referencias'>
 
-async function corpoDoTexto(esq: string, p: Extract<PassoDaLeitura, { tipo: 'texto' }>): Promise<Corpo> {
+async function corpoDoTexto(ordem: OrdemDaObra, p: Extract<PassoDaLeitura, { tipo: 'texto' }>): Promise<Corpo> {
+  const esq = ordem.esquema
   const [linhas, figuras, referencias] = await Promise.all([linhasDoTexto(esq, p.trechos), figurasCitadas(esq, p.trechos), referenciasDe(esq, p.trechos)])
-  return { pagina: p.pagina, linhas, figuras, entrada: null, referencias }
+  return { pagina: p.pagina, linhas: await comMapas(ordem, linhas), figuras, entrada: null, referencias }
+}
+
+/**
+ * A linha da legenda ganha o mapa (§ 9 do desenho): as entradas da parte que ela abre, divididas pela datação EBW quando a parte
+ * tem dois mapas da tabela (`entradasDoMapa`). Os códigos só são lidos quando a legenda está na tabela.
+ */
+async function comMapas(ordem: OrdemDaObra, linhas: LinhaDaLeitura[]): Promise<LinhaDaLeitura[]> {
+  return Promise.all(
+    linhas.map(async (l) => {
+      const parte = ordem.parteDaLegenda.get(l.id)
+      return parte ? { ...l, mapa: { entradas: await entradasDoMapaDaLegenda(ordem, l.id, parte) } } : l
+    }),
+  )
+}
+
+async function entradasDoMapaDaLegenda(ordem: OrdemDaObra, legenda: string, parte: ParteDaLegenda): Promise<string[]> {
+  const ebw = MAPAS_DO_LIVRO[legenda] ? await codigosEbw(ordem, parte.entradas) : new Map<string, string[]>()
+  const entradas = parte.entradas.map((itemId) => ({ itemId, ebw: ebw.get(itemId) ?? [] }))
+  return entradasDoMapa(legenda, parte.legendas, entradas, MAPAS_DO_LIVRO)
+}
+
+/** Uma legenda da obra para a conferência (scripts/conferir-leitura.ts): o volume, o número da parte nele e as entradas do mapa. */
+export interface MapaDaLeitura {
+  legenda: string
+  volume: string
+  parte: number
+  entradas: string[]
+}
+
+/**
+ * As legendas da obra, na ordem de leitura, cada uma com a parte e as entradas do mapa dela (as mesmas que a página mostra:
+ * `comMapas`). Para a conferência no pacote (plano «Os mapas da introdução pelo mapa do app», Tarefa 2). null fora das obras
+ * de leitura.
+ */
+export async function mapasDaLeitura(sigla: string): Promise<MapaDaLeitura[] | null> {
+  const ordem = await ordemGuardada(sigla)
+  if (!ordem) return null
+  return Promise.all(
+    [...ordem.parteDaLegenda].map(async ([legenda, parte]) => ({
+      legenda,
+      volume: parte.volume,
+      parte: parte.numero,
+      entradas: await entradasDoMapaDaLegenda(ordem, legenda, parte),
+    })),
+  )
+}
+
+/** Os códigos EBW de cada entrada (`dating_ebw` das datações do item); sem as tabelas (pacote de antes), nenhum. */
+async function codigosEbw(ordem: OrdemDaObra, itens: readonly string[]): Promise<Map<string, string[]>> {
+  const saida = new Map<string, string[]>()
+  if (!ordem.temEbw || itens.length === 0) return saida
+  const esq = ordem.esquema
+  const linhas = await executar<L>(
+    `SELECT DISTINCT d.subject_id AS item, e.ebw_code AS codigo FROM ${esq}.dating d JOIN ${esq}.dating_ebw e ON e.dating_id = d.id
+     WHERE d.subject_type = 'item' AND d.subject_id IN ${EM_IDS}`,
+    { $ids: ids(itens) },
+  )
+  for (const l of linhas) {
+    const item = s(l.item)!
+    saida.set(item, [...(saida.get(item) ?? []), s(l.codigo)!])
+  }
+  return saida
 }
 
 async function corpoDaEntrada(ordem: OrdemDaObra, p: Extract<PassoDaLeitura, { tipo: 'entrada' }>): Promise<Corpo> {

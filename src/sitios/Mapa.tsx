@@ -65,6 +65,11 @@ export interface MapaProps {
   computador: boolean
   /** Muda quando o conjunto de pontos mostrado muda por filtro: o mapa refaz o «Ver tudo». */
   assinatura: string
+  /**
+   * Os atalhos do mapa (+ − = _ 0 r, as setas, PageUp/PageDown, Home/End, Esc) valem enquanto isto é verdade; padrão: sempre,
+   * com o mapa montado (os Sítios). A leitura os liga só com o mapa à vista ou com o foco nele (src/leitura/MapaDaLegenda.tsx).
+   */
+  atalhosAtivos?: boolean
 }
 
 const CAMINHOS = {
@@ -122,7 +127,7 @@ function larguraDoTexto(texto: string, fonte: string, porLetra: number): number 
   return largura
 }
 
-export default function Mapa({ pontos, selecionada, aoSelecionar, destaque, aoDestacar, foco, regioesAtivas, aoAlternarRegiao, computador, assinatura }: MapaProps) {
+export default function Mapa({ pontos, selecionada, aoSelecionar, destaque, aoDestacar, foco, regioesAtivas, aoAlternarRegiao, computador, assinatura, atalhosAtivos = true }: MapaProps) {
   const idDoClip = useId()
   const idDaDescricao = useId()
   const raizRef = useRef<HTMLDivElement>(null)
@@ -273,15 +278,17 @@ export default function Mapa({ pontos, selecionada, aoSelecionar, destaque, aoDe
       Escape: fecharCartao,
     },
     'mapa',
+    { ativo: atalhosAtivos },
   )
 
   // Avisa (para os testes de ponta a ponta) que o mapa de teclas já foi registrado: declarado depois do `useAtalhos`, o efeito
-  // roda depois do registro.
+  // roda depois do registro (e sai quando os atalhos se desligam).
   useEffect(() => {
     const el = palcoRef.current
+    if (!atalhosAtivos) return
     el?.setAttribute('data-atalhos', '')
     return () => el?.removeAttribute('data-atalhos')
-  }, [])
+  }, [atalhosAtivos])
 
   // Ao fechar o cartão pelo teclado ou pelo botão, o foco volta ao ponto.
   useEffect(() => {

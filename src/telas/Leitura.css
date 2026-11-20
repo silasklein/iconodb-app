@@ -139,6 +139,30 @@
   vertical-align: 2px;
 }
 
+/* O mapa do app sob a linha «Mapa» (§ 9, decisão 94): o texto em cima e o mapa dos Sítios com os sítios das entradas da parte.
+   No celular, dentro da coluna, logo abaixo da linha; no computador, na linha da grade abaixo da legenda, na largura das
+   colunas (as colunas deixam a linha vazia: .ler-mapa-vaga). */
+.ler-mapa {
+  min-width: 0;
+  margin: 0 0 24px;
+}
+.ler-mapa-texto {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.ler-mapa-palco {
+  position: relative;
+  height: 360px;
+  border: 1px solid var(--filete);
+  overflow: hidden;
+  overflow: clip;
+}
+.ler-mapa-vaga {
+  min-height: 0;
+}
+
 @media (min-width: 768px) {
   .ler-titulo h1 {
     font-size: 48px;
@@ -157,6 +181,9 @@
   }
   .paragrafo-linguas.ler-linguas:not(.de-aberto) {
     grid-template-columns: 48px minmax(0, 760px);
+  }
+  .ler-mapa-palco {
+    height: 460px;
   }
   .ler-linguas.de-aberto .paragrafo-coluna-pt .ler-linha:not(.ler-linha-mapa) .paragrafo-trecho {
     font-size: 16.5px;

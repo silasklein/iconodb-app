@@ -1,20 +1,27 @@
 /**
  * Confere a ordem de leitura de uma obra de catálogo num pacote (Tarefa 7 do plano «O IPIAO lido no formato do §»).
  *
- * Uso: `node scripts/conferir-leitura.ts <pasta>/pub-<SIGLA>.sqlite`
+ * Uso: `node scripts/conferir-leitura.ts <pasta>/pub-<SIGLA>.sqlite [--par <legenda>,<legenda> …]`
  *
- * Lê o arquivo do disco (só leitura: os bytes vão para um banco em memória, aberto com SQLITE_DESERIALIZE_READONLY), o abre
- * como o esquema `pub_<SIGLA>` e monta a ordem com o MESMO código do app: `ordemDaLeitura` (src/banco/leitura.ts), que lê as
- * linhas do pacote e as passa a `ordemDaObra` (src/leitura/ordem.ts). Imprime SÓ contagens, nunca texto do livro:
+ * Lê o arquivo, o comum.sqlite e as outras publicações ao lado dele do disco (só leitura: os bytes vão para um banco em memória,
+ * aberto com SQLITE_DESERIALIZE_READONLY), o comum como `main` e cada publicação como `pub_<SIGLA>`, e monta a ordem com o MESMO
+ * código do app: `ordemDaLeitura` (src/banco/leitura.ts), que lê as linhas do pacote e as passa a `ordemDaObra`
+ * (src/leitura/ordem.ts). Imprime SÓ contagens, nunca texto do livro:
  * trechos e entradas no pacote e quantos a ordem tem uma vez, os passos de texto por volume, as entradas fora da ordem dos
  * números e o tempo para montar a ordem. Sai com 1 se falta ou se repete algum trecho ou entrada, ou se há entrada fora de ordem.
+ *
+ * Os mapas (plano «Os mapas da introdução pelo mapa do app», Tarefa 2): por legenda, o volume e a parte, o número de entradas
+ * do mapa e o de sítios com coordenada (os pontos) e sem, pelo mesmo caminho da página (`mapasDaLeitura`, `sitiosDasEntradas`,
+ * `juntar` e a resolução dos sítios do pacote), sem a camada do usuário (este script não a tem). E as duas legendas de cada par
+ * de `PARES_DOS_MAPAS` desta obra têm de estar na mesma parte: sai com 1 se não estão, ou se uma falta. `--par a,b` confere
+ * também esse par (para provar a conferência no pacote sintético, que não tem os pares do livro).
  *
  * Fica fora do build do app (o Vite não o importa). Os módulos do app importam sem a extensão (`./cliente`), como o Vite
  * resolve; aqui um gancho de resolução do Node tenta `.ts` quando o caminho relativo não existe.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { register } from 'node:module'
-import { basename } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 const KINDS_DA_LEITURA = ['running_text', 'period_overview', 'caption']
 
@@ -57,37 +64,81 @@ function cobertura(doPacote: readonly string[], naOrdem: readonly string[]) {
   return { total: pacote.size, umaVez, faltando, repetidas, estranhas }
 }
 
-async function main(caminho: string | undefined): Promise<number> {
-  const nome = caminho ? basename(caminho) : ''
-  const sigla = /^pub-([A-Za-z0-9_]+)\.sqlite$/.exec(nome)?.[1]
-  if (!caminho || !sigla) {
-    console.error('Uso: node scripts/conferir-leitura.ts <pasta>/pub-<SIGLA>.sqlite')
+async function main(argumentos: readonly string[]): Promise<number> {
+  const uso = () => {
+    console.error('Uso: node scripts/conferir-leitura.ts <pasta>/pub-<SIGLA>.sqlite [--par <legenda>,<legenda> …]')
     return 2
   }
+  const paresAMais: (readonly [string, string])[] = []
+  const posicionais: string[] = []
+  for (let i = 0; i < argumentos.length; i++) {
+    if (argumentos[i] !== '--par') {
+      posicionais.push(argumentos[i]!)
+      continue
+    }
+    const [a, b, ...resto] = (argumentos[++i] ?? '').split(',')
+    if (!a || !b || resto.length > 0) return uso()
+    paresAMais.push([a, b])
+  }
+  const caminho = posicionais.length === 1 ? posicionais[0] : undefined
+  const nome = caminho ? basename(caminho) : ''
+  const sigla = /^pub-([A-Za-z0-9_]+)\.sqlite$/.exec(nome)?.[1]
+  if (!caminho || !sigla) return uso()
 
   register('data:text/javascript,' + encodeURIComponent(GANCHO))
-  const [{ default: sqlite3InitModule }, cliente, leitura, { esquemaDaPublicacao }] = await Promise.all([
-    import('@sqlite.org/sqlite-wasm'),
-    import('../src/banco/cliente.ts'),
-    import('../src/banco/leitura.ts'),
-    import('../src/banco/arquivos.ts'),
-  ])
+  const [{ default: sqlite3InitModule }, cliente, leitura, { esquemaDaPublicacao }, { resumosDosItens }, mapas, pacoteDosSitios, { resolverSitios }, { juntar }] =
+    await Promise.all([
+      import('@sqlite.org/sqlite-wasm'),
+      import('../src/banco/cliente.ts'),
+      import('../src/banco/leitura.ts'),
+      import('../src/banco/arquivos.ts'),
+      import('../src/banco/consultas.ts'),
+      import('../src/leitura/mapasDoLivro.ts'),
+      import('../src/sitios/pacote.ts'),
+      import('../src/sitios/resolucao.ts'),
+      import('../src/sitios/juntar.ts'),
+    ])
 
   // o arquivo em memória, só leitura (nada volta ao disco)
   const sqlite3 = await sqlite3InitModule()
   const { capi, wasm } = sqlite3
   const esquema = esquemaDaPublicacao(sigla)
-  const bytes = new Uint8Array(readFileSync(caminho))
+  const caminhoDoComum = join(dirname(caminho), 'comum.sqlite')
+  if (!existsSync(caminhoDoComum)) {
+    console.error(`Falta o comum.sqlite ao lado de ${nome} (os sítios dos mapas usam o glossário e os objetos do pacote).`)
+    return 2
+  }
   const db = new sqlite3.oo1.DB(':memory:')
-  db.exec(`ATTACH ':memory:' AS ${esquema}`)
-  const p = wasm.allocFromTypedArray(bytes)
-  const flags = capi.SQLITE_DESERIALIZE_FREEONCLOSE | capi.SQLITE_DESERIALIZE_READONLY
-  const rc = capi.sqlite3_deserialize(db.pointer!, esquema, p, bytes.byteLength, bytes.byteLength, flags)
-  if (rc !== 0) throw new Error(`Não foi possível abrir ${nome} (sqlite ${rc}).`)
+  // o comum.sqlite é o `main`, e a publicação é anexada como `pub_<SIGLA>`, como no app (src/banco/nucleo.ts)
+  const desserializar = (arquivo: string, alvo: string) => {
+    const bytes = new Uint8Array(readFileSync(arquivo))
+    const p = wasm.allocFromTypedArray(bytes)
+    const flags = capi.SQLITE_DESERIALIZE_FREEONCLOSE | capi.SQLITE_DESERIALIZE_READONLY
+    const rc = capi.sqlite3_deserialize(db.pointer!, alvo, p, bytes.byteLength, bytes.byteLength, flags)
+    if (rc !== 0) throw new Error(`Não foi possível abrir ${basename(arquivo)} (sqlite ${rc}).`)
+  }
+  desserializar(caminhoDoComum, 'main')
+  // todas as publicações da pasta, como o app as abre (os sítios de uma podem ter sido mesclados nos de outra), na ordem do
+  // manifest.json quando há; a conferida, mesmo fora dele
+  const pasta = dirname(caminho)
+  const naPasta = readdirSync(pasta).flatMap((f) => /^pub-([A-Za-z0-9_]+)\.sqlite$/.exec(f)?.[1] ?? [])
+  let ordemDoManifesto: string[] = []
+  try {
+    const manifesto = JSON.parse(readFileSync(join(pasta, 'manifest.json'), 'utf8')) as { publicacoes?: { sigla?: unknown }[] }
+    ordemDoManifesto = (manifesto.publicacoes ?? []).map((p) => String(p.sigla))
+  } catch {
+    // sem manifesto: a ordem dos nomes
+  }
+  const siglas = [...new Set([...ordemDoManifesto.filter((x) => naPasta.includes(x)), ...naPasta.sort(), sigla])]
+  const publicacoes = siglas.map((x) => ({ sigla: x, esquema: esquemaDaPublicacao(x) }))
+  for (const pub of publicacoes) {
+    db.exec(`ATTACH ':memory:' AS ${pub.esquema}`)
+    desserializar(pub.sigla === sigla ? caminho : join(pasta, `pub-${pub.sigla}.sqlite`), pub.esquema)
+  }
   const consultar = (sql: string, parametros?: Record<string, unknown>) => db.selectObjects(sql, parametros as never) as L[]
 
-  // o motor do app sobre este arquivo: só esta publicação aberta
-  const estado = { estado: 'aberto' as const, publicacoes: [{ sigla, esquema }], geradoEm: '', modo: 'memoria' as const }
+  // o motor do app sobre estes arquivos
+  const estado = { estado: 'aberto' as const, publicacoes, geradoEm: '', modo: 'memoria' as const }
   cliente.usarMotor({
     abrir: async () => estado,
     reabrir: async () => estado,
@@ -149,11 +200,44 @@ async function main(caminho: string | undefined): Promise<number> {
   console.log(`Entradas fora da ordem dos números: ${foraDeOrdem}`)
   console.log(`Tempo para montar a ordem: ${Math.round(ms)} ms`)
 
+  // os mapas: por legenda, as entradas e os sítios (como a página: o sítio do livro de cada entrada, levado ao destino pelas
+  // mesclas do pacote; a coordenada do destino ou do absorvido de menor id), sem a camada do usuário
+  const legendas = (await leitura.mapasDaLeitura(sigla)) ?? []
+  const [listaDosSitios, pacoteDeSitios] = await Promise.all([pacoteDosSitios.listaDosSitiosDoPacote(), pacoteDosSitios.pacoteDeSitios()])
+  const semCamada = { registros: new Map(), hlcDoCampo: () => null } as unknown as Parameters<typeof resolverSitios>[0]
+  const resolucao = resolverSitios(semCamada, pacoteDeSitios)
+  // os destinos, como `destinosDosSitios` (src/sitios/useResolucao.ts): os `SI-…` publicados e os sítios absorvidos
+  const destinos = new Map<string, string>()
+  for (const [de] of pacoteDeSitios.publicados) destinos.set(de, resolucao.destino(de))
+  for (const k of resolucao.sitios) if (resolucao.destino(k) !== k) destinos.set(k, resolucao.destino(k))
+  const daLista = { resolucao, destinos, nomes: new Map<string, string[]>() }
+  const { itens: sitiosDaLista } = juntar(listaDosSitios, new Map(), [], new Map(), daLista, [], null)
+  const rotuloDaParte = (m: { volume: string; parte: number }) => `${m.volume}, parte ${m.parte}`
+  console.log(`Mapas (legendas): ${legendas.length}`)
+  for (const m of legendas) {
+    const resumos = await resumosDosItens(m.entradas, 'dada')
+    const doMapa = mapas.sitiosDasEntradas(
+      resumos.map((r) => r.sitioId ?? null),
+      sitiosDaLista,
+      destinos,
+    )
+    const { comCoordenada, semCoordenada } = mapas.contarSitios(doMapa)
+    console.log(`  ${m.legenda} (${rotuloDaParte(m)}): ${m.entradas.length} entradas; ${comCoordenada} sítios com coordenada; ${semCoordenada} sem coordenada`)
+  }
+  const parteDe = new Map(legendas.map((m) => [m.legenda, rotuloDaParte(m)] as const))
+  const pares = mapas.conferirParesDosMapas(sigla, (l) => parteDe.get(l) ?? null, [...mapas.PARES_DOS_MAPAS, ...paresAMais])
+  console.log(`Pares de mapas desta obra: ${pares.length}`)
+  for (const { par, partes, ok } of pares) {
+    const onde = partes.map((p) => p ?? 'fora da obra').join(' | ')
+    console.log(`  ${par[0]} + ${par[1]}: ${ok ? 'na mesma parte' : 'NÃO na mesma parte'} (${onde})`)
+  }
+  const paresErrados = pares.filter((p) => !p.ok).length
+
   db.close()
   const problemas =
-    trechos.faltando + trechos.repetidas + trechos.estranhas + entradas.faltando + entradas.repetidas + entradas.estranhas + foraDeOrdem
+    trechos.faltando + trechos.repetidas + trechos.estranhas + entradas.faltando + entradas.repetidas + entradas.estranhas + foraDeOrdem + paresErrados
   console.log(problemas === 0 ? 'Resultado: OK' : `Resultado: ${problemas} problema(s)`)
   return problemas === 0 ? 0 : 1
 }
 
-process.exitCode = await main(process.argv[2])
+process.exitCode = await main(process.argv.slice(2))

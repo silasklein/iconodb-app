@@ -7,6 +7,7 @@ import {
   ordemDaObra,
   ordemDoVolume,
   paginaDoLocator,
+  partesDoVolume,
   type EntradaParaOrdem,
   type GrupoParaOrdem,
   type PassoDaLeitura,
@@ -340,5 +341,67 @@ describe('as propriedades, num volume grande', () => {
     const porBloco = new Map<number, { n: number; total: number }[]>()
     for (const p of ps) if (p.tipo === 'texto') porBloco.set(p.bloco, [...(porBloco.get(p.bloco) ?? []), p.posicao])
     for (const pos of porBloco.values()) expect(pos).toEqual(pos.map((_, i) => ({ n: i + 1, total: pos.length })))
+  })
+})
+
+/**
+ * As partes do volume (§ 3, regra 2; plano «Os mapas da introdução pelo mapa do app», Tarefa 1): cada sequência de páginas de
+ * texto e a sequência de catálogo que vem depois dela, até o próximo texto. O corte é o mesmo dos blocos: uma página de entrada
+ * estritamente entre dois trechos. Uma entrada na mesma página de um trecho (o livro não tem; o modelo TESTE tem) fica na parte
+ * desse trecho.
+ */
+describe('partesDoVolume', () => {
+  it('quatro partes como no IPIAO I: texto, catálogo, texto, catálogo…; as legendas de cada parte em ordem', () => {
+    const v: VolumeParaOrdem = {
+      volume: 'I',
+      trechos: [
+        trecho('I', 70, 'running_text'),
+        trecho('I', 3, 'running_text'),
+        trecho('I', 5, 'caption'),
+        trecho('I', 6, 'caption'),
+        trecho('I', 40, 'period_overview'),
+        trecho('I', 41, 'caption'),
+      ],
+      entradas: [entrada(9, 80, null), entrada(1, 10, null), entrada(2, 11, null), entrada(5, 50, null), entrada(6, 51, null)],
+      grupos: [],
+    }
+    expect(partesDoVolume(v)).toEqual([
+      {
+        trechos: ['PA-TESTE-I.S.3-txt-1', 'PA-TESTE-I.S.5-cap-1', 'PA-TESTE-I.S.6-cap-1'],
+        legendas: ['PA-TESTE-I.S.5-cap-1', 'PA-TESTE-I.S.6-cap-1'],
+        entradas: ['TESTE-0001', 'TESTE-0002'],
+      },
+      { trechos: ['PA-TESTE-I.S.40-ovw-1', 'PA-TESTE-I.S.41-cap-1'], legendas: ['PA-TESTE-I.S.41-cap-1'], entradas: ['TESTE-0005', 'TESTE-0006'] },
+      { trechos: ['PA-TESTE-I.S.70-txt-1'], legendas: [], entradas: ['TESTE-0009'] },
+    ])
+  })
+
+  it('o modelo TESTE: o texto das p. 3–11 (com as entradas das p. 10–12) e o da p. 19 (com as das p. 20–22)', () => {
+    const partes = partesDoVolume(modeloTeste())
+    expect(partes.map((p) => p.entradas)).toEqual([
+      ['TESTE-0001', 'TESTE-0002', 'TESTE-0003'],
+      ['TESTE-0004', 'TESTE-0005', 'TESTE-0006'],
+    ])
+    expect(partes.map((p) => p.legendas)).toEqual([['PA-TESTE-I.S.9-cap-1'], []])
+    expect(partes[1]!.trechos).toEqual(['PA-TESTE-I.S.19-ovw-1'])
+  })
+
+  it('entradas antes do primeiro texto ficam numa parte sem trechos; um volume sem trechos é uma parte só', () => {
+    expect(
+      partesDoVolume({ volume: 'I', trechos: [trecho('I', 9, 'caption')], entradas: [entrada(1, 2, null), entrada(2, 12, null)], grupos: [] }),
+    ).toEqual([
+      { trechos: [], legendas: [], entradas: ['TESTE-0001'] },
+      { trechos: ['PA-TESTE-I.S.9-cap-1'], legendas: ['PA-TESTE-I.S.9-cap-1'], entradas: ['TESTE-0002'] },
+    ])
+    expect(partesDoVolume({ volume: 'I', trechos: [], entradas: [entrada(1, 2, null)], grupos: [] })).toEqual([
+      { trechos: [], legendas: [], entradas: ['TESTE-0001'] },
+    ])
+    expect(partesDoVolume({ volume: 'I', trechos: [], entradas: [], grupos: [] })).toEqual([])
+  })
+
+  it('as partes cortam onde os blocos são cortados pelo catálogo', () => {
+    const v = modeloTeste()
+    const blocosDoCorte = ordemDoVolume(v).flatMap((p) => (p.tipo === 'texto' && p.posicao.n === 1 ? [p.trechos[0]!] : []))
+    for (const parte of partesDoVolume(v)) expect(blocosDoCorte).toContain(parte.trechos[0])
   })
 })

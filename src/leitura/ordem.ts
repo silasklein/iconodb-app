@@ -214,6 +214,50 @@ export function ordemDoVolume(v: VolumeParaOrdem): PassoDaLeitura[] {
   return passos
 }
 
+/**
+ * Uma parte do volume (§ 3, regra 2): uma sequência de páginas de texto e a sequência de catálogo que vem depois dela, até o
+ * próximo texto. No IPIAO I são quatro; no II–IV, uma (plano «Os mapas da introdução pelo mapa do app», Tarefa 1: as entradas
+ * do mapa de uma legenda são as da parte dela).
+ */
+export interface ParteDoVolume {
+  /** Os trechos da sequência de texto, na ordem de leitura; [] na parte de entradas antes do primeiro texto. */
+  trechos: string[]
+  /** As legendas (`caption`) entre eles, em ordem. */
+  legendas: string[]
+  /** As entradas da sequência de catálogo seguinte (itemIds), na ordem do catálogo. */
+  entradas: string[]
+}
+
+/**
+ * As partes do volume. O corte entre duas sequências de texto é o dos blocos (regra 2 de `ordemDoVolume`): uma página de
+ * entrada estritamente entre a de um trecho e a do seguinte. Cada entrada fica na última sequência de texto que começa numa
+ * página ≤ a dela: a entrada numa página que também tem texto (o livro não tem; o modelo sintético tem) fica na parte desse
+ * texto. As entradas antes do primeiro texto formam uma parte sem trechos.
+ */
+export function partesDoVolume(v: VolumeParaOrdem): ParteDoVolume[] {
+  const trechos = [...v.trechos].sort(cmpTrecho)
+  const entradas = [...v.entradas].sort(cmpEntrada)
+  const paginasDeEntrada = entradas.map((e) => e.pagina)
+  const partes: (ParteDoVolume & { inicio: number })[] = []
+  trechos.forEach((t, i) => {
+    const anterior = i > 0 ? trechos[i - 1]! : null
+    const corte =
+      anterior !== null && contarAte(paginasDeEntrada, anterior.pagina, false) < contarAte(paginasDeEntrada, t.pagina, true)
+    if (anterior === null || corte) partes.push({ inicio: t.pagina, trechos: [], legendas: [], entradas: [] })
+    const parte = partes[partes.length - 1]!
+    parte.trechos.push(t.id)
+    if (t.kind === 'caption') parte.legendas.push(t.id)
+  })
+  const antes: ParteDoVolume = { trechos: [], legendas: [], entradas: [] }
+  let k = -1
+  for (const e of entradas) {
+    while (k + 1 < partes.length && partes[k + 1]!.inicio <= e.pagina) k++
+    ;(k < 0 ? antes : partes[k]!).entradas.push(e.itemId)
+  }
+  const saida = partes.map(({ trechos, legendas, entradas }) => ({ trechos, legendas, entradas }))
+  return antes.entradas.length > 0 ? [antes, ...saida] : saida
+}
+
 /** A ordem da obra: os volumes na ordem dada, concatenados. */
 export function ordemDaObra(volumes: readonly VolumeParaOrdem[]): PassoDaLeitura[] {
   return volumes.flatMap((v) => ordemDoVolume(v))

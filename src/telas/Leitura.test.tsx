@@ -4,16 +4,19 @@
  * GR-TESTE-I-01-02; o da p. 9 tem o panorama e a legenda («Mapa») e cita as entradas 1–3 («(1–3)»); a entrada 1 está na
  * subcoleção GR-TESTE-I-01-01. Tudo inventado (repositório público).
  */
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
+import { atalhoRegistrado } from '../app/atalhos'
 import { guardarPosicao } from '../app/rolagem'
 import { ROTAS } from '../app/routes'
 import { executar, usarMotor } from '../banco/cliente'
+import { registrar } from '../usuario/estado'
 import * as leituraModulo from '../banco/leitura'
 import { rotaDaEntrada, rotaDoTrecho } from '../banco/leitura'
 import { esquecerPreferenciasDaMemoria, lerPosicao } from '../leitura/preferencias'
+import { instalarIntersecao } from '../test/intersecao'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { esquecerAbaDaLeitura, Leitura, ROTA_DA_LEITURA_DA_ENTRADA, ROTA_DA_LEITURA_DO_TRECHO } from './Leitura'
 
@@ -189,6 +192,37 @@ describe('a página de leitura (desenhos 1 e 2)', () => {
       expect(screen.queryByRole('button', { name: /Mostrar todas/ })).toBeNull()
     })
 
+    it('o mapa da legenda (§ 9): o texto, o mapa do app com os sítios da parte e o toque num ponto abre o cartão do sítio', async () => {
+      abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+      await titulo('TESTE I, p. 9')
+      // as entradas 1 e 2 em Maḥteṣ Teste (TESTE-1), a 3 em Tell Probe Teste (TESTE-2): dois sítios, os dois com coordenada
+      const regiao = await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+      expect(regiao).toHaveTextContent(/^Mapa do app: 2 sítios das entradas desta parte/)
+      // o mapa logo abaixo da linha «Mapa»: no celular, dentro da coluna; no computador, na largura das duas colunas
+      const linha = document.querySelector<HTMLElement>('.paragrafo-coluna-pt [data-trecho="PA-TESTE-I.S.9-cap-1"]')!
+      if (aparelho === 'celular') expect(linha.nextElementSibling).toBe(regiao)
+      else {
+        expect(regiao.closest('.paragrafo-coluna')).toBeNull()
+        expect(regiao.parentElement).toHaveClass('ler-linguas')
+        expect(regiao.style.gridColumn).toBe('1 / -1')
+      }
+      const palco = await within(regiao).findByRole('group', { name: 'Mapa dos sítios' })
+      await waitFor(() => expect(palco.querySelectorAll('[data-ponto]')).toHaveLength(2))
+      const nomes = [...palco.querySelectorAll('[data-ponto]')].map((p) => p.getAttribute('aria-label')!.replace(/, \d+ objetos?$/, ''))
+      expect(nomes.sort()).toEqual(['Maḥteṣ Teste', 'Tell Probe Teste'])
+      await userEvent.click(within(palco).getByRole('button', { name: /^Tell Probe Teste, / }))
+      const cartao = await screen.findByRole('dialog', { name: 'Sítio selecionado: Tell Probe Teste' })
+      expect(within(cartao).getByRole('link', { name: 'Abrir sítio' })).toHaveAttribute('href', '/sitio/TESTE-2')
+      expect(cartao).toHaveClass(aparelho === 'celular' ? 'cartao-ponto-folha' : 'cartao-ponto-flutuante')
+    })
+
+    it('o passo sem legenda não tem o mapa do app', async () => {
+      abrir(rotaDoTrecho('TESTE', P11))
+      await titulo('TESTE I, p. 11')
+      expect(screen.queryByText(/^Mapa do app/)).toBeNull()
+      expect(screen.queryByRole('group', { name: 'Mapa dos sítios' })).toBeNull()
+    })
+
     it('o passo da entrada: o título, a etiqueta cheia, a peça, «Abrir a ficha completa» e as linhas com os rótulos', async () => {
       abrir(rotaDaEntrada('TESTE', '1'))
       expect(await titulo('TESTE I: 1')).toBeInTheDocument()
@@ -358,5 +392,165 @@ describe('linhas que o pacote sintético não tem (banco de escrita)', () => {
     const faixa = screen.getByRole('region', { name: 'Figuras citadas' })
     expect(within(faixa).getAllByRole('link')).toHaveLength(9)
     expect(within(faixa).queryByRole('button')).toBeNull()
+  })
+})
+
+describe('o mapa da legenda com a camada do usuário (§ 9: o sítio de cada entrada é o mesmo que o objeto mostra)', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    Element.prototype.scrollIntoView = vi.fn()
+    // a entrada 3 passa a ter o achado num sítio sem coordenada (TESTE-5, Área Probe Teste)
+    await executar("UPDATE pub_TESTE.assertion SET site_id = 5 WHERE subject_id = 'TESTE-0003' AND field = 'findspot'")
+  })
+  afterAll(() => usarMotor(null))
+  afterEach(() => {
+    instalarMatchMedia(375)
+    localStorage.clear()
+    esquecerPreferenciasDaMemoria()
+    esquecerAbaDaLeitura()
+  })
+
+  const pontosDoMapa = (regiao: HTMLElement) =>
+    [...regiao.querySelectorAll('[data-ponto]')].map((p) => p.getAttribute('aria-label')!.replace(/, \d+ objetos?$/, '')).sort()
+
+  it.each([375, 1280])('o sítio sem coordenada conta à parte e não vira ponto (%i px)', async (largura) => {
+    instalarMatchMedia(largura)
+    abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    const regiao = await screen.findByRole('region', { name: 'Mapa do app: 1 sítio das entradas desta parte · 1 sem coordenada' })
+    await waitFor(() => expect(pontosDoMapa(regiao)).toEqual(['Maḥteṣ Teste']))
+  })
+
+  it('a troca de sítio, a coordenada corrigida e a mescla da camada do usuário valem no mapa', async () => {
+    instalarMatchMedia(1280)
+    // a entrada 2 trocada para um sítio novo do usuário, com coordenada; o sítio sem coordenada ganha uma (a correção)
+    await registrar('sitio', 'SI-leitura0-1', 'criar', { nome: 'Tell da Leitura', lat: 31.2, lon: 35.3 })
+    await registrar('item-sitio', 'CA00002', 'alterar', { sitio: 'SI-leitura0-1', sitioNome: 'Tell da Leitura' })
+    await registrar('sitio', 'TESTE-5', 'alterar', { lat: 31.4, lon: 35.4 })
+    const primeiro = abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    let regiao = await screen.findByRole('region', { name: 'Mapa do app: 3 sítios das entradas desta parte' })
+    await waitFor(() => expect(pontosDoMapa(regiao)).toEqual(['Maḥteṣ Teste', 'Tell da Leitura', 'Área Probe Teste']))
+    primeiro.unmount()
+
+    // o sítio novo mesclado no do livro: o ponto dele some, e a entrada 2 fica no ponto do livro
+    await registrar('sitio', 'SI-leitura0-1', 'alterar', { mescladoEm: 'TESTE-1' })
+    abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    regiao = await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    await waitFor(() => expect(pontosDoMapa(regiao)).toEqual(['Maḥteṣ Teste', 'Área Probe Teste']))
+  })
+})
+
+describe('Tarefa 2 (revisão da Tarefa 1, m1): os sítios do pacote lidos uma vez por pacote, não a cada mapa', () => {
+  // o motor do pacote sintético, contando as consultas que juntam os objetos por sítio (a de `sitios()`)
+  let consultasDosSitios = 0
+  beforeAll(async () => {
+    const banco = await bancoDeTeste()
+    usarMotor({
+      abrir: () => banco.abrir(),
+      reabrir: () => banco.reabrir(),
+      executar: (sql, parametros) => {
+        if (sql.includes("a.field = 'findspot' AND a.site_id IS NOT NULL")) consultasDosSitios++
+        return banco.executar(sql, parametros)
+      },
+    })
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+  afterAll(() => usarMotor(null))
+  afterEach(() => {
+    instalarMatchMedia(375)
+    localStorage.clear()
+    esquecerPreferenciasDaMemoria()
+    esquecerAbaDaLeitura()
+  })
+
+  it('dois mapas montados (outra abertura da página e a troca de aba no celular) leem os sítios uma vez', async () => {
+    instalarMatchMedia(375)
+    const primeiro = abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    const depoisDoPrimeiro = consultasDosSitios
+    expect(depoisDoPrimeiro).toBeGreaterThan(0)
+    primeiro.unmount()
+
+    abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    // DE e de volta ao PT: o mapa sai e é montado de novo
+    await userEvent.click(screen.getByRole('tab', { name: 'DE' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'PT' }))
+    await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    expect(consultasDosSitios).toBe(depoisDoPrimeiro)
+  })
+})
+
+describe('Tarefa 2 (revisão da Tarefa 1, m2): os atalhos do mapa na leitura só valem com o mapa à vista ou com o foco nele', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste())
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+  afterAll(() => usarMotor(null))
+  let intersecao: ReturnType<typeof instalarIntersecao>
+  beforeEach(() => {
+    intersecao = instalarIntersecao()
+  })
+  afterEach(() => {
+    intersecao.remover()
+    instalarMatchMedia(375)
+    localStorage.clear()
+    esquecerPreferenciasDaMemoria()
+    esquecerAbaDaLeitura()
+  })
+
+  it.each([375, 1280])('fora da vista e sem foco, + − 0 r ficam livres; à vista ou com o foco no mapa, valem (%i px)', async (largura) => {
+    instalarMatchMedia(largura)
+    abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    const regiao = await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    const palco = await within(regiao).findByRole('group', { name: 'Mapa dos sítios' })
+    await waitFor(() => expect(palco.querySelectorAll('[data-ponto]')).toHaveLength(2))
+    const registrados = () => ['+', '-', '=', '_', '0', 'r'].map((t) => atalhoRegistrado(t, 'mapa'))
+    // o mapa montado, mas fora da vista: nenhum atalho do mapa na página
+    expect(registrados()).toEqual([false, false, false, false, false, false])
+    expect(palco).not.toHaveAttribute('data-atalhos')
+
+    act(() => intersecao.mudar(true))
+    await waitFor(() => expect(registrados()).toEqual([true, true, true, true, true, true]))
+    expect(palco).toHaveAttribute('data-atalhos', '')
+    act(() => intersecao.mudar(false))
+    await waitFor(() => expect(registrados()).toEqual([false, false, false, false, false, false]))
+
+    // fora da vista, o foco no mapa (o palco é uma parada de Tab) liga; o foco fora dele desliga
+    act(() => palco.focus())
+    await waitFor(() => expect(atalhoRegistrado('+', 'mapa')).toBe(true))
+    act(() => screen.getByRole('heading', { level: 1 }).focus())
+    await waitFor(() => expect(atalhoRegistrado('+', 'mapa')).toBe(false))
+  })
+
+  it.each([375, 1280])('fix 1: o cartão aberto não liga os atalhos com o mapa fora da vista; à vista, o Esc fecha o cartão (%i px)', async (largura) => {
+    instalarMatchMedia(largura)
+    abrir(rotaDoTrecho('TESTE', 'PA-TESTE-I.S.9-cap-1'))
+    await titulo('TESTE I, p. 9')
+    const regiao = await screen.findByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+    const palco = await within(regiao).findByRole('group', { name: 'Mapa dos sítios' })
+    await waitFor(() => expect(palco.querySelectorAll('[data-ponto]')).toHaveLength(2))
+    act(() => intersecao.mudar(true))
+    await userEvent.click(within(palco).getByRole('button', { name: /^Tell Probe Teste, / }))
+    await screen.findByRole('dialog', { name: 'Sítio selecionado: Tell Probe Teste' })
+
+    // o mapa (e o cartão, que fica dentro dele) rolado para fora, o foco fora do mapa: nenhum atalho do mapa
+    act(() => intersecao.mudar(false))
+    act(() => screen.getByRole('heading', { level: 1 }).focus())
+    await waitFor(() => expect(atalhoRegistrado('Escape', 'mapa')).toBe(false))
+    expect(atalhoRegistrado('+', 'mapa')).toBe(false)
+    expect(palco).not.toHaveAttribute('data-atalhos')
+    expect(screen.getByRole('dialog', { name: 'Sítio selecionado: Tell Probe Teste' })).toBeInTheDocument()
+
+    // de volta à vista: o Esc fecha o cartão
+    act(() => intersecao.mudar(true))
+    await waitFor(() => expect(palco).toHaveAttribute('data-atalhos', ''))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /^Sítio selecionado/ })).toBeNull())
   })
 })

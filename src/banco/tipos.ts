@@ -675,6 +675,11 @@ export interface LinhaDaLeitura {
   termos: Termo[]
   estado: EstadoDaTraducao | null
   desatualizada: boolean
+  /**
+   * Só na legenda (`caption`, a linha «Mapa»): as entradas do catálogo (itemIds) cujos sítios o mapa do app mostra sob a linha,
+   * as da parte do livro que a legenda abre (desenho «O IPIAO lido no formato do §», § 9).
+   */
+  mapa?: { entradas: string[] }
 }
 
 /** O passo vizinho (‹ ›): a rota, o rótulo («p. 10», «TESTE I: 2»), o tipo e a primeira frase (do português, ou do original). */

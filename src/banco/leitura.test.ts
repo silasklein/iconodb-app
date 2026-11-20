@@ -7,12 +7,20 @@
  * rowids dos trechos NÃO estão na ordem do livro. O `TESTEG` (livro em parágrafos) e o `TESTEGEN` (tradução) não são obras de
  * leitura. Tudo inventado (repositório público).
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { RAIZ_DO_PACOTE_10, RAIZ_DO_PACOTE_6, RAIZ_DO_PACOTE_8, RAIZ_DO_PACOTE_9 } from '../../tests/suporte/fonteDeTeste'
 import { abrirBanco, executar, usarMotor } from './cliente'
 import { item } from './consultas'
-import { obrasDeLeitura, ordemDaLeitura, passoDaLeitura, passoDoGrupo, passoDoItem, rotaDaEntrada, rotaDoTrecho } from './leitura'
+import { mapasDaLeitura, obrasDeLeitura, ordemDaLeitura, passoDaLeitura, passoDoGrupo, passoDoItem, rotaDaEntrada, rotaDoTrecho } from './leitura'
+
+// Os mapas do livro com três legendas inventadas (Tarefa 1 do plano «Os mapas da introdução pelo mapa do app»): a da p. 9, sozinha
+// na tabela enquanto é a única legenda da parte (então todas as entradas; e a leitura dos códigos roda, também no pacote 6, sem
+// `dating_ebw`), e as duas da p. 11, que o pacote sintético não tem: o teste do banco de escrita as grava, com as datações EBW.
+vi.mock('../leitura/mapasDoLivro', async (original) => {
+  const m = await original<typeof import('../leitura/mapasDoLivro')>()
+  return { ...m, MAPAS_DO_LIVRO: { ...m.MAPAS_DO_LIVRO, 'PA-TESTE-I.S.9-cap-1': ['TZA'], 'PA-TESTE-I.S.11-cap-1': ['TXA', 'TXB'], 'PA-TESTE-I.S.11-cap-2': ['TYA'] } }
+})
 
 const ORDEM_DO_TESTE = [
   'PA-TESTE-I.S.3-txt-1',
@@ -124,6 +132,19 @@ describe('a leitura no pacote sintético', () => {
     expect(p.grupos.map((g) => g.id)).toEqual(['GR-TESTE-I-01'])
   })
 
+  it('a legenda da p. 9 tem o mapa: as entradas da parte que ela abre (1–3; o texto das p. 3–11 e as entradas das p. 10–12)', async () => {
+    const p = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.9-cap-1' }))!
+    // A parte: o corte do catálogo é a p. 12 (entrada 3), estritamente entre o trecho da p. 11 e o da p. 19. As entradas das
+    // p. 10 e 11 estão em páginas que também têm texto (o livro não tem isso; o modelo sintético tem): ficam na parte desse texto.
+    // As das p. 20–22 são da parte seguinte, a do texto da p. 19.
+    expect(p.linhas[1]!.mapa).toEqual({ entradas: ['TESTE-0001', 'TESTE-0002', 'TESTE-0003'] })
+    // (a legenda está na tabela do mock, mas é a única da parte: todas)
+    // só a legenda tem o mapa
+    expect(p.linhas[0]!.mapa).toBeUndefined()
+    const p11 = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.11-ovw-1' }))!
+    expect(p11.linhas.every((l) => l.mapa === undefined)).toBe(true)
+  })
+
   it('o passo da entrada 1: título, linhas (a descrição e os campos 3–5), a peça, a posição na subcoleção e os vizinhos', async () => {
     const p = (await passoDaLeitura('TESTE', { entrada: '1' }))!
     expect(p).toMatchObject({
@@ -185,6 +206,22 @@ describe('a leitura no pacote sintético', () => {
   })
 })
 
+describe('mapasDaLeitura (Tarefa 2 do plano dos mapas: a conferência por legenda do scripts/conferir-leitura.ts)', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste())
+  })
+  afterAll(() => usarMotor(null))
+
+  it('cada legenda da obra, na ordem de leitura: o volume, o número da parte no volume e as entradas do mapa', async () => {
+    expect(await mapasDaLeitura('TESTE')).toEqual([{ legenda: 'PA-TESTE-I.S.9-cap-1', volume: 'I', parte: 1, entradas: ['TESTE-0001', 'TESTE-0002', 'TESTE-0003'] }])
+  })
+
+  it('fora das obras de leitura, null', async () => {
+    expect(await mapasDaLeitura('TESTEG')).toBeNull()
+    expect(await mapasDaLeitura('NAO-EXISTE')).toBeNull()
+  })
+})
+
 describe('linhas que o pacote sintético não tem, gravadas num banco de escrita', () => {
   beforeAll(async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
@@ -225,6 +262,46 @@ describe('linhas que o pacote sintético não tem, gravadas num banco de escrita
     expect(p.linhas[0]).toMatchObject({ portugues: null, termos: [] })
     const seguinte = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.11-ovw-1' }))!
     expect(seguinte.anterior!.frase).toMatch(/^Prüfgestalten und Testzeichen/)
+  })
+})
+
+describe('dois mapas na mesma parte (opção A): as entradas se dividem pela datação EBW', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    // duas legendas inventadas na p. 11, um par da tabela (o mock acima): a parte é a mesma da legenda da p. 9
+    await executar(
+      `INSERT INTO pub_TESTE.passage (id, publication, locator, kind, ordinal, text, page) VALUES
+       ('PA-TESTE-I.S.11-cap-1', 'TESTE', 'I.S.11', 'caption', 1, 'Probekarte eins (erfunden).', 11),
+       ('PA-TESTE-I.S.11-cap-2', 'TESTE', 'I.S.11', 'caption', 2, 'Probekarte zwei (erfunden).', 11)`,
+    )
+    // a entrada 1 no 1º mapa, a 2 no 2º, a 3 sem código; a 4 (outra parte) no 1º
+    await executar(
+      `INSERT INTO pub_TESTE.dating_ebw (dating_id, ebw_code, relation) VALUES
+       ((SELECT id FROM pub_TESTE.dating WHERE subject_id = 'TESTE-0001'), 'TXB', 'within'),
+       ((SELECT id FROM pub_TESTE.dating WHERE subject_id = 'TESTE-0002'), 'TYA', 'within'),
+       ((SELECT id FROM pub_TESTE.dating WHERE subject_id = 'TESTE-0004'), 'TXA', 'within')`,
+    )
+  })
+  afterAll(() => usarMotor(null))
+
+  it('cada legenda com as suas; a entrada sem código em todas; a 4, de outra parte, em nenhuma', async () => {
+    const p = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.11-cap-1' }))!
+    expect(p.linhas.map((l) => [l.id, l.rotulo, l.mapa?.entradas ?? null])).toEqual([
+      ['PA-TESTE-I.S.11-ovw-1', null, null],
+      ['PA-TESTE-I.S.11-cap-1', 'Mapa', ['TESTE-0001', 'TESTE-0003']],
+      ['PA-TESTE-I.S.11-cap-2', 'Mapa', ['TESTE-0002', 'TESTE-0003']],
+    ])
+    // a da p. 9 (código TZA, que nenhuma entrada tem): só a sem código, porque as outras têm códigos dos outros mapas da parte
+    const p9 = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.9-cap-1' }))!
+    expect(p9.linhas[1]!.mapa).toEqual({ entradas: ['TESTE-0003'] })
+  })
+
+  it('mapasDaLeitura: as três legendas na mesma parte, cada uma com as entradas do seu mapa (as mesmas da página)', async () => {
+    expect(await mapasDaLeitura('TESTE')).toEqual([
+      { legenda: 'PA-TESTE-I.S.9-cap-1', volume: 'I', parte: 1, entradas: ['TESTE-0003'] },
+      { legenda: 'PA-TESTE-I.S.11-cap-1', volume: 'I', parte: 1, entradas: ['TESTE-0001', 'TESTE-0003'] },
+      { legenda: 'PA-TESTE-I.S.11-cap-2', volume: 'I', parte: 1, entradas: ['TESTE-0002', 'TESTE-0003'] },
+    ])
   })
 })
 
@@ -308,6 +385,11 @@ describe.each([
     const entradas = ordem.filter((p) => p.tipo === 'entrada').map((p) => p.chave)
     expect(new Set(entradas).size).toBe(entradas.length)
     expect([...entradas].sort()).toEqual(catalogo.map((l) => `${l.number}${l.suffix}`).sort())
+  })
+
+  it('a legenda tem o mapa com as entradas da parte; sem `dating_ebw` (pacote 6), sem quebrar', async () => {
+    const p = (await passoDaLeitura('TESTE', { trecho: 'PA-TESTE-I.S.9-cap-1' }))!
+    expect(p.linhas.find((l) => l.rotulo === 'Mapa')!.mapa).toEqual({ entradas: ['TESTE-0001', 'TESTE-0002', 'TESTE-0003'] })
   })
 
   it('passoDoItem e passoDoGrupo: toda entrada e todo grupo chegam a um passo da ordem, sem quebrar', async () => {

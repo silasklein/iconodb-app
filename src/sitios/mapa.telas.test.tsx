@@ -9,6 +9,7 @@ import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { atalhoRegistrado } from '../app/atalhos'
 import { executar, usarMotor } from '../banco/cliente'
 import { renderizarRota, usarFoldDoPacoteSintetico } from '../test/renderizarRota'
+import { instalarIntersecao } from '../test/intersecao'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { registrar } from '../usuario/estado'
 
@@ -283,6 +284,19 @@ describe('teclado e botões do mapa', () => {
     await waitFor(() => expect(x()).toBeGreaterThan(x0))
     await tecla('ArrowUp')
     await waitFor(() => expect(y()).toBeGreaterThan(y0))
+  })
+
+  it('Tarefa 2 do plano dos mapas da leitura: nos Sítios os atalhos do mapa valem com o mapa montado, à vista ou não (como antes)', async () => {
+    const intersecao = instalarIntersecao()
+    try {
+      await abrir()
+      // o observador falso nunca diz que o mapa está à vista: os Sítios não dependem disso
+      await waitFor(() => expect(['+', '-', '=', '_', '0', 'r'].map((t) => atalhoRegistrado(t, 'mapa'))).toEqual([true, true, true, true, true, true]))
+      intersecao.mudar(false)
+      expect(atalhoRegistrado('+', 'mapa')).toBe(true)
+    } finally {
+      intersecao.remover()
+    }
   })
 
   it('+ − 0 R não valem dentro de um campo de texto', async () => {

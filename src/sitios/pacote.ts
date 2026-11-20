@@ -14,18 +14,21 @@ import type { PacoteDeSitios } from './resolucao'
 
 export type SitiosDoPacote = ReadonlyMap<string, SitioResumo>
 
-let guardado: { motor: number; pedido: Promise<SitiosDoPacote>; pronto: SitiosDoPacote | null } | null = null
+let guardado: { motor: number; lista: Promise<readonly SitioResumo[]>; pedido: Promise<SitiosDoPacote>; pronto: SitiosDoPacote | null } | null = null
 aoReabrir(() => {
   guardado = null
 })
 
-export function sitiosDoPacote(): Promise<SitiosDoPacote> {
+/** A leitura de `sitios()` deste pacote: uma por pacote aberto (esquecida em `aoReabrir`, ou quando falha). */
+function leituraDosSitios(): NonNullable<typeof guardado> {
   const motor = geracaoDoBanco()
-  if (guardado?.motor === motor) return guardado.pedido
+  if (guardado?.motor === motor) return guardado
+  const lista = sitios()
   const entrada: NonNullable<typeof guardado> = {
     motor,
+    lista,
     pronto: null,
-    pedido: sitios().then((l) => {
+    pedido: lista.then((l) => {
       const mapa = new Map(l.map((s) => [s.id, s] as const))
       entrada.pronto = mapa
       return mapa
@@ -35,7 +38,20 @@ export function sitiosDoPacote(): Promise<SitiosDoPacote> {
   entrada.pedido.catch(() => {
     if (guardado === entrada) guardado = null
   })
-  return entrada.pedido
+  return entrada
+}
+
+export function sitiosDoPacote(): Promise<SitiosDoPacote> {
+  return leituraDosSitios().pedido
+}
+
+/**
+ * A lista de `sitios()` (na ordem dela, a dos nomes), lida uma vez por pacote: o mapa da leitura (src/leitura/MapaDaLegenda.tsx)
+ * a pede a cada mapa montado (outro passo, a troca de aba no celular), e a consulta junta todos os achados do pacote (revisão da
+ * Tarefa 1 do plano «Os mapas da introdução pelo mapa do app», m1). O mesmo array enquanto o pacote é o mesmo.
+ */
+export function listaDosSitiosDoPacote(): Promise<readonly SitioResumo[]> {
+  return leituraDosSitios().lista
 }
 
 /** O mapa quando já foi lido (sem esperar); null se não, ou se o pacote é outro. */

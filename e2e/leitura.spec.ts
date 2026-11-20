@@ -135,3 +135,29 @@ test('do objeto, «Ler no livro» abre a entrada, e o «‹ origem» volta ao ob
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(nomeDoObjeto)
   await semRolagemHorizontal(page, 'o objeto de volta')
 })
+
+test('o passo da p. 9: sob a linha «Mapa», o mapa do app com os dois sítios, sem rolagem horizontal; os atalhos dele só com ele à vista', async ({ page }) => {
+  await entrar(page)
+  await page.goto(PASSOS[1]!.rota)
+  await conferirPasso(page, 1)
+  // plano «Os mapas da introdução pelo mapa do app»: as entradas 1–3 (a parte da legenda) em dois sítios com coordenada
+  const regiao = page.getByRole('region', { name: 'Mapa do app: 2 sítios das entradas desta parte' })
+  const palco = regiao.getByRole('group', { name: 'Mapa dos sítios' })
+  await expect(palco.locator('[data-ponto]')).toHaveCount(2)
+  await regiao.scrollIntoViewIfNeeded()
+  await semRolagemHorizontal(page, 'o passo da p. 9 com o mapa')
+  const janela = page.viewportSize()!.width
+  const caixa = (await regiao.boundingBox())!
+  expect(caixa.x, 'o mapa começa dentro da janela').toBeGreaterThanOrEqual(0)
+  expect(caixa.x + caixa.width, 'o mapa cabe na largura da janela').toBeLessThanOrEqual(janela)
+
+  // à vista, os atalhos do mapa valem; com a janela baixa e a página no topo, o mapa fica fora da vista e não os toma
+  await expect(palco).toHaveAttribute('data-atalhos', '')
+  await page.setViewportSize({ width: janela, height: 260 })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.getByRole('heading', { level: 1 }).focus()
+  const abaixoDaJanela = await regiao.evaluate((el) => el.getBoundingClientRect().top >= window.innerHeight)
+  expect(abaixoDaJanela, 'o mapa está abaixo da janela').toBe(true)
+  await expect(palco).not.toHaveAttribute('data-atalhos')
+  await semRolagemHorizontal(page, 'o passo da p. 9 com a janela baixa')
+})

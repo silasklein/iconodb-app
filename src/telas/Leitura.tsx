@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useLocation, useNavigationType, useParams } from 'react-router'
 import { LinkComOrigem, OrigemDosLinks, useAoVoltarParaOrigem } from '../app/OrigemDosLinks'
 import { decidirRolagem, lerPosicoes } from '../app/rolagem'
@@ -12,6 +12,7 @@ import { MiniaturaDoObjeto } from '../imagens-usuario/MiniaturaDoObjeto'
 import type { LinkNoTexto } from '../item/trechos'
 import { VoltarDaOrigem } from '../item/VoltarDaOrigem'
 import { linksDaLinha } from '../leitura/linksDaLeitura'
+import { MapaDaLegenda } from '../leitura/MapaDaLegenda'
 import type { TipoDeTexto } from '../leitura/ordem'
 import { ROTULO_DO_TIPO } from '../leitura/rotulos'
 import { gravarColunasDaLeitura, gravarPosicao, lerColunasDaLeitura, type ColunasDaLeitura } from '../leitura/preferencias'
@@ -201,8 +202,8 @@ function PaginaDaLeitura({ p, rota }: { p: PassoDetalhe; rota: string }) {
 
   const atual: Lingua = aba === 'de' ? 'de' : 'pt'
   const visiveis: Lingua[] = computador ? (abertas.de ? ['de', 'pt'] : ['pt']) : [atual]
-  // as linhas da grade: o cabeçalho e uma por linha do passo
-  const linhas = 1 + p.linhas.length
+  // as linhas da grade: o cabeçalho e uma por linha do passo, mais uma sob cada legenda com mapa (§ 9)
+  const linhas = 1 + p.linhas.length + p.linhas.filter((l) => l.mapa).length
   const meta = metaDoPasso(p)
   const entrada = p.tipo === 'entrada'
   const limite = computador ? FIGURAS_NUMA_LINHA : undefined
@@ -270,6 +271,17 @@ function PaginaDaLeitura({ p, rota }: { p: PassoDetalhe; rota: string }) {
           {visiveis.map((l) => (
             <Coluna key={l} lingua={l} p={p} computador={computador} linhas={linhas} aoFechar={l === 'de' ? () => mudarAberta(false) : undefined} />
           ))}
+          {/* No computador, o mapa de cada legenda na linha da grade logo abaixo dela, na largura das colunas (§ 9); as colunas
+              deixam essa linha vazia. No celular, ele fica na própria coluna, abaixo da linha. */}
+          {computador &&
+            linhasDosMapas(p).map(({ linha, fila }) => (
+              <MapaDaLegenda
+                key={linha.id}
+                entradas={linha.mapa!.entradas}
+                computador
+                estilo={{ gridColumn: abertas.de ? '1 / -1' : '2 / -1', gridRow: `${fila}` }}
+              />
+            ))}
         </GradeDasLinguas>
 
         <PeDosVizinhos rotulo="Passo anterior e seguinte" anterior={noPe(p.anterior, p.rotuloDoTipo)} seguinte={noPe(p.seguinte, p.rotuloDoTipo)} estado={estadoAdiante} />
@@ -316,10 +328,29 @@ function Coluna({ lingua, p, computador, linhas, aoFechar }: PropsDaColuna) {
         </div>
       )}
       {p.linhas.map((l) => (
-        <LinhaNaLingua key={l.id} l={l} lingua={lingua} referencias={p.referencias} sigla={p.sigla} volume={p.volume} alvo={temAlvoNoMeio(p) && l.id === p.alvo} />
+        <Fragment key={l.id}>
+          <LinhaNaLingua l={l} lingua={lingua} referencias={p.referencias} sigla={p.sigla} volume={p.volume} alvo={temAlvoNoMeio(p) && l.id === p.alvo} />
+          {l.mapa && (computador ? <div className="ler-mapa-vaga" aria-hidden="true" /> : <MapaDaLegenda entradas={l.mapa.entradas} computador={false} />)}
+        </Fragment>
       ))}
     </section>
   )
+}
+
+/**
+ * As legendas com mapa e a linha da grade (subgrid, contada a partir de 1) logo abaixo de cada uma: o cabeçalho é a 1ª; cada
+ * linha do passo ocupa uma, e cada mapa, mais uma.
+ */
+function linhasDosMapas(p: PassoDetalhe): { linha: LinhaDaLeitura; fila: number }[] {
+  const saida: { linha: LinhaDaLeitura; fila: number }[] = []
+  let fila = 1
+  for (const l of p.linhas) {
+    fila++
+    if (!l.mapa) continue
+    fila++
+    saida.push({ linha: l, fila })
+  }
+  return saida
 }
 
 const NENHUM: readonly never[] = []
