@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router'
 import { estadoDoGrupo, estadoVindoDoPai } from '../app/origem'
 import { grupo, type GrupoDetalhe, type SubcolecaoResumo } from '../banco/consultas'
+import { passoDoGrupo } from '../banco/leitura'
+import { BotaoDaLeitura, useRotaDaLeitura } from '../leitura/LerNoLivro'
 import { Colecao } from '../colecoes/Colecao'
 import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
@@ -186,22 +188,31 @@ function GrupoDoPacote({ id }: { id: string }) {
 /**
  * A introdução: o resumo é o primeiro trecho; «Ler a introdução» abre todos, um parágrafo cada (schema 9: os trechos de
  * `author_group_passage`; antes, só o `intro_passage_id`). Sem trechos, nem resumo nem botão.
+ * Ao lado, «Ler no livro» (Tarefa 5 da leitura, desenho 3) abre o 1º passo do grupo na leitura da obra de catálogo; ele
+ * aparece também no grupo sem introdução, quando o grupo tem passo.
  */
 function Introducao({ g, lendo, aoAlternar }: { g: GrupoDetalhe; lendo: boolean; aoAlternar: () => void }) {
+  const leitura = useRotaDaLeitura(passoDoGrupo, g.id)
   const [primeiro] = g.introducao
-  if (!primeiro) return null
+  if (!primeiro && !leitura) return null
   return (
     <>
-      {lendo ? (
-        <section id="grupo-introducao" className="grupo-introducao" aria-label="Introdução do grupo">
-          <TrechosDaIntroducao trechos={g.introducao} />
-        </section>
-      ) : (
-        <TrechoDaIntroducao className="grupo-resumo" trecho={primeiro} />
-      )}
-      <button type="button" className="grupo-ler hit" aria-expanded={lendo} aria-controls={lendo ? 'grupo-introducao' : undefined} onClick={aoAlternar}>
-        {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
-      </button>
+      {primeiro &&
+        (lendo ? (
+          <section id="grupo-introducao" className="grupo-introducao" aria-label="Introdução do grupo">
+            <TrechosDaIntroducao trechos={g.introducao} />
+          </section>
+        ) : (
+          <TrechoDaIntroducao className="grupo-resumo" trecho={primeiro} />
+        ))}
+      <div className="leitura-botoes grupo-botoes">
+        {primeiro && (
+          <button type="button" className="grupo-ler hit" aria-expanded={lendo} aria-controls={lendo ? 'grupo-introducao' : undefined} onClick={aoAlternar}>
+            {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
+          </button>
+        )}
+        {leitura && <BotaoDaLeitura para={leitura} rotulo="Ler no livro" cheio />}
+      </div>
     </>
   )
 }

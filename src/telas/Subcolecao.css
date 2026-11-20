@@ -61,6 +61,10 @@
   flex-direction: column;
   gap: 8px;
 }
+/* «Ler no livro» sem a caixa da introdução (a subcoleção sem texto próprio; Tarefa 5 da leitura). */
+.subcolecao-botoes-sozinhos {
+  margin: 20px 24px 0;
+}
 .subcolecao-introducao-rotulo {
   font-size: 12px;
   font-weight: 600;
@@ -173,6 +177,9 @@
   }
   .subcolecao-contagem {
     font-size: 15px;
+  }
+  .subcolecao-botoes-sozinhos {
+    margin: 24px 48px 0;
   }
   .subcolecao-introducao {
     margin: 24px 48px 0;

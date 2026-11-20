@@ -265,7 +265,9 @@ describe('Item', () => {
         const ficha = screen.getByRole('group', { name: 'Ficha' })
         expect(ficha.compareDocumentPosition(noLivro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
         expect(noLivro.compareDocumentPosition(screen.getByRole('region', { name: 'Imagem' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-        expect(within(noLivro).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(['/colecoes?obra=TESTE-I', '/grupo/GR-TESTE-I-01', `/grupo/${SUB}`])
+        // Tarefa 5 da leitura: depois do caminho, «Ler no livro» (o passo da entrada)
+        await within(noLivro).findByRole('link', { name: 'Ler no livro' })
+        expect(within(noLivro).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(['/colecoes?obra=TESTE-I', '/grupo/GR-TESTE-I-01', `/grupo/${SUB}`, '/ler/TESTE/entrada/2'])
         expect(within(noLivro).getByRole('link', { name: '1.2–1.3 Figuras de prova e sinais de teste' })).toBeInTheDocument()
         await userEvent.click(await pronto())
         expect(within(noLivro).getByRole('link', { name: '1.2–1.3 Prüfgestalten und Testzeichen' })).toHaveAttribute('lang', 'de')
@@ -275,7 +277,10 @@ describe('Item', () => {
       it('o objeto direto no grupo: «No livro» com dois níveis', async () => {
         abrir('/item/CA00003')
         await titulo()
-        expect(within(screen.getByRole('region', { name: 'No livro' })).getAllByRole('link')).toHaveLength(2)
+        const noLivro = screen.getByRole('region', { name: 'No livro' })
+        expect(within(noLivro.querySelector('.no-livro-caminho') as HTMLElement).getAllByRole('link')).toHaveLength(2)
+        // Tarefa 5 da leitura: «Ler no livro» abre o passo da entrada (TESTE-0003 → a entrada 3)
+        expect(await within(noLivro).findByRole('link', { name: 'Ler no livro' })).toHaveAttribute('href', '/ler/TESTE/entrada/3')
       })
     })
 

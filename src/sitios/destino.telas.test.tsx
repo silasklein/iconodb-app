@@ -51,8 +51,9 @@ describe('o absorvido não aparece: a lista, o mapa, as opções e o nome vão a
     await waitFor(() => expect(linhas()).not.toContain('TESTE-4'))
     // pacote 11: mais TESTEG-9 «Tell Achado Teste» (o achado «do texto» do livro em parágrafos)
     expect(linhas()).toEqual(['TESTE-5', 'TESTE-8', 'TESTE-1', 'TESTE-7', 'SI-aaaaaaaa-1', 'TESTEG-9', 'TESTE-2', 'TESTE-3', 'TESTE-6'])
-    // 3 do livro + CA00001 trocado para TESTE-4 (absorvido); TESTE-5 e TESTE-6 (as partes) não têm objetos
-    expect(linhaDe('TESTE-2')).toHaveTextContent('4 objetos')
+    // 3 do livro + F200001 (do TESTEG-2, mesclado pelo número; M6) + CA00001 trocado para TESTE-4 (absorvido); TESTE-5 e
+    // TESTE-6 (as partes) não têm objetos
+    await waitFor(() => expect(linhaDe('TESTE-2')).toHaveTextContent('5 objetos'))
     const campo = screen.getByRole('searchbox', { name: 'Buscar sítio' })
     await userEvent.type(campo, 'tel probe')
     await waitFor(() => expect(linhas()).toEqual(['TESTE-2']))
@@ -67,7 +68,8 @@ describe('o absorvido não aparece: a lista, o mapa, as opções e o nome vão a
     await screen.findByRole('group', { name: 'Mapa dos sítios' })
     await waitFor(() => expect(pontos().some((p) => p.startsWith('Tell Probe Teste'))).toBe(true))
     await waitFor(() => expect(pontos().some((p) => p.startsWith('Tel Probe Teste'))).toBe(false))
-    expect(pontos().find((p) => p.startsWith('Tell Probe Teste'))).toBe('Tell Probe Teste, 4 objetos')
+    // com F200001, do TESTEG-2 mesclado nele pelo número (M6)
+    await waitFor(() => expect(pontos().find((p) => p.startsWith('Tell Probe Teste'))).toBe('Tell Probe Teste, 5 objetos'))
   })
 
   it('as opções do campo de escolha não têm TESTE-4; TESTE-2 acha-se pelo nome dele e pela grafia da pessoa', async () => {
@@ -76,7 +78,7 @@ describe('o absorvido não aparece: a lista, o mapa, as opções e o nome vão a
     expect(result.current.map((o) => o.id)).not.toContain('TESTE-4')
     const t2 = result.current.find((o) => o.id === 'TESTE-2')!
     expect(t2.grafias).toEqual(expect.arrayContaining(['Probetal Teste', 'Tel Probe Teste']))
-    expect(t2.objetos).toBe(4)
+    expect(t2.objetos).toBe(5) // com F200001, do TESTEG-2 mesclado nele pelo número (M6)
     // as grafias dos livros (sitio_grafia, origem livro) também acham: a de TESTE-1
     expect(result.current.find((o) => o.id === 'TESTE-1')!.grafias).toContain('al-Maḥṭaṣ Teste')
   })

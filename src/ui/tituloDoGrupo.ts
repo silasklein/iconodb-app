@@ -34,3 +34,15 @@ export function tituloDoGrupo(g: GrupoComTitulo, idioma: 'pt' | 'de' = 'pt'): Ti
   const texto = !g.paiId && quantas > 0 && numero && !comecaPeloNumero(titulo, numero) ? `${numero}. ${titulo}` : titulo
   return idioma === 'de' ? { texto, lang: 'de' } : { texto }
 }
+
+/**
+ * O rótulo de uma subcoleção (ou da seção do livro em parágrafos) onde ela aparece no caminho: o «No livro» do objeto e o
+ * caminho da página do § e da leitura (Tarefa 6, revisão da Tarefa 25, 4: antes eram duas regras, «1 Selos…» e «1. Selos…»).
+ * O número simples (arábico ou romano) leva o ponto («1. Selos de prova»); o composto e a faixa, não («1.2–1.3 Figuras…»).
+ * O título que já começa pelo número (o alemão impresso, «1. Testsiegel») fica como está.
+ */
+export function rotuloDaSubcolecao(numero: string | null | undefined, titulo: string): string {
+  const n = numero?.trim().replace(/\.$/, '')
+  if (!n || comecaPeloNumero(titulo, n)) return titulo
+  return /^[\dIVXLC]+$/i.test(n) ? `${n}. ${titulo}` : `${n} ${titulo}`
+}

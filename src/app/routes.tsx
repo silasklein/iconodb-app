@@ -15,6 +15,7 @@ import { Item } from '../telas/Item'
 import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
 import { Paragrafo } from '../telas/Paragrafo'
+import { Leitura, ROTA_DA_LEITURA_DA_ENTRADA, ROTA_DA_LEITURA_DO_TRECHO } from '../telas/Leitura'
 import { ROTA_DO_PARAGRAFO } from '../banco/paragrafos'
 import { NovoObjeto } from '../telas/NovoObjeto'
 import { Preparando } from '../telas/Preparando'
@@ -52,6 +53,10 @@ export const ROTAS: Rota[] = [
   { path: '/item/:numero', elemento: <Item /> },
   // A página do § do livro em parágrafos (o GGG; Etapa 4, Tarefa 25): o português com o alemão e o inglês ao lado.
   { path: ROTA_DO_PARAGRAFO, elemento: <Paragrafo /> },
+  // A leitura de uma obra de catálogo (o IPIAO no formato do §; plano «O IPIAO lido no formato do §», Tarefa 4): o passo de
+  // texto que contém o trecho (rolado até ele) e o passo da entrada.
+  { path: ROTA_DA_LEITURA_DO_TRECHO, elemento: <Leitura /> },
+  { path: ROTA_DA_LEITURA_DA_ENTRADA, elemento: <Leitura /> },
   // Criar um objeto SKC (Tarefa 9). O objeto aberto é /item/<número> ou /item/<OB-…> (o Item resolve os dois).
   { path: '/objeto/novo', elemento: <NovoObjeto /> },
   { path: '/imagem/:id', elemento: <Imagem /> },

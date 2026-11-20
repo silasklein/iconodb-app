@@ -207,12 +207,14 @@ describe('os sítios no mapa', () => {
 
   it('o cartão traz as miniaturas dos objetos do sítio (do livro) e o «+N» quando passam de quatro', async () => {
     await abrir()
-    const probe = screen.getByRole('button', { name: /^Tell Probe Teste, 3 objetos/ })
+    // os 3 do catálogo e F200001, do TESTEG-2 mesclado no TESTE-2 pelo número (M6)
+    const probe = await screen.findByRole('button', { name: /^Tell Probe Teste, 4 objetos/ })
     await userEvent.click(probe)
     const cartao = await screen.findByRole('dialog', { name: 'Sítio selecionado: Tell Probe Teste' })
     const lista = await within(cartao).findByRole('list', { name: 'Objetos de Tell Probe Teste' })
-    await waitFor(() => expect(within(lista).getAllByRole('link').length).toBe(3))
-    for (const a of within(lista).getAllByRole('link')) expect(a.getAttribute('href')).toMatch(/^\/item\/[A-Z]{2}\d+$/)
+    const itens = () => within(lista).getAllByRole('link').filter((a) => !a.getAttribute('href')!.startsWith('/paragrafo/'))
+    await waitFor(() => expect(itens().length).toBe(4))
+    for (const a of itens()) expect(a.getAttribute('href')).toMatch(/^\/item\/[A-Z0-9]{2}\d+$/)
   })
 
   it('passar o mouse numa linha acende o ponto (anel) e passar o mouse no ponto acende a linha', async () => {

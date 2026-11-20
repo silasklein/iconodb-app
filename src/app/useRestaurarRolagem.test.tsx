@@ -112,6 +112,23 @@ describe('useRestaurarRolagem (telas de mentira)', () => {
     await waitFor(() => expect(chamadas()).toEqual([[0, 1500]]), { timeout: 2500 })
   })
 
+  it('Tarefa 6e: enquanto a tela diz que carrega (aria-busy), o ~1 s não conta; quando o conteúdo chega, restaura', async () => {
+    abrir()
+    rolarAte(1500)
+    act(() => void ir('/detalhe'))
+    y = 0
+    altura = 800
+    rolar.mockClear()
+    const carregando = document.body.appendChild(document.createElement('div'))
+    carregando.setAttribute('aria-busy', 'true')
+    act(() => void ir(-1))
+    await new Promise((r) => setTimeout(r, 1300))
+    expect(chamadas()).toEqual([])
+    carregando.remove()
+    altura = 5000
+    await waitFor(() => expect(chamadas()).toEqual([[0, 1500]]))
+  })
+
   it('quem rola na espera cancela a restauração', async () => {
     abrir()
     rolarAte(1500)

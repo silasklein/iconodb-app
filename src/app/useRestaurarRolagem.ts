@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router'
-import { alturaSuficiente, decidirRolagem, guardarPosicao, lerPosicoes } from './rolagem'
+import { aindaCarregando, alturaSuficiente, decidirRolagem, ESPERA_COM_CARREGANDO_MS, guardarPosicao, lerPosicoes } from './rolagem'
 
 const ESPERA_MAXIMA_MS = 1000
 
@@ -67,7 +67,9 @@ export function useRestaurarRolagem(): void {
 
     let quadro = 0
     let cancelado = false
-    const inicio = performance.now()
+    const comeco = performance.now()
+    // o ~1 s conta a partir de quando a tela para de carregar (Tarefa 6e), até o teto
+    let inicio = comeco
     restaurando.current = true
     const entradas = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
     const parar = (porQuemRola: boolean) => {
@@ -89,7 +91,9 @@ export function useRestaurarRolagem(): void {
         parar(false)
         return
       }
-      if (performance.now() - inicio >= ESPERA_MAXIMA_MS) {
+      const agora = performance.now()
+      if (aindaCarregando() && agora - comeco < ESPERA_COM_CARREGANDO_MS) inicio = agora
+      if (agora - inicio >= ESPERA_MAXIMA_MS) {
         // A página não chegou à altura: leva-se o que dá, mas o alvo continua sendo o que se guarda (o
         // `scrollY` cortado só vale quando a pessoa rolar de novo).
         window.scrollTo(0, decisao.y)

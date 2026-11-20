@@ -134,7 +134,9 @@ describe('Parte 2C, bloco 3: a obra do usuário publicada (tipo obra)', () => {
 
 describe('Parte 2C, bloco 2: a mescla de um sítio do livro em outro (tipo sitio, criado 0) vai para um mapa à parte', () => {
   it('TESTE-4 → TESTE-2 está em mesclasDoPacote e não nos redirecionamentos das publicações', async () => {
-    expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2' })
+    // e a do mesmo número entre livros, TESTEG-2 → TESTE-2 (M6)
+    expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2', 'TESTEG-2': 'TESTE-2' })
+    expect((await redirecionamentosDoPacote()).has('TESTEG-2')).toBe(false)
     expect((await redirecionamentosDoPacote()).has('TESTE-4')).toBe(false)
     const { result } = renderHook(() => useRedirecionamentos())
     await waitFor(() => expect(result.current).not.toBeNull())
@@ -148,7 +150,7 @@ describe('Parte 2C, bloco 2: a mescla de um sítio do livro em outro (tipo sitio
     try {
       await executar(`INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('GL-12', 'TESTE-2', 'sitio', 0), ('TESTE-5', 'GL-9', 'sitio', 0),
         ('TESTE-6', 'TESTE-99', 'sitio', 0), ('TESTE-99', 'TESTE-1', 'sitio', 0), ('TESTE-7', 'TESTE-7', 'sitio', 0), ('TESTE-8', 'TESTE-1', 'verbete', 0)`)
-      expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2' })
+      expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTE-4': 'TESTE-2', 'TESTEG-2': 'TESTE-2' })
       expect([...(await redirecionamentosDoPacote()).keys()].sort()).toEqual(['BIB-teste123-1', 'GL-teste123-1', 'GL-teste123-2', 'SI-teste123-1', 'SI-teste123-2'])
     } finally {
       usarMotor(await bancoDeTeste())
@@ -159,7 +161,8 @@ describe('Parte 2C, bloco 2: a mescla de um sítio do livro em outro (tipo sitio
     usarMotor(await bancoDeTeste({ escrita: true }))
     try {
       await executar("UPDATE main.redirecionamento SET para = 'TESTE-99' WHERE de = 'TESTE-4'")
-      expect((await mesclasDoPacote()).size).toBe(0)
+      // fica só a do mesmo número, TESTEG-2 → TESTE-2 (M6)
+      expect(Object.fromEntries(await mesclasDoPacote())).toEqual({ 'TESTEG-2': 'TESTE-2' })
     } finally {
       usarMotor(await bancoDeTeste())
     }

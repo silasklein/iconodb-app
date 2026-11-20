@@ -119,6 +119,19 @@ describe('GrupoDividido (o grupo com subcoleções no computador)', () => {
     expect(direita).toBeInTheDocument()
   })
 
+  it('Tarefa 5 da leitura: «Ler no livro» do grupo, à esquerda, e o da subcoleção escolhida, à direita', async () => {
+    abrir('/grupo/GR-TESTE-I-01?sub=GR-TESTE-I-01-02')
+    const direita = await screen.findByRole('region', { name: /^Objetos da subcoleção/ })
+    const daSub = await within(direita).findByRole('link', { name: 'Ler no livro: subcoleção 1.2–1.3' })
+    expect(daSub).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.10-ovw-2')
+    expect(daSub).toHaveTextContent(/^Ler no livro$/)
+    expect(within(direita).getByRole('button', { name: 'Ler a introdução da subcoleção' }).parentElement).toBe(daSub.parentElement)
+    const doGrupo = await screen.findByRole('link', { name: 'Ler no livro' })
+    expect(doGrupo).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.9-ovw-1')
+    expect(direita.contains(doGrupo)).toBe(false)
+    expect(screen.getByRole('button', { name: 'Ler a introdução' }).parentElement).toBe(doGrupo.parentElement)
+  })
+
   it('«Todos» volta aos 3 e tira o ?sub=', async () => {
     abrir('/grupo/GR-TESTE-I-01?sub=GR-TESTE-I-01-02')
     await waitFor(() => expect(cartoes()).toHaveLength(1))

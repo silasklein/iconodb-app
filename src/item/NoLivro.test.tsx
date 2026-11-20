@@ -4,6 +4,7 @@ import type { NoLivro as LugarNoLivro } from '../banco/tipos'
 import { NoLivro } from './NoLivro'
 
 const NA_SUBCOLECAO: LugarNoLivro = {
+  itemId: 'TESTE-0002',
   publicacao: 'TESTE',
   volume: 'I',
   periodo: 'Calcolítico (fase de teste)',
@@ -48,8 +49,17 @@ describe('NoLivro', () => {
     expect(ponto).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('Tarefa 6 (revisão da Tarefa 25, 4): a subcoleção com o mesmo rótulo do caminho do § («2. …»), e o alemão que já traz o número sem repeti-lo', () => {
+    const simples: LugarNoLivro = { ...NA_SUBCOLECAO, subcolecao: { ...NA_SUBCOLECAO.subcolecao!, numero: '2', tituloDe: '2. Prüfgestalten' } }
+    const { unmount } = mostrar([simples])
+    expect(within(bloco()).getByRole('link', { name: '2. Figuras de prova e sinais de teste' })).toBeInTheDocument()
+    unmount()
+    mostrar([simples], 'de')
+    expect(within(bloco()).getByRole('link', { name: '2. Prüfgestalten' })).toBeInTheDocument()
+  })
+
   it('sem período, o nome do livro é o link e não se repete', () => {
-    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
+    const outro: LugarNoLivro = { itemId: 'OUTRO-0001', publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
     mostrar([outro])
     const linha = bloco().querySelector('p') as HTMLElement
     expect(linha).toHaveTextContent(/^OUTRO › Grupo de teste$/)
@@ -99,7 +109,7 @@ describe('NoLivro', () => {
   })
 
   it('uma linha por lugar; sem período, a obra; sem lugar, nada', () => {
-    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
+    const outro: LugarNoLivro = { itemId: 'OUTRO-0001', publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
     mostrar([NA_SUBCOLECAO, outro])
     const linhas = bloco().querySelectorAll('p')
     expect(linhas).toHaveLength(2)
@@ -116,6 +126,7 @@ describe('NoLivro', () => {
 
   it('Tarefa 26: a linha do livro em parágrafos (o GGG) não tem período: «TESTEG · I. capítulo › 1. seção», o capítulo e a seção em links', () => {
     const doLivro: LugarNoLivro = {
+      itemId: 'TESTEG-0001b',
       publicacao: 'TESTEG',
       volume: '',
       periodo: 'Ferro II (fase de teste)',

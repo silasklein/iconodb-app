@@ -1,0 +1,437 @@
+/*
+ * As peças comuns da página do § (o GGG) e da página de leitura (o IPIAO): a moldura da página, o cabeçalho, a faixa das
+ * figuras, as abas, a grade das línguas com subgrid, os trilhos e o pé (src/paragrafo/pecas.tsx; tiradas de
+ * src/telas/Paragrafo.css na Tarefa 4 do plano «O IPIAO lido no formato do §»). Fundo claro, como as telas de consulta
+ * (decisão 91, a5). Só os tokens que já existem: nenhuma cor nova.
+ */
+.paragrafo {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.paragrafo-corpo {
+  padding: 0 24px 64px;
+}
+.paragrafo .item-volta-nav {
+  padding: 0;
+}
+.paragrafo .item-volta {
+  min-height: var(--alvo-mouse);
+  font-size: 13px;
+  color: var(--secundario);
+}
+.paragrafo-vazio-titulo {
+  margin: 24px 24px 0;
+  font-family: var(--fonte-titulo);
+  font-size: 30px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.paragrafo-vazio {
+  margin: 24px 24px 8px;
+  font-size: 16px;
+}
+.paragrafo > p:not(.paragrafo-vazio) {
+  margin: 0 24px;
+}
+
+/* O cabeçalho */
+.paragrafo-caminho {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.paragrafo-caminho a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.paragrafo-livro {
+  font-weight: 600;
+}
+.paragrafo-sep {
+  color: var(--secundario);
+  white-space: pre;
+}
+.paragrafo-titulo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+}
+.paragrafo-titulo h1 {
+  margin: 0;
+  font-family: var(--fonte-titulo);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.paragrafo-setas {
+  display: flex;
+  gap: 4px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.paragrafo-setas a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--alvo-toque);
+  padding: 0 6px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.paragrafo-setas a:hover span,
+.paragrafo-setas a:focus-visible span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.paragrafo-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+.paragrafo-meta a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+/* As figuras citadas */
+.paragrafo-figuras {
+  margin-top: 28px;
+  border-top: 2px solid var(--texto);
+}
+.paragrafo-cab-secao {
+  margin: 0;
+  padding: 12px 0 14px;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.paragrafo-cab-secao .codigo {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--secundario);
+}
+.paragrafo-faixa {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.paragrafo-figura {
+  flex: 0 0 118px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.paragrafo-figura-imagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 10px;
+  background: var(--superficie);
+  overflow: hidden;
+}
+.paragrafo-figura-imagem img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.paragrafo-figura-rotulo {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.paragrafo-figura:hover .paragrafo-figura-rotulo,
+.paragrafo-figura:focus-visible .paragrafo-figura-rotulo {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.paragrafo-figura-sitio {
+  font-size: 12px;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+/* «Mostrar todas (N)»: a faixa mostra uma linha; o botão abre o resto */
+.paragrafo-mais-figuras {
+  min-height: var(--alvo-toque);
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--corpo-consulta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* As abas do celular */
+.paragrafo-abas {
+  margin-top: 28px;
+  border-bottom: 1px solid var(--filete);
+}
+.paragrafo-abas-lista {
+  display: flex;
+  gap: 28px;
+}
+.paragrafo-abas-lista [role='tab'] {
+  min-height: var(--alvo-toque);
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--corpo-consulta);
+  cursor: pointer;
+}
+.paragrafo-abas-lista [role='tab'][aria-selected='true'] {
+  border-bottom-color: var(--texto);
+  color: var(--texto);
+  font-weight: 600;
+}
+
+/* As línguas */
+.paragrafo-linguas {
+  margin-top: 20px;
+}
+.paragrafo-coluna {
+  min-width: 0;
+}
+.paragrafo-cab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--filete);
+}
+.paragrafo-cab-linha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.paragrafo-cab-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.paragrafo-cab-nome b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.paragrafo-cab-nome small {
+  font-size: 12px;
+  color: var(--secundario);
+}
+
+.paragrafo-trecho {
+  margin: 0 0 18px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--corpo-consulta);
+  overflow-wrap: break-word;
+}
+.paragrafo-coluna-pt .paragrafo-trecho {
+  font-size: 17px;
+  line-height: 1.62;
+  color: var(--texto);
+}
+.paragrafo-falta {
+  color: var(--secundario);
+  font-size: 13px;
+}
+.paragrafo-sem-traducao {
+  display: block;
+  font-size: 12px;
+  color: var(--secundario);
+}
+.paragrafo-coluna .termo {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.paragrafo-coluna .paragrafo-fig {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--texto);
+  text-underline-offset: 3px;
+}
+
+/* O pé: o § anterior e o seguinte */
+.paragrafo-pe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 36px;
+  border-top: 2px solid var(--texto);
+}
+.paragrafo-pe a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 0;
+  color: inherit;
+  text-decoration: none;
+}
+.paragrafo-pe-anterior {
+  padding-right: 16px !important;
+}
+.paragrafo-pe-seguinte {
+  grid-column: 2;
+  text-align: right;
+  border-left: 1px solid var(--filete);
+  padding-left: 16px !important;
+}
+.paragrafo-pe b {
+  font-size: 16px;
+  font-weight: 600;
+}
+.paragrafo-pe a:hover b,
+.paragrafo-pe a:focus-visible b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.paragrafo-pe span {
+  font-size: 13px;
+  color: var(--secundario);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+/* a etiqueta do tipo do vizinho, quando ele é de outro tipo (a leitura do IPIAO) */
+.paragrafo-pe .paragrafo-pe-tipo {
+  display: inline;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Computador: o português no centro (até 680 px), o alemão e o inglês em trilhos que se abrem em colunas. */
+@media (min-width: 768px) {
+  .paragrafo {
+    min-height: calc(100dvh - var(--barra-superior));
+  }
+  .paragrafo-corpo {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 48px 80px;
+  }
+  .paragrafo-titulo h1 {
+    font-size: 48px;
+  }
+  .paragrafo-setas a {
+    min-height: var(--alvo-mouse);
+  }
+  .paragrafo-mais-figuras {
+    min-height: var(--alvo-mouse);
+  }
+  .paragrafo-faixa {
+    overflow: visible;
+    flex-wrap: wrap;
+  }
+  .paragrafo-figura {
+    flex-basis: 132px;
+  }
+  .paragrafo-linguas {
+    display: grid;
+    column-gap: 40px;
+    margin-top: 36px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 680px) minmax(0, 1fr);
+  }
+  .paragrafo-linguas.de-aberto.en-aberto {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .paragrafo-linguas.de-aberto:not(.en-aberto) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  }
+  .paragrafo-linguas.en-aberto:not(.de-aberto) {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* Cada língua ocupa todas as linhas da grade e as reparte (subgrid): os trechos e as notas ficam alinhados. */
+  .paragrafo-coluna {
+    display: grid;
+    grid-template-rows: subgrid;
+    align-content: start;
+  }
+  .paragrafo-coluna-de,
+  .paragrafo-trilho-de {
+    grid-column: 1;
+  }
+  .paragrafo-coluna-pt {
+    grid-column: 2;
+  }
+  .paragrafo-coluna-en,
+  .paragrafo-trilho-en {
+    grid-column: 3;
+  }
+  .paragrafo-cab {
+    border-top: 2px solid var(--texto);
+    border-bottom: 0;
+    padding-top: 12px;
+    margin-bottom: 22px;
+  }
+  .paragrafo-linguas.de-aberto.en-aberto .paragrafo-coluna-pt .paragrafo-trecho {
+    font-size: 16px;
+  }
+  .paragrafo-trilho {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 48px;
+    padding: 14px 0;
+    border: 1px solid var(--filete);
+    border-radius: 6px;
+    background: var(--superficie);
+    font: inherit;
+    font-size: 13px;
+    color: var(--corpo-consulta);
+    cursor: pointer;
+  }
+  .paragrafo-trilho:hover,
+  .paragrafo-trilho:focus-visible {
+    border-color: var(--texto);
+    color: var(--texto);
+  }
+  .paragrafo-trilho > span {
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+  }
+  .paragrafo-trilho b {
+    font-weight: 600;
+    color: var(--texto);
+  }
+  .paragrafo-trilho-de {
+    justify-self: end;
+  }
+  .paragrafo-trilho-de span {
+    transform: rotate(180deg);
+  }
+  .paragrafo-trilho-en {
+    justify-self: start;
+  }
+}

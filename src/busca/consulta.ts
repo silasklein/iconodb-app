@@ -14,6 +14,8 @@ import type { Registro } from '../usuario/fusao'
 import { garantirIndiceDoUsuario, numeroDeObjeto, SIGLA_SKC } from '../usuario/indice'
 import { chaveDaFonte, lerReferenciaDigitada } from '../banco/referencias'
 import { caminhoDoParagrafo, numeroDoParagrafo } from '../banco/paragrafos'
+import { obrasDeLeitura, rotaDoTrecho, trechosNaLeitura } from '../banco/leitura'
+import type { TipoDeTexto } from '../leitura/ordem'
 import { indiceDeNotas } from '../notas/indiceDeNotas'
 import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
 import { garantirOsDonosDosTrechos } from '../hipoteses/garantirDonos'
@@ -112,14 +114,25 @@ export interface AcertoDoUsuario {
 /**
  * Um § do livro em parágrafos achado pela busca (decisão 91, a6: o bloco «Nos §§» e a aba «Texto», Tarefa 26): o texto
  * corrido, as notas ou a tradução inglesa dele casam. Um § não é objeto: não entra em `objetos`, nas contagens nem nas facetas.
+ *
+ * Na mesma lista, a página de introdução de uma obra de catálogo (plano «O IPIAO lido no formato do §», Tarefa 5): o trecho
+ * `<vol>.S.<p>` que casou, um achado por passo da leitura, com o rótulo «TESTE I, p. 10» e a rota da leitura rolada até ele.
  */
 export interface ParagrafoAchado {
+  /**
+   * 'pagina': a página de introdução da obra de catálogo. O § do livro em parágrafos não leva o campo (é o achado de sempre,
+   * igual ao de antes da leitura): vale 'paragrafo'.
+   */
+  tipo?: 'paragrafo' | 'pagina'
+  /** Na página: o tipo do passo («Introdução do grupo»…), a etiqueta da linha. */
+  rotuloDoTipo?: TipoDeTexto
   /** A publicação da página do §: o livro; um trecho da tradução (o GGIG, `publication.translation_of`) abre o § do original. */
   sigla: string
+  /** O número do §; na página, a página impressa. */
   numero: number
-  /** «GGG § 29». */
+  /** «GGG § 29»; na página, «TESTE I, p. 10». */
   rotulo: string
-  /** A rota da página do § (`/paragrafo/:sigla/:numero`). */
+  /** A rota da página do § (`/paragrafo/:sigla/:numero`); na página, a da leitura (`/ler/:sigla/trecho/:id`, o 1º que casou). */
   caminho: string
   /** Os trechos que casaram (texto, notas e inglês), na ordem do índice. */
   trechos: string[]
@@ -174,6 +187,16 @@ export interface ResultadoDaBusca {
    * os esconde, e o de publicação os deixa quando é a do § ou a de um texto que casou.
    */
   paragrafos: ParagrafoAchado[]
+  /**
+   * Quantos dos achados da aba «Texto» são páginas de introdução (Tarefa 5 da leitura), em toda aba: com alguma, a tela diz
+   * «No texto» e «N trechos» no lugar de «Nos §§» e «N §§». Sem o campo, nenhuma.
+   */
+  paginasNoTexto?: number
+  /**
+   * Há obra de leitura aberta no pacote (fix final, m4): a aba «Texto» também busca as introduções do catálogo, e a tela vazia
+   * diz «Nada encontrado no texto». Sem o campo (ou false), só o livro em parágrafos: «Nada encontrado nos §§».
+   */
+  comLeitura?: boolean
 }
 
 const LIMITE_PADRAO = 120
@@ -815,6 +838,79 @@ function vazio(curta = false): ResultadoDaBusca {
 }
 
 /**
+ * O trecho que a linha do achado mostra: o português, se casou; senão o original, se casou; com `exigir`, null quando nenhum
+ * casou (uma variante do glossário); sem `exigir`, o português (ou o original). A nota leva o número dela.
+ */
+function trechoAchado(l: L, exigir: boolean, digitado: string, palavras: readonly string[], tabela: FoldTabela): ParagrafoAchado['trecho'] | null {
+  const pt = s(l.texto)
+  const original = s(l.text) ?? ''
+  const nota = l.kind === 'footnote' ? (n(l.ordinal) ?? null) : null
+  const linguaDoOriginal = s(l.language) === 'en' ? 'en' : 'de'
+  const com = (texto: string, lingua: ParagrafoAchado['trecho']['lingua']) => ({ id: s(l.id)!, nota, texto, lingua, recorte: recorteDoTrecho(texto, digitado, tabela) })
+  if (pt && casa(palavras, pt, tabela)) return com(pt, 'pt-BR')
+  if (casa(palavras, original, tabela)) return com(original, linguaDoOriginal)
+  if (exigir) return null
+  return pt ? com(pt, 'pt-BR') : com(original, linguaDoOriginal)
+}
+
+/**
+ * As páginas de introdução das obras de catálogo achadas (Tarefa 5 da leitura): os trechos `<vol>.S.<p>` que estão num passo
+ * de texto da leitura (`trechosNaLeitura`), um achado por passo, na ordem da leitura. O caminho abre o passo rolado até o
+ * primeiro trecho que casou; o trecho mostrado é o primeiro com casamento visível, como no §.
+ */
+async function paginasDosTrechos(
+  pubs: readonly PublicacaoAberta[],
+  trechos: readonly string[],
+  digitado: string,
+  palavras: readonly string[],
+  tabela: FoldTabela,
+): Promise<ParagrafoAchado[]> {
+  const naLeitura = await trechosNaLeitura(trechos)
+  if (naLeitura.size === 0) return []
+  const linhas = await porPublicacao(
+    pubs.filter((p) => [...naLeitura.values()].some((t) => t.sigla === p.sigla)),
+    (esq) => `SELECT p.id, p.kind, p.ordinal, p.language, p.text, r.texto
+              FROM ${esq}.passage p LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id WHERE p.id IN ${EM_IDS}`,
+    { $ids: lista([...naLeitura.keys()]) },
+  )
+  const daLinha = new Map(linhas.map((l) => [s(l.id)!, l]))
+  const porPasso = new Map<string, { achado: ParagrafoAchado; passo: number; casou: boolean }>()
+  for (const id of trechos) {
+    const t = naLeitura.get(id)
+    const l = daLinha.get(id)
+    if (!t || !l) continue
+    const chave = `${t.sigla}|${t.passo}`
+    const atual = porPasso.get(chave) ?? {
+      passo: t.passo,
+      casou: false,
+      achado: {
+        tipo: 'pagina' as const,
+        rotuloDoTipo: t.rotuloDoTipo,
+        sigla: t.sigla,
+        numero: t.pagina,
+        rotulo: t.rotulo,
+        caminho: rotaDoTrecho(t.sigla, id),
+        trechos: [],
+        publicacoes: [t.sigla],
+        trecho: trechoAchado(l, false, digitado, palavras, tabela)!,
+        trilha: [],
+      },
+    }
+    if (!atual.casou) {
+      const visivel = trechoAchado(l, true, digitado, palavras, tabela)
+      if (visivel) {
+        atual.achado.trecho = visivel
+        atual.achado.caminho = rotaDoTrecho(t.sigla, id)
+        atual.casou = true
+      }
+    }
+    if (!atual.achado.trechos.includes(id)) atual.achado.trechos.push(id)
+    porPasso.set(chave, atual)
+  }
+  return [...porPasso.values()].sort((x, y) => x.passo - y.passo).map((x) => x.achado)
+}
+
+/**
  * Os §§ dos trechos achados (`busca.doc` `trecho` cujo `passage.locator` é «§N»), um por (publicação da página, número). O
  * trecho de uma tradução (`publication.translation_of`, o GGIG) vale para o § do original, se ele está aberto.
  */
@@ -840,17 +936,7 @@ async function paragrafosDosTrechos(
   // O trecho que se mostra: o primeiro que casou, na língua em que casou; sem casamento visível (uma variante do glossário), o
   // primeiro trecho, no português.
   const casou = new Set<string>()
-  const trechoDe = (l: L, exigir: boolean): ParagrafoAchado['trecho'] | null => {
-    const pt = s(l.texto)
-    const original = s(l.text) ?? ''
-    const nota = l.kind === 'footnote' ? (n(l.ordinal) ?? null) : null
-    const linguaDoOriginal = s(l.language) === 'en' ? 'en' : 'de'
-    const com = (texto: string, lingua: ParagrafoAchado['trecho']['lingua']) => ({ id: s(l.id)!, nota, texto, lingua, recorte: recorteDoTrecho(texto, digitado, tabela) })
-    if (pt && casa(palavras, pt, tabela)) return com(pt, 'pt-BR')
-    if (casa(palavras, original, tabela)) return com(original, linguaDoOriginal)
-    if (exigir) return null
-    return pt ? com(pt, 'pt-BR') : com(original, linguaDoOriginal)
-  }
+  const trechoDe = (l: L, exigir: boolean) => trechoAchado(l, exigir, digitado, palavras, tabela)
   for (const id of trechos) {
     const l = daLinha.get(id)
     const numero = l ? numeroDoParagrafo(s(l.locator)) : null
@@ -994,15 +1080,28 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   }
   const doEscopo = (escopo: Escopo) => [...porEscopo[escopo]].flatMap((nr) => todos.get(nr) ?? [])
   // Os §§ achados (Tarefa 26): a aba «Texto» conta os §§, em toda aba; a lista vem no «Tudo» (o bloco «Nos §§») e no «Texto».
-  const todosOsParagrafos = (
-    await paragrafosDosTrechos(
+  // As páginas de introdução das obras de catálogo (Tarefa 5 da leitura) entram na mesma lista, na ordem das publicações
+  // (`publicacoesAbertas`: o catálogo antes do livro em parágrafos); o objeto que o mesmo trecho dá continua em `objetos`.
+  const [dosParagrafos, dasPaginas, comLeitura] = await Promise.all([
+    paragrafosDosTrechos(
       pubs,
       doTipo('trecho').filter((d) => !d.objeto).map((d) => d.ref),
       digitado,
       palavras,
       tabela,
-    )
-  ).filter((p) => filtrosDeixamOsParagrafos(p, opcoes.filtros))
+    ),
+    // como as outras consultas ao lado: se a ordem de leitura falha (um pacote velho estranho, um erro de SQL), a busca segue sem as páginas
+    paginasDosTrechos(pubs, doTipo('trecho').map((d) => d.ref), digitado, palavras, tabela).catch((): ParagrafoAchado[] => []),
+    obrasDeLeitura().then(
+      (obras) => obras.length > 0,
+      () => false,
+    ),
+  ])
+  const ordemDaPublicacao = new Map(pubs.map((p, i) => [p.sigla, i]))
+  // (a ordenação é estável: dentro de cada publicação, a ordem da leitura ou a dos §§)
+  const todosOsParagrafos = [...dasPaginas, ...dosParagrafos]
+    .sort((x, y) => (ordemDaPublicacao.get(x.sigla) ?? 99) - (ordemDaPublicacao.get(y.sigla) ?? 99))
+    .filter((p) => filtrosDeixamOsParagrafos(p, opcoes.filtros))
   const contagens = Object.fromEntries(
     ESCOPOS.map((e) => [e, e === 'texto' ? todosOsParagrafos.length : doEscopo(e).filter((c) => passa(c, opcoes.filtros)).length]),
   ) as Record<Escopo, number>
@@ -1054,5 +1153,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     usuario,
     contagensDoUsuario,
     paragrafos,
+    paginasNoTexto: todosOsParagrafos.filter((p) => p.tipo === 'pagina').length,
+    comLeitura,
   }
 }

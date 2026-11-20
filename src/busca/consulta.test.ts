@@ -117,7 +117,8 @@ describe('buscar() sobre o pacote sintético', () => {
   })
 
   it('escopo "local": objetos dos sítios que casam', async () => {
-    expect(numeros(await buscar('probe', { ...opcoes, escopo: 'local' }))).toEqual(['BA00002', 'CA00003', 'CA00004'])
+    // e F200001, a figura achada no TESTEG-2 «T. Probe Teste» (M6)
+    expect(numeros(await buscar('probe', { ...opcoes, escopo: 'local' }))).toEqual(['BA00002', 'CA00003', 'CA00004', 'F200001'])
     expect((await buscar('leão', { ...opcoes, escopo: 'local' })).total).toBe(0)
   })
 

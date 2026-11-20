@@ -31,6 +31,15 @@
 .no-livro-sep {
   color: var(--secundario);
 }
+/* A linha do catálogo e, embaixo, «Ler no livro» (Tarefa 5 da leitura, desenho 3). */
+.no-livro-lugar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.no-livro-lugar .ler-no-livro {
+  margin-bottom: 4px;
+}
 
 @media (min-width: 768px) {
   .no-livro {

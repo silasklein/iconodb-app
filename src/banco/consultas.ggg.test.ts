@@ -74,10 +74,11 @@ describe('o livro em parágrafos nas Coleções, na Bibliografia e no mapa', () 
     expect(r!.achadoDoTexto).toEqual({ sigla: 'TESTEG', trechoId: 'PA-TESTEG-§3-txt-1', paragrafo: 3 })
     const doSitio = (await objetosDosSitios(['TESTEG-9'])).get('TESTEG-9')!
     expect(doSitio.map((o) => [o.numero, o.achadoDoTexto?.paragrafo])).toEqual([['F200002', 3]])
-    // o sítio do achado conta quantos objetos vêm do texto (o cartão do mapa: «1 objeto, 1 do texto»)
+    // Tarefa 6 (revisão da Tarefa 26, M3): o resumo do sítio não conta os «do texto»; o cartão do mapa os conta dos objetos
+    // carregados (com os das mesclas e o livro de cada um), e o campo da consulta ficava sem uso
     const tell = (await sitios()).find((s) => s.id === 'TESTEG-9')!
-    expect([tell.objetos, tell.doTexto]).toEqual([1, 1])
-    expect((await sitios()).find((s) => s.id === 'TESTE-1')!.doTexto).toBe(0)
+    expect(tell.objetos).toBe(1)
+    expect(tell).not.toHaveProperty('doTexto')
   })
 
   it('fix 1, I1: a figura sem tipo (sem campo 5) leva o rótulo dela no resumo; o objeto do catálogo sem tipo, não', async () => {

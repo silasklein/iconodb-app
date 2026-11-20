@@ -167,28 +167,34 @@ describe('Partes na página do sítio', () => {
     await trocarSitioDoObjeto('CA00003', 'TESTE-6', 'Túmulo Probe Teste')
     const r = renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
-    expect(await screen.findByText('TESTE-2 · 3 objetos, 1 nas partes')).toBeInTheDocument()
+    // os 3 do catálogo e a figura TESTEG-0001a, do TESTEG-2 mesclado nele pelo número (M6)
+    expect(await screen.findByText('TESTE-2 · 4 objetos, 1 nas partes')).toBeInTheDocument()
     const partes = screen.getByRole('region', { name: 'Partes' })
     await waitFor(() =>
       expect([...partes.querySelectorAll('.sitio-parte')].map((l) => l.textContent)).toEqual(['Área Probe Teste1 objeto', '└Túmulo Probe Teste1 objeto']),
     )
     const objetos = screen.getByRole('region', { name: 'Objetos deste sítio' })
-    const cartoes = within(objetos).getAllByRole('link')
-    expect(cartoes.map((c) => [c.getAttribute('href'), c.querySelector('.cartao-sitio')?.textContent])).toEqual([
-      ['/item/CA00004', 'Tell Probe Teste'],
-      ['/item/BA00002', 'Tell Probe Teste'],
-      ['/item/CA00003', 'em Túmulo Probe Teste'],
-    ])
+    const cartoes = () => within(objetos).getAllByRole('link')
+    await waitFor(() =>
+      expect(cartoes().map((c) => [c.getAttribute('href'), c.querySelector('.cartao-sitio')?.textContent])).toEqual([
+        ['/item/CA00004', 'Tell Probe Teste'],
+        ['/item/BA00002', 'Tell Probe Teste'],
+        // a figura do TESTEG-2 (M6), com o link «do texto» ao § 2 de onde vem o achado
+        ['/item/F200001', 'Tell Probe Teste'],
+        ['/paragrafo/TESTEG/2', undefined],
+        ['/item/CA00003', 'em Túmulo Probe Teste'],
+      ]),
+    )
     r.unmount()
     // a página do túmulo diz o mesmo número
     const r2 = renderizarRota('/sitio/TESTE-6')
     await screen.findByRole('heading', { level: 1, name: 'Túmulo Probe Teste' })
     expect(await screen.findByText('TESTE-6 · 1 objeto')).toBeInTheDocument()
     r2.unmount()
-    // e a lista dos sítios: o todo 3, a área 1, o túmulo 1
+    // e a lista dos sítios: o todo 4 (com a figura do TESTEG-2, M6), a área 1, o túmulo 1
     const { container } = renderizarRota('/sitios')
     const n = (id: string) => container.querySelector(`[data-sitio="${id}"] .lista-n`)?.textContent
-    await waitFor(() => expect([n('TESTE-2'), n('TESTE-5'), n('TESTE-6')]).toEqual(['3 objetos', '1 objeto', '1 objeto']))
+    await waitFor(() => expect([n('TESTE-2'), n('TESTE-5'), n('TESTE-6')]).toEqual(['4 objetos', '1 objeto', '1 objeto']))
   })
 
   it('no todo: «, 3 nas partes» sob o título, a seção «Partes» em árvore e, na grade, «em …» nos objetos que vêm de uma parte', async () => {
@@ -197,7 +203,8 @@ describe('Partes na página do sítio', () => {
     try {
       renderizarRota('/sitio/TESTE-2')
       await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
-      expect(await screen.findByText('TESTE-2 · 6 objetos, 3 nas partes')).toHaveClass('codigo')
+      // 3 do catálogo, a figura do TESTEG-2 mesclado nele pelo número (M6) e os 3 de Maḥteṣ Teste, na parte
+      expect(await screen.findByText('TESTE-2 · 7 objetos, 3 nas partes')).toHaveClass('codigo')
       const partes = screen.getByRole('region', { name: 'Partes' })
       expect(within(partes).getByRole('heading', { name: 'Partes' })).toBeInTheDocument()
       expect(partes.querySelector('.detalhe-secao-topo .codigo')).toHaveTextContent(/^3$/)
@@ -214,11 +221,12 @@ describe('Partes na página do sítio', () => {
       // o «└» é desenho: o leitor de tela ouve a lista dentro da lista
       expect(partes.querySelector('.sitio-parte-ramo')).toHaveAttribute('aria-hidden', 'true')
       const objetos = screen.getByRole('region', { name: 'Objetos deste sítio' })
-      expect(within(objetos).getByText('6')).toBeInTheDocument()
-      const cartoes = within(objetos).getAllByRole('link')
-      expect(cartoes).toHaveLength(6)
-      // os do próprio sítio primeiro; os da parte dizem de qual
-      expect(cartoes.map((c) => /em Maḥteṣ Teste/.test(c.textContent ?? ''))).toEqual([false, false, false, true, true, true])
+      expect(await within(objetos).findByText('7')).toBeInTheDocument()
+      // os cartões (sem o link «do texto» ao § 2 da figura do TESTEG-2, M6)
+      const cartoes = within(objetos).getAllByRole('link').filter((a) => a.getAttribute('href')!.startsWith('/item/'))
+      expect(cartoes).toHaveLength(7)
+      // os do próprio sítio primeiro (com a figura do TESTEG-2); os da parte dizem de qual
+      expect(cartoes.map((c) => /em Maḥteṣ Teste/.test(c.textContent ?? ''))).toEqual([false, false, false, false, true, true, true])
     } finally {
       await registrar('sitio', 'TESTE-1', 'alterar', { parteDe: null })
     }
@@ -227,7 +235,7 @@ describe('Partes na página do sítio', () => {
   it('sem objetos nas partes, o código é o de hoje; a seção conta todos os descendentes', async () => {
     const r = renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
-    expect(await screen.findByText('TESTE-2 · 3 objetos')).toBeInTheDocument()
+    expect(await screen.findByText('TESTE-2 · 4 objetos')).toBeInTheDocument() // com a figura do TESTEG-2 (M6)
     const partes = screen.getByRole('region', { name: 'Partes' })
     expect(partes.querySelector('.detalhe-secao-topo .codigo')).toHaveTextContent(/^2$/)
     expect([...partes.querySelectorAll('.sitio-parte')].map((l) => l.textContent)).toEqual(['Área Probe Teste0 objetos', '└Túmulo Probe Teste0 objetos'])
@@ -349,7 +357,7 @@ describe('Partes na página do sítio', () => {
       await userEvent.type(campo, 'probe')
       await waitFor(() =>
         expect(opcoesNaLista()).toEqual([
-          ['Tell Probe Teste', null, '3 objetos'],
+          ['Tell Probe Teste', null, '4 objetos'], // com a figura do TESTEG-2 (M6)
           ['Área Probe Teste', '1', 'parte de Tell Probe Teste'],
           ['Túmulo Probe Teste', '2', 'parte de Área Probe Teste'],
         ]),
@@ -418,7 +426,7 @@ describe('Partes na página do sítio', () => {
     expect(
       await within(caixa).findByText('Tel Probe Teste foi mesclado em Tell Probe Teste e não é mais um sítio à parte: não pode ser parte de outro nem ter partes. Escolha Tell Probe Teste.'),
     ).toBeInTheDocument()
-    expect(opcoesNaLista()).toEqual([['Tell Probe Teste', null, 'Tel Probe Teste · 3 objetos']])
+    expect(opcoesNaLista()).toEqual([['Tell Probe Teste', null, 'Tel Probe Teste · 4 objetos']]) // com a figura do TESTEG-2 (M6)
     // o próprio sítio não está na lista
     await userEvent.clear(campo)
     await userEvent.type(campo, 'area probe')

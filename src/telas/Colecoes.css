@@ -232,3 +232,38 @@
     column-count: 4;
   }
 }
+
+/* «Ler o livro» e «Continuar» na aba do volume da obra de catálogo (Tarefa 5 da leitura, desenho 3): no celular, uma fileira
+   sobre os períodos; no computador, à direita das contagens do resumo. */
+.colecoes-leitura {
+  padding: 4px 0 20px;
+}
+.colecoes-resumo-direita {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 24px;
+}
+.colecoes-resumo:has(.colecoes-leitura) {
+  align-items: center;
+}
+.colecoes-resumo .colecoes-leitura {
+  padding: 0;
+}
+.colecoes-continuar {
+  display: inline-block;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--secundario);
+  text-decoration: none;
+}
+.colecoes-continuar-passo {
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.colecoes-continuar:hover .colecoes-continuar-passo {
+  text-decoration-color: currentColor;
+}

@@ -1,5 +1,5 @@
-import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
-import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router'
+import { memo, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Link, Navigate, useLocation, useNavigationType, useParams, useSearchParams } from 'react-router'
 import { livrosNaBibliografia, obra, type LivroNaBibliografia } from '../banco/consultas'
 import { caminhoDoParagrafo } from '../banco/paragrafos'
 import { tabelaDoPacote } from '../busca/fold'
@@ -19,7 +19,9 @@ import { IconButton } from '../ui/IconButton'
 import { ListaEDetalhe } from '../ui/ListaEDetalhe'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
+import { lerPaineis } from '../app/rolagem'
 import { useCarregar } from '../ui/useCarregar'
+import { useJanelaDaLista } from '../ui/useJanelaDaLista'
 import { AvisoDeCopia, useCopiar } from '../ui/useCopiar'
 import { numeroPtBr } from '../ui/numero'
 import { NotasDoAlvo } from '../notas/NotasDoAlvo'
@@ -41,7 +43,13 @@ const anoValido = (a: string | null) => (a && /^\d{3,4}$/.test(a) ? a : undefine
 /** Uma linha da lista, memoizada (digitar no filtro só refaz as que entram ou saem). A obra do usuário tem a marca SKC. */
 const LinhaDaObra = memo(function LinhaDaObra({ o, atual, busca }: { o: ObraDaLista; atual: boolean; busca: string }) {
   return (
-    <Link className="lista-linha obra-linha" to={{ pathname: `/obra/${encodeURIComponent(o.id)}`, search: busca }} aria-current={atual ? 'page' : undefined} data-atual={atual ? '' : undefined}>
+    <Link
+      className="lista-linha obra-linha"
+      to={{ pathname: `/obra/${encodeURIComponent(o.id)}`, search: busca }}
+      aria-current={atual ? 'page' : undefined}
+      data-atual={atual ? '' : undefined}
+      data-linha-da-janela=""
+    >
       <span className="lista-nome">
         {o.curta ?? o.titulo ?? o.id}
         {o.skc && <span className="marca-skc obra-linha-skc">SKC</span>}
@@ -104,7 +112,18 @@ export function Bibliografia() {
     const o = id ? dados?.entradas.find((e) => e.item.id === id)?.item : undefined
     return o ? (o.curta ?? o.titulo ?? o.id) : undefined
   }, [dados, id])
-  const grupos = useMemo(() => agrupar(visiveis, (e) => (porAno ? anoDe(e.item) : inicialDe(e.ordem))), [visiveis, porAno])
+  // Tarefa 6c: a lista desenhada aos poucos (useJanelaDaLista); a obra escolhida fica sempre entre as desenhadas. Aberta a
+  // frio (do objeto, da nota, da Busca), a janela começa em volta dela; voltando (POP) com a lista rolada, começa no topo,
+  // para a posição guardada mostrar as mesmas linhas (fix round 1 da Tarefa 6)
+  const { key: chaveDaEntrada } = useLocation()
+  const tipoDeNavegacao = useNavigationType()
+  const [restaurar] = useState(() => computador && tipoDeNavegacao === 'POP' && (lerPaineis()[chaveDaEntrada]?.lista ?? 0) > 0)
+  const indiceDaEscolhida = useMemo(() => (id ? visiveis.findIndex((e) => e.item.id === id) : -1), [visiveis, id])
+  const janela = useJanelaDaLista(visiveis.length, `${consulta}|${porAno}`, { alvo: indiceDaEscolhida, restaurar })
+  const grupos = useMemo(
+    () => agrupar(visiveis.slice(janela.inicio, janela.fim), (e) => (porAno ? anoDe(e.item) : inicialDe(e.ordem))),
+    [visiveis, janela.inicio, janela.fim, porAno],
+  )
 
   useEffect(() => {
     if (computador && id) rolagem.current?.querySelector('[data-atual]')?.scrollIntoView?.({ block: 'nearest' })
@@ -158,18 +177,23 @@ export function Bibliografia() {
       {carga.fase === 'erro' && <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />}
       {dados && visiveis.length === 0 && <p className="lista-vazia">Nenhuma obra encontrada.</p>}
       {dados && visiveis.length > 0 && (
-        <div className="lista-letras">
+        <div className="lista-letras lista-janela" onFocus={janela.aoFocar}>
+          {/* as linhas antes da janela (a obra aberta a frio no meio da lista): a altura delas (fix round 1 da Tarefa 6) */}
+          {janela.espacoDeCima > 0 && <div ref={janela.refDoEspacoDeCima} className="lista-espaco" aria-hidden="true" style={{ height: janela.espacoDeCima }} />}
           {grupos.map((g, i) => (
             <section key={g.chave} aria-label={porAno ? `Obras de ${g.chave}` : `Obras com ${g.chave}`}>
               <div className="lista-letra">
                 <h2>{g.chave}</h2>
-                {i === 0 && <span>objetos</span>}
+                {i === 0 && janela.inicio === 0 && <span>objetos</span>}
               </div>
               {g.entradas.map((e: Entrada<ObraDaLista>) => (
                 <LinhaDaObra key={e.item.id} o={e.item} atual={e.item.id === id} busca={busca} />
               ))}
             </section>
           ))}
+          {/* as linhas que ainda não se desenharam: a altura delas, para a rolagem (Tarefa 6c); sempre no documento, porque mede
+              o deslocamento quando a janela cresce para cima */}
+          <div ref={janela.refDoEspaco} className="lista-espaco" aria-hidden="true" style={{ height: janela.espaco }} />
         </div>
       )}
     </>
@@ -276,10 +300,12 @@ function EsteLivro({ livro, livros }: { livro: LivroNaBibliografia; livros: read
   const original = livro.traducaoDe ? livros.find((l) => l.sigla === livro.traducaoDe) : undefined
   const traducao = livro.traducao ? livros.find((l) => l.sigla === livro.traducao) : undefined
   const plural = (n: number, um: string, varios: string) => `${numeroPtBr(n)} ${n === 1 ? um : varios}`
+  // o id do título de cada bloco (revisão da Tarefa 26, M4: um id fixo se repetiria com dois blocos na tela)
+  const idDoTitulo = useId()
   return (
-    <section className="detalhe-secao este-livro" aria-labelledby="este-livro-titulo">
+    <section className="detalhe-secao este-livro" aria-labelledby={idDoTitulo}>
       <div className="detalhe-secao-topo">
-        <h2 id="este-livro-titulo">Este livro no IconoDB</h2>
+        <h2 id={idDoTitulo}>Este livro no IconoDB</h2>
         <span className="codigo">{livro.sigla}</span>
       </div>
       {original ? (

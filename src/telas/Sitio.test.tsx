@@ -26,7 +26,9 @@ describe('Sítio (celular)', () => {
     renderizarRota('/sitio/TESTE-2')
     expect(await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })).toBeInTheDocument()
     // F1: o identificador sob o título de um sítio dos livros é o número do sítio, não o verbete-nome (GL-)
-    expect(screen.getByText('TESTE-2 · 3 objetos')).toHaveClass('codigo')
+    // os 3 objetos do catálogo e a figura TESTEG-0001a, achada no TESTEG-2 mesclado nele pelo número (M6); a figura chega
+    // depois (antes, «3 objetos» era a contagem final)
+    expect(await screen.findByText('TESTE-2 · 4 objetos')).toHaveClass('codigo')
     const coord = screen.getByRole('region', { name: 'Coordenada' })
     expect(within(coord).getByText('31,91320 N · 35,20710 E')).toHaveClass('codigo')
     expect(within(coord).getByText('Gazetteer')).toBeInTheDocument()
@@ -55,7 +57,16 @@ describe('Sítio (celular)', () => {
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
     expect(screen.getByText('am Testbach (erfunden)')).toHaveAttribute('lang', 'de')
     const objetos = screen.getByRole('region', { name: 'Objetos deste sítio' })
-    expect(within(objetos).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/item/CA00003', '/item/CA00004', '/item/BA00002'])
+    // e a figura F200001 do TESTEG-2 mesclado nele pelo número (M6), com o link «do texto» ao § 2
+    await waitFor(() =>
+      expect(within(objetos).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual([
+        '/item/CA00003',
+        '/item/CA00004',
+        '/item/BA00002',
+        '/item/F200001',
+        '/paragrafo/TESTEG/2',
+      ]),
+    )
     expect(screen.getByRole('link', { name: 'Voltar aos sítios' })).toHaveAttribute('href', '#/sitios')
     expect(screen.getByRole('link', { name: 'Buscar objetos deste sítio' }).getAttribute('href')).toBe(
       '#/busca?q=Tell+Probe+Teste&escopo=local',
@@ -72,8 +83,10 @@ describe('Sítio (celular)', () => {
 
   it('sem coordenada: avisa e não oferece o mapa', async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
-    // TESTE-4 (mesclado em TESTE-2 no pacote 8) daria a coordenada dele (`dadosDoDestino`): sem ela também
+    // TESTE-4 (mesclado em TESTE-2 no pacote 8) e TESTEG-2 (mesclado nele pelo número, M6) dariam a coordenada deles
+    // (`dadosDoDestino`): sem ela também
     await executar('UPDATE pub_TESTE.site SET lat = NULL, lon = NULL WHERE id IN (2, 4)')
+    await executar('UPDATE pub_TESTEG.site SET lat = NULL, lon = NULL WHERE id = 2')
     renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
     expect(screen.getByText('sem coordenada')).toBeInTheDocument()
@@ -125,8 +138,9 @@ describe('Sítio (computador): lista e detalhe', () => {
     renderizarRota('/sitio/TESTE-2')
     expect(await screen.findByRole('heading', { level: 2, name: 'Tell Probe Teste' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Sítios' })).toBeInTheDocument()
-    const lista = document.querySelector('.lista-rolagem')
-    expect(screen.getByRole('link', { name: /^Tell Probe Teste/ })).toHaveAttribute('aria-current', 'page')
+    const lista = document.querySelector<HTMLElement>('.lista-rolagem')!
+    // na lista (o TESTEG-2 mesclado no TESTE-2 pelo número, M6, também se chama «Tell Probe Teste», em «Mesclado aqui»)
+    expect(within(lista).getByRole('link', { name: /^Tell Probe Teste/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Abrir no mapa' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: /^Maḥteṣ Teste/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Maḥteṣ Teste' })).toBeInTheDocument()
@@ -151,6 +165,7 @@ describe('Sítio: coordenada 0', () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     await executar('UPDATE pub_TESTE.site SET lat = 0, lon = NULL WHERE id = 2')
     await executar('UPDATE pub_TESTE.site SET lat = NULL, lon = NULL WHERE id = 4')
+    await executar('UPDATE pub_TESTEG.site SET lat = NULL, lon = NULL WHERE id = 2')   // mesclado em TESTE-2 pelo número (M6)
     renderizarRota('/sitio/TESTE-2')
     await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
     expect(screen.queryByRole('link', { name: 'Abrir no mapa' })).not.toBeInTheDocument()
@@ -260,7 +275,8 @@ describe('mesclar e desfazer na página do sítio', () => {
     const lista = () => within(caixa).getAllByRole('listitem').map((li) => li.textContent)
     expect(lista()).toEqual([
       'o nome «Tell Probe Teste» e a grafia «Tel Probe Teste» passam a ser grafias de Maḥteṣ Teste;',
-      'os 3 objetos e a parte de Tell Probe Teste passam a contar em Maḥteṣ Teste;',
+      // os 3 do catálogo e a figura TESTEG-0001a, achada no TESTEG-2 mesclado nele pelo número (M6)
+      'os 4 objetos e a parte de Tell Probe Teste passam a contar em Maḥteṣ Teste;',
       'a coordenada que vale é a de Maḥteṣ Teste.',
     ])
     await userEvent.click(t2)
@@ -276,15 +292,22 @@ describe('mesclar e desfazer na página do sítio', () => {
     await waitFor(() => expect(estadoAtual().registro('sitio', 'TESTE-1')?.campos.mescladoEm).toBe('TESTE-2'))
     try {
       // a página que ficou: «Mesclado aqui», a contagem e a grade com os objetos do que entrou
-      await waitFor(() => expect(screen.getByText('TESTE-2 · 6 objetos')).toBeInTheDocument())
+      await waitFor(() => expect(screen.getByText('TESTE-2 · 7 objetos')).toBeInTheDocument())
       const objetos = screen.getByRole('region', { name: 'Objetos deste sítio' })
-      await waitFor(() => expect(within(objetos).getAllByRole('link')).toHaveLength(6))
+      // os 7 objetos (o F200001 da figura TESTEG-0001a, M6) e o link «do texto» ao § 2 de onde vem o achado dela
+      const itens = () => within(objetos).getAllByRole('link').filter((a) => a.getAttribute('href')!.startsWith('/item/'))
+      await waitFor(() => expect(itens()).toHaveLength(7))
+      expect(within(objetos).getByRole('link', { name: '§ 2' })).toHaveAttribute('href', '/paragrafo/TESTEG/2')
       const dados = screen.getByRole('region', { name: 'Dados do sítio' })
       expect(within(dados).getByText('Mesclado aqui')).toBeInTheDocument()
       const linhas = [...dados.querySelectorAll('.sitio-mesclado')].map((l) => l.textContent)
-      // um por absorvido, em ordem de id (TESTE-1, TESTE-4)
+      // um por absorvido, em ordem de id (TESTE-1, TESTE-4, TESTEG-2: o do mesmo número, M6)
       // com o livro e o número de cada um (Tarefa 27, fix round 2)
-      expect(linhas).toEqual(['Maḥteṣ Teste(dos livros)· TESTE-1desfazer', 'Tel Probe Teste(dos livros)· TESTE-4desfazer'])
+      expect(linhas).toEqual([
+        'Maḥteṣ Teste(dos livros)· TESTE-1desfazer',
+        'Tel Probe Teste(dos livros)· TESTE-4desfazer',
+        'Tell Probe Teste(dos livros)· TESTEG-2desfazer',
+      ])
     } finally {
       await act(() => desfazerMescla('TESTE-1', []))
     }
@@ -339,7 +362,7 @@ describe('mesclar e desfazer na página do sítio', () => {
   it('«desfazer»: a confirmação no lugar com o que volta, o foco em «Cancelar»; «Desfazer» grava null e a mensagem leva ao que voltou', async () => {
     await registrar('sitio', 'TESTE-1', 'alterar', { mescladoEm: 'TESTE-2' })
     renderizarRota('/sitio/TESTE-2')
-    const desfazer = await screen.findByRole('button', { name: 'desfazer a mesclagem de Maḥteṣ Teste' })
+    const desfazer = await screen.findByRole('button', { name: 'Desfazer a mescla de TESTE 1' })
     await userEvent.click(desfazer)
     const caixa = await grupo('Desfazer a mesclagem de Maḥteṣ Teste?')
     expect(within(caixa).getByText(
@@ -355,7 +378,27 @@ describe('mesclar e desfazer na página do sítio', () => {
     const ver = within(mensagem.closest('p')!).getByRole('link', { name: 'Ver' })
     expect(ver).toHaveAttribute('href', '/sitio/TESTE-1')
     await waitFor(() => expect(ver).toHaveFocus())
-    expect(screen.queryByRole('button', { name: 'desfazer a mesclagem de Maḥteṣ Teste' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Desfazer a mescla de TESTE 1' })).not.toBeInTheDocument()
+  })
+
+  it('M6 (R28): «Mesclado aqui» no TESTE-2 mostra o TESTEG-2 do pacote, e cada «desfazer» tem o nome do livro e do número', async () => {
+    renderizarRota('/sitio/TESTE-2')
+    await screen.findByRole('heading', { level: 1, name: 'Tell Probe Teste' })
+    const dados = screen.getByRole('region', { name: 'Dados do sítio' })
+    await waitFor(() => expect(dados.querySelectorAll('.sitio-mesclado')).toHaveLength(2))
+    // a mescla do pacote 8 (TESTE-4) e a do mesmo número entre livros (TESTEG-2 → TESTE-2, `criado` 0), em ordem de id; o
+    // TESTEG-2 tem o verbete-nome do TESTE-2, então o mesmo nome: só o livro e o número o distinguem
+    expect([...dados.querySelectorAll('.sitio-mesclado')].map((l) => l.textContent)).toEqual([
+      'Tel Probe Teste(dos livros)· TESTE-4desfazer',
+      'Tell Probe Teste(dos livros)· TESTEG-2desfazer',
+    ])
+    // a grafia impressa do TESTEG chega ao TESTE-2 pela mescla, com o livro e a página
+    expect(within(dados).getByText('T. Probe Teste')).toBeInTheDocument()
+    // o nome acessível de cada «desfazer» é próprio: o livro e o número (os dois «desfazer» do IPIAO-91 tinham o mesmo nome)
+    const botoes = within(dados).getAllByRole('button', { name: /^Desfazer a mescla de / })
+    expect(botoes.map((b) => b.getAttribute('aria-label'))).toEqual(['Desfazer a mescla de TESTE 4', 'Desfazer a mescla de TESTEG 2'])
+    await userEvent.click(within(dados).getByRole('button', { name: 'Desfazer a mescla de TESTEG 2' }))
+    expect(await grupo('Desfazer a mesclagem de Tell Probe Teste?')).toBeInTheDocument()
   })
 
   it('o endereço antigo: o aviso logo abaixo do título, só na chegada; some ao abrir «Corrigir»', async () => {

@@ -2,6 +2,8 @@ import { useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNo
 import { Link } from 'react-router'
 import { estadoDoGrupo } from '../app/origem'
 import { grupo, type GrupoDetalhe, type ObjetoResumo, type SubcolecaoResumo, type TextoDaIntroducao } from '../banco/consultas'
+import { passoDoGrupo } from '../banco/leitura'
+import { BotaoDaLeitura, useRotaDaLeitura } from '../leitura/LerNoLivro'
 import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
@@ -103,6 +105,8 @@ function Lateral({
   const coluna = useRef<HTMLDivElement>(null)
   const obra = chaveDaObra(g.publicacao, g.volume)
   const livro = g.paragrafos
+  // «Ler no livro» (Tarefa 5 da leitura): o 1º passo do grupo; o capítulo do livro em parágrafos tem o «Ler o capítulo» dele.
+  const leitura = useRotaDaLeitura(passoDoGrupo, livro ? null : g.id)
 
   // Ao montar (de volta do objeto, ao recarregar, vindo de `/grupo/<sub>` ou do «No livro»), a escolhida aparece na
   // lista: só a rolagem da coluna se ajusta (a da janela é a que se restaura, e o foco não muda). Depois, quem escolhe
@@ -138,11 +142,16 @@ function Lateral({
           : `${objetos(g.objetos)} · ${subcolecoes(g.subcolecoes.length)}`}
       </span>
       {livro && <LerOsParagrafos sigla={g.publicacao} intervalo={livro} rotulo="Ler o capítulo" />}
-      {!livro && g.introducao.length > 0 && (
+      {!livro && (g.introducao.length > 0 || leitura) && (
         <>
-          <button type="button" className="grupo-dividido-ler hit" aria-expanded={lendo} aria-controls={lendo ? idIntro : undefined} onClick={() => setLendo((v) => !v)}>
-            {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
-          </button>
+          <div className="leitura-botoes grupo-dividido-botoes">
+            {g.introducao.length > 0 && (
+              <button type="button" className="grupo-dividido-ler hit" aria-expanded={lendo} aria-controls={lendo ? idIntro : undefined} onClick={() => setLendo((v) => !v)}>
+                {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
+              </button>
+            )}
+            {leitura && <BotaoDaLeitura para={leitura} rotulo="Ler no livro" cheio />}
+          </div>
           {lendo && (
             <section id={idIntro} className="grupo-dividido-introducao" aria-label="Introdução do grupo">
               <TrechosDaIntroducao trechos={g.introducao} />
@@ -222,23 +231,29 @@ function PainelDaSubcolecao({ pai, sub }: { pai: string; sub: SubcolecaoResumo }
   const [lendo, setLendo] = useState(false)
   const idIntro = useId()
   const trechos: TextoDaIntroducao[] = carga.fase === 'ok' ? (carga.dados?.introducao ?? []) : []
+  const leitura = useRotaDaLeitura(passoDoGrupo, sub.id)
   const estado = estadoDoGrupo(sub.id, sub.titulo, caminhoNoGrupo(pai, sub.id), true)
   const cabecalho = (
     <div className="grupo-dividido-cabecalho">
       <span className="grupo-dividido-numero codigo">{sub.numero}</span>
       <h2>{sub.titulo}</h2>
       <span className="grupo-dividido-n">{objetos(sub.objetos)}</span>
-      {trechos.length > 0 && (
-        <button
-          type="button"
-          className="grupo-dividido-ler hit"
-          aria-expanded={lendo}
-          aria-controls={lendo ? idIntro : undefined}
-          aria-label={lendo ? 'Recolher a introdução da subcoleção' : 'Ler a introdução da subcoleção'}
-          onClick={() => setLendo((v) => !v)}
-        >
-          {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
-        </button>
+      {(trechos.length > 0 || leitura) && (
+        <span className="leitura-botoes grupo-dividido-botoes">
+          {trechos.length > 0 && (
+            <button
+              type="button"
+              className="grupo-dividido-ler hit"
+              aria-expanded={lendo}
+              aria-controls={lendo ? idIntro : undefined}
+              aria-label={lendo ? 'Recolher a introdução da subcoleção' : 'Ler a introdução da subcoleção'}
+              onClick={() => setLendo((v) => !v)}
+            >
+              {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
+            </button>
+          )}
+          {leitura && <BotaoDaLeitura para={leitura} rotulo="Ler no livro" rotuloAcessivel={`Ler no livro: subcoleção ${sub.numero || sub.titulo}`} cheio />}
+        </span>
       )}
     </div>
   )

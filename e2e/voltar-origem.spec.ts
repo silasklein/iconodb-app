@@ -8,6 +8,7 @@ import { expect, test } from './fixtures'
  */
 
 const celular = (page: Page) => (page.viewportSize()?.width ?? 0) < 768
+const pc = (page: Page) => !celular(page)
 
 async function entrar(page: Page) {
   await page.goto('./')
@@ -20,16 +21,32 @@ async function entrar(page: Page) {
 const rolagem = (page: Page) =>
   page.evaluate((pc) => (pc ? (document.querySelector('.lista-principal')?.scrollTop ?? -1) : window.scrollY), !celular(page))
 
-/** Rola até o fim (do painel do detalhe no computador, da janela no celular) e devolve onde parou. */
+/**
+ * Rola até o fim (do painel do detalhe no computador, da janela no celular) e devolve onde parou. Espera o estado, não um
+ * intervalo (Tarefa 6e): o evento `scroll` chegar (o app guarda a posição nele) e a altura parar de mudar (um bloco que ainda
+ * chegasse mudaria o fim).
+ */
 async function rolarAteOFim(page: Page): Promise<number> {
-  await page.evaluate((pc) => {
-    if (pc) {
-      const p = document.querySelector('.lista-principal')!
-      p.scrollTop = p.scrollHeight
-    } else window.scrollTo(0, document.documentElement.scrollHeight)
-  }, !celular(page))
-  // o evento `scroll` chega no quadro seguinte
-  await page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))))
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (pc) => {
+          const el = pc ? document.querySelector('.lista-principal')! : document.documentElement
+          const alvo: EventTarget = pc ? el : window
+          const altura = el.scrollHeight
+          const fim = el.scrollHeight - el.clientHeight
+          if (Math.abs(el.scrollTop - fim) > 1) {
+            const rolou = new Promise((ok) => alvo.addEventListener('scroll', ok, { once: true }))
+            if (pc) el.scrollTop = el.scrollHeight
+            else window.scrollTo(0, el.scrollHeight)
+            await rolou
+          }
+          // no fim, sem nada carregando, e a altura a mesma depois da rolagem
+          return Math.abs(el.scrollTop - (el.scrollHeight - el.clientHeight)) <= 1 && el.scrollHeight === altura && !document.querySelector('[aria-busy="true"]')
+        }, pc(page)),
+      { message: 'a página parou no fim' },
+    )
+    .toBe(true)
   return rolagem(page)
 }
 

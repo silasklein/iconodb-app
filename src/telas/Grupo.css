@@ -117,9 +117,13 @@
   font-size: 13px;
   color: var(--secundario);
 }
-.grupo-ler {
+/* «Ler a introdução» e «Ler no livro» (Tarefa 5 da leitura) numa fileira, onde antes ficava só o botão. */
+.grupo-botoes {
   align-self: flex-start;
   margin-top: -8px;
+}
+.grupo-ler {
+  align-self: flex-start;
   border: 0;
   background: none;
   padding: 0;

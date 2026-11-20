@@ -191,6 +191,15 @@
   align-self: baseline;
   padding: 0;
 }
+/* «Ler a introdução» e «Ler no livro» (Tarefa 5 da leitura): à esquerda, sob as contagens; no cabeçalho da subcoleção, no fim
+   da linha (o botão alinha pelo centro, não pela linha de base do título). */
+.grupo-dividido-botoes {
+  align-self: flex-start;
+}
+.grupo-dividido-cabecalho .grupo-dividido-botoes,
+.grupo-dividido-cabecalho .grupo-dividido-botoes .grupo-dividido-ler {
+  align-self: center;
+}
 .grupo-dividido-introducao-sub {
   max-width: 720px;
   padding: 14px 16px;

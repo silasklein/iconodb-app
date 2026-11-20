@@ -296,6 +296,29 @@
   align-self: flex-start;
   margin-top: 10px;
 }
+/* A página de introdução de uma obra de catálogo (Tarefa 5 da leitura, desenho 3): o rótulo e a etiqueta do tipo numa linha,
+   sobre o recorte (a coluna estreita do § não cabe «TESTE I, p. 19»). */
+.busca-paragrafo-pagina {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 4px;
+}
+.busca-paragrafo-pagina .busca-paragrafo-fonte {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.busca-paragrafo-tipo {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--controle);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--corpo-consulta);
+  white-space: nowrap;
+}
 
 /* Contagem e grade */
 .busca-resultados {
@@ -573,5 +596,8 @@ a.busca-usuario-rotulo {
   }
   .busca-paragrafo {
     grid-template-columns: 84px minmax(0, 1fr);
+  }
+  .busca-paragrafo-pagina {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

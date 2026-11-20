@@ -1,7 +1,9 @@
 import { useId, useState, type MouseEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { estadoDoGrupo, estadoVindoDoPai, passosAtePai } from '../app/origem'
+import { passoDoGrupo } from '../banco/leitura'
 import type { GrupoDetalhe, SubcolecaoResumo, TextoDaIntroducao } from '../banco/tipos'
+import { BotaoDaLeitura, useRotaDaLeitura } from '../leitura/LerNoLivro'
 import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { CartaoDeObjeto } from '../ui/CartaoDeObjeto'
 import { useBreakpoint } from '../ui/useBreakpoint'
@@ -73,7 +75,7 @@ export function Subcolecao({ g, pai }: Props) {
             <ParagrafosDaSecao sigla={g.publicacao} paragrafos={g.paragrafosDaSecao} />
           </div>
         ) : (
-          <Introducao numero={g.numero} trechos={g.introducao} />
+          <Introducao grupoId={g.id} numero={g.numero} trechos={g.introducao} />
         )}
 
         <section className="grupo-objetos subcolecao-objetos" aria-label={livro ? 'Figuras da seção' : 'Objetos da subcoleção'}>
@@ -127,13 +129,17 @@ export function Subcolecao({ g, pai }: Props) {
 /**
  * A caixa da introdução: o rótulo, o primeiro trecho e «Ler a introdução», que abre todos no lugar (um parágrafo cada,
  * com os avisos de tradução do grupo). Sem trechos, não há caixa.
+ * Ao lado do botão, «Ler no livro» (Tarefa 5 da leitura) abre o 1º passo da subcoleção na leitura; sem trechos e com passo,
+ * ele fica sozinho, sem a caixa.
  */
-function Introducao({ numero, trechos }: { numero: string | null; trechos: TextoDaIntroducao[] }) {
+function Introducao({ grupoId, numero, trechos }: { grupoId: string; numero: string | null; trechos: TextoDaIntroducao[] }) {
   const [lendo, setLendo] = useState(false)
   const idRotulo = useId()
   const idTexto = useId()
+  const leitura = useRotaDaLeitura(passoDoGrupo, grupoId)
   const [primeiro] = trechos
-  if (!primeiro) return null
+  const lerNoLivro = leitura && <BotaoDaLeitura para={leitura} rotulo="Ler no livro" cheio />
+  if (!primeiro) return lerNoLivro ? <div className="leitura-botoes subcolecao-botoes-sozinhos">{lerNoLivro}</div> : null
   return (
     <section className="subcolecao-introducao" aria-labelledby={idRotulo}>
       <span className="subcolecao-introducao-rotulo" id={idRotulo}>
@@ -142,9 +148,12 @@ function Introducao({ numero, trechos }: { numero: string | null; trechos: Texto
       <div id={idTexto} className={lendo ? 'subcolecao-introducao-texto' : 'subcolecao-introducao-texto subcolecao-resumo'}>
         {lendo ? <TrechosDaIntroducao trechos={trechos} /> : <TrechoDaIntroducao trecho={primeiro} />}
       </div>
-      <button type="button" className="subcolecao-ler hit" aria-expanded={lendo} aria-controls={idTexto} onClick={() => setLendo((v) => !v)}>
-        {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
-      </button>
+      <div className="leitura-botoes">
+        <button type="button" className="subcolecao-ler hit" aria-expanded={lendo} aria-controls={idTexto} onClick={() => setLendo((v) => !v)}>
+          {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
+        </button>
+        {lerNoLivro}
+      </div>
     </section>
   )
 }

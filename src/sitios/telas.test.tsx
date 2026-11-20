@@ -728,10 +728,12 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
       await userEvent.click(screen.getByRole('button', { name: 'Corrigir' }))
       const dl = screen.getByRole('region', { name: 'Dados do sítio' })
       const grupos = within(dl).getAllByRole('group')
-      expect(grupos.map((g) => g.getAttribute('aria-label'))).toEqual(['árabe', 'alemã', 'sem origem'])
+      // e «sem tradição»: a grafia impressa do TESTEG, do TESTEG-2 mesclado aqui pelo número (M6)
+      expect(grupos.map((g) => g.getAttribute('aria-label'))).toEqual(['árabe', 'alemã', 'sem tradição', 'sem origem'])
       expect(within(grupos[0]!).getByRole('listitem')).toHaveTextContent(/^Tel Probe TesteTESTE, p\. 7$/)
       expect(within(grupos[1]!).getByRole('listitem')).toHaveTextContent(/^TestheimSKCTESTE$/)
-      expect(within(grupos[2]!).getByRole('listitem')).toHaveTextContent(/^Khirbet ProbeSKC$/)
+      expect(within(grupos[2]!).getByRole('listitem')).toHaveTextContent(/^T\. Probe TesteTESTEG, p\. 6$/)
+      expect(within(grupos[3]!).getByRole('listitem')).toHaveTextContent(/^Khirbet ProbeSKC$/)
     })
 
     it('duas escolhas seguidas, antes de a primeira voltar gravada: nenhuma se perde (cada gravação parte do estado de agora)', async () => {

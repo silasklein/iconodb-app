@@ -24,7 +24,7 @@ async function entrar(page: Page) {
 /** Abre o alemão: o trilho no computador, a aba DE no celular. */
 async function abrirAlemao(page: Page) {
   if (celular(page)) await page.getByRole('tab', { name: 'DE' }).click()
-  else await page.getByRole('button', { name: 'Abrir o alemão' }).click()
+  else await page.getByRole('button', { name: /^Abrir o Alemão · TESTEG/ }).click()
   const de = page.getByRole('region', { name: 'Alemão' })
   await expect(de).toBeVisible()
   return de
@@ -58,7 +58,7 @@ test('da figura ao § 2: o português, o alemão corrigido com o cartão do lido
   } else {
     // abre só com o português (a4): os trilhos fechados ao lado
     await expect(page.getByRole('region', { name: 'Alemão' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Abrir o inglês' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Abrir o Inglês · TESTEGEN/ })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Origem' }).getByRole('link', { name: 'Figura TESTEG: 1a' })).toBeVisible()
   }
   await semRolagemHorizontal(page, 'o § em português')
@@ -87,7 +87,7 @@ test('da figura ao § 2: o português, o alemão corrigido com o cartão do lido
 
   if (!celular(page)) {
     // as três línguas lado a lado, o primeiro trecho na mesma altura nas três
-    await page.getByRole('button', { name: 'Abrir o inglês' }).click()
+    await page.getByRole('button', { name: /^Abrir o Inglês · TESTEGEN/ }).click()
     const en = page.getByRole('region', { name: 'Inglês' })
     await expect(en).toContainText('Two probe seals from Mahtes Teste')
     // a página do inglês vem do banco da tradução (fix 1)
@@ -105,7 +105,7 @@ test('da figura ao § 2: o português, o alemão corrigido com o cartão do lido
     await expect(page.getByRole('region', { name: 'Inglês' })).toBeVisible()
     await page.getByRole('button', { name: 'Fechar o inglês' }).click()
     await page.getByRole('button', { name: 'Fechar o alemão' }).click()
-    await expect(page.getByRole('button', { name: 'Abrir o alemão' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Abrir o Alemão · TESTEG/ })).toBeVisible()
   }
 
   // ‹ › anda em ordem: o § 3, com «ler a seção do começo»

@@ -4,11 +4,17 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
 import { grupo } from '../banco/consultas'
+import { passoDoGrupo } from '../banco/leitura'
 import { urlImagem } from '../pacote/imagens'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Grupo } from './Grupo'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
+// a consulta do «Ler no livro», espiada: o teste do capítulo do livro em parágrafos confere que ela nem é feita
+vi.mock('../banco/leitura', async (original) => {
+  const m = await original<typeof import('../banco/leitura')>()
+  return { ...m, passoDoGrupo: vi.fn(m.passoDoGrupo) }
+})
 
 function Item() {
   const { pathname, state } = useLocation()
@@ -201,6 +207,32 @@ describe('Grupo', () => {
     expect(screen.getByRole('region', { name: 'Introdução do grupo' }).querySelectorAll('p:not(.introducao-aviso)')).toHaveLength(1)
   })
 
+  it.each([
+    ['celular', 375],
+    ['computador', 1280],
+  ] as const)('Tarefa 5 da leitura (%s): «Ler no livro», ao lado de «Ler a introdução», abre o 1º passo do grupo', async (_, largura) => {
+    instalarMatchMedia(largura)
+    abrir('GR-TESTE-I-02')
+    const ler = await screen.findByRole('link', { name: 'Ler no livro' })
+    expect(ler).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.19-ovw-1')
+    const introducao = screen.getByRole('button', { name: 'Ler a introdução' })
+    expect(introducao.parentElement).toBe(ler.parentElement)
+    expect(introducao.compareDocumentPosition(ler) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it.each([
+    ['celular', 375],
+    ['computador', 1280],
+  ] as const)('Tarefa 5 da leitura (%s): o capítulo do livro em parágrafos fica com o «Ler o capítulo» dele, sem «Ler no livro»', async (_, largura) => {
+    instalarMatchMedia(largura)
+    vi.mocked(passoDoGrupo).mockClear()
+    abrir('GR-TESTEG-01')
+    await screen.findByRole('link', { name: /Ler o capítulo/ })
+    // o capítulo nem pede o passo (não há o que esperar carregar): o botão não pode aparecer depois
+    expect(vi.mocked(passoDoGrupo).mock.calls.map(([id]) => id)).not.toContain('GR-TESTEG-01')
+    expect(screen.queryByRole('link', { name: 'Ler no livro' })).not.toBeInTheDocument()
+  })
+
   it('um grupo que não existe avisa e volta às coleções', async () => {
     abrir('GR-NAO-HA')
     expect(await screen.findByRole('status')).toHaveTextContent('Grupo não encontrado')
@@ -227,6 +259,13 @@ describe('Grupo: a introdução em trechos (banco mudado no teste)', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('button', { name: /introdução/ })).not.toBeInTheDocument()
     expect(document.querySelector('.grupo-resumo')).toBeNull()
+  })
+
+  it('Tarefa 5 da leitura: o grupo sem introdução, com passo, ainda tem «Ler no livro» (a 1ª entrada dele)', async () => {
+    await executar("UPDATE pub_TESTE.author_group SET intro_passage_id = NULL WHERE id = 'GR-TESTE-I-02'")
+    abrir('GR-TESTE-I-02')
+    expect(await screen.findByRole('link', { name: 'Ler no livro' })).toHaveAttribute('href', expect.stringMatching(/^\/ler\/TESTE\/entrada\/\d+$/))
+    expect(screen.queryByRole('button', { name: /introdução/ })).not.toBeInTheDocument()
   })
 
   it('o resumo é o primeiro trecho; «Ler a introdução» mostra todos, um parágrafo cada, na ordem', async () => {

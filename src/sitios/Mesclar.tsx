@@ -26,7 +26,7 @@ import { chaveDaGrafia, eSitioSkc, grafiasDoRegistro, hlcDoSitio, lerDadosDoSiti
 import { desfazerMescla, mesclarSitios } from './operacoes'
 import { useSitiosDoPacote, type SitiosDoPacote } from './pacote'
 import { conflitosDesteAparelho, podeMesclar, type Conflito, type PacoteDeSitios, type Resolucao } from './resolucao'
-import { conteudoDoSitio, sugestaoDeQualFica, textoDaMescla, textoDoConflito, textoDoDesfazer, type Contagens, type FontesDoConteudo } from './textos'
+import { conteudoDoSitio, nomeDoDesfazer, sugestaoDeQualFica, textoDaMescla, textoDoConflito, textoDoDesfazer, type Contagens, type FontesDoConteudo } from './textos'
 import { usePacoteDeSitios, useResolucaoDeSitios } from './useResolucao'
 import './Mesclar.css'
 
@@ -318,7 +318,8 @@ function QualFica({ id, outro, sobre, aoFechar }: { id: string; outro: string; s
 
 /**
  * A linha «Mesclado aqui» nos dados do sítio: um por absorvido (diretos e indiretos), o nome (abre a página dele, que volta aqui
- * com o aviso), «(seu)» ou «(dos livros)», o id do sítio dos livros («· GGG-1135») e «desfazer». A confirmação abre logo abaixo da linha, com o foco em «Cancelar»; ao
+ * com o aviso), «(seu)» ou «(dos livros)», o id do sítio dos livros («· GGG-1135») e «desfazer» (o nome acessível com o livro e o
+ * número, `nomeDoDesfazer`: «Desfazer a mescla de GGG 1135»). A confirmação abre logo abaixo da linha, com o foco em «Cancelar»; ao
  * fechar, o foco volta ao «desfazer». Desfeita, `aoDesfazer` (a página mostra a mensagem com «Ver»).
  */
 export function MescladoAqui({ id, sobre, aoAbrir, aoDesfazer }: { id: string; sobre: SobreOsSitios; aoAbrir: () => void; aoDesfazer: (entra: string, nome: string) => void }) {
@@ -365,7 +366,7 @@ export function MescladoAqui({ id, sobre, aoAbrir, aoDesfazer }: { id: string; s
                 type="button"
                 className="sitio-link-botao"
                 aria-expanded={aberto === x}
-                aria-label={`desfazer a mesclagem de ${nome}`}
+                aria-label={nomeDoDesfazer(x, nome, sobre.resolucao.eDoUsuario(x))}
                 onClick={() => {
                   setFalhou(false)
                   aoAbrir()

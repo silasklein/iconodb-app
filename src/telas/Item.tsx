@@ -668,6 +668,8 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     )
   )
   const comPainel = !!(nova || aberta)
+  // O rótulo de cada item do objeto («TESTE I: 3»): a origem que o «Ler no livro» leva à leitura (Tarefa 5 da leitura).
+  const origensDosItens = useMemo(() => new Map(d.itens.map((i) => [i.id, i.origem])), [d.itens])
   // O aviso do pé ("Hipótese registrada · Desfazer") some quando um painel abre: ele cobriria o pé do painel.
   useEffect(() => {
     if (comPainel) setAviso(null)
@@ -682,7 +684,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       )}
       <Cabeca d={d} skcLigados={skcLigados} livrosLigados={livrosLigados} />
       <Ficha d={d} doUsuario={doUsuario} bibliografia={bibliografia} />
-      <NoLivro lugares={d.noLivro} idioma={idioma} />
+      <NoLivro lugares={d.noLivro} idioma={idioma} origens={origensDosItens} />
       {!computador && (
         <section className="item-imagem" aria-label="Imagem">
           {imagem}

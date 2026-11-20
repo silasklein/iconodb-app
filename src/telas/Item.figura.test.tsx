@@ -1,18 +1,24 @@
 /**
  * Etapa 4, Tarefa 24: a página da figura do livro em parágrafos (tela 1 aprovada; decisão 91), sobre o pacote sintético:
- * `F200001` (TESTEG-0001a, sem sítio), `F200002` (TESTEG-0002, achado «do texto» pelo § 3) e `CA00004` (TESTE-0004 e a
- * figura TESTEG-0001b, a mesma peça). A ficha do catálogo some na figura; ficam o crédito, «Discutida em» e, na peça
+ * `F200001` (TESTEG-0001a, sem sítio: o achado dela no TESTEG-2, M6, sai no banco de escrita), `F200002` (TESTEG-0002,
+ * achado «do texto» pelo § 3) e `CA00004` (TESTE-0004 e a figura TESTEG-0001b, a mesma peça). A ficha do catálogo some na figura; ficam o crédito, «Discutida em» e, na peça
  * juntada, a ficha e o título do TESTE com as duas leituras lado a lado, como vozes. Tudo inventado (repositório público).
  */
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
+import { passoDoItem } from '../banco/leitura'
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { Item } from './Item'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
+// a consulta do «Ler no livro», espiada: a linha do livro em parágrafos nem a faz
+vi.mock('../banco/leitura', async (original) => {
+  const m = await original<typeof import('../banco/leitura')>()
+  return { ...m, passoDoItem: vi.fn(m.passoDoItem) }
+})
 
 function abrir(caminho: string) {
   return render(
@@ -38,8 +44,10 @@ describe.each([
   ['computador', 1280],
 ])('a página da figura (%s)', (_, largura) => {
   beforeAll(async () => {
-    usarMotor(await bancoDeTeste())
+    usarMotor(await bancoDeTeste({ escrita: true }))
     Element.prototype.scrollIntoView = vi.fn()
+    // a figura 1a sem sítio: sem o achado «do texto» no TESTEG-2 que o pacote ganhou na revisão final da Etapa 4 (M6)
+    await executar("DELETE FROM pub_TESTEG.assertion WHERE subject_id = 'TESTEG-0001a'")
   })
   afterAll(() => usarMotor(null))
   beforeEach(() => instalarMatchMedia(largura))
@@ -51,6 +59,24 @@ describe.each([
     const cabeca = screen.getByTestId('item-cabeca')
     expect(within(cabeca).getByText('F200001')).toHaveClass('item-numero')
     expect(within(cabeca).getByTestId('numeros-nas-fontes')).toHaveTextContent(/^figura do TESTEG$/)
+  })
+
+  it('Tarefa 5 da leitura: a figura do livro em parágrafos não tem «Ler no livro»; na peça juntada, só a linha do catálogo tem', async () => {
+    vi.mocked(passoDoItem).mockClear()
+    abrir('/item/F200001')
+    await titulo()
+    await screen.findByRole('region', { name: 'No livro' })
+    // a linha do livro em parágrafos nem pede o passo (não há o que esperar carregar): o botão não pode aparecer depois
+    expect(vi.mocked(passoDoItem)).not.toHaveBeenCalled()
+    expect(screen.queryByRole('link', { name: 'Ler no livro' })).not.toBeInTheDocument()
+    cleanup()
+    abrir('/item/CA00004')
+    const noLivro = await screen.findByRole('region', { name: 'No livro' })
+    expect(await within(noLivro).findByRole('link', { name: 'Ler no livro' })).toHaveAttribute('href', '/ler/TESTE/entrada/4')
+    // só a linha do catálogo pediu (e já respondeu): uma consulta, um botão
+    expect(vi.mocked(passoDoItem).mock.calls.map(([id]) => id)).toEqual(['TESTE-0004'])
+    expect(within(noLivro).getAllByRole('link', { name: 'Ler no livro' })).toHaveLength(1)
+    expect(noLivro.querySelectorAll('.no-livro-caminho')).toHaveLength(2)
   })
 
   it('a ficha: só o crédito (sem sítio, a linha vazia some); sem a seção Catálogo', async () => {
@@ -156,8 +182,10 @@ describe('fix round 1 da Tarefa 27 (M3): a peça com duas figuras, o lugar tirad
   beforeAll(async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     Element.prototype.scrollIntoView = vi.fn()
-    // a figura 2 (com o achado «do texto» pelo § 3) passa a ser outra vista da peça da figura 1a (sem sítio)
+    // a figura 2 (com o achado «do texto» pelo § 3) passa a ser outra vista da peça da figura 1a (sem sítio: sem o achado
+    // no TESTEG-2 que o pacote ganhou, M6)
     await executar("UPDATE main.object_member SET object_id = 'F200001' WHERE item_id = 'TESTEG-0002'")
+    await executar("DELETE FROM pub_TESTEG.assertion WHERE subject_id = 'TESTEG-0001a'")
   })
   afterAll(() => usarMotor(null))
 
@@ -166,5 +194,24 @@ describe('fix round 1 da Tarefa 27 (M3): a peça com duas figuras, o lugar tirad
     await titulo()
     expect(within(ficha()).getByRole('link', { name: 'Tell Achado Teste' })).toHaveAttribute('href', '/sitio/TESTEG-9')
     expect(within(ficha()).getByTestId('marca-do-texto')).toHaveTextContent('do texto pela fig. 2 no § 3')
+  })
+})
+
+describe('revisão final da Etapa 4 (M6): a figura 1a achada no TESTEG-2, mesclado no TESTE-2 pelo número', () => {
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste())
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+  afterAll(() => usarMotor(null))
+
+  it('a ficha tem o sítio (com o nome do destino da mescla) e o crédito; a marca «do texto» leva ao § 2', async () => {
+    abrir('/item/F200001')
+    await titulo()
+    expect(linhasDaFicha()).toEqual(['Sítio', 'Crédito'])
+    // o link é o do sítio do livro, e a página dele leva ao destino (como o TESTE-4)
+    expect(within(ficha()).getByRole('link', { name: 'Tell Probe Teste' })).toHaveAttribute('href', '/sitio/TESTEG-2')
+    const marca = within(ficha()).getByTestId('marca-do-texto')
+    expect(marca).toHaveTextContent('do texto')
+    expect(within(marca).getByRole('link')).toHaveAttribute('href', '/paragrafo/TESTEG/2')
   })
 })

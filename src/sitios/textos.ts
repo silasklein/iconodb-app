@@ -138,6 +138,16 @@ export function textoDaMescla(fica: string, entra: string, nomes: readonly strin
   return linhas.map((l, i) => `${l}${i === linhas.length - 1 ? '.' : ';'}`)
 }
 
+/**
+ * O nome acessível do «desfazer» de um absorvido na linha «Mesclado aqui»: o livro e o número de um sítio dos livros
+ * («Desfazer a mescla de TESTEG 2»), que distinguem dois absorvidos de mesmo nome (a cópia de um livro mesclada no sítio de
+ * mesmo número do outro, como os dois «desfazer» do IPIAO-91); o nome de um sítio seu, que não tem livro nem número.
+ */
+export function nomeDoDesfazer(id: string, nome: string, doUsuario: boolean): string {
+  const traco = id.lastIndexOf('-')
+  return `Desfazer a mescla de ${doUsuario || traco < 0 ? nome : `${id.slice(0, traco)} ${id.slice(traco + 1)}`}`
+}
+
 /** A confirmação de «desfazer» na linha «Mesclado aqui» (telas aprovadas §2). */
 export function textoDoDesfazer(entra: string, fica: string, c: Contagens): string {
   const volta = ['o nome', ...itens(c, ['grafias', 'objetos', 'notas', 'partes', 'correcoes']).map((i) => i.texto)]

@@ -6,6 +6,7 @@ import { irPara, renderizarRota, usarFoldDoPacoteSintetico } from '../test/rende
 import { instalarMatchMedia } from '../test/larguraDeTela'
 import { excluirLigacao, ligar } from '../revisao/ligacoes'
 import { estadoAtual, registrar } from '../usuario/estado'
+import { guardarPaineis } from '../app/rolagem'
 import { chicagoEmTexto } from './Bibliografia'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
@@ -272,5 +273,101 @@ describe('chicagoEmTexto (o texto que "Copiar referência" copia)', () => {
   })
   it('o Chicago em texto, quando há, vale como está', () => {
     expect(chicagoEmTexto({ chicago: 'A &amp; B', chicagoHtml: '<i>x</i>', titulo: null, curta: null })).toBe('A &amp; B')
+  })
+})
+
+describe('Tarefa 6c: a lista com 5 000 obras (sintéticas, geradas no teste) é desenhada aos poucos', () => {
+  const TOTAL = 5000
+  beforeAll(async () => {
+    usarMotor(await bancoDeTeste({ escrita: true }))
+    // 5 000 obras inventadas, cada uma com uma citação curta («Sintética 0001»…), sem objeto
+    await executar(`
+      WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ${TOTAL})
+      INSERT INTO main.bib_entry (id, csl_json, chicago, chicago_html, short_cites, origin)
+      SELECT printf('BIB-T%05d', i),
+        json_object('id', printf('BIB-T%05d', i), 'type', 'book', 'title', 'Obra sintética ' || i, 'author', json_array(json_object('family', 'Sintética'))),
+        NULL, NULL, json_object('TESTE', json_array(printf('Sintética %04d', i))), 'TESTE I'
+      FROM n`)
+  })
+  afterAll(async () => usarMotor(await bancoDeTeste()))
+
+  it('celular: a contagem diz todas, mas só as primeiras linhas estão no documento', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(375)
+    renderizarRota('/bibliografia')
+    expect(await screen.findByText(`${(TOTAL + 5).toLocaleString('pt-BR')} obras · Chicago autor-data`, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(linhas().length).toBeGreaterThan(0)
+    expect(linhas().length).toBeLessThanOrEqual(300)
+  })
+
+  it('a busca acha uma obra do fim da lista (o filtro corre sobre todas)', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(375)
+    renderizarRota('/bibliografia')
+    const campo = await screen.findByRole('searchbox', { name: 'Buscar na bibliografia' }, { timeout: 5000 })
+    await screen.findByText(/obras · Chicago autor-data/, {}, { timeout: 5000 })
+    await userEvent.type(campo, 'Sintética 4999')
+    await waitFor(() => expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-T04999']), { timeout: 5000 })
+  })
+
+  /** A linha marcada (aria-current), quando chega. */
+  const marcada = () =>
+    waitFor(
+      () => {
+        const a = linhas().find((l) => l.getAttribute('aria-current') === 'page')
+        expect(a).toBeDefined()
+        return a!
+      },
+      { timeout: 5000 },
+    )
+
+  it('fix round 1: computador, a obra do meio aberta a frio: a janela começa em volta dela (≤ 300 linhas), marcada e rolada até ela', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(1280)
+    sessionStorage.clear()
+    const rolar = vi.fn()
+    Element.prototype.scrollIntoView = rolar
+    renderizarRota('/obra/BIB-T02500')
+    const atual = await marcada()
+    expect(atual).toHaveAttribute('href', '/obra/BIB-T02500')
+    expect(linhas().length).toBeLessThanOrEqual(300)
+    // as de antes dela não estão desenhadas: o espaço de cima tem a altura delas
+    expect(linhas().some((l) => l.getAttribute('href') === '/obra/BIB-T00001')).toBe(false)
+    expect(document.querySelector('.lista-janela > .lista-espaco')).not.toBeNull()
+    await waitFor(() => expect(rolar.mock.contexts).toContain(atual))
+  })
+
+  it('fix round 1: subindo pelo teclado (o foco na primeira linha desenhada), desenham-se as de cima', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(1280)
+    sessionStorage.clear()
+    Element.prototype.scrollIntoView = vi.fn()
+    renderizarRota('/obra/BIB-T02500')
+    await marcada()
+    const primeira = () => linhas()[0]!.getAttribute('href')
+    const antes = primeira()
+    act(() => linhas()[0]!.focus())
+    await waitFor(() => expect(primeira()).not.toBe(antes))
+    expect(Number(/T(\d+)/.exec(primeira()!)![1])).toBeLessThan(Number(/T(\d+)/.exec(antes!)![1]))
+  })
+
+  it('fix round 1: voltando (POP) com a lista rolada guardada, a janela vai do topo até a obra, para a posição restaurada valer', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(1280)
+    sessionStorage.clear()
+    Element.prototype.scrollIntoView = vi.fn()
+    // a entrada inicial do MemoryRouter é um POP com a chave 'default'
+    guardarPaineis('default', { lista: 40_000, principal: 0 })
+    renderizarRota('/obra/BIB-T00800')
+    const atual = await marcada()
+    expect(atual).toHaveAttribute('href', '/obra/BIB-T00800')
+    expect(linhas()[0]).toHaveAttribute('href', '/obra/BIB-900001')
+    expect(linhas().length).toBeGreaterThanOrEqual(800)
+    expect(linhas().length).toBeLessThan(900)
+    sessionStorage.clear()
+  })
+
+  it('o teclado: o foco na última linha desenhada desenha as seguintes', { timeout: 20_000 }, async () => {
+    instalarMatchMedia(375)
+    renderizarRota('/bibliografia')
+    await screen.findByText(/obras · Chicago autor-data/, {}, { timeout: 5000 })
+    const antes = linhas().length
+    act(() => linhas().at(-1)!.focus())
+    await waitFor(() => expect(linhas().length).toBeGreaterThan(antes))
   })
 })

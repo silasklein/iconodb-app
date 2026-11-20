@@ -3,10 +3,16 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { executar, usarMotor } from '../banco/cliente'
+import { obrasDeLeitura } from '../banco/leitura'
 import { instalarMatchMedia } from '../test/larguraDeTela'
+import { esquecerPreferenciasDaMemoria, gravarPosicao } from '../leitura/preferencias'
 import { Colecoes } from './Colecoes'
 
 vi.mock('../pacote/imagens', () => ({ urlImagem: vi.fn(async (c: string) => `blob:${c}`) }))
+vi.mock('../banco/leitura', async (original) => {
+  const m = await original<typeof import('../banco/leitura')>()
+  return { ...m, obrasDeLeitura: vi.fn(m.obrasDeLeitura) }
+})
 
 function abrir(url = '/colecoes') {
   return render(
@@ -133,6 +139,55 @@ describe('Coleções', () => {
     expect(screen.queryByRole('link', { name: 'Voltar' })).not.toBeInTheDocument()
     expect(screen.getByText('2 grupos · 6 objetos')).toBeInTheDocument()
     await waitFor(() => expect(document.querySelectorAll('.colecoes-miniatura img').length).toBeGreaterThan(0))
+  })
+
+  describe.each([
+    ['celular', 375],
+    ['computador', 1280],
+  ] as const)('Tarefa 5 da leitura: «Ler o livro» e «Continuar» na aba da obra de catálogo (%s)', (_, largura) => {
+    beforeEach(() => instalarMatchMedia(largura))
+    afterEach(() => {
+      localStorage.clear()
+      esquecerPreferenciasDaMemoria()
+    })
+
+    it('«Ler o livro» abre o 1º passo do volume; sem posição guardada, sem «Continuar»', async () => {
+      abrir('/colecoes?obra=TESTE-I')
+      expect(await screen.findByRole('link', { name: 'Ler o livro' })).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.3-txt-1')
+      expect(screen.queryByRole('link', { name: /^Continuar/ })).not.toBeInTheDocument()
+    })
+
+    it('com a posição guardada, «Continuar: TESTE I: 2» leva a ela', async () => {
+      gravarPosicao('TESTE', '/ler/TESTE/entrada/2')
+      abrir('/colecoes?obra=TESTE-I')
+      expect(await screen.findByRole('link', { name: 'Continuar: TESTE I: 2' })).toHaveAttribute('href', '/ler/TESTE/entrada/2')
+      expect(screen.getByRole('link', { name: 'Ler o livro' })).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.3-txt-1')
+    })
+
+    it('a posição de um passo que o pacote não tem: sem «Continuar», e «Ler o livro» continua valendo', async () => {
+      gravarPosicao('TESTE', '/ler/TESTE/entrada/99')
+      abrir('/colecoes?obra=TESTE-I')
+      // «Ler o livro» e «Continuar» vêm da mesma carga: com o primeiro na tela, a posição já foi conferida
+      expect(await screen.findByRole('link', { name: 'Ler o livro' })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^Continuar/ })).not.toBeInTheDocument()
+      cleanup()
+      gravarPosicao('TESTE', '/ler/TESTE/trecho/PA-NAO-HA')
+      abrir('/colecoes?obra=TESTE-I')
+      // «Ler o livro» e «Continuar» vêm da mesma carga: com o primeiro na tela, a posição já foi conferida
+      expect(await screen.findByRole('link', { name: 'Ler o livro' })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^Continuar/ })).not.toBeInTheDocument()
+    })
+
+    it('a aba do livro em parágrafos (TESTEG) não tem «Ler o livro»', async () => {
+      gravarPosicao('TESTEG', '/ler/TESTEG/trecho/PA-TESTEG-§2-txt-1')
+      vi.mocked(obrasDeLeitura).mockClear()
+      abrir('/colecoes?obra=TESTEG')
+      await screen.findByRole('link', { name: /Época de teste e imagens de prova/ })
+      // a aba do livro em parágrafos nem pede as obras de leitura (não há o que esperar carregar)
+      expect(vi.mocked(obrasDeLeitura)).not.toHaveBeenCalled()
+      expect(screen.queryByRole('link', { name: 'Ler o livro' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^Continuar/ })).not.toBeInTheDocument()
+    })
   })
 
   it('sem o banco no aparelho avisa e leva a preparar', async () => {

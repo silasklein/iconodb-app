@@ -387,6 +387,7 @@ describe('consultas sobre o pacote sintético', () => {
       const dois = (await item('CA00002'))!
       expect(dois.noLivro).toEqual([
         {
+          itemId: 'TESTE-0002',
           publicacao: 'TESTE',
           volume: 'I',
           periodo: 'Calcolítico (fase de teste)',
@@ -403,7 +404,7 @@ describe('consultas sobre o pacote sintético', () => {
       const quatro = (await item('CA00004'))!
       // pacote 11: o CA00004 é também a figura TESTEG-0001b (decisão 83: uma linha por livro)
       expect(quatro.noLivro).toEqual([
-        expect.objectContaining({ grupo: expect.objectContaining({ id: 'GR-TESTE-I-02', numero: null, subcolecoes: 0 }), subcolecao: null }),
+        expect.objectContaining({ itemId: 'TESTE-0004', grupo: expect.objectContaining({ id: 'GR-TESTE-I-02', numero: null, subcolecoes: 0 }), subcolecao: null }),
         expect.objectContaining({ publicacao: 'TESTEG', volume: '', grupo: expect.objectContaining({ id: 'GR-TESTEG-01', numero: 'I', subcolecoes: 1 }), subcolecao: expect.objectContaining({ id: 'GR-TESTEG-01-01', numero: '1' }) }),
       ])
       for (const n of ['CA00001', 'CA00002', 'CA00003', 'CA00004']) {
@@ -447,6 +448,9 @@ describe('consultas sobre o pacote sintético', () => {
       ['TESTE-4', 'Tel Probe Teste', 0],
       ['TESTEG-9', 'Tell Achado Teste', 1], // pacote 11: o achado «do texto» de TESTEG-0002
       ['TESTE-2', 'Tell Probe Teste', 3],
+      // M6 (R28): o sítio 2 do TESTEG, com o verbete-nome do TESTE-2, e a figura TESTEG-0001a; a mescla TESTEG-2 → TESTE-2 é
+      // do pacote, e a consulta não sabe de mescla
+      ['TESTEG-2', 'Tell Probe Teste', 1],
       ['TESTE-3', 'Tell Usuário Teste', 0], // o sítio do usuário publicado (Tarefa 16)
       ['TESTE-6', 'Túmulo Probe Teste', 0],
     ])
@@ -509,11 +513,12 @@ describe('consultas sobre o pacote sintético', () => {
     // o número de objetos é o de verbete(id).objetos, para todos os verbetes
     for (const v of lista) expect(v.objetos).toBe((await verbete(v.id))!.objetos.length)
     expect(por.get('GL-900004')!.objetos).toBe(3) // nome de sítio: os três objetos achados lá
-    expect(por.get('GL-900005')!.objetos).toBe(3)
+    expect(por.get('GL-900005')!.objetos).toBe(4) // e a figura TESTEG-0001a, no TESTEG-2 de mesmo verbete-nome (M6)
   })
 
   it('sitios() e sitio() trazem a região: o verbete-pai do verbete do nome, ou null', async () => {
-    expect((await sitios()).map((x) => x.regiao)).toEqual(Array(9).fill(null)) // pacote 8: oito sítios; pacote 11: mais TESTEG-9
+    // pacote 8: oito sítios; pacote 11: mais TESTEG-9; M6: mais TESTEG-2
+    expect((await sitios()).map((x) => x.regiao)).toEqual(Array(10).fill(null))
     expect((await sitio('TESTE-1'))!.regiao).toBeNull()
   })
 
@@ -903,7 +908,9 @@ describe('Parte 2C, bloco 2: as tabelas dos sítios do pacote 8', () => {
       { parte: 'TESTE-6', todo: 'TESTE-5' },
     ])
     const grafias = await grafiasDoPacote()
-    expect(grafias).toHaveLength(9)
+    expect(grafias).toHaveLength(10)
+    // M6: a grafia impressa do TESTEG, no id do sítio dele (mesclado em TESTE-2 pelo número)
+    expect(grafias).toContainEqual({ sitio: 'TESTEG-2', texto: 'T. Probe Teste', tradicao: null, sigla: 'TESTEG', pagina: '6', origem: 'livro' })
     expect(grafias).toContainEqual({ sitio: 'TESTE-1', texto: 'al-Maḥṭaṣ Teste', tradicao: null, sigla: 'TESTE', pagina: '4', origem: 'livro' })
     expect(grafias).toContainEqual({ sitio: 'TESTE-4', texto: 'Tel Probe Teste', tradicao: null, sigla: 'TESTE', pagina: '7', origem: 'livro' })
     expect(grafias).toContainEqual({ sitio: 'TESTE-2', texto: 'Probetal Teste', tradicao: 'alema', sigla: null, pagina: null, origem: 'usuario' })

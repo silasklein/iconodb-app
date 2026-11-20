@@ -93,6 +93,14 @@ describe('Subcolecao', () => {
     expect(caixa.querySelectorAll('p[lang]')).toHaveLength(1)
   })
 
+  it('Tarefa 5 da leitura: na caixa da introdução, «Ler no livro» ao lado de «Ler a introdução» abre o 1º passo da subcoleção', async () => {
+    abrir()
+    const caixa = await screen.findByRole('region', { name: 'Introdução · o texto do autor sobre 1.2–1.3' })
+    const ler = await within(caixa).findByRole('link', { name: 'Ler no livro' })
+    expect(ler).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.10-ovw-2')
+    expect(within(caixa).getByRole('button', { name: 'Ler a introdução' }).parentElement).toBe(ler.parentElement)
+  })
+
   it('«Objetos» e a contagem; o cartão leva a subcoleção como contexto e a origem marcada', async () => {
     abrir()
     expect(await screen.findByRole('heading', { level: 2, name: 'Objetos 1' })).toBeInTheDocument()

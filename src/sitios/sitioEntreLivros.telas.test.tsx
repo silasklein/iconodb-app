@@ -2,10 +2,12 @@
  * Etapa 4, Tarefa 27 (fix round 1; revisão do branch, I1): o mesmo sítio do registro nos dois livros. O registro dos sítios é um
  * só, e o livro em parágrafos reusa o número de um sítio que o catálogo já tem. O pipeline grava então a mescla
  * `<LIVRO>-n → <CATÁLOGO>-n` (`tipo 'sitio'`, `criado 0`) e não sugere o par do mesmo número; o app já trata a mescla de ponta a
- * ponta e não precisa de outra regra. Este teste fixa isso: o TESTEG ganha o sítio 2 (o mesmo «Tell Probe Teste» do TESTE-2, na
- * mesma coordenada), com a figura TESTEG-0001a (F200001) achada nele, e a linha `TESTEG-2 → TESTE-2`. A lista dos sítios, o
- * mapa, os pares da Revisão (um par antigo do mesmo número, como o pipeline gravava antes) e a mescla da pessoa no TESTE-2
- * valem para os dois como um. Só dados TESTE inventados (banco de escrita).
+ * ponta e não precisa de outra regra. Este teste fixa isso: o TESTEG tem o sítio 2 (o verbete-nome do TESTE-2, então o mesmo
+ * «Tell Probe Teste», na mesma coordenada; impresso «T. Probe Teste»), com a figura TESTEG-0001a (F200001) achada nele, e a
+ * linha `TESTEG-2 → TESTE-2`. Desde a revisão final da Etapa 4 (M6) os três vêm do pacote sintético, gravados pelas funções
+ * do build; aqui só entra o par antigo do mesmo número. A lista dos sítios, o mapa, os pares da Revisão (esse par antigo,
+ * como o pipeline gravava antes) e a mescla da pessoa no TESTE-2 valem para os dois como um. Só dados TESTE inventados (banco
+ * de escrita).
  */
 import { renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -26,11 +28,6 @@ vi.mock('../usuario/useSincronizacao', async () => (await import('../../tests/su
 beforeAll(async () => {
   usarMotor(await bancoDeTeste({ escrita: true }))
   usarFoldDoPacoteSintetico()
-  await executar(`INSERT INTO pub_TESTEG.site (id, name_entry_id, literal_name, lat, lon, coord_method, coord_source)
-    VALUES (2, 'GL-900005', 'Tell Probe Teste', 31.9132, 35.2071, 'gazetteer', 'https://example.org/gazetteer/tell-probe-teste')`)
-  await executar(`INSERT INTO pub_TESTEG.assertion (subject_type, subject_id, field, value, site_id, certainty, publication, locator, is_primary)
-    VALUES ('item', 'TESTEG-0001a', 'findspot', 'Tell Probe Teste', 2, 'certain', 'TESTEG', '§2', 1)`)
-  await executar("INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('TESTEG-2', 'TESTE-2', 'sitio', 0)")
   // o par do mesmo número que o pipeline sugeria antes da correção: com a mescla, ele não fica aberto
   await executar("INSERT INTO main.sitio_par_sugerido (a, b, motivo) VALUES ('TESTE-2', 'TESTEG-2', 'coordenada')")
 })
@@ -87,8 +84,12 @@ describe('o sítio do livro em parágrafos com o número de um sítio do catálo
       'Tel Probe Teste(dos livros)· TESTE-4desfazer',
       'Tell Probe Teste(dos livros)· TESTEG-2desfazer',
     ])
-    // o mesmo nome do sítio que ficou: só o número o distingue
+    // o mesmo nome do sítio que ficou: só o número o distingue, também no nome acessível de cada «desfazer» (M6)
     expect(screen.getAllByText('Tell Probe Teste').length).toBeGreaterThan(1)
+    expect([...dados.querySelectorAll('.sitio-mesclado button')].map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Desfazer a mescla de TESTE 4',
+      'Desfazer a mescla de TESTEG 2',
+    ])
   })
 
   it('a mescla que a pessoa fez no TESTE-2 vale também para o do livro em parágrafos', async () => {

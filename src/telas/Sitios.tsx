@@ -372,7 +372,7 @@ export function Sitios() {
   const limparFiltro = () => definir({ regioes: '', filtro: '' })
 
   const filtroDeRegioes = (
-    <FiltroDeRegioes contagens={dados?.porRegiao ?? new Map()} total={total} ativas={regioesAtivas} aoAlternar={alternarRegiao} aoLimpar={() => definir({ regioes: '' })} />
+    <FiltroDeRegioes contagens={dados?.porRegiao ?? null} total={dados ? total : null} ativas={regioesAtivas} aoAlternar={alternarRegiao} aoLimpar={() => definir({ regioes: '' })} />
   )
   // O mapa é uma tela de origem (decisão 85): o objeto aberto do cartão de um ponto mostra «‹ Sítios».
   const mapa = (

@@ -674,3 +674,10 @@
     font-size: 14px;
   }
 }
+
+/* Tarefa 6c: a lista desenhada aos poucos (useJanelaDaLista). A âncora da rolagem é feita pelo gancho (ao desenhar as
+   linhas de cima, ele corrige a rolagem); o navegador não a faz de novo nas linhas nem nos espaços */
+.lista-janela,
+.lista-espaco {
+  overflow-anchor: none;
+}

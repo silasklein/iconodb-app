@@ -83,6 +83,13 @@ const ROTULOS = {
   texto_sem_paragrafo: 'Textos sem parágrafo',
   trecho_retirado_nao_aplicado: 'Trechos retirados não aplicados',
   trecho_transcrito_a_mao_nao_aplicado: 'Trechos transcritos à mão não aplicados',
+  // os seis de antes que o pacote real traz e ainda saíam pelo nome de reserva, no singular (Tarefa 6)
+  erro_do_livro: 'Erros do livro',
+  texto_da_fonte_corrigido: 'Textos da fonte corrigidos',
+  abreviatura_divergente: 'Abreviaturas divergentes',
+  aparato_campos_4_e_5_invertidos: 'Aparatos com os campos 4 e 5 invertidos',
+  intervalo_incompleto: 'Intervalos incompletos',
+  obra_repetida_no_livro: 'Obras repetidas no livro',
   // motivos de antes que também perdiam o acento no nome de reserva
   citacao_religada_a_volume_proprio: 'Citações religadas ao volume próprio',
   divergencia_markitdown: 'Divergências com o MarkItDown',

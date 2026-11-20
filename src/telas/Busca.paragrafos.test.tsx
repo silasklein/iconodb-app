@@ -4,7 +4,7 @@
  * termo em destaque e o caminho, um link à página do §. A busca em si é testada em busca/paragrafosNaBusca.test.ts; aqui
  * `buscar` é simulada.
  */
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { vi } from 'vitest'
@@ -59,6 +59,11 @@ function Onde() {
   return <span data-testid="onde">{`${pathname}${search}`}</span>
 }
 
+function OndeComEstado() {
+  const { pathname, state } = useLocation()
+  return <output data-testid="onde-estado" data-state={JSON.stringify(state ?? null)}>{pathname}</output>
+}
+
 function abrir(url: string) {
   return render(
     <MemoryRouter initialEntries={[url]}>
@@ -73,6 +78,7 @@ function abrir(url: string) {
           }
         />
         <Route path="/paragrafo/:sigla/:numero" element={<Onde />} />
+        <Route path="/ler/:sigla/trecho/:id" element={<OndeComEstado />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -144,6 +150,62 @@ describe.each([
     mock.mockResolvedValue(resultado([], { objetos: [], numeros: [], total: 0, totalSemFiltros: 0 }))
     abrir('/busca?q=selo&escopo=texto')
     expect(await screen.findByText('Nada encontrado nos §§ para «selo»')).toBeInTheDocument()
+  })
+
+  it('fix final (m4): com uma obra de leitura no pacote, a aba «Texto» também busca as introduções: «Nada encontrado no texto»', async () => {
+    mock.mockResolvedValue(resultado([], { objetos: [], numeros: [], total: 0, totalSemFiltros: 0, comLeitura: true }))
+    abrir('/busca?q=selo&escopo=texto')
+    expect(await screen.findByText('Nada encontrado no texto para «selo»')).toBeInTheDocument()
+    expect(screen.queryByText(/nos §§/)).toBeNull()
+  })
+
+  const pagina = (numero: number): ParagrafoAchado => ({
+    ...achado(numero),
+    tipo: 'pagina',
+    rotuloDoTipo: 'grupo',
+    sigla: 'TESTE',
+    rotulo: `TESTE I, p. ${numero}`,
+    caminho: `/ler/TESTE/trecho/PA-TESTE-I.S.${numero}-ovw-1`,
+    trechos: [`PA-TESTE-I.S.${numero}-ovw-1`],
+    publicacoes: ['TESTE'],
+    trilha: [],
+  })
+
+  it('Tarefa 5 da leitura (desenho 3): a página de introdução na mesma lista, com o rótulo e a etiqueta do tipo; o link abre a leitura com a origem «Busca»', async () => {
+    mock.mockResolvedValue(resultado([pagina(19), achado(3)], { objetos: [], numeros: [], total: 0, totalSemFiltros: 0, paginasNoTexto: 1 }))
+    abrir('/busca?q=selo&escopo=texto')
+    // com páginas entre os achados: «Trechos achados» e «N trechos»
+    expect(await screen.findByRole('button', { name: 'Texto, 2 trechos' })).toBeInTheDocument()
+    const [primeira, segunda] = within(await screen.findByRole('region', { name: 'Trechos achados' })).getAllByRole('listitem') as [HTMLElement, HTMLElement]
+    const link = within(primeira).getByRole('link')
+    expect(link).toHaveAttribute('href', '/ler/TESTE/trecho/PA-TESTE-I.S.19-ovw-1')
+    expect(link).toHaveAccessibleName(/^TESTE I, p\. 19, Introdução do grupo: Um selo de prova/)
+    expect(primeira.querySelector('.busca-paragrafo-livro')).toHaveTextContent(/^TESTE I, p\. 19$/)
+    expect(primeira.querySelector('.busca-paragrafo-tipo')).toHaveTextContent(/^Introdução do grupo$/)
+    expect(primeira.querySelector('.busca-paragrafo-numero')).toBeNull()
+    // o § continua como era
+    expect(within(segunda).getByRole('link')).toHaveAttribute('href', '/paragrafo/TESTEG/3')
+    expect(segunda.querySelector('.busca-paragrafo-tipo')).toBeNull()
+    expect(segunda).toHaveTextContent('§ 3')
+    // o link leva a origem (decisão 85): a leitura mostra «‹ Busca»
+    await userEvent.click(link)
+    const estado = JSON.parse(screen.getByTestId('onde-estado').dataset.state!)
+    expect(estado.voltar).toMatchObject({ rotulo: 'Busca', caminho: '/busca?q=selo&escopo=texto' })
+  })
+
+  it('Tarefa 5 da leitura: no «Tudo», com páginas entre os achados, o bloco é «No texto» e «Ver os 4 trechos»; o singular é «1 trecho»', async () => {
+    mock.mockResolvedValue(resultado([pagina(10), pagina(19), achado(1), achado(2)], { paginasNoTexto: 2 }))
+    abrir('/busca?q=selo')
+    const bloco = await screen.findByRole('region', { name: 'No texto' })
+    expect(screen.queryByRole('region', { name: 'Nos §§' })).toBeNull()
+    expect(within(bloco).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(bloco).getByRole('button', { name: 'Ver os 4 trechos' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Texto, 4 trechos' })).toBeInTheDocument()
+    cleanup()
+    mock.mockResolvedValue(resultado([pagina(19)], { paginasNoTexto: 1 }))
+    abrir('/busca?q=selo')
+    expect(await screen.findByRole('button', { name: 'Texto, 1 trecho' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'No texto' })).toBeInTheDocument()
   })
 
   it('«Tudo» só com §§ (nenhum objeto): o bloco, sem «Nada encontrado»', async () => {

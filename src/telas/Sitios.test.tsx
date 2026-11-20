@@ -21,7 +21,10 @@ describe('Sítios sem região no pacote (R18: uma lista alfabética com letras)'
   it('lista os sítios com a coordenada em graus, a contagem de objetos e «Mostrar no mapa» (celular)', async () => {
     renderizarRota('/sitios')
     expect(screen.getByRole('heading', { level: 1, name: 'Sítios' })).toBeInTheDocument()
+    // Tarefa 6c: enquanto carrega, «Todas» sem o «0» (antes dizia que não havia nenhum sítio)
+    expect(screen.getByRole('button', { name: 'Todas, carregando' })).toHaveTextContent(/^Todas$/)
     await screen.findAllByRole('link', { name: /^Tell Probe Teste/ })
+    expect(screen.getByRole('button', { name: 'Todas, 8 sítios' })).toHaveTextContent('Todas8')
     // TESTE-3: o sítio do usuário publicado pelo pipeline (Tarefa 16)
     // Pacote 8: TESTE-5 a TESTE-8 a mais; TESTE-4, mesclado em TESTE-2, não aparece. Pacote 11: TESTEG-9 «Tell Achado Teste».
     await waitFor(() =>
@@ -30,8 +33,9 @@ describe('Sítios sem região no pacote (R18: uma lista alfabética com letras)'
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['A', 'H', 'M', 'T'])
     const tell = screen.getByRole('link', { name: /^Tell Probe Teste/ })
     expect(within(tell).getByText('31,913 N · 35,207 E · Levante Sul')).toBeInTheDocument()
-    // o número leva a unidade em texto escondido, para o leitor de tela ("3 objetos")
-    expect(tell.closest('.sitio-linha')).toHaveTextContent('3 objetos')
+    // o número leva a unidade em texto escondido, para o leitor de tela ("4 objetos": os 3 do catálogo e a figura do TESTEG-2,
+    // mesclado no TESTE-2 pelo número, M6)
+    await waitFor(() => expect(tell.closest('.sitio-linha')).toHaveTextContent('4 objetos'))
     expect(within(screen.getByRole('link', { name: /^Maḥteṣ Teste/ })).getByText(/^\d+,\d{3} N · \d+,\d{3} E · Levante Sul$/)).toBeInTheDocument()
     expect(screen.getByText('8 sítios · 6 com coordenada')).toBeInTheDocument()
     // «Mostrar no mapa» é um botão (o mapa é do app, sem link externo): leva ao ponto do sítio
@@ -177,13 +181,14 @@ describe('Sítios: coordenada 0', () => {
   })
 
   it('Parte 2C, bloco 2: um objeto que o livro põe no destino e num absorvido conta uma vez (como na página)', async () => {
-    // CA00003 (TESTE-0003) também em TESTE-4, mesclado em TESTE-2; CA00001 (TESTE-0001) também, e só ele é novo para TESTE-2.
+    // CA00003 (TESTE-0003) também em TESTE-4, mesclado em TESTE-2; CA00001 (TESTE-0001) também, e só ele é novo para TESTE-2
+    // (que já conta 4: os 3 do catálogo e a figura do TESTEG-2, mesclado nele pelo número, M6).
     await executar(`INSERT INTO pub_TESTE.assertion (subject_type, subject_id, field, value, site_id, publication) VALUES
                       ('item', 'TESTE-0003', 'findspot', 'Tel Probe Teste', 4, 'TESTE'), ('item', 'TESTE-0001', 'findspot', 'Tel Probe Teste', 4, 'TESTE')`)
     renderizarRota('/sitios')
     await screen.findByRole('link', { name: /^Tell Probe Teste/ })
     const linha = () => document.querySelector('.sitio-linha[data-sitio="TESTE-2"]')
-    await waitFor(() => expect(linha()).toHaveTextContent('4 objetos'))
+    await waitFor(() => expect(linha()).toHaveTextContent('5 objetos'))
   })
 
   it('Parte 2C, bloco 2: o destino sem coordenada mostra a do absorvido (TESTE-4, mesclado em TESTE-2) e vai ao mapa com ela', async () => {

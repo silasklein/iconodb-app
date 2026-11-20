@@ -6,6 +6,7 @@
  * (Tarefa 8, `codepointsParaUtf16`).
  */
 import type { ReferenciaDeFonte } from './referencias'
+import type { TipoDeTexto } from '../leitura/ordem'
 
 /** O "número" de um objeto (CA00001); um item sem objeto atribuído usa o id do item. */
 export type Numero = string
@@ -290,6 +291,8 @@ export interface ItemDetalhe {
 
 /** Um lugar do objeto no livro: a obra, o volume, o período, o grupo de cima e a subcoleção (null fora dela ou num pacote 5–8). */
 export interface NoLivro {
+  /** O item do objeto que está neste lugar (o «Ler no livro» da linha do catálogo abre o passo dele; Tarefa 5 da leitura). */
+  itemId: string
   publicacao: string
   volume: string
   periodo: string | null
@@ -484,11 +487,9 @@ export interface SitioResumo {
   /** A região: o verbete-pai (`glossary_entry.parent_id`) do verbete que dá nome ao sítio; null quando não há (R18). */
   regiao: { id: string; nome: string } | null
   objetos: number
-  /** Dos objetos, quantos têm o achado «do texto» (decisão 90.1; o cartão do mapa). Ausente num sítio do usuário. */
-  doTexto?: number
 }
 
-export interface Sitio extends Omit<SitioResumo, 'objetos' | 'doTexto'> {
+export interface Sitio extends Omit<SitioResumo, 'objetos'> {
   gradeRef: string | null
   metodo: 'grid' | 'gazetteer' | null
   fonteDaCoordenada: string | null
@@ -575,6 +576,11 @@ export interface ReferenciaDoParagrafo {
   objeto: Numero
   numero: number
   sufixo: string
+  /**
+   * O volume do item citado («II»; a leitura, fix final m2): a numeração do catálogo é única na obra, e a remissão a outro
+   * volume diz o volume dele no nome acessível. Sem o campo (o §), o volume do passo.
+   */
+  volume?: string
 }
 
 /** Um § do livro em parágrafos (rota `/paragrafo/:sigla/:numero`). */
@@ -642,4 +648,76 @@ export interface LivroNaBibliografia {
   figuras: number
   /** O primeiro § (o «Ler o § 1»); null sem §§. */
   primeiro: number | null
+}
+
+// ---------------------------------------------------------------------------
+// A leitura de uma obra de catálogo (o IPIAO no formato do §; src/banco/leitura.ts)
+// ---------------------------------------------------------------------------
+
+/** Uma obra de catálogo que se lê do começo ao fim (`obrasDeLeitura`): os volumes na ordem de `volume.ordinal`. */
+export interface ObraDeLeitura {
+  sigla: string
+  /** `rotulo`: «TESTE I»; `primeiro`: a rota do 1º passo do volume. */
+  volumes: { volume: string; rotulo: string; primeiro: string }[]
+}
+
+/** Uma linha DE | PT de um passo: um trecho de introdução, a descrição de uma entrada ou um campo dela. */
+export interface LinhaDaLeitura {
+  /** `passage.id` (o trecho ou a descrição) ou `catalog_field.unit_id` (o campo). */
+  id: string
+  /** «Descrição», «3 · Local e contexto do achado», …, «Mapa» (a legenda); null no texto corrido. */
+  rotulo: string | null
+  /** O original (alemão). */
+  texto: string
+  /** O português renderizado (`unit_pt_render`); null sem tradução. */
+  portugues: string | null
+  /** Os verbetes no português, em CODE POINTS. */
+  termos: Termo[]
+  estado: EstadoDaTraducao | null
+  desatualizada: boolean
+}
+
+/** O passo vizinho (‹ ›): a rota, o rótulo («p. 10», «TESTE I: 2»), o tipo e a primeira frase (do português, ou do original). */
+export interface VizinhoDaLeitura {
+  rota: string
+  rotulo: string
+  tipo: TipoDeTexto | 'entrada'
+  frase: string | null
+}
+
+/** Um passo da leitura (rotas `/ler/:sigla/trecho/:id` e `/ler/:sigla/entrada/:chave`). */
+export interface PassoDetalhe {
+  sigla: string
+  volume: string
+  /** «TESTE I». */
+  obra: string
+  /** O ano do volume (`volume.year`; sem ele, o da publicação): «TESTE I 2020, p. 11» no alemão. null sem ano no pacote. */
+  ano: number | null
+  tipo: 'texto' | 'entrada'
+  rotuloDoTipo: TipoDeTexto | 'entrada'
+  /** «TESTE I, p. 10» (texto) ou «TESTE I: 1» (entrada, decisão 39). */
+  titulo: string
+  /** A página impressa: a do locator, no texto; `text_page` mais o deslocamento de `volume.page_offsets`, na entrada. */
+  pagina: number | null
+  /** O caminho do grupo do passo, em português, como `ParagrafoDetalhe.caminho` ([] fora de grupo). */
+  caminho: string[]
+  grupos: GrupoNoCaminho[]
+  linhas: LinhaDaLeitura[]
+  /** As figuras citadas (`passage_item 'mentions'` dos trechos do passo, ou da descrição), uma por objeto, na ordem das fontes. */
+  figuras: ObjetoResumo[]
+  /** A peça da entrada (o objeto dela), no passo de entrada; null no texto. */
+  entrada: ObjetoResumo | null
+  /**
+   * As menções do passo (`passage_item 'mentions'` dos trechos, ou da descrição, sem a própria entrada), item por item, com o
+   * objeto: os números do catálogo citados no texto viram links (como `ParagrafoDetalhe.referencias`).
+   */
+  referencias: ReferenciaDoParagrafo[]
+  /** k de m no bloco (texto) ou entre as entradas do grupo ou da subcoleção (entrada). */
+  posicao: { n: number; total: number; de: 'bloco' | 'grupo' | 'subcolecao' }
+  /** A rota do 1º passo do bloco, ou da 1ª entrada do grupo, quando `posicao.n` > 1; null no primeiro. */
+  inicio: string | null
+  /** O trecho pedido por `/trecho/:id`, para rolar até ele; null na entrada. */
+  alvo: string | null
+  anterior: VizinhoDaLeitura | null
+  seguinte: VizinhoDaLeitura | null
 }

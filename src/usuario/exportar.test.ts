@@ -625,6 +625,20 @@ describe('hipóteses SKC para o MEDIATION', () => {
     expect(doc.observacoes.join(' ')).toContain('publicadoDe')
   })
 
+  it('Tarefa 6d: um termo do livro unido a outro (GL do livro → GL do livro) sai com o GL atual, sem publicadoDe (não é termo do usuário)', () => {
+    const verbete = ev({ ap: A, seq: 1, n: 0, tipo: 'verbete', reg: 'GL-aaaaaaaa-1', op: 'criar', campos: { forma: 'leão-de-prova', status: 'proposed' } })
+    const h = hip(2, 'HY-aaaaaaaa-1', { termos: ['GL-900001', 'GL-aaaaaaaa-1'], termosRotulos: ['íbex de prova', 'leão-de-prova'] })
+    const redirecionamentos = new Map([
+      ['GL-900001', 'GL-900002'],
+      ['GL-aaaaaaaa-1', 'GL-002102'],
+    ])
+    const doc = montarHipoteses(fundir([verbete, h]), AGORA, new Map(), redirecionamentos)
+    expect(doc.hipoteses[0]!.identificacao).toEqual([
+      { id: 'GL-900002', rotulo: 'íbex de prova', termoDoUsuario: false },
+      { id: 'GL-002102', rotulo: 'leão-de-prova', termoDoUsuario: false, publicadoDe: 'GL-aaaaaaaa-1' },
+    ])
+  })
+
   it('só as próprias, vivas: excluídas ficam de fora; posições sobre hipóteses dos livros não entram; em ordem de criação', () => {
     const h1 = hip(2, 'HY-aaaaaaaa-2', {})
     const h2 = hip(1, 'HY-bbbbbbbb-1', { modalidade: 'possible' }, B)

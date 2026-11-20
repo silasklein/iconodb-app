@@ -6,10 +6,12 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
 import { RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
 import { usarMotor } from '../banco/cliente'
+import * as leituraModulo from '../banco/leitura'
+import { rotaDoTrecho } from '../banco/leitura'
 import { buscar } from './consulta'
 import { lerTabelaDeFold } from './fold'
 
@@ -119,11 +121,85 @@ describe('os §§ na busca', () => {
   it('Tarefa 26: «do texto» é um valor da faceta «Certeza do sítio» (o achado tirado do §), e filtra', async () => {
     const r = await buscar('Testkredit', opcoes)
     const certeza = r.facetas.find((f) => f.chave === 'certeza')!
-    expect(certeza.opcoes.find((o) => o.valor === 'do_texto')).toMatchObject({ rotulo: 'do texto', n: 1 })
-    expect(numeros(await buscar('Testkredit', { ...opcoes, filtros: { certeza: ['do_texto'] } }))).toEqual(['F200002'])
+    // F200002 (o § 3) e F200001 (o § 2, no TESTEG-2 de mesmo número do TESTE-2; M6)
+    expect(certeza.opcoes.find((o) => o.valor === 'do_texto')).toMatchObject({ rotulo: 'do texto', n: 2 })
+    expect(numeros(await buscar('Testkredit', { ...opcoes, filtros: { certeza: ['do_texto'] } }))).toEqual(['F200001', 'F200002'])
   })
 
   it('o crédito da figura (campo 7) acha as figuras', async () => {
     expect(numeros(await buscar('Testkredit', opcoes))).toEqual(['CA00004', 'F200001', 'F200002'])
+  })
+
+  it('Tarefa 5 da leitura: o trecho de introdução de uma obra de catálogo entra como achado de página, com a rota do trecho na leitura', async () => {
+    // «estrelas» só está no panorama da p. 19 (o começo do grupo GR-TESTE-I-02)
+    const r = await buscar('estrelas', opcoes)
+    expect(r.paragrafos).toEqual([
+      {
+        tipo: 'pagina',
+        rotuloDoTipo: 'grupo',
+        sigla: 'TESTE',
+        numero: 19,
+        rotulo: 'TESTE I, p. 19',
+        caminho: rotaDoTrecho('TESTE', 'PA-TESTE-I.S.19-ovw-1'),
+        trechos: ['PA-TESTE-I.S.19-ovw-1'],
+        publicacoes: ['TESTE'],
+        trecho: expect.objectContaining({ id: 'PA-TESTE-I.S.19-ovw-1', nota: null, lingua: 'pt-BR', texto: expect.stringContaining('estrelas de prova') }),
+        trilha: [],
+      },
+    ])
+    // a aba «Texto» conta a página (e diz quantas são páginas, para os rótulos); o alemão também acha
+    expect(r.contagens.texto).toBe(1)
+    expect(r.paginasNoTexto).toBe(1)
+    expect((await buscar('Testskarabäus', opcoes)).paginasNoTexto).toBe(0)
+    expect((await buscar('estrelas', { ...opcoes, escopo: 'texto' })).paragrafos.map((p) => p.rotulo)).toEqual(['TESTE I, p. 19'])
+    expect((await buscar('Probesterne', opcoes)).paragrafos[0]!.trecho).toMatchObject({ id: 'PA-TESTE-I.S.19-ovw-1', lingua: 'de' })
+  })
+
+  it('Tarefa 5 da leitura: o objeto que o trecho já dava continua; a obra de catálogo vem antes do livro em parágrafos e a contagem soma os dois', async () => {
+    const d = await buscar('denteados', opcoes)
+    expect(numeros(d)).toEqual(['BA00001', 'BA00002', 'CA00004'])
+    expect(d.paragrafos.map((p) => [p.tipo, p.rotulo])).toEqual([['pagina', 'TESTE I, p. 19']])
+    const selos = await buscar('selos', opcoes)
+    expect(selos.paragrafos.map((p) => [p.tipo ?? 'paragrafo', p.rotulo])).toEqual([
+      ['pagina', 'TESTE I, p. 19'],
+      ['paragrafo', 'TESTEG § 2'],
+    ])
+    expect(selos.contagens.texto).toBe(2)
+    expect(selos.paginasNoTexto).toBe(1)
+    // dois passos da mesma obra: cada um o seu achado, na ordem da leitura (a subcoleção 1.1 na p. 10, depois a p. 11)
+    expect((await buscar('sozinho', opcoes)).paragrafos.map((p) => [p.rotulo, p.rotuloDoTipo, p.caminho])).toEqual([
+      ['TESTE I, p. 10', 'subcolecao', rotaDoTrecho('TESTE', 'PA-TESTE-I.S.10-ovw-1')],
+      ['TESTE I, p. 11', 'subcolecao', rotaDoTrecho('TESTE', 'PA-TESTE-I.S.11-ovw-1')],
+    ])
+    // um filtro de objeto esconde a página, como o §; o de publicação a deixa quando é a da obra
+    expect((await buscar('estrelas', { ...opcoes, filtros: { periodo: ['F2'] } })).paragrafos).toEqual([])
+    expect((await buscar('estrelas', { ...opcoes, filtros: { publicacao: ['TESTE'] } })).paragrafos).toHaveLength(1)
+    expect((await buscar('estrelas', { ...opcoes, filtros: { publicacao: ['TESTEG'] } })).paragrafos).toEqual([])
+  })
+
+  it('fix final (m1): se a ordem de leitura falha (pacote velho estranho, erro de SQL), a busca continua e acha os §§ do TESTEG', async () => {
+    const falha = vi.spyOn(leituraModulo, 'trechosNaLeitura').mockRejectedValue(new Error('ordem estragada'))
+    try {
+      const r = await buscar('Testskarabäus', opcoes)
+      expect(r.paragrafos.map((p) => [p.tipo ?? 'paragrafo', p.rotulo])).toEqual([['paragrafo', 'TESTEG § 3']])
+      expect(r.paginasNoTexto).toBe(0)
+      // sem as páginas: a busca não as inventa, e o § continua
+      expect((await buscar('selos', opcoes)).paragrafos.map((p) => p.rotulo)).toEqual(['TESTEG § 2'])
+      expect(falha).toHaveBeenCalled()
+    } finally {
+      falha.mockRestore()
+    }
+  })
+
+  it('fix final (m4): o resultado diz se há obra de leitura aberta (a aba «Texto» também busca as introduções); se a consulta falha, não', async () => {
+    expect((await buscar('nadadisto', { ...opcoes, escopo: 'texto' })).comLeitura).toBe(true)
+    const soGgg = vi.spyOn(leituraModulo, 'obrasDeLeitura').mockResolvedValue([])
+    try {
+      expect((await buscar('nadadisto', { ...opcoes, escopo: 'texto' })).comLeitura).toBe(false)
+      soGgg.mockRejectedValue(new Error('ordem estragada'))
+      expect((await buscar('nadadisto', { ...opcoes, escopo: 'texto' })).comLeitura).toBe(false)
+    } finally {
+      soGgg.mockRestore()
+    }
   })
 })

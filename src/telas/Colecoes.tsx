@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { grupos, type Grupo } from '../banco/consultas'
+import { obrasDeLeitura, tituloDaPosicao } from '../banco/leitura'
+import { BotaoDaLeitura } from '../leitura/LerNoLivro'
+import { lerPosicao } from '../leitura/preferencias'
 import { PainelSkc } from '../colecoes/PainelSkc'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
 import { Miniatura } from '../ui/Miniatura'
@@ -89,13 +92,19 @@ export function Colecoes() {
           <CapitulosDoLivro obra={aba} computador={computador} />
         ) : (
           <section className="colecoes-corpo" aria-label={`Grupos de ${aba.rotulo}`}>
-            {computador && (
+            {computador ? (
               <div className="colecoes-resumo">
                 <span>{aba.rotulo} · Grupos da autora</span>
-                <span className="codigo">
-                  {plural(aba.grupos.length, 'grupo', 'grupos')} · {plural(aba.grupos.reduce((s, g) => s + g.objetos, 0), 'objeto', 'objetos')}
+                {/* «Ler o livro» e «Continuar» à direita das contagens, como no desenho 3 (Tarefa 5 da leitura) */}
+                <span className="colecoes-resumo-direita">
+                  <span className="codigo">
+                    {plural(aba.grupos.length, 'grupo', 'grupos')} · {plural(aba.grupos.reduce((s, g) => s + g.objetos, 0), 'objeto', 'objetos')}
+                  </span>
+                  <LeituraDaObra obra={aba} />
                 </span>
               </div>
+            ) : (
+              <LeituraDaObra obra={aba} />
             )}
             <div className="colecoes-periodos">
               {porPeriodo(aba.grupos).map((p) => (
@@ -126,6 +135,36 @@ export function Colecoes() {
           </section>
         )}
       </main>
+    </div>
+  )
+}
+
+/**
+ * «Ler o livro» e «Continuar» na aba de um volume de obra de catálogo (Tarefa 5 da leitura, desenho 3; q4): o primeiro abre
+ * o 1º passo do volume; o segundo, a posição guardada neste aparelho (`lerPosicao`), só quando o pacote tem o passo dela, com
+ * o título do passo («Continuar: TESTE I, p. 11»). Fora das obras de leitura, nada.
+ */
+function LeituraDaObra({ obra }: { obra: Obra }) {
+  const [g] = obra.grupos
+  const sigla = g?.publicacao ?? ''
+  const volume = g?.volume ?? ''
+  const carga = useCarregar(async () => {
+    const doVolume = (await obrasDeLeitura()).find((o) => o.sigla === sigla)?.volumes.find((v) => v.volume === volume)
+    if (!doVolume) return null
+    const posicao = lerPosicao(sigla)
+    const titulo = posicao ? await tituloDaPosicao(sigla, posicao) : null
+    return { primeiro: doVolume.primeiro, continuar: posicao && titulo ? { rota: posicao, titulo } : null }
+  }, `${sigla}|${volume}`)
+  if (carga.fase !== 'ok' || carga.dados === null) return null
+  const { primeiro, continuar } = carga.dados
+  return (
+    <div className="leitura-botoes colecoes-leitura">
+      <BotaoDaLeitura para={primeiro} rotulo="Ler o livro" />
+      {continuar && (
+        <Link className="colecoes-continuar" to={continuar.rota}>
+          Continuar: <span className="colecoes-continuar-passo">{continuar.titulo}</span>
+        </Link>
+      )}
     </div>
   )
 }

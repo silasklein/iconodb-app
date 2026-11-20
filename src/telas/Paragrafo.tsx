@@ -1,23 +1,21 @@
-import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { LinkComOrigem, OrigemDosLinks, useAoVoltarParaOrigem } from '../app/OrigemDosLinks'
 import { comVoltar, lerVoltar, rotuloDoIconeDeVoltar, voltarDaOrigem } from '../app/voltar'
 import { paragrafo as consultarParagrafo } from '../banco/consultas'
 import { caminhoDoParagrafo } from '../banco/paragrafos'
-import type { CorrecaoDeLeitura, ObjetoResumo, ParagrafoDetalhe, ReferenciaDoParagrafo, Termo, TrechoDoParagrafo } from '../banco/tipos'
+import type { CorrecaoDeLeitura, ParagrafoDetalhe, ReferenciaDoParagrafo, Termo, TrechoDoParagrafo } from '../banco/tipos'
 import { useFormasEmUso } from '../glossario/doUsuario'
 import { exibirTermo } from '../glossario/exibirTermo'
 import { useFormasDoPacote } from '../glossario/formasDoPacote'
-import { MiniaturaDoObjeto } from '../imagens-usuario/MiniaturaDoObjeto'
 import { VoltarDaOrigem } from '../item/VoltarDaOrigem'
-import { useSitiosVivos } from '../sitios/doUsuario'
 import { AvisoDeErro } from '../ui/AvisoDeErro'
-import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { comModificador } from '../ui/useVoltar'
+import { AbasDasLinguas, Caminho, FigurasCitadas, GradeDasLinguas, LANG, NOME, PeDosVizinhos, SetasDosVizinhos, Trilho, type Lingua } from '../paragrafo/pecas'
 import {
   chamadasDeNota,
   descricaoDaRegra,
@@ -30,12 +28,6 @@ import {
   type PecaDoParagrafo,
 } from './textoDoParagrafo'
 import './Paragrafo.css'
-
-type Lingua = 'de' | 'pt' | 'en'
-
-const NOME: Record<Lingua, string> = { de: 'Alemão', pt: 'Português', en: 'Inglês' }
-const ABA: Record<Lingua, string> = { de: 'DE', pt: 'PT', en: 'EN' }
-const LANG: Record<Lingua, string> = { de: 'de', pt: 'pt-BR', en: 'en' }
 
 /**
  * A página do § (Etapa 4, Tarefa 25; tela 2 aprovada; decisão 91, a4, a5 e a8), rota `/paragrafo/:sigla/:numero`: o livro em
@@ -174,37 +166,17 @@ function PaginaDoParagrafo({ p }: { p: ParagrafoDetalhe }) {
       <main className="paragrafo-corpo">
         {/* O «‹ origem» (decisão 85): no computador, em cima; no celular, o ícone do topo diz a origem (o desenho). */}
         {computador && deOnde && <VoltarDaOrigem voltar={deOnde} />}
-        {p.caminho.length > 0 && (
-          <p className="paragrafo-caminho" data-testid="paragrafo-caminho">
-            <span className="paragrafo-livro">{p.caminho[0]}</span>
-            {p.grupos.map((g, i) => (
-              <Fragment key={g.id}>
-                <span className="paragrafo-sep" aria-hidden="true">
-                  {i === 0 ? ' · ' : ' › '}
-                </span>
-                <Link to={`/grupo/${encodeURIComponent(g.id)}`}>{g.rotulo}</Link>
-              </Fragment>
-            ))}
-          </p>
-        )}
+        {p.caminho.length > 0 && <Caminho livro={p.caminho[0]!} grupos={p.grupos} />}
         <div className="paragrafo-titulo">
           <h1>
             {p.sigla} § {p.numero}
           </h1>
-          <nav className="paragrafo-setas" aria-label="§§ vizinhos">
-            {p.anterior && (
-              <Link to={caminhoDoParagrafo(p.sigla, p.anterior.numero)} replace state={estadoAdiante} aria-label={`§ ${p.anterior.numero}`}>
-                <Icon name="anterior" size={18} />
-                <span>§ {p.anterior.numero}</span>
-              </Link>
-            )}
-            {p.seguinte && (
-              <Link to={caminhoDoParagrafo(p.sigla, p.seguinte.numero)} replace state={estadoAdiante} aria-label={`§ ${p.seguinte.numero}`}>
-                <span>§ {p.seguinte.numero}</span>
-                <Icon name="proximo" size={18} />
-              </Link>
-            )}
-          </nav>
+          <SetasDosVizinhos
+            rotulo="§§ vizinhos"
+            anterior={p.anterior && { para: caminhoDoParagrafo(p.sigla, p.anterior.numero), rotulo: `§ ${p.anterior.numero}` }}
+            seguinte={p.seguinte && { para: caminhoDoParagrafo(p.sigla, p.seguinte.numero), rotulo: `§ ${p.seguinte.numero}` }}
+            estado={estadoAdiante}
+          />
         </div>
         {(pags || posicao) && (
           <p className="paragrafo-meta" data-testid="paragrafo-meta">
@@ -222,117 +194,25 @@ function PaginaDoParagrafo({ p }: { p: ParagrafoDetalhe }) {
 
         {p.figuras.length > 0 && <FigurasCitadas figuras={p.figuras} />}
 
-        {!computador && (
-          <div className="paragrafo-abas">
-            <div className="paragrafo-abas-lista" role="tablist" aria-label="Língua">
-              {(['pt', 'de', 'en'] as const)
-                .filter((l) => linguas.includes(l))
-                .map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    role="tab"
-                    id={`${idAba}-${l}`}
-                    aria-selected={atual === l}
-                    aria-controls={`${idAba}-painel`}
-                    tabIndex={atual === l ? 0 : -1}
-                    onClick={() => setAba(l)}
-                    onKeyDown={(e) => {
-                      const lista = (['pt', 'de', 'en'] as const).filter((x) => linguas.includes(x))
-                      const i = lista.indexOf(l)
-                      const proxima = e.key === 'ArrowRight' ? lista[(i + 1) % lista.length] : e.key === 'ArrowLeft' ? lista[(i + lista.length - 1) % lista.length] : null
-                      if (!proxima) return
-                      e.preventDefault()
-                      setAba(proxima)
-                      document.getElementById(`${idAba}-${proxima}`)?.focus()
-                    }}
-                  >
-                    {ABA[l]}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
+        {!computador && <AbasDasLinguas linguas={(['pt', 'de', 'en'] as const).filter((l) => linguas.includes(l))} atual={atual} aoEscolher={setAba} id={idAba} />}
 
-        {computador ? (
-          <div className={`paragrafo-linguas${abertas.de ? ' de-aberto' : ''}${abertas.en && linguas.includes('en') ? ' en-aberto' : ''}`} style={{ gridTemplateRows: `repeat(${linhas}, auto)` }}>
-            {!abertas.de && <Trilho lingua="de" fonte={`${p.sigla}${p.ano ? ` ${p.ano}` : ''}`} linhas={linhas} aoAbrir={() => mudarAberta('de', true)} />}
-            {colunas}
-            {linguas.includes('en') && !abertas.en && p.traducao && (
-              <Trilho lingua="en" fonte={`${p.traducao.sigla}${p.traducao.ano ? ` ${p.traducao.ano}` : ''}`} linhas={linhas} aoAbrir={() => mudarAberta('en', true)} />
-            )}
-          </div>
-        ) : (
-          <div className="paragrafo-linguas" role="tabpanel" id={`${idAba}-painel`} aria-labelledby={`${idAba}-${visiveis[0]}`}>
-            {colunas}
-          </div>
-        )}
+        <GradeDasLinguas computador={computador} linhas={linhas} deAberto={abertas.de} enAberto={abertas.en && linguas.includes('en')} id={idAba} atual={visiveis[0] ?? atual}>
+          {computador && !abertas.de && <Trilho lingua="de" fonte={`${p.sigla}${p.ano ? ` ${p.ano}` : ''}`} linhas={linhas} aoAbrir={() => mudarAberta('de', true)} />}
+          {colunas}
+          {computador && linguas.includes('en') && !abertas.en && p.traducao && (
+            <Trilho lingua="en" fonte={`${p.traducao.sigla}${p.traducao.ano ? ` ${p.traducao.ano}` : ''}`} linhas={linhas} aoAbrir={() => mudarAberta('en', true)} />
+          )}
+        </GradeDasLinguas>
 
-        {(p.anterior || p.seguinte) && (
-          <nav className="paragrafo-pe" aria-label="§ anterior e seguinte">
-            {p.anterior ? (
-              <Link to={caminhoDoParagrafo(p.sigla, p.anterior.numero)} replace state={estadoAdiante} className="paragrafo-pe-anterior">
-                <b>‹ § {p.anterior.numero}</b>
-                {p.anterior.frase && <span>{p.anterior.frase}</span>}
-              </Link>
-            ) : (
-              <span />
-            )}
-            {p.seguinte && (
-              <Link to={caminhoDoParagrafo(p.sigla, p.seguinte.numero)} replace state={estadoAdiante} className="paragrafo-pe-seguinte">
-                <b>§ {p.seguinte.numero} ›</b>
-                {p.seguinte.frase && <span>{p.seguinte.frase}</span>}
-              </Link>
-            )}
-          </nav>
-        )}
+        <PeDosVizinhos
+          rotulo="§ anterior e seguinte"
+          anterior={p.anterior && { para: caminhoDoParagrafo(p.sigla, p.anterior.numero), titulo: `§ ${p.anterior.numero}`, frase: p.anterior.frase }}
+          seguinte={p.seguinte && { para: caminhoDoParagrafo(p.sigla, p.seguinte.numero), titulo: `§ ${p.seguinte.numero}`, frase: p.seguinte.frase }}
+          estado={estadoAdiante}
+        />
       </main>
       <CartaoDoLido cartao={cartao} />
     </div>
-  )
-}
-
-/** A faixa «Figuras citadas»: a miniatura, o rótulo do livro («TESTEG: 1a») e o sítio; cada uma leva a origem (decisão 85). */
-function FigurasCitadas({ figuras }: { figuras: readonly ObjetoResumo[] }) {
-  const sitios = useSitiosVivos(false)
-  return (
-    <section className="paragrafo-figuras" aria-label="Figuras citadas">
-      <h2 className="paragrafo-cab-secao">
-        Figuras citadas <span className="codigo">{figuras.length}</span>
-      </h2>
-      <div className="paragrafo-faixa">
-        {figuras.map((f) => {
-          const s = sitios.doResumo(f)
-          return (
-            <LinkComOrigem key={f.numero} className="paragrafo-figura" to={`/item/${encodeURIComponent(f.numero)}`}>
-              <span className="paragrafo-figura-imagem">
-                <MiniaturaDoObjeto numero={f.numero} caminho={f.miniatura} alt={f.tipo ?? `Objeto ${f.numero}`} />
-              </span>
-              <span className="paragrafo-figura-rotulo">{f.origem}</span>
-              <span className="paragrafo-figura-sitio">{[s.nome, s.marca].filter(Boolean).join(' · ') || 'sem sítio'}</span>
-            </LinkComOrigem>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
-/** O trilho fechado do alemão ou do inglês, no computador: abre a coluna. */
-function Trilho({ lingua, fonte, linhas, aoAbrir }: { lingua: 'de' | 'en'; fonte: string; linhas: number; aoAbrir: () => void }) {
-  return (
-    <button
-      type="button"
-      className={`paragrafo-trilho paragrafo-trilho-${lingua}`}
-      style={{ gridRow: `1 / span ${linhas}` }}
-      aria-label={lingua === 'de' ? 'Abrir o alemão' : 'Abrir o inglês'}
-      onClick={aoAbrir}
-    >
-      <Icon name="adicionar" size={18} />
-      <span>
-        <b>{NOME[lingua]}</b> · {fonte}
-      </span>
-    </button>
   )
 }
 
@@ -348,7 +228,11 @@ interface PropsDaColuna {
 }
 
 /** As correções do trecho na língua (o português não tem: a tradução é do texto já corrigido). */
-const correcoesDe = (t: TrechoDoParagrafo, l: Lingua): readonly CorrecaoDeLeitura[] => (l === 'de' ? t.correcoes : l === 'en' ? t.correcoesDoIngles : [])
+/** A lista vazia estável (as dependências dos `useMemo` não mudam a cada desenho). */
+const NENHUM: readonly never[] = []
+
+// o português não tem correções: a lista vazia estável (`NENHUM`), para o `useMemo` de `TextoNaLingua` (revisão da Tarefa 25, 7)
+const correcoesDe = (t: TrechoDoParagrafo, l: Lingua): readonly CorrecaoDeLeitura[] => (l === 'de' ? t.correcoes : l === 'en' ? t.correcoesDoIngles : NENHUM)
 
 /**
  * Uma língua: o cabeçalho, os trechos e as notas. No computador ela ocupa uma coluna da grade das línguas e as suas linhas
@@ -481,8 +365,6 @@ interface PropsDoTexto {
   saltos?: SaltosDasNotas
 }
 
-const NENHUM: readonly never[] = []
-
 /** Um trecho (ou uma nota) numa língua, com os termos (no português), os links das figuras e, ligadas, as correções. */
 function TextoNaLingua({ t, lingua, referencias, corrigido, cartao, classe, nota = false, notas = NENHUM, saltos }: PropsDoTexto) {
   const Tag = nota ? 'span' : 'p'
@@ -608,17 +490,23 @@ function useCartaoDoLido(raiz: RefObject<HTMLDivElement | null>): CartaoDoLido {
     setPosicao(null)
     if (devolverFoco) gatilho.current?.focus()
   }, [])
+  // logo abaixo da correção, dentro da página: medido ao abrir e de novo quando a janela muda (o texto reflui; revisão da
+  // Tarefa 25, 8)
+  const medir = useCallback(() => {
+    const g = gatilho.current
+    const caixa = raiz.current?.getBoundingClientRect()
+    if (!g || !caixa) return setPosicao(null)
+    const r = g.getBoundingClientRect()
+    const largura = Math.min(300, caixa.width - 32)
+    setPosicao({ top: r.bottom - caixa.top + 8, left: Math.max(16, Math.min(r.left - caixa.left, caixa.width - largura - 16)) })
+  }, [raiz])
   const abrir = useCallback(
     (l: LidoAberto, g: HTMLElement) => {
       gatilho.current = g
       setAberto(l)
-      const caixa = raiz.current?.getBoundingClientRect()
-      const r = g.getBoundingClientRect()
-      if (!caixa) return setPosicao(null)
-      const largura = Math.min(300, caixa.width - 32)
-      setPosicao({ top: r.bottom - caixa.top + 8, left: Math.max(16, Math.min(r.left - caixa.left, caixa.width - largura - 16)) })
+      medir()
     },
-    [raiz],
+    [medir],
   )
   useEffect(() => {
     if (!aberto) return
@@ -632,11 +520,13 @@ function useCartaoDoLido(raiz: RefObject<HTMLDivElement | null>): CartaoDoLido {
     }
     document.addEventListener('keydown', aoTeclar)
     document.addEventListener('pointerdown', aoTocar)
+    window.addEventListener('resize', medir)
     return () => {
       document.removeEventListener('keydown', aoTeclar)
       document.removeEventListener('pointerdown', aoTocar)
+      window.removeEventListener('resize', medir)
     }
-  }, [aberto, fechar])
+  }, [aberto, fechar, medir])
   return { id, aberto, posicao, abrir, fechar }
 }
 

@@ -20,15 +20,18 @@ export function OrigemDosLinks({ rotulo, children }: { rotulo: string | null | u
 /** A origem que os links para objetos daqui levam (null fora de uma tela de origem). */
 export const useOrigemDosLinks = (): VoltarDaOrigem | null => useContext(Contexto)
 
-/** As telas que mostram o «‹ origem» (decisão 85): o objeto e, desde a Tarefa 25, a página do §. */
+/**
+ * As telas que mostram o «‹ origem» (decisão 85): o objeto, desde a Tarefa 25 a página do § e, desde a Tarefa 5 da leitura
+ * do IPIAO, a página de leitura da obra de catálogo (`/ler/…`).
+ */
 const levaAOrigem = (to: ComponentProps<typeof Link>['to']) => {
   const caminho = typeof to === 'string' ? to : (to.pathname ?? '')
-  return caminho.startsWith('/item/') || caminho.startsWith('/paragrafo/')
+  return caminho.startsWith('/item/') || caminho.startsWith('/paragrafo/') || caminho.startsWith('/ler/')
 }
 
 /**
  * O `Link` dos lugares que levam a objetos e a outras telas (as notas, as hipóteses de um verbete, Comparar): só o que
- * vai a `/item/…` ou a `/paragrafo/…` leva a origem, junto do estado que já tinha.
+ * vai a `/item/…`, a `/paragrafo/…` ou a `/ler/…` leva a origem, junto do estado que já tinha.
  */
 export function LinkComOrigem(props: ComponentProps<typeof Link>) {
   const origem = useOrigemDosLinks()

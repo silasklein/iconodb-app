@@ -3,7 +3,7 @@
  * TESTEG (o modelo do GGG) e o TESTEGEN (o do GGIG). O § 2 tem dois trechos, a nota 2, duas correções de leitura no primeiro
  * trecho (Maḥteṣ, lido «Mahtes»; Pl., lido «PI.») e cita as figuras 1a (F200001) e 1b (CA00004). Tudo inventado.
  */
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
@@ -197,19 +197,19 @@ describe('a página do § (tela 2)', () => {
       await titulo()
       expect(screen.queryByRole('region', { name: 'Alemão' })).toBeNull()
       expect(screen.queryByRole('region', { name: 'Inglês' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Abrir o alemão' })).toHaveTextContent('Alemão · TESTEG 2021')
-      expect(screen.getByRole('button', { name: 'Abrir o inglês' })).toHaveTextContent('Inglês · TESTEGEN 2022')
+      expect(screen.getByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' })).toHaveTextContent('Alemão · TESTEG 2021')
+      expect(screen.getByRole('button', { name: 'Abrir o Inglês · TESTEGEN 2022' })).toHaveTextContent('Inglês · TESTEGEN 2022')
 
-      await userEvent.click(screen.getByRole('button', { name: 'Abrir o alemão' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' }))
       const de = coluna('Alemão')
       expect(de).toHaveAttribute('lang', 'de')
       expect(de).toHaveTextContent('Zwei Probesiegel aus Maḥteṣ Teste zeigen einen Testlöwen (Abb. 1a) und seine Rückseite (Abb. 1b); vgl. Pl. 3.')
       expect(de).toHaveTextContent('TESTEG 2021, p. 6 · lido e corrigido')
       expect(within(de).getAllByRole('link', { name: 'Abb. 1b' })[0]!).toHaveAttribute('href', '/item/CA00004')
       expect(within(within(de).getByRole('list', { name: 'Notas' })).getByRole('listitem')).toHaveTextContent('Probenote zur Testgravur, erfunden für den Test der App.')
-      expect(screen.queryByRole('button', { name: 'Abrir o alemão' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' })).toBeNull()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Abrir o inglês' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Abrir o Inglês · TESTEGEN 2022' }))
       const en = coluna('Inglês')
       expect(en).toHaveAttribute('lang', 'en')
       expect(en).toHaveTextContent('Two probe seals from Mahtes Teste show a test lion (illus. 1a) and its reverse (illus. 1b).')
@@ -225,7 +225,7 @@ describe('a página do § (tela 2)', () => {
       expect(coluna('Inglês')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Fechar o alemão' }))
       expect(screen.queryByRole('region', { name: 'Alemão' })).toBeNull()
-      expect(screen.getByRole('button', { name: 'Abrir o alemão' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' })).toBeInTheDocument()
       expect(JSON.parse(localStorage.getItem('iconodb:paragrafo-linguas')!)).toEqual({ de: false, en: true })
     })
   })
@@ -243,7 +243,7 @@ describe('a página do § (tela 2)', () => {
         ['EN', 'false'],
       ])
       expect(screen.getByRole('tabpanel')).toContainElement(coluna('Português'))
-      expect(screen.queryByRole('button', { name: 'Abrir o alemão' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' })).toBeNull()
 
       await userEvent.click(within(abas).getByRole('tab', { name: 'DE' }))
       expect(coluna('Alemão')).toHaveTextContent('Die Testgravur beider Probesiegel ist flach')
@@ -279,7 +279,7 @@ describe('a página do § (tela 2)', () => {
     const abrirAlemao = async () => {
       abrir('/paragrafo/TESTEG/2')
       await titulo()
-      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o alemão' }))
+      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' }))
       else await userEvent.click(screen.getByRole('tab', { name: 'DE' }))
       return coluna('Alemão')
     }
@@ -323,11 +323,32 @@ describe('a página do § (tela 2)', () => {
       expect(screen.queryByRole('dialog', { name: 'O que foi lido' })).toBeNull()
     })
 
+    it('Tarefa 6 (revisão da Tarefa 25, 8): o cartão aberto se reposiciona quando a janela muda de tamanho', async () => {
+      const de = await abrirAlemao()
+      await userEvent.click(within(de).getByRole('switch', { name: /Mostrar o que foi corrigido/ }))
+      const gatilho = within(de).getByRole('button', { name: 'Maḥteṣ' })
+      let esquerda = 120
+      const original = HTMLElement.prototype.getBoundingClientRect
+      const medida = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        if (this === gatilho) return { left: esquerda, right: esquerda + 60, top: 80, bottom: 100, width: 60, height: 20, x: esquerda, y: 80, toJSON: () => ({}) } as DOMRect
+        if (this.classList.contains('paragrafo')) return { left: 0, right: 1000, top: 0, bottom: 2000, width: 1000, height: 2000, x: 0, y: 0, toJSON: () => ({}) } as DOMRect
+        return original.call(this)
+      })
+      await userEvent.click(gatilho)
+      const cartao = screen.getByRole('dialog', { name: 'O que foi lido' })
+      expect([cartao.style.top, cartao.style.left]).toEqual(['108px', '120px'])
+      // a janela muda (o texto reflui): a correção vai a outro lugar, e o cartão a acompanha
+      esquerda = 400
+      fireEvent(window, new Event('resize'))
+      expect([cartao.style.top, cartao.style.left]).toEqual(['108px', '400px'])
+      medida.mockRestore()
+    })
+
     it('o português não tem a chave; o inglês sem correção também não', async () => {
       abrir('/paragrafo/TESTEG/2')
       await titulo()
       expect(within(coluna('Português')).queryByRole('switch')).toBeNull()
-      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o inglês' }))
+      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o Inglês · TESTEGEN 2022' }))
       else await userEvent.click(screen.getByRole('tab', { name: 'EN' }))
       expect(within(coluna('Inglês')).queryByRole('switch')).toBeNull()
     })
@@ -374,13 +395,13 @@ describe('a página do § (tela 2)', () => {
     it('o alemão liga as chamadas; o inglês as deixa como texto; o inglês tem a página da tradução', async () => {
       abrir('/paragrafo/TESTEG/2')
       await titulo()
-      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o alemão' }))
+      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o Alemão · TESTEG 2021' }))
       else await userEvent.click(screen.getByRole('tab', { name: 'DE' }))
       const de = coluna('Alemão')
       await userEvent.click(within(de).getAllByRole('link', { name: 'nota 2' })[0]!)
       expect(within(within(de).getByRole('list', { name: 'Notas' })).getByRole('listitem')).toHaveFocus()
 
-      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o inglês' }))
+      if (aparelho === 'computador') await userEvent.click(screen.getByRole('button', { name: 'Abrir o Inglês · TESTEGEN 2022' }))
       else await userEvent.click(screen.getByRole('tab', { name: 'EN' }))
       const en = coluna('Inglês')
       expect(en).toHaveTextContent('and its reverse (illus. 1b).²')

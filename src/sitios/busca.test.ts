@@ -56,9 +56,10 @@ const buscar = (q: string, escopo: 'tudo' | 'local' = 'tudo') => m.consulta.busc
 describe('buscar(): um sítio do livro corrigido acha os objetos dele pelo nome corrigido e pelo do livro', () => {
   beforeEach(() => m.estado.receberEventos([e('sitio', 'TESTE-2', { nome: 'Tell Nova Grafia', variantes: ['Khirbet Probe'] })]))
 
-  it('o nome corrigido, uma grafia acrescentada e o nome do livro levam aos mesmos 3 objetos', async () => {
+  it('o nome corrigido, uma grafia acrescentada e o nome do livro levam aos mesmos 4 objetos', async () => {
     for (const q of ['nova grafia', 'khirbet probe', 'tell probe teste']) {
-      expect((await buscar(q, 'local')).numeros, q).toEqual(['BA00002', 'CA00003', 'CA00004'])
+      // os 3 do catálogo e F200001, achado no TESTEG-2 mesclado no TESTE-2 pelo número (M6)
+      expect((await buscar(q, 'local')).numeros, q).toEqual(['BA00002', 'CA00003', 'CA00004', 'F200001'])
     }
   })
 
@@ -70,7 +71,7 @@ describe('buscar(): um sítio do livro corrigido acha os objetos dele pelo nome 
   it('voltar o nome ao do livro (null) tira o nome corrigido da busca', async () => {
     await m.estado.receberEventos([e('sitio', 'TESTE-2', { nome: null, variantes: null })])
     expect((await buscar('nova grafia', 'local')).total).toBe(0)
-    expect((await buscar('tell probe teste', 'local')).total).toBe(3)
+    expect((await buscar('tell probe teste', 'local')).total).toBe(4) // com F200001, do TESTEG-2 (M6)
   })
 
   it('a faceta Sítio usa o nome de agora', async () => {
@@ -178,7 +179,8 @@ describe('m1: um objeto SKC leva o nome de agora do sítio na busca e nas sugest
     const r = await buscar('khirbet probe', 'local')
     expect(r.numeros).toContain('CA00005')
     const faceta = r.facetas.find((f) => f.chave === 'sitio')!
-    expect(faceta.opcoes.map((o) => [o.valor, o.rotulo, o.n])).toEqual([['TESTE-2', 'Tell Probe Teste', 4]])
+    // os 3 do catálogo, F200001 (do TESTEG-2 mesclado nele pelo número, M6) e o SKC
+    expect(faceta.opcoes.map((o) => [o.valor, o.rotulo, o.n])).toEqual([['TESTE-2', 'Tell Probe Teste', 5]])
   })
 
   it('um sítio do usuário excluído: o objeto SKC diz o nome e «excluído»; restaurado, só o nome', async () => {

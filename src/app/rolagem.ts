@@ -98,3 +98,17 @@ export function guardarPaineis(chave: string, r: RolagemDosPaineis): void {
     /* sem sessionStorage: a restauração só deixa de existir */
   }
 }
+
+/**
+ * A tela ainda carrega? (Tarefa 6e) As telas que esperam um `useCarregar` mostram um elemento `aria-busy="true"`; enquanto
+ * ele está lá, a restauração da rolagem não começa a contar o ~1 s de espera: num aparelho lento (ou depois de recarregar,
+ * com o banco frio) o conteúdo pode levar mais que isso, e a posição se perdia (o e2e voltar-origem.spec.ts:134 falhava
+ * assim, de vez em quando). Com `raizes`, só dentro delas (os painéis da lista e do detalhe); sem, no documento.
+ */
+export function aindaCarregando(raizes?: readonly (ParentNode | null | undefined)[]): boolean {
+  const onde = raizes ?? [document]
+  return onde.some((r) => !!r?.querySelector('[aria-busy="true"]'))
+}
+
+/** O teto da espera da restauração, mesmo com a tela carregando (uma tela que nunca termina não prende a rolagem). */
+export const ESPERA_COM_CARREGANDO_MS = 10_000

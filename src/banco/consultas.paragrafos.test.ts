@@ -365,6 +365,25 @@ describe('fix round 1 da Tarefa 27 (M6): «Discutida em» e o inglês sem consul
     expect(sqls.filter((x) => /FROM pub_TESTEG\.author_group_passage ap/.test(x))).toHaveLength(1)
   })
 
+  it('Tarefa 6 (revisão da Tarefa 23, M6): as traduções e a coluna `aligned_passage` são olhadas uma vez por pacote, não a cada §', async () => {
+    await paragrafo('TESTEG', 2)
+    sqls.length = 0
+    const p = (await paragrafo('TESTEG', 3))!
+    expect(p.trechos[0]!.ingles).not.toBeNull()
+    expect(p.traducao).toEqual({ sigla: 'TESTEGEN', ano: 2022 })
+    expect(sqls.filter((x) => x.includes('pragma_table_info'))).toEqual([])
+    expect(sqls.filter((x) => /SELECT translation_of FROM/.test(x))).toEqual([])
+  })
+
+  it('Tarefa 6 (revisão da Tarefa 23, M4): o achado do resumo (o sítio, o id e o «do texto») sai de uma subconsulta só', async () => {
+    sqls.length = 0
+    const [r] = await resumosDosItens(['TESTEG-0002'], 'dada')
+    expect(r).toMatchObject({ sitio: 'Tell Achado Teste', sitioId: 'TESTEG-9', achadoDoTexto: { sigla: 'TESTEG', trechoId: 'PA-TESTEG-§3-txt-1', paragrafo: 3 } })
+    const doResumo = sqls.find((x) => x.includes('AS campo5'))!
+    // uma subconsulta do achado por publicação (a consulta une as três publicações abertas)
+    expect(doResumo.match(/a\.field = 'findspot'/g)).toHaveLength(3)
+  })
+
   it('o inglês alinhado só é procurado na tradução (o catálogo e o livro em parágrafos não têm `aligned_passage`)', async () => {
     sqls.length = 0
     expect((await paragrafo('TESTEG', 2))!.trechos[0]!.ingles).not.toBeNull()

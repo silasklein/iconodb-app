@@ -1,5 +1,5 @@
 import { PACOTE_VAZIO, resolverSitios, type Conflito } from './resolucao'
-import { conteudoDoSitio, sugestaoDeQualFica, textoDaMescla, textoDoConflito, textoDoDesfazer, type Contagens, type FontesDoConteudo } from './textos'
+import { conteudoDoSitio, nomeDoDesfazer, sugestaoDeQualFica, textoDaMescla, textoDoConflito, textoDoDesfazer, type Contagens, type FontesDoConteudo } from './textos'
 import { ev } from '../../tests/suporte/eventosDeTeste'
 import type { Json } from '../usuario/eventos'
 import { fundir } from '../usuario/fusao'
@@ -48,6 +48,17 @@ describe('textoDaMescla (telas aprovadas §1)', () => {
     ])
     expect(textoDaMescla('Tell Teste', 'Tell Exemplo', ['Tell Exemplo'], c({}), null)).toEqual(['o nome «Tell Exemplo» passa a ser grafia de Tell Teste.'])
     expect(textoDaMescla('X', 'Y', ['Y'], c({ objetos: 2 }), null).join(' ')).not.toMatch(/\b0 /)
+  })
+})
+
+describe('nomeDoDesfazer (M6: o nome acessível de cada «desfazer» em «Mesclado aqui»)', () => {
+  it('um sítio dos livros: o livro e o número, que distinguem dois absorvidos de mesmo nome', () => {
+    expect(nomeDoDesfazer('TESTEG-2', 'Tell Probe Teste', false)).toBe('Desfazer a mescla de TESTEG 2')
+    expect(nomeDoDesfazer('TESTE-4', 'Tell Probe Teste', false)).toBe('Desfazer a mescla de TESTE 4')
+  })
+  it('um sítio seu (também o publicado com id de livro): o nome', () => {
+    expect(nomeDoDesfazer('SI-teste123-2', 'Tell Absorvido Teste', true)).toBe('Desfazer a mescla de Tell Absorvido Teste')
+    expect(nomeDoDesfazer('TESTE-3', 'Tell Usuário Teste', true)).toBe('Desfazer a mescla de Tell Usuário Teste')
   })
 })
 

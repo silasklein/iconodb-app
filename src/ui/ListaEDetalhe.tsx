@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { useLocation, useNavigationType } from 'react-router'
-import { guardarPaineis, lerPaineis, type RolagemDosPaineis } from '../app/rolagem'
+import { aindaCarregando, ESPERA_COM_CARREGANDO_MS, guardarPaineis, lerPaineis, type RolagemDosPaineis } from '../app/rolagem'
 import './ListaEDetalhe.css'
 
 const ESPERA_MAXIMA_MS = 1000
 
 /**
  * A rolagem dos dois painéis fica com a entrada do histórico: ao sair (para o objeto, por exemplo) se guarda; ao voltar
- * (POP) se restaura, esperando o conteúdo chegar (até ~1 s), como a da janela (useRestaurarRolagem). Quem rola no meio
+ * (POP) se restaura, esperando o conteúdo chegar (até ~1 s depois de os painéis pararem de carregar, `aindaCarregando`),
+ * como a da janela (useRestaurarRolagem). Quem rola no meio
  * da espera assume a posição. Decisão 85: do objeto se volta ao verbete como estava.
  */
 function useRolagemDosPaineis(lista: RefObject<HTMLElement | null>, principal: RefObject<HTMLElement | null>) {
@@ -49,15 +50,20 @@ function useRolagemDosPaineis(lista: RefObject<HTMLElement | null>, principal: R
     if (salva) {
       restaurando.current = true
       atual.current = salva
-      const inicio = performance.now()
+      const comeco = performance.now()
+      // o ~1 s conta a partir de quando os painéis param de carregar (aria-busy; Tarefa 6e), até o teto
+      let inicio = comeco
       const tentar = () => {
         if (cancelado) return
         const pares = [
           [lista.current, salva.lista],
           [principal.current, salva.principal],
         ] as const
+        const agora = performance.now()
+        const carregando = aindaCarregando([lista.current, principal.current])
+        if (carregando && agora - comeco < ESPERA_COM_CARREGANDO_MS) inicio = agora
         const prontos = pares.every(([el, y]) => !el || y <= 0 || el.scrollHeight - el.clientHeight >= y)
-        if (prontos || performance.now() - inicio >= ESPERA_MAXIMA_MS) {
+        if (prontos || agora - inicio >= ESPERA_MAXIMA_MS) {
           for (const [el, y] of pares) if (el && y > 0) el.scrollTop = y
           parar(false)
           return

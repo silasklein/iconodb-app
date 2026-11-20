@@ -62,7 +62,8 @@
  *    `verificacao` também. `localizador` é legível como o `hypothesis.locator` do pacote: a obra e o número de cada item do
  *    objeto ("TESTE I, Nr. 3"; vários itens separados por "; "), "SKC OB-…" para um objeto SKC, ou o número do objeto se o
  *    pacote não pôde ser lido; o trecho marcado (o id `PA-…`/`OB-…`) fica em `trecho.fonte`. Um termo do usuário que o
- *    pacote publicou (Tarefa 16) sai com o id do livro, `termoDoUsuario: false` e `publicadoDe` = o id do app.
+ *    pacote publicou (Tarefa 16) sai com o id do livro, `termoDoUsuario: false` e `publicadoDe` = o id do app; um termo do
+ *    livro que o processamento uniu a outro sai com o id do que ficou, sem `publicadoDe` (Tarefa 6d).
  */
 import { refsDeObjetosExcluidos } from '../colecoes/visiveis'
 import { eHipoteseSkc, lerHipotese, lerRegiao, objetoDaHipotese, RE_ELEMENTO_DO_LIVRO, type HipoteseSkc, type RegiaoSkc } from '../hipoteses/modelo'
@@ -573,9 +574,12 @@ export function montarHipoteses(
   const hipoteses = hipotesesProprias(estado).map((r): HipoteseParaMediation => {
     const h = lerHipotese(r)
     const identificacao = h.termos.map((t): TermoParaMediation => {
-      const publicado = destinoDe(redirecionamentos, t.id)
-      if (publicado !== t.id) return { id: publicado, rotulo: t.rotulo, termoDoUsuario: false, publicadoDe: t.id }
-      if (!eVerbeteSkc(t.id)) return { id: t.id, rotulo: t.rotulo, termoDoUsuario: false }
+      // o GL de agora (o redirecionamento seguido): o do livro que publicou um termo do usuário, ou o que ficou quando o
+      // processamento uniu dois verbetes do livro. `publicadoDe` só no termo do usuário (o id dele no app); um GL do livro
+      // unido a outro sai só com o GL atual (Tarefa 6d: antes ganhava `publicadoDe` com o GL antigo, como se fosse do usuário)
+      const atual = destinoDe(redirecionamentos, t.id)
+      if (!eVerbeteSkc(t.id)) return { id: atual, rotulo: t.rotulo, termoDoUsuario: false }
+      if (atual !== t.id) return { id: atual, rotulo: t.rotulo, termoDoUsuario: false, publicadoDe: t.id }
       const v = estado.registro('verbete', t.id)
       const lido = v ? lerVerbeteSkc(v) : null
       return { id: t.id, rotulo: t.rotulo, termoDoUsuario: true, forma: lido?.emUso ?? t.rotulo, formaOriginal: lido?.forma ?? t.rotulo }
@@ -614,6 +618,7 @@ export function montarHipoteses(
       'Mapeamento provisório pelos campos da tabela de hipóteses da especificação (§4.2); a Fase 5 o fecha contra o esquema real do MEDIATION.',
       'Termos com termoDoUsuario true são verbetes criados no app (ids GL-<aparelho>-<n>): "forma" é a forma de agora.',
       'Um verbete criado no app que o pipeline já publicou leva o id do livro (termoDoUsuario false); publicadoDe é o id dele no app.',
+      'Um verbete do livro que o processamento uniu a outro sai com o id do que ficou, sem publicadoDe.',
       'alvo.tipo usa os códigos do pacote ("item" = o objeto, pelo número; "element"); localizador é a obra e o número; o trecho marcado está em trecho.fonte.',
     ],
     hipoteses,

@@ -332,6 +332,20 @@ describe('nomes em português para os motivos reais (m5)', () => {
   })
 })
 
+describe('Tarefa 6: os seis motivos de antes que o pacote real traz sem nome próprio, no plural como os outros', () => {
+  it.each([
+    ['erro_do_livro', 'Erros do livro'],
+    ['texto_da_fonte_corrigido', 'Textos da fonte corrigidos'],
+    ['abreviatura_divergente', 'Abreviaturas divergentes'],
+    ['aparato_campos_4_e_5_invertidos', 'Aparatos com os campos 4 e 5 invertidos'],
+    ['intervalo_incompleto', 'Intervalos incompletos'],
+    ['obra_repetida_no_livro', 'Obras repetidas no livro'],
+  ])('%s → %s', (motivo, nome) => {
+    expect(Object.hasOwn(ROTULO_DA_PENDENCIA, motivo)).toBe(true)
+    expect(rotuloDaPendencia(motivo)).toBe(nome)
+  })
+})
+
 describe('fix rounds 1 e 2 da Tarefa 27 (M5): os motivos da Etapa 4 com nome em português, com acento, no plural como os outros', () => {
   it.each([
     ['obra_da_traducao_sem_par', 'Obras da tradução sem par'],

@@ -133,8 +133,6 @@ function lerListaDeFiguras(texto: string): { partes: Parte[]; comprimento: numbe
   return { partes, comprimento }
 }
 
-const listaDeFiguras = (texto: string): Parte[] => lerListaDeFiguras(texto).partes
-
 /** Uma referência a figuras no texto: a chave e a lista («Abb. 1a», «figs. 3a–b»), [inicio, fim) em UTF-16, e as figuras dela. */
 export interface ReferenciaNoTexto {
   inicio: number
@@ -173,14 +171,12 @@ export function destaqueDaFigura(frase: string, numero: number, sufixo: string):
   return dentro && fecha + 1 - abre <= PARENTESE_ATE ? { inicio: abre, fim: fecha + 1 } : { inicio: r.inicio, fim: r.fim }
 }
 
-/** A frase cita a figura (número e letra)? Um número sem letra no texto vale para todas as partes; uma figura sem letra, para qualquer letra. */
+/**
+ * A frase cita a figura (número e letra)? Um número sem letra no texto vale para todas as partes; uma figura sem letra, para
+ * qualquer letra: as referências da frase e a regra de `parteCitaAFigura` (revisão da Tarefa 25, 6: antes, uma cópia dela).
+ */
 function citaAFigura(frase: string, numero: number, sufixo: string): boolean {
-  const letra = sufixo.toLowerCase()
-  for (const m of frase.matchAll(CHAVE_DA_FIGURA)) {
-    const lista = listaDeFiguras(frase.slice(m.index + m[0].length))
-    if (lista.some((p) => p.numero === numero && (p.letra === '' || letra === '' || p.letra === letra))) return true
-  }
-  return false
+  return referenciasDeFiguras(frase).some((r) => r.figuras.some((p) => parteCitaAFigura(p, numero, sufixo)))
 }
 
 /** A primeira frase do texto que cita a figura (`numero` e `sufixo`, «1» e «a» em «Abb. 1a»); null se nenhuma. */
