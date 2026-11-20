@@ -48,8 +48,8 @@ const EXTRAS: [string, string, string, string][] = [
 // De fábrica: 1 citação + 1 tradução com termo alterado = 2; +4 extras = 6; + 4 verbetes a revisar = 10; + 1 elemento sem região = 11;
 // + 2 pares de sítios que podem ser o mesmo (`sitio_par_sugerido`: TESTE-1 ~ TESTE-7, TESTE-1 ~ TESTE-8; Tarefa 15) = 13;
 // + as 3 citações não resolvidas de item do pacote 10 (TESTE-0004, TESTE-0005 e TESTE-0006, a sem autor) = 16.
-// As 29 traduções de máquina (26 + os 3 trechos das introduções das subcoleções, pacote 9) ficam fora: «Traduções não
-// revisadas» é só consulta.
+// As 35 traduções de máquina (26 + os 3 trechos das introduções das subcoleções, pacote 9, + os 6 trechos do TESTEG, pacote 11)
+// ficam fora: «Traduções não revisadas» é só consulta.
 const TOTAL = 16
 const CHAVE_MEDIDA = chaveDoCaso({ tipo: 'medidas_nao_normalizadas', entidade: 'item', entidadeId: 'TESTE-0004', detalhe: '5 cm?' })
 
@@ -84,7 +84,7 @@ describe('a lista dos tipos', () => {
       'traducoes-desatualizadas',
       'traducoes-nao-revisadas', // só consulta: por último, e fora do total
     ])
-    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '4', '2', '2', '1', '1', '1', '1', '29'])
+    expect(grupos.map((li) => li.querySelector('.revisao-grupo-quantidade')!.textContent)).toEqual(['4', '4', '2', '2', '1', '1', '1', '1', '35'])  // pacote 11: mais os seis trechos do TESTEG
   })
 
   it('os grupos abrem e fecham pelo botão, e o que está aberto fica no endereço', async () => {
@@ -265,14 +265,14 @@ describe('«Traduções não revisadas» (só consulta)', () => {
   it('mostra a contagem e o aviso, não entra no total, e a lista é limitada (25 e «Mostrar mais»)', async () => {
     abrir('/revisao?abrir=traducoes-nao-revisadas')
     const cab = await screen.findByRole('button', { name: /^Traduções não revisadas/ })
-    expect(cab).toHaveTextContent('29')
+    expect(cab).toHaveTextContent('35') // pacote 11: mais os seis trechos do TESTEG
     expect(cab).toHaveTextContent(/só para consulta/)
     expect(apoio()).toBe(`${TOTAL} casos · o que o processamento não decidiu sozinho`)
     expect(screen.getByText('Só para consulta: não entra no total.')).toBeInTheDocument()
     const lista = screen.getByRole('list', { name: 'Casos de Traduções não revisadas' })
     expect(within(lista).getAllByRole('listitem')).toHaveLength(25)
     expect(within(lista).queryByRole('button', { name: /Deixar como está/ })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Mostrar mais 4 (25 de 29)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mostrar mais 10 (25 de 35)' })).toBeInTheDocument()
     // cada linha leva ao trecho
     const links = within(lista).getAllByRole('link', { name: /^Abrir o (trecho|campo)$/ })
     expect(links.length).toBeGreaterThan(0)

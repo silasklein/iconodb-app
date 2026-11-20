@@ -243,3 +243,21 @@ h2.cartao-ponto-nome {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+/* A marca «do texto» sob a miniatura (Tarefa 26, tela 7): a etiqueta contornada do app; com o §, ela é o link. */
+.cartao-ponto-miniaturas li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.cartao-ponto-do-texto {
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+a.cartao-ponto-do-texto:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

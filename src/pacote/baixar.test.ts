@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fonteDeTeste, RAIZ_DO_PACOTE_6, RAIZ_DO_PACOTE_8, RAIZ_DO_PACOTE_9, RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
+import { fonteDeTeste, RAIZ_DO_PACOTE_6, RAIZ_DO_PACOTE_8, RAIZ_DO_PACOTE_9, RAIZ_DO_PACOTE_10, RAIZ_DO_PACOTE_SINTETICO } from '../../tests/suporte/fonteDeTeste'
 import { armazemMemoria, type Armazem } from './armazem'
 import {
   ErroDeIntegridade,
@@ -27,6 +27,8 @@ import { cacheMemoria, type CacheImagens } from './imagens'
 
 const MANIFESTO = 'nucleo/manifest.json'
 const NUCLEO = ['nucleo/busca.sqlite', 'nucleo/comum.sqlite', 'nucleo/fold.json', 'nucleo/pub-TESTE.sqlite']
+/** O núcleo inteiro do pacote sintético de agora (pacote 11): mais o livro em parágrafos e a tradução dele. */
+const NUCLEO_DO_PACOTE = [...NUCLEO, 'nucleo/pub-TESTEG.sqlite', 'nucleo/pub-TESTEGEN.sqlite']
 
 function doDisco(caminho: string): Uint8Array {
   return new Uint8Array(readFileSync(join(RAIZ_DO_PACOTE_SINTETICO, caminho)))
@@ -111,15 +113,15 @@ afterEach(() => {
 describe('lerManifesto', () => {
   it('lê o manifesto do pacote sintético', async () => {
     const m = await lerManifesto(fonteDeTeste())
-    expect(m.schema).toBe(10)
-    expect(m.publicacoes[0]?.sigla).toBe('TESTE')
+    expect(m.schema).toBe(11)
+    expect(m.publicacoes.map((p) => p.sigla)).toEqual(['TESTE', 'TESTEG', 'TESTEGEN'])
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it('aceita os schemas 5 a 10 (bloco 3): o 10 é o de agora; os outros abrem sem as colunas novas', async () => {
-    expect(SCHEMA_ESPERADO).toBe(10)
-    expect(SCHEMAS_ACEITOS).toEqual([5, 6, 7, 8, 9, 10])
-    for (const schema of [5, 6, 7, 8, 9, 10]) expect((await lerManifesto(comSchema(fonteDeTeste(), schema))).schema).toBe(schema)
+  it('aceita os schemas 5 a 11 (etapa 4): o 11 é o de agora; os outros abrem sem as colunas novas', async () => {
+    expect(SCHEMA_ESPERADO).toBe(11)
+    expect(SCHEMAS_ACEITOS).toEqual([5, 6, 7, 8, 9, 10, 11])
+    for (const schema of [5, 6, 7, 8, 9, 10, 11]) expect((await lerManifesto(comSchema(fonteDeTeste(), schema))).schema).toBe(schema)
   })
 
   it('F11: o pacote do schema 6 de antes (tests/fixtures/pacote-6, o que está hoje no Dropbox) continua aceito', async () => {
@@ -128,13 +130,13 @@ describe('lerManifesto', () => {
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it.each([[8, RAIZ_DO_PACOTE_8], [9, RAIZ_DO_PACOTE_9]] as const)('Tarefa 7: o pacote %s de antes continua aceito', async (schema, raiz) => {
+  it.each([[8, RAIZ_DO_PACOTE_8], [9, RAIZ_DO_PACOTE_9], [10, RAIZ_DO_PACOTE_10]] as const)('Tarefa 7: o pacote %s de antes continua aceito', async (schema, raiz) => {
     const m = await lerManifesto(fonteDeTeste(raiz))
     expect(m.schema).toBe(schema)
     expect(Object.keys(m.arquivos)).toEqual(expect.arrayContaining(NUCLEO))
   })
 
-  it.each([4, 11, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
+  it.each([4, 12, 5.5])('recusa o schema %s com a mensagem combinada', async (schema) => {
     const fonte = comSchema(fonteDeTeste(), schema)
     await expect(lerManifesto(fonte)).rejects.toBeInstanceOf(ErroDeSchema)
     await expect(lerManifesto(fonte)).rejects.toThrow(
@@ -195,8 +197,8 @@ describe('pacote com defeito: conferido antes de baixar e da troca', () => {
 })
 
 describe('sincronizarPacote', () => {
-  it('um schema que o app não lê (11) é recusado e nada é baixado nem gravado', async () => {
-    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 11))
+  it('um schema que o app não lê (12) é recusado e nada é baixado nem gravado', async () => {
+    const { fonte, baixados } = observar(comSchema(fonteDeTeste(), 12))
     const { armazem, opcoes } = ambiente()
     await expect(sincronizarPacote(fonte, semProgresso, opcoes)).rejects.toBeInstanceOf(ErroDeSchema)
     expect(baixados).toEqual([])
@@ -321,7 +323,7 @@ describe('sincronizarPacote', () => {
     expect(await igual(lerArquivoDoPacote('nucleo/busca.sqlite', armazem), novoBusca)).toBe(true)
     expect(await igual(lerArquivoDoPacote('nucleo/pub-TESTE.sqlite', armazem), novoPub)).toBe(true)
     // Os arquivos de antes saem do aparelho depois da troca.
-    expect((await armazem.listar('blobs')).length).toBe(NUCLEO.length)
+    expect((await armazem.listar('blobs')).length).toBe(NUCLEO_DO_PACOTE.length)
   })
 
   it('na segunda vez, sem mudanças, devolve "igual" e não baixa nada', async () => {

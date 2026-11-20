@@ -8,7 +8,7 @@ import { fundir } from '../usuario/fusao'
 import type { Evento } from '../usuario/eventos'
 import { chaveDoCaso, chaveDoElementoSemRegiao, chaveDoRascunho, chaveDoSitioSolto } from './chave'
 import { autorDaCitacao, casosIguais, idDoGrupo, montarFila, verbetesARever, type EntradaDaFila } from './fila'
-import { MOTIVOS_DAS_SUBCOLECOES, rotuloDaPendencia } from './rotulos'
+import { MOTIVOS_DAS_SUBCOLECOES, ROTULO_DA_PENDENCIA, rotuloDaPendencia } from './rotulos'
 
 const cit = (detalhe: string, id = 'PA-TESTE-0001-cat-1'): LinhaDaFila => ({ tipo: 'citacao_nao_resolvida', entidade: 'passage', entidadeId: id, detalhe, numero: null })
 const sitio = (item: string, numero: string, tipo = 'sitio_nao_normalizado', detalhe = 'x'): LinhaDaFila => ({ tipo, entidade: 'item', entidadeId: item, detalhe, numero })
@@ -329,6 +329,58 @@ describe('nomes em português para os motivos reais (m5)', () => {
     const f = fila([], { linhas: [{ tipo: motivo, entidade: 'item', entidadeId: 'TESTE-0001', detalhe: 'x', numero: 'CA00001' }] })
     expect(f.grupos[0]!.rotulo).toBe(nome)
     expect(f.grupos[0]!.apoio.length).toBeGreaterThan(10)
+  })
+})
+
+describe('fix rounds 1 e 2 da Tarefa 27 (M5): os motivos da Etapa 4 com nome em português, com acento, no plural como os outros', () => {
+  it.each([
+    ['obra_da_traducao_sem_par', 'Obras da tradução sem par'],
+    ['correcao_duvidosa', 'Correções duvidosas'],
+    ['paragrafo_sem_par', 'Parágrafos sem par'],
+    ['mencao_sem_figura', 'Menções sem figura'],
+    ['rotulo_sem_figura', 'Rótulos sem figura'],
+    ['alinhamento_duvidoso', 'Alinhamentos duvidosos'],
+    ['nota_sem_chamada', 'Notas sem chamada'],
+    ['figura_em_duas_regioes', 'Figuras em duas regiões'],
+    ['mencao_externa_a_mao', 'Menções externas à mão'],
+    ['trecho_transcrito_a_mao', 'Trechos transcritos à mão'],
+    ['periodo_sem_concordancia', 'Períodos sem concordância'],
+    // o pipeline grava este quando mescla o sítio de mesmo número do registro com verbete-nome ou coordenada diferentes
+    ['sitio_mesmo_numero_divergente', 'Sítios de mesmo número com dados diferentes'],
+  ])('%s → %s (o grupo da fila também)', (motivo, nome) => {
+    expect(rotuloDaPendencia(motivo)).toBe(nome)
+    const f = fila([], { linhas: [{ tipo: motivo, entidade: 'passage', entidadeId: 'PA-TESTEG-§2-txt-1', detalhe: 'x', numero: null }] })
+    expect(f.grupos[0]!.rotulo).toBe(nome)
+  })
+
+  it('todo motivo da Etapa 4 que o pacote real traz (e o dos sítios do mesmo número) tem nome próprio', () => {
+    const daEtapa4 = [
+      'alinhamento_duvidoso', 'apelido_sitio_do_usuario', 'correcao_duvidosa', 'figura_em_duas_regioes', 'figura_sem_imagem',
+      'linha_de_titulo_solta', 'mencao_externa_a_mao', 'mencao_perto_de_ano', 'mencao_sem_figura', 'mesmo_objeto_com_dois_numeros',
+      'nota_par_sem_chamada', 'nota_sem_chamada', 'obra_da_traducao_sem_par', 'pagina_girada', 'paragrafo_da_nota_a_mao',
+      'paragrafo_lido_diferente', 'paragrafo_sem_par', 'registro_nao_confere', 'rotulo_sem_figura', 'subcolecao_trecho_novo',
+      'traducao_termo_alterado', 'trecho_retirado', 'trecho_transcrito_a_mao', 'sitio_mesmo_numero_divergente',
+    ]
+    expect(daEtapa4.filter((m) => !Object.hasOwn(ROTULO_DA_PENDENCIA, m))).toEqual([])
+  })
+
+  it('fix round 2: os nomes novos seguem o estilo dos de antes (o grupo no plural: a primeira palavra termina em «s»)', () => {
+    const novos = [
+      'obra_da_traducao_sem_par', 'correcao_duvidosa', 'paragrafo_sem_par', 'mencao_sem_figura', 'rotulo_sem_figura', 'alinhamento_duvidoso',
+      'nota_sem_chamada', 'nota_par_sem_chamada', 'apelido_sitio_do_usuario', 'figura_em_duas_regioes', 'figura_sem_imagem',
+      'linha_de_titulo_solta', 'mencao_externa_a_mao', 'mencao_perto_de_ano', 'mesmo_objeto_com_dois_numeros', 'pagina_girada',
+      'paragrafo_da_nota_a_mao', 'paragrafo_lido_diferente', 'registro_nao_confere', 'subcolecao_trecho_novo', 'trecho_retirado',
+      'trecho_transcrito_a_mao', 'sitio_mesmo_numero_divergente', 'achado_sem_figura', 'achado_sem_trecho', 'achado_sitio_ambiguo',
+      'chamada_sem_nota', 'correcao_da_fonte_nao_aplicada', 'divisao_do_aparato_nao_aplicada', 'erro_do_livro_nao_encontrado',
+      'figura_sem_credito', 'figura_sem_item', 'mencao_externa_nao_aplicada', 'nota_faltando', 'nota_fora_de_ordem',
+      'nota_paragrafo_divergente', 'nota_sem_numero', 'nota_sem_par', 'paragrafo_da_nota_nao_aplicado', 'paragrafo_faltando',
+      'paragrafo_fora_de_ordem', 'regiao_sem_rotulo', 'rotulo_duplicado', 'sumario_nao_confere', 'texto_sem_paragrafo',
+      'trecho_retirado_nao_aplicado', 'trecho_transcrito_a_mao_nao_aplicado', 'citacao_religada_a_volume_proprio',
+      'divergencia_markitdown', 'divisao_do_aparato_a_mao', 'indice_de_lugares_divergente', 'indice_de_lugares_ilegivel',
+      'periodo_fora_da_tabela', 'periodo_sem_concordancia', 'segmentacao_numero_fora_de_ordem', 'sem_tabela_para_a_regiao',
+      'verbete_fora_do_indice',
+    ]
+    expect(novos.filter((m) => !/^\p{L}+s\b/u.test(ROTULO_DA_PENDENCIA[m] ?? ''))).toEqual([])
   })
 })
 

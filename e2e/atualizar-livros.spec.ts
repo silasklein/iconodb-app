@@ -64,7 +64,7 @@ test('um pacote novo no Dropbox: a faixa no Início, «Atualizar os livros», s�
   pacoteMaisNovo(dropbox, info)
   await page.goto('./') // sem o #/obra/…: carrega a página de novo (uma abertura nova do app)
   await expect(page.getByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeVisible()
-  const faixa = page.getByRole('status').filter({ hasText: 'Há uma versão nova dos livros no Dropbox: TESTE I.' })
+  const faixa = page.getByRole('status').filter({ hasText: 'Há uma versão nova dos livros no Dropbox: TESTE I, TESTEG, TESTEGEN.' })
   await expect(faixa).toBeVisible()
   expect(manifestos(dropbox)).toBe(2)
   await expect(verbetes(page)).toHaveText('10')
@@ -77,7 +77,7 @@ test('um pacote novo no Dropbox: a faixa no Início, «Atualizar os livros», s�
   await expect(livros.getByRole('button', { name: 'Atualizar os livros' })).toBeVisible()
   await livros.getByRole('button', { name: 'Procurar livros novos' }).click()
   await expect.poll(() => manifestos(dropbox)).toBe(3)
-  await expect(livros.getByText('Há uma versão nova dos livros no Dropbox: TESTE I.')).toBeVisible()
+  await expect(livros.getByText('Há uma versão nova dos livros no Dropbox: TESTE I, TESTEG, TESTEGEN.')).toBeVisible()
   await semRolagemHorizontal(page, 'Sincronização com livros novos')
   await foto(page, 'sincronizacao-livros-novos', livros)
 

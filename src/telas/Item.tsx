@@ -6,7 +6,7 @@ import { comVoltar, lerVoltar, rotuloDoIconeDeVoltar, voltarDaOrigem } from '../
 import { VoltarDaOrigem } from '../item/VoltarDaOrigem'
 import { useAtalhos } from '../app/useAtalhos'
 import { elementosDoObjeto, fontesDosObjetos, item, regioes as regioesDaImagem, vizinhos } from '../banco/consultas'
-import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, Regiao } from '../banco/tipos'
+import type { ContextoDeNavegacao, Hipotese, ItemDetalhe, ReferenciaBibliografica, Regiao } from '../banco/tipos'
 import { NIVEIS } from '../banco/tipos'
 import { comImagemAberta, lerImagemAberta, semImagemAberta, type EstadoDoVisualizador } from '../imagem/estado'
 import { ImagemItem } from '../item/ImagemItem'
@@ -18,7 +18,8 @@ import { LARGURA_DO_PAINEL_LATERAL } from '../item/CascaDoPainel'
 import { NoLivro } from '../item/NoLivro'
 import { semPonto, textoDaData } from '../item/ficha'
 import { useResumoDasHipoteses } from '../item/resumoDasHipoteses'
-import { Catalogo, contarHipoteses, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
+import { camposDoCatalogo, Catalogo, contarHipoteses, HipotesesPorNivel, Relacoes, Secao } from '../item/Secoes'
+import { campoDoCredito, CreditoDaFigura, figurasDe, MarcaDoTexto, numeroDaFigura, VozDaFigura } from '../item/Figura'
 import { BibliografiaDoObjeto } from '../revisao/BibliografiaDoObjeto'
 import { useReferenciasComLigacoes } from '../revisao/referencias'
 import { BotaoDoTrecho } from '../hipoteses/BotaoDoTrecho'
@@ -190,6 +191,11 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
   const aberta = params.get('hipotese')
   // "Comparar (n/4)" (Tarefa 14): põe o objeto na bandeja de comparação.
   const comparar = useAdicionarAComparar(d.numero, d.numero)
+  // A figura de um livro em parágrafos (Tarefa 24, decisão 91): sem a ficha do catálogo; a voz dela traz «Discutida em». Na
+  // peça juntada (o objeto que também está num livro de catálogo), o título e a ficha são os do catálogo (a2).
+  const figuras = useMemo(() => figurasDe(d.itens), [d.itens])
+  const soFigura = figuras.length > 0 && figuras.length === d.itens.length
+  const catalogo = useMemo(() => camposDoCatalogo(d), [d])
 
   // Contexto: o do estado (Busca ou Grupo) ou, sem estado, o primeiro grupo do objeto.
   const estado = lerEstado(location.state)
@@ -243,6 +249,12 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
   // As imagens do usuário (decisão 33): depois das do livro. As regiões marcadas pelo usuário valem nas duas.
   const { imagens: doUsuario, principal } = useImagensDoUsuario(d.numero)
   const imagensExibidas = useMemo(() => juntarImagens(d.imagens, doUsuario), [d.imagens, doUsuario])
+  // A peça de mais de um livro (decisão 91, a2; desenho 6): a legenda de cada imagem diz de que livro ela é.
+  const fonteDaImagem = useMemo(() => {
+    if (new Set(d.itens.map((i) => i.publicacao)).size < 2) return undefined
+    const origens = new Map(d.itens.map((i) => [i.id, i.origem]))
+    return (itemId: string) => origens.get(itemId) ?? null
+  }, [d.itens])
   const mapaDeRegioes = useEstado(useCallback((e: Estado) => e.registros.get('regiao'), []))
   const regioes = useMemo(() => {
     const r: Record<string, Regiao[]> = { ...(regioesDoLivro ?? {}) }
@@ -264,6 +276,9 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
   const refsDoGrupo = useMemo(() => [d.numero, ...ligados], [d.numero, ligados])
   const hipotesesSkc = useHipotesesSkc(refsDoGrupo)
   const skcPorNivel = useMemo(() => agruparPorNivel(hipotesesSkc), [hipotesesSkc])
+  // A figura sozinha sem hipótese nenhuma (Tarefa 24, revisão): as hipóteses do GGG vêm num pacote depois (decisão 89), e
+  // a seção vazia não aparece, nem o ícone e a tecla H dela. Shift+H continua a registrar uma hipótese SKC, e aí ela aparece.
+  const semHipoteses = soFigura && contarHipoteses(d, skcPorNivel) === 0 && d.outrasHipoteses.length === 0
   const ancorasSkc = useMemo(
     () => d.leituras.map((l) => ({ pt: l.texto === null ? [] : ancorasDasHipoteses(hipotesesSkc, l.passagemId, 'pt', l.texto), de: ancorasDasHipoteses(hipotesesSkc, l.passagemId, 'de', l.original) })),
     [d, hipotesesSkc],
@@ -471,7 +486,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
     {
       ArrowLeft: () => (posicao?.anterior ? irPara(posicao.anterior) : false),
       ArrowRight: () => (posicao?.proximo ? irPara(posicao.proximo) : false),
-      h: alternarPorNivel,
+      h: () => (semHipoteses ? false : alternarPorNivel()),
       l: alternarIdioma,
       n: pedirNota,
       c: () => (folhaDeColecao ? fecharFolhaDeColecao() : abrirFolhaDeColecao()),
@@ -545,13 +560,15 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
 
   const acoes = (
     <>
-      <IconButton
-        icon="niveis"
-        label="Ver todas as hipóteses por nível"
-        shortcut="H"
-        expandido={porNivel}
-        onClick={alternarPorNivel}
-      />
+      {!semHipoteses && (
+        <IconButton
+          icon="niveis"
+          label="Ver todas as hipóteses por nível"
+          shortcut="H"
+          expandido={porNivel}
+          onClick={alternarPorNivel}
+        />
+      )}
       <IconButton icon="traducao" label="Mostrar o original alemão" shortcut="L" pressionado={idioma === 'de'} onClick={alternarIdioma} />
       {computador ? (
         <IconButton icon="escrever" label="Escrever nota" shortcut="N" onClick={pedirNota} />
@@ -606,6 +623,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
       aoMostrar={(id) => {
         imagemAtual.current = id
       }}
+      fonteDaImagem={fonteDaImagem}
       marcar={marcarNoItem}
       aoAdicionar={(e) => abrirAdicionar(e.currentTarget)}
       aoEditar={(id, e) => {
@@ -663,7 +681,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
         </p>
       )}
       <Cabeca d={d} skcLigados={skcLigados} livrosLigados={livrosLigados} />
-      <Ficha d={d} doUsuario={doUsuario} />
+      <Ficha d={d} doUsuario={doUsuario} bibliografia={bibliografia} />
       <NoLivro lugares={d.noLivro} idioma={idioma} />
       {!computador && (
         <section className="item-imagem" aria-label="Imagem">
@@ -671,7 +689,7 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
         </section>
       )}
       <section className="item-leituras" aria-label="Leituras">
-        {d.leituras.length === 0 && <p className="item-sem-leitura">Nenhuma fonte tem texto sobre este objeto.</p>}
+        {d.leituras.length === 0 && figuras.length === 0 && <p className="item-sem-leitura">Nenhuma fonte tem texto sobre este objeto.</p>}
         {d.leituras.map((l, i) => (
           <Leitura
             key={l.passagemId}
@@ -690,6 +708,10 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
             resumoDaHipotese={resumoDaHipotese}
           />
         ))}
+        {figuras.map((f) => {
+          const campo = soFigura ? null : campoDoCredito(d.catalogo, f)
+          return <VozDaFigura key={f.id} item={f} credito={campo && <CreditoDaFigura campo={campo} item={f} bibliografia={bibliografia} comPrefixo />} />
+        })}
         <LeiturasDosLivros numeros={livrosLigados} itens={itensDosLivros} idioma={idioma} semAviso hipoteses={hipotesesSkc} hipoteseAtiva={aberta} aoAbrirHipotese={lembrarGatilho} />
         {skcLigados.map((id) => (
           <LeituraSkc key={id} id={id} numero={numeracao.porId.get(id)?.numero ?? 'sem número'} ligada hipoteses={hipotesesSkc} hipoteseAtiva={aberta} aoAbrirHipotese={lembrarGatilho} />
@@ -704,30 +726,35 @@ function ItemCarregado({ d, ligados = [], ligadoDe = null }: { d: ItemDetalhe; l
         ))}
       </section>
       <div className="secoes">
-        <Secao
-          id="hipoteses"
-          titulo="Hipóteses por nível"
-          contagem={contarHipoteses(d, skcPorNivel)}
-          aberta={porNivel}
-          aoAlternar={() => alternar('hipoteses')}
-        >
-          <HipotesesPorNivel
-            item={d}
-            aoAbrir={lembrarGatilho}
-            skc={skcPorNivel}
-            acoes={
-              <div className="objeto-hipoteses-acoes">
-                <button type="button" className="objeto-botao" aria-keyshortcuts="Shift+H" onClick={() => novaHipotese.atalho()}>
-                  <Icon name="registrarHipotese" size={18} />
-                  {novaHipotese.emPreparo ? 'Retomar a hipótese em preparo' : 'Registrar hipótese'}
-                </button>
-              </div>
-            }
-          />
-        </Secao>
-        <Secao id="catalogo" titulo="Catálogo" contagem={d.catalogo.length || null} aberta={!!secoes.catalogo} aoAlternar={() => alternar('catalogo')}>
-          <Catalogo campos={d.catalogo} idioma={idioma} />
-        </Secao>
+        {!semHipoteses && (
+          <Secao
+            id="hipoteses"
+            titulo="Hipóteses por nível"
+            contagem={contarHipoteses(d, skcPorNivel)}
+            aberta={porNivel}
+            aoAlternar={() => alternar('hipoteses')}
+          >
+            <HipotesesPorNivel
+              item={d}
+              aoAbrir={lembrarGatilho}
+              skc={skcPorNivel}
+              acoes={
+                <div className="objeto-hipoteses-acoes">
+                  <button type="button" className="objeto-botao" aria-keyshortcuts="Shift+H" onClick={() => novaHipotese.atalho()}>
+                    <Icon name="registrarHipotese" size={18} />
+                    {novaHipotese.emPreparo ? 'Retomar a hipótese em preparo' : 'Registrar hipótese'}
+                  </button>
+                </div>
+              }
+            />
+          </Secao>
+        )}
+        {/* A figura não tem ficha do catálogo (Tarefa 24): sem campo nenhum de catálogo, a seção some. */}
+        {(catalogo.length > 0 || figuras.length === 0) && (
+          <Secao id="catalogo" titulo="Catálogo" contagem={catalogo.length || null} aberta={!!secoes.catalogo} aoAlternar={() => alternar('catalogo')}>
+            <Catalogo campos={catalogo} idioma={idioma} />
+          </Secao>
+        )}
         <Secao
           id="relacoes"
           titulo="Paralelos e relações"
@@ -869,9 +896,17 @@ function Cabeca({ d, skcLigados, livrosLigados }: { d: ItemDetalhe; skcLigados: 
   const numeracao = useNumeracao()
   const outros = useCarregar(() => fontesDosObjetos(livrosLigados), livrosLigados.join('|'))
   const esperando = livrosLigados.length > 0 && outros.fase === 'carregando'
+  // A figura sozinha (Tarefa 24, decisão 91 a1): o título é o rótulo dela («GGG: 3b», decisão 39), e o rótulo de cima diz
+  // «figura do GGG» em vez de repetir o número. Com outros membros ligados, o rótulo de cima continua a lista das fontes.
+  const figuras = figurasDe(d.itens)
+  const soFigura = figuras.length > 0 && figuras.length === d.itens.length
+  const semLigados = skcLigados.length === 0 && livrosLigados.length === 0
   const fontes = esperando
     ? ''
-    : textoDosNumerosNasFontes([...d.itens.map((i) => i.referencia), ...(outros.fase === 'ok' ? outros.dados : [])], skcLigados, numeracao)
+    : soFigura && semLigados
+      ? `figura do ${figuras[0]!.referencia.obra || figuras[0]!.publicacao}`
+      : textoDosNumerosNasFontes([...d.itens.map((i) => i.referencia), ...(outros.fase === 'ok' ? outros.dados : [])], skcLigados, numeracao)
+  const titulo = d.descricao ?? d.tipo ?? (soFigura ? textoDosNumerosNasFontes(figuras.map((f) => f.referencia), [], numeracao) : d.numero)
   return (
     <div className="item-cabeca" data-testid="item-cabeca">
       <p className="item-rotulo">
@@ -880,7 +915,7 @@ function Cabeca({ d, skcLigados, livrosLigados }: { d: ItemDetalhe; skcLigados: 
           {fontes}
         </span>
       </p>
-      <h1>{d.descricao ?? d.tipo ?? d.numero}</h1>
+      <h1>{titulo}</h1>
     </div>
   )
 }
@@ -896,7 +931,7 @@ function textoDasImagens(livro: number, doUsuario: readonly ImagemDoUsuario[]): 
  * O sítio na ficha (Tarefa 12): o nome de agora (corrigido, ou o do sítio que a pessoa escolheu para o objeto), com "no livro:
  * …" quando ela trocou, a marca "excluído" se o sítio escolhido foi excluído, e o botão que abre "Sítio deste objeto".
  */
-function SitioDaFicha({ d }: { d: ItemDetalhe }) {
+function SitioDaFicha({ d, figura = null }: { d: ItemDetalhe; figura?: ItemDetalhe['itens'][number] | null }) {
   const vivos = useSitiosVivos()
   const computador = useBreakpoint() === 'computador'
   const location = useLocation()
@@ -931,6 +966,8 @@ function SitioDaFicha({ d }: { d: ItemDetalhe }) {
         )}
         {s.marca && <span className="marca-excluido">{s.marca}</span>}
         {s.trocado && <small className="item-ficha-no-livro">no livro: {d.sitio?.nome ?? 'sem sítio'}</small>}
+        {/* O achado «do texto» (decisão 90.1) é do sítio do livro: com o sítio trocado pela pessoa, a marca sai. */}
+        {d.sitio && !s.trocado && <MarcaDoTexto sitio={d.sitio} figura={figura} />}
       </span>
       <IconButton
         icon="editarFicha"
@@ -956,9 +993,30 @@ function SitioDaFicha({ d }: { d: ItemDetalhe }) {
   )
 }
 
-function Ficha({ d, doUsuario = [] }: { d: ItemDetalhe; doUsuario?: readonly ImagemDoUsuario[] }) {
+/**
+ * A ficha curta. Na figura sozinha (Tarefa 24, tela 1), só o sítio e o crédito, e as linhas vazias não aparecem: a figura sem
+ * sítio (nem do livro nem escolhido pela pessoa) fica sem a linha Sítio, salvo quando a Revisão pede para escolher
+ * (`?corrigir=sitio`).
+ */
+function Ficha({ d, doUsuario = [], bibliografia = d.bibliografia }: { d: ItemDetalhe; doUsuario?: readonly ImagemDoUsuario[]; bibliografia?: readonly ReferenciaBibliografica[] }) {
+  const vivos = useSitiosVivos()
+  const [params] = useSearchParams()
+  // guardado ao montar: a linha do sítio tira o `?corrigir=sitio` do endereço logo depois, e a folha dela não pode sumir
+  const [pedidoDeSitio] = useState(() => params.get('corrigir') === 'sitio')
+  const figuras = figurasDe(d.itens)
+  const soFigura = figuras.length > 0 && figuras.length === d.itens.length
+  const temSitio = !!vivos.doObjetoDoPacote(d.numero, { id: d.sitio?.id ?? null, nome: d.sitio?.nome ?? null }).id
   const data = textoDaData(d)
-  const linhas: [string, ReactNode][] = [['Sítio', <SitioDaFicha d={d} />]]
+  const linhas: [string, ReactNode][] = []
+  // a figura cujo achado deu o sítio (a peça com duas figuras pode ter o lugar tirado da segunda; revisão do branch, M3)
+  const figuraDoAchado = (d.sitio && figuras.find((f) => f.id === d.sitio!.itemId)) ?? figuras[0] ?? null
+  if (!soFigura || temSitio || pedidoDeSitio) linhas.push(['Sítio', <SitioDaFicha d={d} figura={figuraDoAchado} />])
+  if (soFigura) {
+    for (const f of figuras) {
+      const campo = campoDoCredito(d.catalogo, f)
+      if (campo) linhas.push([figuras.length > 1 ? `Crédito ${numeroDaFigura(f)}` : 'Crédito', <CreditoDaFigura campo={campo} item={f} bibliografia={bibliografia} />])
+    }
+  }
   if (data) linhas.push(['Data', data])
   if (d.acervo) linhas.push(['Acervo', d.acervo])
   if (d.medidas?.texto) linhas.push(['Medidas', semPonto(d.medidas.texto)])

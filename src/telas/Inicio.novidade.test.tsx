@@ -79,7 +79,8 @@ describe('Início: «Há uma versão nova dos livros no Dropbox»', () => {
     abrir()
     const faixa = (await screen.findByText(/Há uma versão nova dos livros/)).closest('[role="status"]')
     expect(faixa).not.toBeNull()
-    expect(faixa).toHaveTextContent('Há uma versão nova dos livros no Dropbox: TESTE I–IV.')
+    // pacote 11: com o livro em parágrafos e a tradução dele
+    expect(faixa).toHaveTextContent('Há uma versão nova dos livros no Dropbox: TESTE I–IV, TESTEG, TESTEGEN.')
     expect(faixa).not.toHaveTextContent('!')
     await userEvent.click(screen.getByRole('button', { name: 'Atualizar os livros' }))
     expect(screen.getByTestId('onde')).toHaveTextContent('/preparando {"atualizar":true}')

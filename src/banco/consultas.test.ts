@@ -3,7 +3,9 @@
  * Consultas sobre o pacote sintético (tests/fixtures/pacote), com o sqlite-wasm em
  * memória no Node. O pacote tem 6 objetos (CA00001–CA00004, BA00001–BA00002, um item
  * TESTE-000N cada), 9 hipóteses, 9 verbetes e dois grupos de 3 itens. No schema 9, GR-TESTE-I-01 tem as
- * subcoleções «1.1» (TESTE-0001) e «1.2–1.3» (TESTE-0002); TESTE-0003 fica só no grupo.
+ * subcoleções «1.1» (TESTE-0001) e «1.2–1.3» (TESTE-0002); TESTE-0003 fica só no grupo. No pacote 11 (etapa 4) vêm também o
+ * livro em parágrafos TESTEG (as figuras F200001 e F200002; a TESTEG-0001b é do CA00004) e a tradução TESTEGEN: 8 objetos;
+ * as consultas do livro em parágrafos estão em consultas.paragrafos.test.ts.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { armazemComPacote, bancoDeTeste } from '../../tests/suporte/bancoDeTeste'
@@ -61,11 +63,19 @@ describe('consultas sobre o pacote sintético', () => {
   afterAll(() => usarMotor(null))
 
   it('abre o pacote com uma publicação por esquema anexado', async () => {
-    expect(await abrirBanco()).toMatchObject({ estado: 'aberto', publicacoes: [{ sigla: 'TESTE', esquema: 'pub_TESTE' }] })
+    // pacote 11 (etapa 4): mais o livro em parágrafos (TESTEG) e a tradução dele (TESTEGEN), na ordem do manifesto
+    expect(await abrirBanco()).toMatchObject({
+      estado: 'aberto',
+      publicacoes: [
+        { sigla: 'TESTE', esquema: 'pub_TESTE' },
+        { sigla: 'TESTEG', esquema: 'pub_TESTEG' },
+        { sigla: 'TESTEGEN', esquema: 'pub_TESTEGEN' },
+      ],
+    })
   })
 
   it('R22: o esquema do pacote sintético não tem comentários SQL (nem siglas e nomes reais neles)', async () => {
-    for (const esquema of ['main', 'pub_TESTE', 'busca']) {
+    for (const esquema of ['main', 'pub_TESTE', 'pub_TESTEG', 'pub_TESTEGEN', 'busca']) {
       const sqls = (await executar<{ sql: string }>(`SELECT sql FROM ${esquema}.sqlite_master WHERE sql IS NOT NULL`)).map((l) => l.sql)
       expect(sqls.length, esquema).toBeGreaterThan(0)
       expect(sqls.filter((x) => x.includes('--') || x.includes('/*')), esquema).toEqual([])
@@ -75,7 +85,8 @@ describe('consultas sobre o pacote sintético', () => {
 
   it('contagens() bate com o pacote', async () => {
     // o pacote sintético traz o verbete GL-900010 e o sítio TESTE-3 publicados da camada do usuário (Tarefa 16)
-    expect(await contagens()).toEqual({ objetos: 6, hipoteses: 9, verbetes: 10 })
+    // pacote 11: mais as figuras F200001 e F200002 do TESTEG (a TESTEG-0001b é o CA00004, a mesma peça que TESTE-0004)
+    expect(await contagens()).toEqual({ objetos: 8, hipoteses: 9, verbetes: 10 })
     // e com o que está nos bancos, contado à parte
     const [o] = await executar<{ n: number }>('SELECT count(*) AS n FROM main.object')
     const [h] = await executar<{ n: number }>('SELECT count(*) AS n FROM pub_TESTE.hypothesis')
@@ -135,12 +146,14 @@ describe('consultas sobre o pacote sintético', () => {
   it('traducoesNaoRevisadasNoPacote() traz só as de máquina, trechos e campos do catálogo (id#categoria)', async () => {
     const l = await traducoesNaoRevisadasNoPacote()
     // pacote 9: mais os três trechos das introduções das subcoleções (I.S.10 e I.S.11)
-    expect(l.filter((t) => t.entidade === 'passage')).toHaveLength(11)
+    // pacote 11: mais os seis trechos do TESTEG (§§ 1–3 e as duas notas); o inglês do TESTEGEN não tem tradução
+    expect(l.filter((t) => t.entidade === 'passage')).toHaveLength(17)
+    expect(l.filter((t) => t.entidadeId.startsWith('PA-TESTEG-'))).toHaveLength(6)
     expect(l.filter((t) => t.entidade === 'catalog_field')).toHaveLength(18)
     expect(l.filter((t) => t.entidade === 'catalog_field').every((t) => /^TESTE-\d+#\d$/.test(t.entidadeId))).toBe(true)
     const [revisado] = await executar<{ id: string }>("SELECT id FROM pub_TESTE.passage WHERE translation_state = 'reviewed'")
     expect(l.some((t) => t.entidadeId === revisado!.id)).toBe(false)
-    expect(l.length).toBe(29)
+    expect(l.length).toBe(35)
   })
 
   it('verbetesAReverNoPacote() traz os verbetes propostos com a forma original', async () => {
@@ -205,9 +218,9 @@ describe('consultas sobre o pacote sintético', () => {
     })
     expect(i.relacoes.paralelos).toEqual([
       { grau: 'comparable', numero: 'CA00002', itemId: 'TESTE-0002', externo: null, semelhanca: null, locator: 'TESTE I, Nr. 1' },
-      { grau: 'strict', numero: null, itemId: null, externo: 'Autor 1999: 14 Nr. 5', semelhanca: null, locator: 'TESTE I, Nr. 1' },
+      { grau: 'strict', numero: null, itemId: null, externo: 'Autor 1999: 914 Nr. 95', semelhanca: null, locator: 'TESTE I, Nr. 1' },
     ])
-    expect(i.bibliografia.map((b) => b.bruto)).toEqual(['Autor 1999: 12 Nr. 3', 'Autor 1999: 14 Nr. 5'])
+    expect(i.bibliografia.map((b) => b.bruto)).toEqual(['Autor 1999: 12 Nr. 3', 'Autor 1999: 914 Nr. 95'])
     expect(i.bibliografia[0]).toMatchObject({ obraId: 'BIB-900001', curta: 'Autor 1999', chicago: expect.stringContaining('Achados de teste') })
     expect(i.grupos).toEqual([{ id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova' }])
   })
@@ -259,7 +272,8 @@ describe('consultas sobre o pacote sintético', () => {
 
   it('grupos() lista os grupos na ordem, com contagens e capa', async () => {
     const gs = await grupos()
-    expect(gs.map((g) => g.id)).toEqual(['GR-TESTE-I-01', 'GR-TESTE-I-02'])
+    // pacote 11: o grupo do TESTEG depois, na ordem do manifesto
+    expect(gs.map((g) => g.id)).toEqual(['GR-TESTE-I-01', 'GR-TESTE-I-02', 'GR-TESTEG-01'])
     expect(gs[0]).toMatchObject({
       publicacao: 'TESTE',
       volume: 'I',
@@ -286,9 +300,9 @@ describe('consultas sobre o pacote sintético', () => {
   })
 
   describe('subcoleções (schema 9)', () => {
-    it('o pacote sintético é do schema 10 (com as subcoleções do 9)', async () => {
+    it('o pacote sintético é do schema 11 (com as subcoleções do 9)', async () => {
       const [l] = await executar<{ user_version: number }>('PRAGMA pub_TESTE.user_version')
-      expect(l!.user_version).toBe(10)
+      expect(l!.user_version).toBe(11)
     })
 
     it('grupos() dá só os grupos de cima, com o número de subcoleções', async () => {
@@ -296,17 +310,19 @@ describe('consultas sobre o pacote sintético', () => {
       expect(gs.map((g) => [g.id, g.subcolecoes, g.paiId, g.numero])).toEqual([
         ['GR-TESTE-I-01', 2, null, '1'],
         ['GR-TESTE-I-02', 0, null, null],
+        ['GR-TESTEG-01', 1, null, 'I'],
       ])
       // Decisão 81: o grupo de cima com subcoleções leva o número do livro ('1'); a subcoleção se distingue só por paiId.
       // Foco 5: os totais não contam as linhas das subcoleções
-      expect(gs.reduce((t, g) => t + g.objetos, 0)).toBe(6)
+      // (pacote 11: 6 do TESTE e 3 do TESTEG; o CA00004 conta nos dois livros)
+      expect(gs.reduce((t, g) => t + g.objetos, 0)).toBe(9)
     })
 
     it('grupo() do grupo de cima traz as subcoleções em ordem, a introdução dele e todos os itens', async () => {
       const g = (await grupo('GR-TESTE-I-01'))!
       expect(g.subcolecoes).toEqual([
-        { id: 'GR-TESTE-I-01-01', numero: '1.1', titulo: 'Animais de prova', tituloDe: 'Probetiere', objetos: 1 },
-        { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen', objetos: 1 },
+        { id: 'GR-TESTE-I-01-01', numero: '1.1', titulo: 'Animais de prova', tituloDe: 'Probetiere', objetos: 1, paragrafos: null },
+        { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen', objetos: 1, paragrafos: null },
       ])
       expect(g.introducao.map((t) => t.id)).toEqual(['PA-TESTE-I.S.9-ovw-1'])
       expect(g.itens.map((o) => o.numero)).toEqual(['CA00001', 'CA00002', 'CA00003'])
@@ -376,6 +392,7 @@ describe('consultas sobre o pacote sintético', () => {
           periodo: 'Calcolítico (fase de teste)',
           grupo: { id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova', tituloDe: '1. Testtiere und Probefiguren', numero: '1', subcolecoes: 2 },
           subcolecao: { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen' },
+          emParagrafos: false,
         },
       ])
       expect(dois.grupos).toEqual([{ id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova' }])
@@ -384,7 +401,11 @@ describe('consultas sobre o pacote sintético', () => {
       expect(tres.noLivro[0]!.subcolecao).toBeNull()
       expect((await item('CA00001'))!.noLivro[0]!.subcolecao?.numero).toBe('1.1')
       const quatro = (await item('CA00004'))!
-      expect(quatro.noLivro).toEqual([expect.objectContaining({ grupo: expect.objectContaining({ id: 'GR-TESTE-I-02', numero: null, subcolecoes: 0 }), subcolecao: null })])
+      // pacote 11: o CA00004 é também a figura TESTEG-0001b (decisão 83: uma linha por livro)
+      expect(quatro.noLivro).toEqual([
+        expect.objectContaining({ grupo: expect.objectContaining({ id: 'GR-TESTE-I-02', numero: null, subcolecoes: 0 }), subcolecao: null }),
+        expect.objectContaining({ publicacao: 'TESTEG', volume: '', grupo: expect.objectContaining({ id: 'GR-TESTEG-01', numero: 'I', subcolecoes: 1 }), subcolecao: expect.objectContaining({ id: 'GR-TESTEG-01-01', numero: '1' }) }),
+      ])
       for (const n of ['CA00001', 'CA00002', 'CA00003', 'CA00004']) {
         expect((await item(n))!.grupos.every((g) => !/^GR-TESTE-I-\d\d-\d\d$/.test(g.id))).toBe(true)
       }
@@ -424,6 +445,7 @@ describe('consultas sobre o pacote sintético', () => {
       ['TESTE-1', 'Maḥteṣ Teste', 3],
       ['TESTE-7', 'Maḥtiṣ Teste', 0],
       ['TESTE-4', 'Tel Probe Teste', 0],
+      ['TESTEG-9', 'Tell Achado Teste', 1], // pacote 11: o achado «do texto» de TESTEG-0002
       ['TESTE-2', 'Tell Probe Teste', 3],
       ['TESTE-3', 'Tell Usuário Teste', 0], // o sítio do usuário publicado (Tarefa 16)
       ['TESTE-6', 'Túmulo Probe Teste', 0],
@@ -476,7 +498,7 @@ describe('consultas sobre o pacote sintético', () => {
       expect(o).toMatchObject({ id: 'BIB-900090', curta: 'Imaginária 2010', origem: 'SKC', citadaComo: { SKC: ['Imaginária 2010'] }, titulo: 'Selos sonhados no planalto fictício' })
       expect(o!.chicago).toBe('Imaginária, Cicrana. 2010. Selos sonhados no planalto fictício. Cidade Fictícia.')
       expect(o!.objetos.map((x) => x.numero)).toEqual(['BA00002'])
-      expect((await redirecionamentos()).find((r) => r.de === 'BIB-teste123-1')).toEqual({ de: 'BIB-teste123-1', para: 'BIB-900090', tipo: 'obra', verbeteExiste: false, obraExiste: true, criado: true })
+      expect((await redirecionamentos()).find((r) => r.de === 'BIB-teste123-1')).toEqual({ de: 'BIB-teste123-1', para: 'BIB-900090', tipo: 'obra', verbeteExiste: false, obraExiste: true, criado: true, origemNoGlossario: false })
     })
   })
 
@@ -491,7 +513,7 @@ describe('consultas sobre o pacote sintético', () => {
   })
 
   it('sitios() e sitio() trazem a região: o verbete-pai do verbete do nome, ou null', async () => {
-    expect((await sitios()).map((x) => x.regiao)).toEqual(Array(8).fill(null)) // pacote 8: oito sítios
+    expect((await sitios()).map((x) => x.regiao)).toEqual(Array(9).fill(null)) // pacote 8: oito sítios; pacote 11: mais TESTEG-9
     expect((await sitio('TESTE-1'))!.regiao).toBeNull()
   })
 
@@ -535,7 +557,11 @@ describe('consultas sobre o pacote sintético', () => {
     // Os elementos pedidos (onde o usuário desenhou): a obra e os rótulos; o que não existe fica de fora.
     expect([...d.elementos.entries()]).toEqual([['EL-900001', { sigla: 'TESTE', rotulo: 'figura denteada', rotuloDe: 'Zackenfigur' }]])
     // A obra, os autores e a língua (a do rótulo original).
-    expect([...d.publicacoes.entries()]).toEqual([['TESTE', { obra: 'TESTE I', autores: ['Autora, Primeira Teste', 'Autor, Segundo Teste'], lingua: 'de' }]])
+    expect([...d.publicacoes.entries()]).toEqual([
+      ['TESTE', { obra: 'TESTE I', autores: ['Autora, Primeira Teste', 'Autor, Segundo Teste'], lingua: 'de' }],
+      ['TESTEG', { obra: 'TESTEG', autores: ['Autorin, Dritte Teste'], lingua: 'de' }],
+      ['TESTEGEN', { obra: 'TESTEGEN', autores: ['Autorin, Dritte Teste'], lingua: 'en' }],
+    ])
     // Só para contar, a tela lê só as regiões (sem termos nem obras).
     expect(await regioesDoLivro()).toEqual([regiao])
   })
@@ -616,7 +642,7 @@ describe('sem pacote e reabertura', () => {
     const cheio = await armazemComPacote()
     for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
     expect((await reabrirBanco()).estado).toBe('aberto')
-    expect((await contagens()).objetos).toBe(6)
+    expect((await contagens()).objetos).toBe(8)
   })
 
   it('"sem pacote" nunca fica guardado: o pacote que chega depois aparece sem reabrir', async () => {
@@ -628,7 +654,7 @@ describe('sem pacote e reabertura', () => {
     const cheio = await armazemComPacote()
     for (const c of await cheio.listar('')) await armazem.gravar(c, (await cheio.ler(c))!)
     expect((await abrirBanco()).estado).toBe('aberto')
-    expect((await contagens()).objetos).toBe(6)
+    expect((await contagens()).objetos).toBe(8)
   })
 
   it('o Banco também não guarda "sem pacote" (o worker vive entre as telas)', async () => {
@@ -666,7 +692,7 @@ describe('falha ao abrir', () => {
     await expect(banco.executar('SELECT 1')).rejects.toBeInstanceOf(ErroSemPacote)
     for (const [c, bytes] of guardados) await armazem.gravar(c, bytes)
     expect((await abrirBanco()).estado).toBe('aberto')
-    expect((await contagens()).objetos).toBe(6)
+    expect((await contagens()).objetos).toBe(8)
   })
 
   it('o esquema repetido é detectado sem diferenciar maiúsculas', () => {
@@ -739,7 +765,8 @@ describe('decisão 40: as citações no texto do usuário', () => {
 
   it('obrasDoPacote: a sigla e o volume de cada obra aberta', async () => {
     const { obrasDoPacote } = await import('./consultas')
-    expect(await obrasDoPacote()).toEqual(['TESTE I'])
+    // pacote 11: o TESTEG (obra sem volumes); o TESTEGEN não tem itens
+    expect(await obrasDoPacote()).toEqual(['TESTE I', 'TESTEG'])
   })
 
   it('objetosDasFontes: o objeto de cada referência que existe, pela chave; as outras ficam de fora', async () => {

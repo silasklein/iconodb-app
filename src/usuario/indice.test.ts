@@ -682,7 +682,7 @@ describe('buscar() junta o pacote e a camada do usuário', () => {
     const r = await m.consulta.buscar('mahtes', opcoes)
     expect(numeros(r)).toEqual(['BA00001', 'CA00001', 'CA00002'])
     expect(r.usuario).toEqual([])
-    expect(r.contagensDoUsuario).toEqual({ tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 })
+    expect(r.contagensDoUsuario).toEqual({ tudo: 0, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 })
   })
 
   it('o limite corta os objetos, mas total e números incluem os SKC', async () => {

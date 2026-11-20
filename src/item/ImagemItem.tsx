@@ -41,6 +41,11 @@ interface Props {
   /** A imagem à vista mudou (Tarefa 10: onde marcar a região nova). */
   aoMostrar?: (id: string) => void
   /**
+   * O livro de cada imagem do livro, pelo item dela («TESTE I: 4», «GGG: 5a»): a legenda o põe antes do crédito. Só na peça
+   * de mais de um livro (Tarefa 26, desenho 6); sem isto, a legenda é só o crédito.
+   */
+  fonteDaImagem?: (itemId: string) => string | null
+  /**
    * Tarefa 10, computador (PC-ItemNovaHipotese.dc.html): marcar a região nova da hipótese aqui mesmo, na coluna da
    * imagem, com o formulário aberto ao lado. Concluir entrega a imagem e os pontos; Esc (ou o botão) cancela.
    */
@@ -69,7 +74,7 @@ function indiceInicial(imagens: readonly ImagemExibida[], inicial: Props['inicia
  * cima, com as coordenadas de 0 a 1 do banco (viewBox 0 0 1 1 sobre a caixa exata da imagem).
  * "Ampliar a imagem" leva ao visualizador (`#/imagem/<id>`, Tarefa 9).
  */
-export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false, aoAmpliar, inicial = null, principal = null, mostrar = null, aoAdicionar, aoEditar, aoMostrar, marcar = null, atalhos = true, devolverFoco = true }: Props) {
+export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null, comDica = false, aoAmpliar, inicial = null, principal = null, mostrar = null, aoAdicionar, aoEditar, aoMostrar, fonteDaImagem, marcar = null, atalhos = true, devolverFoco = true }: Props) {
   const ampliar = useRef<HTMLDivElement>(null)
   const [indice, setIndice] = useState(() => Math.max(indiceInicial(imagens, inicial, principal), 0))
   const [original, setOriginal] = useState(() => (inicial && indiceInicial(imagens, inicial) >= 0 ? (inicial.original ?? false) : false))
@@ -320,7 +325,9 @@ export function ImagemItem({ numero, imagens, regioes = {}, elementoAceso = null
           )}
         </div>
       )}
-      {!atual.skc && atual.credito && <p className="imagem-item-credito">{atual.credito}</p>}
+      {!atual.skc && (atual.credito || fonteDaImagem?.(atual.itemId)) && (
+        <p className="imagem-item-credito">{[fonteDaImagem?.(atual.itemId), atual.credito].filter(Boolean).join(' · ')}</p>
+      )}
     </div>
   )
 

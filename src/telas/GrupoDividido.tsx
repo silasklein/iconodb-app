@@ -11,6 +11,20 @@ import { numeroPtBr, textoDeObjetos as objetos, textoDeSubcolecoes as subcolecoe
 import { TrechosDaIntroducao } from './TrechosDaIntroducao'
 import { caminhoNoGrupo, chaveDaObra, rotuloDaObra, rotuloDaSubcolecao, tituloDoGrupo } from './obras'
 import { useParametrosNaUrl } from './useParametrosNaUrl'
+import {
+  LerOsParagrafos,
+  ParagrafosDaSecao,
+  numeroDaSecao,
+  rotuloDaSecao,
+  rotuloDaSecaoNaLista,
+  rotuloDoCapitulo,
+  textoDeFiguras,
+  textoDeParagrafos,
+  textoDeSecoes,
+  textoDoIntervalo,
+  tituloDaSecao,
+} from './LivroEmParagrafos'
+import './LivroEmParagrafos.css'
 import './Grupo.css'
 import './GrupoDividido.css'
 
@@ -33,20 +47,32 @@ export function GrupoDividido({ g }: { g: GrupoDetalhe }) {
     if (window.scrollY > 0) window.scrollTo(0, 0)
   }
 
-  const anuncio = sub ? rotuloDaSubcolecao(sub) : `Todos os objetos, ${objetos(g.objetos)}`
+  // O capítulo do livro em parágrafos (Tarefa 26): seções, figuras e §§ no lugar de subcoleções e objetos.
+  const livro = g.paragrafos !== null
+  const anuncio = sub
+    ? livro
+      ? rotuloDaSecaoNaLista(sub)
+      : rotuloDaSubcolecao(sub)
+    : livro
+      ? `Todas as figuras do capítulo, ${textoDeFiguras(g.objetos)}`
+      : `Todos os objetos, ${objetos(g.objetos)}`
 
   return (
     <main className="grupo-dividido">
       <Lateral g={g} escolhida={sub?.id ?? null} aoEscolher={escolher} />
       <div className="grupo-dividido-principal">
         {sub ? (
-          <PainelDaSubcolecao key={sub.id} pai={g.id} sub={sub} />
+          livro ? (
+            <PainelDaSecao key={sub.id} pai={g} sub={sub} />
+          ) : (
+            <PainelDaSubcolecao key={sub.id} pai={g.id} sub={sub} />
+          )
         ) : (
           <>
-            <Grade rotulo="Objetos do grupo" itens={g.itens} estado={estadoDoGrupo(g.id, tituloDoGrupo(g).texto, caminhoNoGrupo(g.id))}>
+            <Grade rotulo={livro ? 'Figuras do capítulo' : 'Objetos do grupo'} itens={g.itens} estado={estadoDoGrupo(g.id, tituloDoGrupo(g).texto, caminhoNoGrupo(g.id))}>
               <div className="grupo-objetos-topo">
                 <h2>
-                  Todos os objetos <span className="codigo">{numeroPtBr(g.objetos)}</span>
+                  {livro ? 'Todas as figuras' : 'Todos os objetos'} <span className="codigo">{numeroPtBr(g.objetos)}</span>
                 </h2>
               </div>
             </Grade>
@@ -76,6 +102,7 @@ function Lateral({
   const idIntro = useId()
   const coluna = useRef<HTMLDivElement>(null)
   const obra = chaveDaObra(g.publicacao, g.volume)
+  const livro = g.paragrafos
 
   // Ao montar (de volta do objeto, ao recarregar, vindo de `/grupo/<sub>` ou do «No livro»), a escolhida aparece na
   // lista: só a rolagem da coluna se ajusta (a da janela é a que se restaura, e o foco não muda). Depois, quem escolhe
@@ -99,12 +126,19 @@ function Lateral({
           Coleções · {rotuloDaObra(g.publicacao, g.volume)}
         </Link>
       </nav>
-      {g.periodo && <span className="grupo-dividido-periodo">{g.periodo}</span>}
+      {livro ? (
+        <span className="grupo-dividido-periodo">{rotuloDoCapitulo(rotuloDaObra(g.publicacao, g.volume), g.numero)}</span>
+      ) : (
+        g.periodo && <span className="grupo-dividido-periodo">{g.periodo}</span>
+      )}
       <h1>{tituloDoGrupo(g).texto}</h1>
       <span className="grupo-dividido-contagem">
-        {objetos(g.objetos)} · {subcolecoes(g.subcolecoes.length)}
+        {livro
+          ? `${textoDeFiguras(g.objetos)} · ${textoDeParagrafos(livro.total)} · ${textoDeSecoes(g.subcolecoes.length)}`
+          : `${objetos(g.objetos)} · ${subcolecoes(g.subcolecoes.length)}`}
       </span>
-      {g.introducao.length > 0 && (
+      {livro && <LerOsParagrafos sigla={g.publicacao} intervalo={livro} rotulo="Ler o capítulo" />}
+      {!livro && g.introducao.length > 0 && (
         <>
           <button type="button" className="grupo-dividido-ler hit" aria-expanded={lendo} aria-controls={lendo ? idIntro : undefined} onClick={() => setLendo((v) => !v)}>
             {lendo ? 'Recolher a introdução' : 'Ler a introdução'}
@@ -117,28 +151,30 @@ function Lateral({
         </>
       )}
 
-      <nav className="grupo-dividido-lista" aria-label="Subcoleções">
+      <nav className="grupo-dividido-lista" aria-label={livro ? 'Seções' : 'Subcoleções'}>
         <ul>
           <li>
             <Linha
               to={caminhoNoGrupo(g.id)}
-              numero="Todos"
-              titulo="Todos os objetos do grupo"
+              numero={livro ? 'Todas' : 'Todos'}
+              titulo={livro ? 'Todas as figuras do capítulo' : 'Todos os objetos do grupo'}
               n={g.objetos}
               atual={escolhida === null}
               onClick={(e) => aoEscolher(e, null)}
+              rotulo={livro ? `Todas as figuras do capítulo, ${textoDeFiguras(g.objetos)}` : undefined}
             />
           </li>
           {g.subcolecoes.map((s) => (
             <li key={s.id}>
               <Linha
                 to={caminhoNoGrupo(g.id, s.id)}
-                numero={s.numero}
+                numero={livro && s.numero ? numeroDaSecao(s.numero) : s.numero}
                 titulo={s.titulo}
+                detalhe={livro && s.paragrafos ? textoDoIntervalo(s.paragrafos) : undefined}
                 n={s.objetos}
                 atual={escolhida === s.id}
                 onClick={(e) => aoEscolher(e, s.id)}
-                rotulo={rotuloDaSubcolecao(s)}
+                rotulo={livro ? rotuloDaSecaoNaLista(s) : rotuloDaSubcolecao(s)}
               />
             </li>
           ))}
@@ -148,7 +184,17 @@ function Lateral({
   )
 }
 
-function Linha(p: { to: string; numero: string; titulo: string; n: number; atual: boolean; rotulo?: string; onClick: (e: MouseEvent<HTMLAnchorElement>) => void }) {
+function Linha(p: {
+  to: string
+  numero: string
+  titulo: string
+  /** Sob o título: os §§ da seção (o livro em parágrafos). */
+  detalhe?: string
+  n: number
+  atual: boolean
+  rotulo?: string
+  onClick: (e: MouseEvent<HTMLAnchorElement>) => void
+}) {
   return (
     <Link
       className="grupo-dividido-linha"
@@ -158,7 +204,10 @@ function Linha(p: { to: string; numero: string; titulo: string; n: number; atual
       aria-label={p.rotulo ?? `${p.titulo}, ${objetos(p.n)}`}
     >
       <span className="grupo-dividido-linha-numero codigo">{p.numero}</span>
-      <span className="grupo-dividido-linha-titulo">{p.titulo}</span>
+      <span className="grupo-dividido-linha-titulo">
+        {p.titulo}
+        {p.detalhe && <span className="secao-intervalo">{p.detalhe}</span>}
+      </span>
       <span className="grupo-dividido-linha-n">{numeroPtBr(p.n)}</span>
     </Link>
   )
@@ -215,6 +264,44 @@ function PainelDaSubcolecao({ pai, sub }: { pai: string; sub: SubcolecaoResumo }
             </section>
           )}
         </Grade>
+      )}
+      <div className="grupo-dividido-notas">
+        <NotasDoAlvo tipo="grupo" ref_={sub.id} variante="secao" />
+      </div>
+    </>
+  )
+}
+
+/**
+ * A seção do livro em parágrafos escolhida, à direita (Tarefa 26, tela 3): «TESTEG · Seção 1», o título com o número, «N figuras ·
+ * §§ a–b», «Ler a seção» (o primeiro §), «§§ desta seção» com a primeira frase de cada um, e «Figuras da seção».
+ */
+function PainelDaSecao({ pai, sub }: { pai: GrupoDetalhe; sub: SubcolecaoResumo }) {
+  const carga = useCarregar(() => grupo(sub.id), sub.id)
+  const titulo = tituloDaSecao(sub)
+  const estado = estadoDoGrupo(sub.id, titulo, caminhoNoGrupo(pai.id, sub.id), true)
+  const paragrafos = carga.fase === 'ok' ? (carga.dados?.paragrafosDaSecao ?? []) : []
+  return (
+    <>
+      <div className="grupo-dividido-secao">
+        <span className="grupo-dividido-periodo">{rotuloDaSecao(rotuloDaObra(pai.publicacao, pai.volume), sub.numero)}</span>
+        <h2 className="grupo-dividido-secao-titulo">{titulo}</h2>
+        <span className="grupo-dividido-n">{[textoDeFiguras(sub.objetos), sub.paragrafos ? textoDoIntervalo(sub.paragrafos) : null].filter(Boolean).join(' · ')}</span>
+        {sub.paragrafos && <LerOsParagrafos sigla={pai.publicacao} intervalo={sub.paragrafos} rotulo="Ler a seção" botao />}
+      </div>
+      {carga.fase === 'erro' ? (
+        <AvisoDeErro erro={carga.erro} aoTentar={carga.tentarDeNovo} />
+      ) : (
+        <>
+          <ParagrafosDaSecao sigla={pai.publicacao} paragrafos={paragrafos} />
+          <Grade rotulo="Figuras da seção" itens={carga.fase === 'ok' ? (carga.dados?.itens ?? []) : []} ocupada={carga.fase === 'carregando'} estado={estado}>
+            <div className="grupo-objetos-topo">
+              <h2>
+                Figuras da seção <span className="codigo">{numeroPtBr(sub.objetos)}</span>
+              </h2>
+            </div>
+          </Grade>
+        </>
       )}
       <div className="grupo-dividido-notas">
         <NotasDoAlvo tipo="grupo" ref_={sub.id} variante="secao" />

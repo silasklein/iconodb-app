@@ -1,6 +1,6 @@
 {
- "schema": 10,
- "gerado_em": "2026-11-15T18:33:33+00:00",
+ "schema": 11,
+ "gerado_em": "2026-11-18T18:45:12+00:00",
  "publicacoes": [
   {
    "sigla": "TESTE",
@@ -11,6 +11,30 @@
      "volume": "I",
      "rotulo": "TESTE I",
      "ano": 2020
+    }
+   ]
+  },
+  {
+   "sigla": "TESTEG",
+   "volume": "",
+   "rotulo": "TESTEG",
+   "volumes": [
+    {
+     "volume": "",
+     "rotulo": "TESTEG",
+     "ano": 2021
+    }
+   ]
+  },
+  {
+   "sigla": "TESTEGEN",
+   "volume": "",
+   "rotulo": "TESTEGEN",
+   "volumes": [
+    {
+     "volume": "",
+     "rotulo": "TESTEGEN",
+     "ano": 2022
     }
    ]
   }
@@ -72,21 +96,53 @@
    "sha256": "d6c888948645572d931bc159cc03372e3166c76880ed82a19421c11c5d0c0242",
    "bytes": 1080
   },
+  "imagens/TESTEG/TESTEG-0001a/screen-1.webp": {
+   "sha256": "7a861f89ead17518c6a8a91d0091265c4b74f9e41f370bc86f54af45ed3dd4f7",
+   "bytes": 26120
+  },
+  "imagens/TESTEG/TESTEG-0001a/thumb-1.webp": {
+   "sha256": "a4a68fdd8958b0557331303e92a5676b3a989aeb830dea7bcb86c109b470f18b",
+   "bytes": 5810
+  },
+  "imagens/TESTEG/TESTEG-0001b/screen-1.webp": {
+   "sha256": "81c465d7907aed451a162482eaeb62c16189ddc275e3e4a45cd196a7bb2ff697",
+   "bytes": 23728
+  },
+  "imagens/TESTEG/TESTEG-0001b/thumb-1.webp": {
+   "sha256": "54611aed6b11d50233aad4eeb9c3909522472c424a490512abc9ae5206f3a7cb",
+   "bytes": 6424
+  },
+  "imagens/TESTEG/TESTEG-0002/screen-1.webp": {
+   "sha256": "cacbbee7c20a2c9a72fc67b86ac13d12cd409c9af0a401acdc52a7480ad91b60",
+   "bytes": 6126
+  },
+  "imagens/TESTEG/TESTEG-0002/thumb-1.webp": {
+   "sha256": "62c320ba77de19a6ebfa3520ed134a521671f7e1cdef1e9375da00f48ed56814",
+   "bytes": 1294
+  },
   "nucleo/busca.sqlite": {
-   "sha256": "c2eb0177d4b939e97817d161b07ad586ec40b6d8e6acff444f1bc1162da6cea9",
+   "sha256": "301aefe42bbb249f81c2e3f7bc33f4c7df35e7a1c5f7ae31ceea23dca74cb1c2",
    "bytes": 45056
   },
   "nucleo/comum.sqlite": {
-   "sha256": "1a0cb9ebcb127f5d215a076739d71209ffc900a7f31808e2adbba96898ca9d30",
-   "bytes": 385024
+   "sha256": "5c872b71be89fc94cfbf291378f9d1baba695c9a3d2b619736fff67534dadae2",
+   "bytes": 389120
   },
   "nucleo/fold.json": {
    "sha256": "a30ac717837f964699d1bc79cb47ac1610e415b3577859d133e5a1d096f42822",
    "bytes": 1194
   },
   "nucleo/pub-TESTE.sqlite": {
-   "sha256": "7482f0aceb22cbc9aba7213b14e53105d649ad2805e3bebf7d6d88f6726907e7",
-   "bytes": 393216
+   "sha256": "13be2fdecd027800458c44be0a487ba50bcb3e69f7cafd90d6df9db559fe29d3",
+   "bytes": 397312
+  },
+  "nucleo/pub-TESTEG.sqlite": {
+   "sha256": "3b33e16e5fb1e469ea5a7f3517fd02298b1258aadd1c6454d4e13f5fb31e3c92",
+   "bytes": 389120
+  },
+  "nucleo/pub-TESTEGEN.sqlite": {
+   "sha256": "ee6279531b407cbec814903d3463b7b89e32293a2553568cb715cb3b120be2bc",
+   "bytes": 389120
   }
  }
 }

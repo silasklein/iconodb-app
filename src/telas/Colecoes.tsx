@@ -9,6 +9,7 @@ import { useBreakpoint } from '../ui/useBreakpoint'
 import { useCarregar } from '../ui/useCarregar'
 import { numeroPtBr } from '../ui/numero'
 import { chaveDaObra, rotuloDaObra, tituloDoGrupo } from './obras'
+import { textoDeFiguras, textoDeParagrafos, textoDeSecoes, textoDoIntervalo } from './LivroEmParagrafos'
 import './Colecoes.css'
 
 const SEM_PERIODO = 'Sem período'
@@ -84,6 +85,8 @@ export function Colecoes() {
 
         {aba === null ? (
           carga.fase !== 'erro' && !esperandoObra && <PainelSkc />
+        ) : aba.grupos.some((g) => g.paragrafos !== null) ? (
+          <CapitulosDoLivro obra={aba} computador={computador} />
         ) : (
           <section className="colecoes-corpo" aria-label={`Grupos de ${aba.rotulo}`}>
             {computador && (
@@ -124,5 +127,51 @@ export function Colecoes() {
         )}
       </main>
     </div>
+  )
+}
+
+/**
+ * A aba do livro em parágrafos (o GGG; Tarefa 26, tela 3): os capítulos na ordem do livro, sem cabeçalho de período (o
+ * capítulo já é a época), cada um com «N figuras · N seções · §§ a–b»; o capítulo sem figura mostra «§» no lugar da miniatura.
+ */
+function CapitulosDoLivro({ obra, computador }: { obra: Obra; computador: boolean }) {
+  const figuras = obra.grupos.reduce((s, g) => s + g.objetos, 0)
+  const paragrafos = obra.grupos.reduce((s, g) => s + (g.paragrafos?.total ?? 0), 0)
+  return (
+    <section className="colecoes-corpo" aria-label={`Capítulos de ${obra.rotulo}`}>
+      {computador && (
+        <div className="colecoes-resumo">
+          <span>{obra.rotulo} · capítulos do livro, com as seções dentro</span>
+          <span className="codigo">
+            {plural(obra.grupos.length, 'capítulo', 'capítulos')} · {textoDeFiguras(figuras)} · {textoDeParagrafos(paragrafos)}
+          </span>
+        </div>
+      )}
+      <div className="colecoes-capitulos">
+        {obra.grupos.map((g) => (
+          <Link key={g.id} className="colecoes-grupo colecoes-capitulo" to={`/grupo/${encodeURIComponent(g.id)}`}>
+            {computador && (
+              <span className="colecoes-miniatura">
+                {g.capa ? (
+                  <Miniatura caminho={g.capa.miniatura} alt="" />
+                ) : (
+                  <span className="colecoes-sem-figura" aria-hidden="true">
+                    §
+                  </span>
+                )}
+              </span>
+            )}
+            <span className="colecoes-grupo-texto">
+              <span className="colecoes-grupo-nome">{tituloDoGrupo(g).texto}</span>
+              <span className="colecoes-grupo-n">
+                {[textoDeFiguras(g.objetos), g.subcolecoes > 0 ? textoDeSecoes(g.subcolecoes) : null, g.paragrafos ? textoDoIntervalo(g.paragrafos) : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
   )
 }

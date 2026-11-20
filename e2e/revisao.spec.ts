@@ -178,9 +178,9 @@ test('Revisão: ações por tipo, Deixar como está e Desfazer, a mesma conta no
   await expect(traducoes).toBeVisible()
   await expect(page.getByText('Só para consulta: não entra no total.')).toBeVisible()
   // pacote 9: 26 + os 3 trechos das introduções das subcoleções
-  await expect(page.getByRole('button', { name: /^Traduções não revisadas/ })).toContainText('29')
+  await expect(page.getByRole('button', { name: /^Traduções não revisadas/ })).toContainText('35') // pacote 11: mais os seis trechos do TESTEG
   await expect(traducoes.getByRole('listitem')).toHaveCount(25)
-  await expect(page.getByRole('button', { name: 'Mostrar mais 4 (25 de 29)' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mostrar mais 10 (25 de 35)' })).toBeVisible()
   await expect(traducoes.getByRole('button', { name: /Deixar como está/ })).toHaveCount(0)
   expect(await total(page)).toBe(14)
   await foto(page, 'revisao-8-traducoes-so-consulta', page.getByRole('button', { name: /^Traduções não revisadas/ }))

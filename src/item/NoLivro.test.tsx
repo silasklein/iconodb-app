@@ -8,7 +8,7 @@ const NA_SUBCOLECAO: LugarNoLivro = {
   volume: 'I',
   periodo: 'Calcolítico (fase de teste)',
   grupo: { id: 'GR-TESTE-I-01', titulo: 'Animais de teste e figuras de prova', tituloDe: '1. Testtiere und Probefiguren', numero: '1', subcolecoes: 2 },
-  subcolecao: { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen' },
+  subcolecao: { id: 'GR-TESTE-I-01-02', numero: '1.2–1.3', titulo: 'Figuras de prova e sinais de teste', tituloDe: 'Prüfgestalten und Testzeichen' }, emParagrafos: false,
 }
 const NO_GRUPO: LugarNoLivro = { ...NA_SUBCOLECAO, subcolecao: null }
 
@@ -49,7 +49,7 @@ describe('NoLivro', () => {
   })
 
   it('sem período, o nome do livro é o link e não se repete', () => {
-    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null }
+    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
     mostrar([outro])
     const linha = bloco().querySelector('p') as HTMLElement
     expect(linha).toHaveTextContent(/^OUTRO › Grupo de teste$/)
@@ -99,7 +99,7 @@ describe('NoLivro', () => {
   })
 
   it('uma linha por lugar; sem período, a obra; sem lugar, nada', () => {
-    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null }
+    const outro: LugarNoLivro = { publicacao: 'OUTRO', volume: '', periodo: null, grupo: { id: 'GR-OUTRO-01', titulo: 'Grupo de teste', tituloDe: '1. Testgruppe', numero: null, subcolecoes: 0 }, subcolecao: null, emParagrafos: false }
     mostrar([NA_SUBCOLECAO, outro])
     const linhas = bloco().querySelectorAll('p')
     expect(linhas).toHaveLength(2)
@@ -112,5 +112,24 @@ describe('NoLivro', () => {
       </MemoryRouter>,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('Tarefa 26: a linha do livro em parágrafos (o GGG) não tem período: «TESTEG · I. capítulo › 1. seção», o capítulo e a seção em links', () => {
+    const doLivro: LugarNoLivro = {
+      publicacao: 'TESTEG',
+      volume: '',
+      periodo: 'Ferro II (fase de teste)',
+      grupo: { id: 'GR-TESTEG-01', titulo: 'Época de teste e imagens de prova', tituloDe: 'Testzeit und Probebilder', numero: 'I', subcolecoes: 1 },
+      subcolecao: { id: 'GR-TESTEG-01-01', numero: '1', titulo: 'Selos de prova da fase de teste', tituloDe: 'Probesiegel der Teststufe' },
+      emParagrafos: true,
+    }
+    mostrar([NA_SUBCOLECAO, doLivro])
+    const [, linha] = [...bloco().querySelectorAll('p')] as HTMLElement[]
+    expect(linha).toHaveTextContent(/^TESTEG · I\. Época de teste e imagens de prova › 1\. Selos de prova da fase de teste$/)
+    expect(within(linha!).getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+      ['I. Época de teste e imagens de prova', '/grupo/GR-TESTEG-01'],
+      ['1. Selos de prova da fase de teste', '/grupo/GR-TESTEG-01-01'],
+    ])
+    expect(linha!.querySelector('.no-livro-livro')).toHaveTextContent('TESTEG')
   })
 })

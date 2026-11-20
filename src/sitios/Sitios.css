@@ -973,6 +973,12 @@ span.trocar-sitio-nome {
     min-height: var(--alvo-mouse);
   }
 }
+/* o id do sítio dos livros ao lado do nome (fix round 2 da Tarefa 27): discreto, como o apoio da caixa «Mesclar» */
+.sitio-mesclado-id {
+  font-size: 12px;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
 .sitio-desfazer {
   margin: 6px 0 8px;
 }

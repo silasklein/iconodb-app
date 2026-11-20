@@ -59,10 +59,10 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     const grupo = screen.getByRole('group', { name: 'Filtrar por região' })
     const nomes = within(grupo).getAllByRole('button').map((b) => b.getAttribute('aria-label'))
     // Pacote 8: TESTE-5 a TESTE-8 a mais (TESTE-7 e TESTE-8 no Levante Sul, TESTE-5 e TESTE-6 sem coordenada); TESTE-4, mesclado
-    // em TESTE-2, não aparece.
+    // em TESTE-2, não aparece. Pacote 11: mais TESTEG-9 (o achado «do texto» do livro em parágrafos), no Levante Sul.
     expect(nomes).toEqual([
-      'Todas, 13 sítios',
-      'Levante Sul, 5 sítios',
+      'Todas, 14 sítios',
+      'Levante Sul, 6 sítios',
       'Levante Norte, 2 sítios',
       'Transjordânia, 0 sítios (nenhum ainda)',
       'Egito, 1 sítio',
@@ -73,14 +73,14 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
       'Sem coordenada, 3 sítios',
       'Fora das regiões, 1 sítio',
     ])
-    expect(within(grupo).getByRole('button', { name: 'Todas, 13 sítios' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(grupo).getByRole('button', { name: 'Todas, 14 sítios' })).toHaveAttribute('aria-pressed', 'true')
     expect(chip('Chipre')).toHaveClass('regiao-chip-vazia')
   })
 
   it('as etiquetas combinam (união) e filtram a lista e o mapa; o endereço guarda o filtro', async () => {
     await abrir()
-    expect(linhas()).toHaveLength(13) // pacote 8: TESTE-5 a TESTE-8 a mais (TESTE-4, mesclado, não)
-    expect(pontos()).toHaveLength(9) // 13 sítios, 3 sem coordenada, 2 de uma coordenada só (Gêmeos)
+    expect(linhas()).toHaveLength(14) // pacote 8: TESTE-5 a TESTE-8 a mais (TESTE-4, mesclado, não); pacote 11: TESTEG-9
+    expect(pontos()).toHaveLength(10) // 14 sítios, 3 sem coordenada, 2 de uma coordenada só (Gêmeos)
     await userEvent.click(chip('Egito'))
     expect(endereco()).toBe('/sitios?regioes=egito')
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-1']))
@@ -96,7 +96,7 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     await userEvent.click(chip('Egito')) // tirar uma
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-2']))
     await userEvent.click(screen.getByRole('button', { name: 'Limpar filtro' }))
-    await waitFor(() => expect(linhas()).toHaveLength(13))
+    await waitFor(() => expect(linhas()).toHaveLength(14))
     expect(endereco()).toBe('/sitios')
   })
 
@@ -123,7 +123,7 @@ describe('o filtro por região (etiquetas que se combinam)', () => {
     await abrir('/sitios?regioes=egito')
     await waitFor(() => expect(linhas()).toEqual(['SI-aaaaaaaa-1']))
     await userEvent.click(screen.getByRole('button', { name: /^Todas, / }))
-    await waitFor(() => expect(linhas()).toHaveLength(13))
+    await waitFor(() => expect(linhas()).toHaveLength(14))
     await userEvent.click(chip('Sem coordenada'))
     await waitFor(() => expect(linhas()).toEqual(['TESTE-5', 'SI-aaaaaaaa-3', 'TESTE-6'])) // pacote 8: as partes sem coordenada
     expect(pontos()).toHaveLength(0)
@@ -348,7 +348,7 @@ describe('«Mostrar no mapa» e «Abrir no mapa»', () => {
   it('/sitios?foco=<sítio> chega com o mapa centrado e o cartão aberto; um filtro que o esconde é desfeito', async () => {
     await abrir('/sitios?foco=SI-aaaaaaaa-1&regioes=ira', 1280)
     expect(await screen.findByRole('dialog', { name: 'Sítio selecionado: Tell do Egito' })).toBeInTheDocument()
-    await waitFor(() => expect(linhas()).toHaveLength(13)) // pacote 8: TESTE-5 a TESTE-8 a mais
+    await waitFor(() => expect(linhas()).toHaveLength(14)) // pacote 8: TESTE-5 a TESTE-8 a mais
     expect(chip('Irã')).toHaveAttribute('aria-pressed', 'false')
   })
 

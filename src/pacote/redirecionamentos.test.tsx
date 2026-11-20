@@ -113,13 +113,16 @@ describe('revisão final (N2): destinosCriadosOuNenhum', () => {
 })
 
 describe('Parte 2C, bloco 3: a obra do usuário publicada (tipo obra)', () => {
-  it('só de um BIB-<aparelho>-<n> para um BIB-<dígitos> que existe em bib_entry', async () => {
+  // Etapa 4, Tarefa 27 (decisão 92, c6): também de um BIB-<dígitos> para outro (a obra repetida unida no fechamento); o
+  // teste completo da obra unida está em src/bibliografia/obrasUnidas.test.tsx
+  it('só de um BIB-<aparelho>-<n> (ou de um BIB-<dígitos>, a obra unida) para um BIB-<dígitos> que existe em bib_entry', async () => {
     usarMotor(await bancoDeTeste({ escrita: true }))
     try {
       await executar(`INSERT INTO main.redirecionamento (de, para, tipo, criado) VALUES ('BIB-bbbbbbbb-1', 'BIB-999999', 'obra', 1),
         ('BIB-bbbbbbbb-2', 'BIB-cccccccc-1', 'obra', 1), ('BIB-900001', 'BIB-900002', 'obra', 0), ('BIB-bbbbbbbb-3', 'BIB-900001', 'verbete', 0),
-        ('GL-bbbbbbbb-4', 'BIB-900001', 'obra', 0), ('BIB-bbbbbbbb-5', 'BIB-900002', 'obra', 0)`)
+        ('GL-bbbbbbbb-4', 'BIB-900001', 'obra', 0), ('BIB-bbbbbbbb-5', 'BIB-900002', 'obra', 0), ('BIB-800003', 'BIB-cccccccc-1', 'obra', 0)`)
       expect(Object.fromEntries([...(await redirecionamentosDoPacote())].filter(([de]) => de.startsWith('BIB-')))).toEqual({
+        'BIB-900001': 'BIB-900002',
         'BIB-bbbbbbbb-5': 'BIB-900002',
         'BIB-teste123-1': 'BIB-900090',
       })

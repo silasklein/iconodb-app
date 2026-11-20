@@ -1,0 +1,108 @@
+/*
+ * O livro em parágrafos nas Coleções (Tarefa 26, tela 3): «Ler o capítulo» (link de texto com o ícone do livro), «Ler a seção»
+ * (o botão contornado) e «§§ desta seção». Só tokens que já existem.
+ */
+.ler-paragrafos {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 6px;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+  padding: 10px 0;
+  font-size: 15px;
+  color: var(--texto);
+  text-decoration: none;
+}
+.ler-paragrafos svg {
+  align-self: center;
+}
+.ler-paragrafos-rotulo {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+.ler-paragrafos:hover .ler-paragrafos-rotulo {
+  text-decoration-color: currentColor;
+}
+.ler-paragrafos-intervalo {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.ler-paragrafos-botao {
+  align-items: center;
+  column-gap: 10px;
+  padding: 0 18px;
+  border: 1.5px solid var(--texto);
+  border-radius: 6px;
+}
+.ler-paragrafos-botao .ler-paragrafos-rotulo {
+  text-decoration: none;
+}
+.ler-paragrafos-botao:hover {
+  background: var(--superficie);
+}
+
+.paragrafos-da-secao {
+  display: flex;
+  flex-direction: column;
+}
+.paragrafos-da-secao ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.paragrafos-da-secao-linha {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: baseline;
+  min-height: var(--alvo-toque);
+  box-sizing: border-box;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--filete);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--texto);
+  text-decoration: none;
+}
+.paragrafos-da-secao-numero {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.paragrafos-da-secao-frase {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.paragrafos-da-secao-linha:hover .paragrafos-da-secao-frase {
+  text-decoration: underline;
+  text-decoration-color: var(--controle);
+  text-underline-offset: 3px;
+}
+
+/* A linha de §§ sob o título de uma seção nas listas («§§ 27–31»). */
+.secao-intervalo {
+  display: block;
+  font-size: 12px;
+  color: var(--secundario);
+}
+[aria-current] .secao-intervalo {
+  color: inherit;
+  opacity: 0.8;
+}
+
+@media (min-width: 768px) {
+  .paragrafos-da-secao-linha {
+    grid-template-columns: 76px minmax(0, 1fr);
+    min-height: var(--alvo-mouse);
+  }
+  .ler-paragrafos {
+    min-height: var(--alvo-mouse);
+    padding: 4px 0;
+  }
+  .ler-paragrafos-botao {
+    min-height: 40px;
+    padding: 0 16px;
+  }
+}

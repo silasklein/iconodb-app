@@ -151,7 +151,7 @@ describe('buscar() sobre o pacote sintético', () => {
     const r = await buscar('mahtes', opcoes)
     expect(r.contagens.tudo).toBe(3)
     expect(r.contagens.termo).toBeLessThanOrEqual(r.contagens.tudo)
-    expect(Object.keys(r.contagens).sort()).toEqual(['bibliografia', 'colecao', 'local', 'termo', 'tudo'])
+    expect(Object.keys(r.contagens).sort()).toEqual(['bibliografia', 'colecao', 'local', 'termo', 'texto', 'tudo'])
   })
 
   it('número do objeto digitado acha o objeto', async () => {

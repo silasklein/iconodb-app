@@ -690,7 +690,7 @@ test('Parte 2C, bloco 2: sem internet, A mescla Maḥtiṣ em Maḥteṣ e B, de
       await x.page.goto('#/sitio/TESTE-1')
       await expect(x.page).toHaveURL(/#\/sitio\/TESTE-7$/, { timeout: 30_000 })
       await expect(titulo(x.page, 'Maḥtiṣ Teste')).toBeVisible()
-      await expect(x.page.locator('dt:text-is("Mesclado aqui") + dd')).toHaveText(/^Maḥteṣ Teste\s*\(dos livros\)\s*desfazer$/)
+      await expect(x.page.locator('dt:text-is("Mesclado aqui") + dd')).toHaveText(/^Maḥteṣ Teste\s*\(dos livros\)\s*· TESTE-1\s*desfazer$/)
       await x.page.goto('#/sitios')
       await expect(x.page.locator('a.lista-linha').filter({ hasText: 'Maḥtiṣ Teste' })).toHaveCount(1)
       await expect(x.page.locator('a.lista-linha').filter({ hasText: /Maḥteṣ Teste/ })).toHaveCount(0)

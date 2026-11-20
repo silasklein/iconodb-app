@@ -49,7 +49,8 @@ describe('o absorvido não aparece: a lista, o mapa, as opções e o nome vão a
     renderizarRota('/sitios')
     await waitFor(() => expect(linhas()).toContain('TESTE-2'))
     await waitFor(() => expect(linhas()).not.toContain('TESTE-4'))
-    expect(linhas()).toEqual(['TESTE-5', 'TESTE-8', 'TESTE-1', 'TESTE-7', 'SI-aaaaaaaa-1', 'TESTE-2', 'TESTE-3', 'TESTE-6'])
+    // pacote 11: mais TESTEG-9 «Tell Achado Teste» (o achado «do texto» do livro em parágrafos)
+    expect(linhas()).toEqual(['TESTE-5', 'TESTE-8', 'TESTE-1', 'TESTE-7', 'SI-aaaaaaaa-1', 'TESTEG-9', 'TESTE-2', 'TESTE-3', 'TESTE-6'])
     // 3 do livro + CA00001 trocado para TESTE-4 (absorvido); TESTE-5 e TESTE-6 (as partes) não têm objetos
     expect(linhaDe('TESTE-2')).toHaveTextContent('4 objetos')
     const campo = screen.getByRole('searchbox', { name: 'Buscar sítio' })
@@ -137,14 +138,14 @@ describe('a busca (a página inteira) vale pelo destino (especificação §7)', 
 })
 
 describe('o Menu conta os sítios como a lista', () => {
-  it('8 sítios: os 8 do pacote menos TESTE-4 (mesclado em TESTE-2), mais o seu', async () => {
+  it('9 sítios: os 9 do pacote (pacote 11: com TESTEG-9) menos TESTE-4 (mesclado em TESTE-2), mais o seu', async () => {
     render(
       <MemoryRouter>
         <Menu variante="folha" aoFechar={() => undefined} />
       </MemoryRouter>,
     )
     const sitiosLink = await screen.findByRole('link', { name: /Sítios/ })
-    await waitFor(() => expect(sitiosLink).toHaveTextContent('8 sítios'))
+    await waitFor(() => expect(sitiosLink).toHaveTextContent('9 sítios'))
   })
 })
 

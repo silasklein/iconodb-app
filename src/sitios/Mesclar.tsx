@@ -318,7 +318,7 @@ function QualFica({ id, outro, sobre, aoFechar }: { id: string; outro: string; s
 
 /**
  * A linha «Mesclado aqui» nos dados do sítio: um por absorvido (diretos e indiretos), o nome (abre a página dele, que volta aqui
- * com o aviso), «(seu)» ou «(dos livros)» e «desfazer». A confirmação abre logo abaixo da linha, com o foco em «Cancelar»; ao
+ * com o aviso), «(seu)» ou «(dos livros)», o id do sítio dos livros («· GGG-1135») e «desfazer». A confirmação abre logo abaixo da linha, com o foco em «Cancelar»; ao
  * fechar, o foco volta ao «desfazer». Desfeita, `aoDesfazer` (a página mostra a mensagem com «Ver»).
  */
 export function MescladoAqui({ id, sobre, aoAbrir, aoDesfazer }: { id: string; sobre: SobreOsSitios; aoAbrir: () => void; aoDesfazer: (entra: string, nome: string) => void }) {
@@ -349,6 +349,14 @@ export function MescladoAqui({ id, sobre, aoAbrir, aoDesfazer }: { id: string; s
             <span className="sitio-mesclado">
               <Link to={`/sitio/${encodeURIComponent(x)}`}>{nome}</Link>
               <span>({sobre.resolucao.eDoUsuario(x) ? 'seu' : 'dos livros'})</span>
+              {/* o livro e o número do sítio dos livros, como na caixa «Mesclar» («IPIAO-1135»): dois absorvidos de mesmo nome
+                  (a cópia de um livro mesclada no sítio de mesmo número do outro) se distinguem (Tarefa 27, fix round 2) */}
+              {!sobre.resolucao.eDoUsuario(x) && (
+                <span className="sitio-mesclado-id">
+                  <span aria-hidden="true">· </span>
+                  <span className="codigo">{x}</span>
+                </span>
+              )}
               <button
                 ref={(b) => {
                   if (b) gatilhos.current.set(x, b)

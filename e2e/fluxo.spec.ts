@@ -93,7 +93,8 @@ test('entrar, preparar, consultar e, sem internet, abrir de novo', async ({ page
   // Um grupo da obra, um item dele e o Voltar ao grupo.
   await page.goto('#/colecoes')
   await semRolagemHorizontal(page, 'Coleções')
-  await page.getByRole('navigation', { name: 'Obras' }).getByRole('link', { name: /TESTE/ }).click()
+  // pacote 11: o livro em parágrafos (TESTEG) é outra aba; esta é a do TESTE I
+  await page.getByRole('navigation', { name: 'Obras' }).getByRole('link', { name: 'TESTE I', exact: true }).click()
   await semRolagemHorizontal(page, 'Coleções de uma obra')
   await page.locator('a.colecoes-grupo').first().click()
   const grade = page.getByRole('region', { name: 'Objetos do grupo' })

@@ -37,9 +37,10 @@ describe('tela Busca: resultados', () => {
     numeros: ['CA00001', 'CA00002', 'BA00001'],
     total: 3,
     totalSemFiltros: 3,
-    contagens: { tudo: 3, termo: 2, local: 0, bibliografia: 1, colecao: 0 },
+    contagens: { tudo: 3, texto: 0, termo: 2, local: 0, bibliografia: 1, colecao: 0 },
     usuario: [],
-    contagensDoUsuario: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+    contagensDoUsuario: { tudo: 0, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+    paragrafos: [],
     facetas: [
       { chave: 'publicacao', rotulo: 'Publicação', opcoes: [{ valor: 'TESTE', rotulo: 'TESTE I', n: 3, ativa: false }] },
       {
@@ -163,7 +164,7 @@ describe('tela Busca: resultados', () => {
   })
 
   it('sem resultado: "Nada encontrado para «…»" e a sugestão de buscar em Tudo', async () => {
-    mock.mockResolvedValue(resultado({ objetos: [], numeros: [], total: 0, totalSemFiltros: 0, contagens: { tudo: 4, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
+    mock.mockResolvedValue(resultado({ objetos: [], numeros: [], total: 0, totalSemFiltros: 0, contagens: { tudo: 4, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
     abrirComRota('/busca?q=%20xyzzy%20&escopo=local')
     expect(await screen.findByText('Nada encontrado para «xyzzy»')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Buscar em Tudo' }))
@@ -209,7 +210,7 @@ describe('tela Busca: resultados', () => {
 
   it('T17-B-29: uma busca só com acertos do usuário (sem facetas) não deixa a coluna «Filtros» vazia: ela diz que não há o que filtrar', async () => {
     instalarMatchMedia(1280)
-    mock.mockResolvedValue(resultado({ objetos: [], numeros: [], total: 0, totalSemFiltros: 0, facetas: [], usuario: [{ tipo: 'nota', ref: 'NT-aaaaaaaa-1', rotulo: 'uma nota', trecho: '', destino: '/nota/NT-aaaaaaaa-1' } as never], contagensDoUsuario: { tudo: 1, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
+    mock.mockResolvedValue(resultado({ objetos: [], numeros: [], total: 0, totalSemFiltros: 0, facetas: [], usuario: [{ tipo: 'nota', ref: 'NT-aaaaaaaa-1', rotulo: 'uma nota', trecho: '', destino: '/nota/NT-aaaaaaaa-1' } as never], contagensDoUsuario: { tudo: 1, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
     abrirComRota('/busca?q=nota')
     const facetas = await screen.findByRole('complementary', { name: 'Filtros' })
     expect(within(facetas).getByText('Não há o que filtrar nesta busca.')).toBeInTheDocument()
@@ -321,9 +322,9 @@ describe('tela Busca: resultados', () => {
         numeros: [],
         total: 0,
         totalSemFiltros: 0,
-        contagens: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+        contagens: { tudo: 0, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
         usuario,
-        contagensDoUsuario: { tudo: usuario.length, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+        contagensDoUsuario: { tudo: usuario.length, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
         ...extra,
       })
 
@@ -377,7 +378,7 @@ describe('tela Busca: resultados', () => {
       mock.mockResolvedValue(
         resultado({
           usuario: [acerto({ tipo: 'colecao', ref: 'CO-a-1', rotulo: 'Minhas notas' })],
-          contagensDoUsuario: { tudo: 1, termo: 0, local: 0, bibliografia: 0, colecao: 1 },
+          contagensDoUsuario: { tudo: 1, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 1 },
         }),
       )
       abrirComRota('/busca?q=leao')
@@ -388,7 +389,7 @@ describe('tela Busca: resultados', () => {
     })
 
     it('"Nada encontrado" sugere Tudo também quando o que há lá é da camada do usuário', async () => {
-      mock.mockResolvedValue(soUsuario([], { contagensDoUsuario: { tudo: 2, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
+      mock.mockResolvedValue(soUsuario([], { contagensDoUsuario: { tudo: 2, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 } }))
       abrirComRota('/busca?q=leao&escopo=termo')
       expect(await screen.findByText('Nada encontrado para «leao»')).toBeInTheDocument()
       expect(screen.getByText(/Em «Tudo» há 2 acertos na sua camada/)).toBeInTheDocument()

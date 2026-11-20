@@ -76,7 +76,7 @@ describe('Sincronização: «Procurar livros novos»', () => {
     usarProcura({ obterFonte: async () => fonte({ outra: true }), armazem })
     abrir()
     await userEvent.click(within(secao()).getByRole('button', { name: 'Procurar livros novos' }))
-    expect(await within(secao()).findByText('Há uma versão nova dos livros no Dropbox: TESTE I.')).toBeInTheDocument()
+    expect(await within(secao()).findByText('Há uma versão nova dos livros no Dropbox: TESTE I, TESTEG, TESTEGEN.')).toBeInTheDocument()
     await userEvent.click(within(secao()).getByRole('button', { name: 'Atualizar os livros' }))
     expect(screen.getByTestId('onde')).toHaveTextContent('/preparando')
   })

@@ -70,8 +70,9 @@ export interface Leitura {
 export interface ItemDaFonte {
   id: string
   publicacao: string
-  tipo: 'catalog' | 'intro_figure'
-  /** "TESTE I: 2" ou "TESTE I: Abb. 1" (decisão 39). */
+  /** 'figura': a figura de um livro em parágrafos (o GGG), sem os campos do catálogo (pacote 11). */
+  tipo: 'catalog' | 'intro_figure' | 'figura'
+  /** "TESTE I: 2", "TESTE I: Abb. 1" ou, numa figura do livro em parágrafos, "GGG: 3b", sem «Abb.» (decisão 39). */
   origem: string
   /** A mesma referência em partes, para juntar várias numa linha (`formatarReferencias`). */
   referencia: ReferenciaDeFonte
@@ -116,6 +117,8 @@ export interface Datacao {
 export interface SitioDoItem {
   /** "<SIGLA>-<n>": o sítio é de uma publicação. */
   id: string
+  /** O item cujo achado deu o sítio (na peça de dois livros, a figura que diz «pela fig. X no § N»; revisão do branch, M3). */
+  itemId: string
   /** Forma em uso (verbete-nome em português) ou, sem verbete, como impresso. */
   nome: string
   literal: string
@@ -125,6 +128,12 @@ export interface SitioDoItem {
   certeza: Certeza
   /** O contexto do achado (assertion `context`), como impresso. */
   contexto: string | null
+  /** O achado «do texto» (decisão 90.1; `assertion.reason = 'do_texto'`): tirado do texto do livro, não de uma ficha. */
+  doTexto: boolean
+  /** O trecho de onde o achado «do texto» veio (`assertion.passage_id`); null no achado comum e no tirado do crédito. */
+  trechoId: string | null
+  /** O § desse trecho (`passage.locator` «§N»), para o link à página do §; null sem trecho. */
+  paragrafo: number | null
 }
 
 export interface Medida {
@@ -287,6 +296,8 @@ export interface NoLivro {
   /** O grupo de cima: `numero` e `subcolecoes` para o número do livro antes do título (decisão 81, `tituloDoGrupo`). */
   grupo: { id: string; titulo: string; tituloDe: string; numero: string | null; subcolecoes: number }
   subcolecao: { id: string; numero: string; titulo: string; tituloDe: string } | null
+  /** A linha é de um livro em parágrafos (o GGG): sem período, e a seção com o número e ponto («1. …», Tarefa 26). */
+  emParagrafos: boolean
 }
 
 /** Um objeto numa grade ou lista (grupo, verbete, obra, sítio). */
@@ -309,6 +320,26 @@ export interface ObjetoResumo {
   semNumero?: true
   /** O SKC, Nr. do objeto SKC (decisão 38), se já tem. */
   nrSkc?: number
+  /**
+   * O achado do objeto é «do texto» (decisão 90.1): a marca no cartão do sítio e no mapa, com o trecho e o § de onde veio
+   * (null quando o achado foi tirado do crédito, sem trecho). Ausente no achado comum.
+   */
+  achadoDoTexto?: { sigla: string; trechoId: string | null; paragrafo: number | null }
+  /**
+   * A figura do livro em parágrafos sem tipo (sem campo 5; Tarefa 26, fix 1): o rótulo dela («GGG: 3a», decisão 39), que o cartão
+   * mostra na linha do tipo. Fica fora de `tipo`, que é a faceta «Tipo» da Busca. Ausente nos outros objetos.
+   */
+  figura?: string
+}
+
+/**
+ * Os §§ (`§N`) de um grupo do livro em parágrafos (Tarefa 26): os trechos dele (`author_group_passage` e a introdução) e, no
+ * capítulo, os das seções. null num grupo de livro de catálogo (o IPIAO), que não tem §§.
+ */
+export interface IntervaloDeParagrafos {
+  primeiro: number
+  ultimo: number
+  total: number
 }
 
 export interface Grupo {
@@ -335,6 +366,8 @@ export interface Grupo {
   numero: string | null
   /** Quantas subcoleções o grupo tem (0 numa subcoleção e num pacote 5–8). */
   subcolecoes: number
+  /** Os §§ do grupo no livro em parágrafos (o capítulo conta os das seções); null fora dele. */
+  paragrafos: IntervaloDeParagrafos | null
 }
 
 /** Uma subcoleção na lista do grupo e nas vizinhas («anterior», «próxima»). */
@@ -345,6 +378,8 @@ export interface SubcolecaoResumo {
   titulo: string
   tituloDe: string
   objetos: number
+  /** Os §§ da seção (o livro em parágrafos); null fora dele. */
+  paragrafos: IntervaloDeParagrafos | null
 }
 
 export interface TextoDaIntroducao {
@@ -366,6 +401,8 @@ export interface GrupoDetalhe extends Omit<Grupo, 'subcolecoes'> {
   posicao: { n: number; total: number } | null
   anterior: SubcolecaoResumo | null
   proxima: SubcolecaoResumo | null
+  /** Os §§ do próprio grupo, com a primeira frase (o português, ou o original), em ordem: «§§ desta seção». Vazio fora do livro em parágrafos. */
+  paragrafosDaSecao: { numero: number; frase: string | null }[]
 }
 
 export type ContextoDeNavegacao = { tipo: 'grupo'; id: string } | { tipo: 'lista'; ids: string[] }
@@ -447,9 +484,11 @@ export interface SitioResumo {
   /** A região: o verbete-pai (`glossary_entry.parent_id`) do verbete que dá nome ao sítio; null quando não há (R18). */
   regiao: { id: string; nome: string } | null
   objetos: number
+  /** Dos objetos, quantos têm o achado «do texto» (decisão 90.1; o cartão do mapa). Ausente num sítio do usuário. */
+  doTexto?: number
 }
 
-export interface Sitio extends Omit<SitioResumo, 'objetos'> {
+export interface Sitio extends Omit<SitioResumo, 'objetos' | 'doTexto'> {
   gradeRef: string | null
   metodo: 'grid' | 'gazetteer' | null
   fonteDaCoordenada: string | null
@@ -468,4 +507,139 @@ export interface Regiao {
   /** Como no banco: `<polygon points="x,y …"/>`, coordenadas de 0 a 1 (R4). */
   selector: string
   pontos: [number, number][]
+}
+
+/** Um trecho do texto da fonte, como impresso (o alemão do livro; no livro digitalizado, o corrigido), e o id dele no pacote. */
+export interface TrechoDaFonte {
+  id: string
+  texto: string
+}
+
+/**
+ * Uma correção do texto digitalizado (`correcao_de_leitura`, pacote 11): o trecho [inicio, fim) do texto corrigido, como foi
+ * lido (`lido`) e a regra (PL, AYIN, ACENTO…). Nas consultas, `inicio` e `fim` já vêm em posições UTF-16 de `texto` (o pacote
+ * os grava em code points; `correcoesEmUtf16`), prontos para `slice`.
+ */
+export interface CorrecaoDeLeitura {
+  inicio: number
+  fim: number
+  lido: string
+  regra: string
+}
+
+/** Um trecho (texto corrido ou nota) de um § do livro em parágrafos, nas três línguas. */
+export interface TrechoDoParagrafo extends TrechoDaFonte {
+  /** `passage.ordinal`: a posição do trecho no §; numa nota, o número da nota. */
+  ordinal: number
+  pagina: number | null
+  /** O português renderizado (sem marcadores; `unit_pt_render`); null sem tradução. */
+  portugues: string | null
+  /** Os verbetes no português, em CODE POINTS (como em `Leitura.termos`). */
+  termos: Termo[]
+  estado: EstadoDaTraducao | null
+  desatualizada: boolean
+  /** O inglês da tradução (o GGIG) alinhado a este trecho (`aligned_passage`, noutro banco); vários juntos por espaço; null sem. */
+  ingles: string | null
+  /** As correções de leitura do trecho, em UTF-16 de `texto`, na ordem do texto. */
+  correcoes: CorrecaoDeLeitura[]
+  /** As correções de leitura do inglês (no banco da tradução), em UTF-16 de `ingles` (o juntado), na ordem do texto. */
+  correcoesDoIngles: CorrecaoDeLeitura[]
+  /** A página do inglês alinhado (`passage.page` no banco da tradução; a primeira, quando vários se juntam); null sem. */
+  paginaDoIngles: number | null
+}
+
+/** Um grupo da autora no caminho do § (o capítulo e a seção), com o título em português, para o link. */
+export interface GrupoNoCaminho {
+  id: string
+  /** «I. Época de teste…» (o grupo de cima, `tituloDoGrupo`), «1. Selos de prova…» (a subcoleção, com o número). */
+  rotulo: string
+}
+
+/** A seção em que o § está (o grupo mais interno: a subcoleção ou, fora dela, o capítulo) e os §§ dela, em ordem (decisão 91, a8). */
+export interface SecaoDoParagrafo {
+  id: string
+  /** É uma subcoleção («da seção»), não o grupo de cima («do capítulo»). */
+  subcolecao: boolean
+  paragrafos: number[]
+}
+
+/** O § vizinho: o número e a primeira frase (do português, ou do original sem tradução). */
+export interface VizinhoDoParagrafo {
+  numero: number
+  frase: string | null
+}
+
+/** Uma figura que o § cita (`passage_item 'mentions'`): o item, o objeto dele e o número e a letra no livro (os links do texto). */
+export interface ReferenciaDoParagrafo {
+  itemId: string
+  objeto: Numero
+  numero: number
+  sufixo: string
+}
+
+/** Um § do livro em parágrafos (rota `/paragrafo/:sigla/:numero`). */
+export interface ParagrafoDetalhe {
+  sigla: string
+  numero: number
+  /** O ano da publicação (o «TESTEG 2021» do trilho do alemão); null sem. */
+  ano: number | null
+  /** A tradução inglesa aberta (`publication.translation_of`, o GGIG); null sem. */
+  traducao: { sigla: string; ano: number | null } | null
+  /**
+   * O caminho do grupo (a subcoleção, quando há) em que o § está, do livro ao título mais interno, em PORTUGUÊS (Tarefa 25):
+   * a obra e os `grupos`; [] fora de grupo.
+   */
+  caminho: string[]
+  /** Os grupos do caminho, do de cima ao mais interno, para os links. */
+  grupos: GrupoNoCaminho[]
+  /** A seção do § e os §§ dela; null fora de grupo. */
+  secao: SecaoDoParagrafo | null
+  /** As figuras que o § cita, item por item (mais de um item pode ser o mesmo objeto). */
+  referencias: ReferenciaDoParagrafo[]
+  /** O texto corrido, em ordem. */
+  trechos: TrechoDoParagrafo[]
+  /** As notas do §, em ordem. */
+  notas: TrechoDoParagrafo[]
+  /** As figuras citadas no § (`passage_item 'mentions'`), uma por objeto, na ordem das fontes. */
+  figuras: ObjetoResumo[]
+  anterior: VizinhoDoParagrafo | null
+  seguinte: VizinhoDoParagrafo | null
+}
+
+/** Um § que cita uma figura (`paragrafosQueCitam`): «Discutida em». */
+export interface ParagrafoQueCita {
+  sigla: string
+  numero: number
+  /** O primeiro trecho do § que cita a figura. */
+  trechoId: string
+  /** A frase do § que cita a figura (decisão 91, a3). */
+  frase: string
+  /** 'pt': a frase é do português; 'original': do texto do livro (o trecho não tem tradução, ou ela não deixou achar a frase). */
+  lingua: 'pt' | 'original'
+  /** O caminho do §, em português, como `ParagrafoDetalhe.caminho` (a obra primeiro). */
+  caminho: string[]
+}
+
+/**
+ * Um livro em parágrafos (o GGG) ou a tradução dele (o GGIG) como obra da Bibliografia (Tarefa 26): a obra igual da
+ * Bibliografia comum (mesmo título e ano), ou uma entrada própria `LIVRO-<sigla>`, com os números do livro.
+ */
+export interface LivroNaBibliografia {
+  sigla: string
+  /** O id na Bibliografia (a rota `/obra/:id`): o `bib_entry` igual, ou `LIVRO-<sigla>`. */
+  obraId: string
+  /** «Autora – Autor 2010»: os sobrenomes e o ano do CSL da publicação. */
+  curta: string
+  titulo: string
+  csl: Record<string, unknown> | null
+  /** A sigla do original, numa tradução (`publication.translation_of`). */
+  traducaoDe: string | null
+  /** A sigla da tradução aberta do livro. */
+  traducao: string | null
+  /** Os capítulos (os grupos de cima), os §§ (`§N`) e as figuras do próprio livro. */
+  capitulos: number
+  paragrafos: number
+  figuras: number
+  /** O primeiro § (o «Ler o § 1»); null sem §§. */
+  primeiro: number | null
 }

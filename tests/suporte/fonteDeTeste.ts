@@ -19,6 +19,11 @@ export const RAIZ_DO_PACOTE_6 = join(import.meta.dirname, '..', 'fixtures', 'pac
  */
 export const RAIZ_DO_PACOTE_8 = join(import.meta.dirname, '..', 'fixtures', 'pacote-8')
 export const RAIZ_DO_PACOTE_9 = join(import.meta.dirname, '..', 'fixtures', 'pacote-9')
+/**
+ * Etapa 4 (Tarefa 23): o pacote sintético do schema 10 de antes do livro em parágrafos (2402810), só o núcleo. O app novo
+ * continua a abri-lo (sem `correcao_de_leitura`, sem o TESTEG e o TESTEGEN).
+ */
+export const RAIZ_DO_PACOTE_10 = join(import.meta.dirname, '..', 'fixtures', 'pacote-10')
 
 function arquivosEm(pasta: string): string[] {
   return readdirSync(pasta).flatMap((nome) => {

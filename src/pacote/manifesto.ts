@@ -21,9 +21,14 @@ import { arquivosDoBanco } from '../banco/arquivos'
  *   'SKC' (a obra do usuário publicada) e `redirecionamento.tipo` 'obra'. Num pacote 5–9 as colunas faltam: as consultas dão
  *   null (src/banco/consultas.ts: `temNivelAutomatico` olha `level_auto`; as outras colunas vêm de `SELECT g.*`/`r.*`/`b.origin`
  *   e dão null quando faltam).
+ * - 11: os livros digitalizados em parágrafos (etapa 4: o GGG e a tradução inglesa, o GGIG): a tabela `correcao_de_leitura`
+ *   (as correções do texto lido, em code points do texto corrigido), e o que já cabia no 7–10 e agora tem linhas: o item
+ *   `kind 'figura'`, os trechos `§N` com `passage_item 'mentions'`, `passage.aligned_passage` (o inglês → o alemão, noutro
+ *   banco) e o achado «do texto» (`assertion.reason = 'do_texto'`, decisão 90.1). Num pacote 5–10 a tabela falta: nenhuma
+ *   correção (src/banco/consultas.ts, `paragrafo`).
  */
-export const SCHEMA_ESPERADO = 10
-export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8, 9, 10]
+export const SCHEMA_ESPERADO = 11
+export const SCHEMAS_ACEITOS: readonly number[] = [5, 6, 7, 8, 9, 10, 11]
 export const CAMINHO_DO_MANIFESTO = 'nucleo/manifest.json'
 export const MSG_SCHEMA = 'Este pacote é de outra versão do banco; gere-o de novo com `app-export`.'
 

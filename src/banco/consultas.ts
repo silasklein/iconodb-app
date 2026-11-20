@@ -11,11 +11,13 @@ import { chaveDaFonte, formatarReferencias, type ReferenciaDeFonte } from './ref
 import { tradicaoValida } from '../sitios/modelo'
 import { tituloDoGrupo } from '../ui/tituloDoGrupo'
 import type { GrafiaDoPacote, ParSugerido } from '../sitios/resolucao'
+import { correcoesEmUtf16, dividirEmFrases, fraseDoTrechoQueCita, numeroDoParagrafo } from './paragrafos'
 import {
   NIVEIS,
   type Ancora,
   type CampoDoCatalogo,
   type Certeza,
+  type CorrecaoDeLeitura,
   type Contagens,
   type ContextoDeNavegacao,
   type Datacao,
@@ -25,9 +27,11 @@ import {
   type Hipotese,
   type HipotesesPorNivel,
   type Imagem,
+  type IntervaloDeParagrafos,
   type ItemDaFonte,
   type ItemDetalhe,
   type Leitura,
+  type LivroNaBibliografia,
   type Medida,
   type NoLivro,
   type ModoDeExibicao,
@@ -35,6 +39,8 @@ import {
   type ObjetoResumo,
   type Obra,
   type ObraResumo,
+  type ParagrafoDetalhe,
+  type ParagrafoQueCita,
   type Paralelo,
   type ReferenciaBibliografica,
   type Regiao,
@@ -45,6 +51,8 @@ import {
   type SubcolecaoResumo,
   type Termo,
   type TextoDaIntroducao,
+  type TrechoDaFonte,
+  type TrechoDoParagrafo,
   type Verbete,
   type VerbeteDaLista,
   type VerbeteResumo,
@@ -110,7 +118,7 @@ function tipoCurto(texto: string | null): string | null {
   return primeira.replace(/\.$/, '').trim() || null
 }
 
-/** Ordem das fontes: publicação na ordem do manifesto, catálogo antes das figuras, número, sufixo. */
+/** Ordem das fontes: publicação na ordem de `publicacoesAbertas()` (catálogos, livros em parágrafos, traduções), catálogo antes das figuras, número, sufixo. */
 async function comparadorDeFonte(): Promise<(a: L, b: L) => number> {
   const ordemPub = new Map((await publicacoesAbertas()).map((p, i) => [p.sigla, i]))
   return (x, y) =>
@@ -161,6 +169,11 @@ const SQL_RESUMO = (esq: string, sigla: string) => `
        JOIN ${esq}.site st ON st.id = a.site_id
      WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot'
      ORDER BY a.is_primary DESC, a.id LIMIT 1) AS sitio_id,
+    (SELECT CASE WHEN a.reason = 'do_texto' THEN json_array(a.passage_id, pa.locator, coalesce(a.publication, '${sigla}')) END FROM ${esq}.assertion a
+       JOIN ${esq}.site st ON st.id = a.site_id
+       LEFT JOIN ${esq}.passage pa ON pa.id = a.passage_id
+     WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot'
+     ORDER BY a.is_primary DESC, a.id LIMIT 1) AS achado_do_texto,
     im.thumb_path, im.display_mode
   FROM ${esq}.item i
   LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
@@ -189,6 +202,7 @@ export async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 
     const numero = numeros.get(s(l.id)!)!
     if (vistos.has(numero)) continue
     vistos.add(numero)
+    const doTexto = json<[unknown, unknown, unknown] | null>(l.achado_do_texto, null)
     resumos.push({
       numero,
       itemId: s(l.id)!,
@@ -198,6 +212,8 @@ export async function resumosDosItens(itens: readonly string[], ordem: 'dada' | 
       sitioId: s(l.sitio_id),
       miniatura: s(l.thumb_path),
       display_mode: s(l.display_mode) as ModoDeExibicao | null,
+      ...(l.kind === 'figura' && !s(l.campo5) ? { figura: origemDe(l) } : {}),
+      ...(Array.isArray(doTexto) ? { achadoDoTexto: { sigla: s(doTexto[2]) ?? s(l.publication)!, trechoId: s(doTexto[0]), paragrafo: numeroDoParagrafo(s(doTexto[1])) } } : {}),
     })
   }
   return resumos
@@ -759,14 +775,24 @@ const SQL_GRUPO = (esq: string, onde: string, sub: boolean) => `
     ${SQL_OBJETOS_DO_GRUPO(esq)} AS objetos,
     (SELECT count(*) FROM ${esq}.author_group_item gi JOIN ${esq}.image im ON im.item_id = gi.item_id
      WHERE gi.group_id = g.id) AS imagens,
-    (SELECT count(*) FROM ${esq}.hypothesis h
-       LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id
-     WHERE ${ALVO_ITEM} IN (SELECT item_id FROM ${esq}.author_group_item WHERE group_id = g.id)) AS hipoteses,
+    coalesce(hip.n, 0) AS hipoteses,
     (SELECT json_array(im.thumb_path, im.display_mode) FROM ${esq}.author_group_item gi
        JOIN ${esq}.image im ON im.item_id = gi.item_id
      WHERE gi.group_id = g.id AND im.thumb_path IS NOT NULL ORDER BY gi.ordinal, im.ordinal LIMIT 1) AS capa
   FROM ${esq}.author_group g
+  LEFT JOIN (${SQL_HIPOTESES_POR_GRUPO(esq)}) hip ON hip.gid = g.id
   WHERE ${onde}`
+
+/**
+ * As hipóteses de cada grupo (as do item e as dos elementos dele), numa passada só pelas hipóteses, agrupada por grupo (Tarefa
+ * 27). A subconsulta correlacionada de antes varria `hypothesis` inteira para cada grupo: com as 18 mil hipóteses do IPIAO na
+ * segunda passada, 7 s no navegador para abrir as Coleções. Cada hipótese conta uma vez por grupo (o item é único no grupo).
+ */
+const SQL_HIPOTESES_POR_GRUPO = (esq: string) => `
+  SELECT gi.group_id AS gid, count(*) AS n FROM ${esq}.hypothesis h
+    LEFT JOIN ${esq}.element e ON h.target_type = 'element' AND e.id = h.target_id
+    JOIN ${esq}.author_group_item gi ON gi.item_id = ${ALVO_ITEM}
+  GROUP BY gi.group_id`
 
 function grupoDe(l: L): Grupo {
   const capa = json<[string, string | null] | null>(l.capa, null)
@@ -787,7 +813,64 @@ function grupoDe(l: L): Grupo {
     paiId: s(l.parent_id),
     numero: s(l.numero),
     subcolecoes: n(l.subcolecoes) ?? 0,
+    paragrafos: null,
   }
+}
+
+/** Os §§ de cada grupo: os próprios (os trechos dele e a introdução) e todos (com os das subcoleções, no grupo de cima). */
+interface ParagrafosDoGrupo {
+  proprios: Set<number>
+  todos: Set<number>
+}
+
+/**
+ * Os §§ (`§N`) dos grupos pedidos, em todas as publicações abertas (Tarefa 26): os trechos de `author_group_passage` (schema 9)
+ * e o `intro_passage_id` de cada grupo e das subcoleções dele. Um grupo de livro de catálogo (o IPIAO) não tem trecho `§N`: fica
+ * de fora do mapa.
+ */
+async function paragrafosDosGrupos(grupos: readonly string[]): Promise<Map<string, ParagrafosDoGrupo>> {
+  const saida = new Map<string, ParagrafosDoGrupo>()
+  if (grupos.length === 0) return saida
+  const sub = await temSubcolecoes()
+  const pai = sub ? 'g.parent_id' : 'NULL'
+  const dosGrupos = sub ? `(g.id IN ${EM_IDS} OR g.parent_id IN ${EM_IDS})` : `g.id IN ${EM_IDS}`
+  const linhas = await linhasPorPublicacao(
+    (esq) =>
+      [
+        ...(sub
+          ? [`SELECT g.id, ${pai} AS pai, p.locator FROM ${esq}.author_group_passage ap JOIN ${esq}.author_group g ON g.id = ap.group_id
+              JOIN ${esq}.passage p ON p.id = ap.passage_id WHERE p.locator GLOB '§[0-9]*' AND ${dosGrupos}`]
+          : []),
+        `SELECT g.id, ${pai} AS pai, p.locator FROM ${esq}.author_group g JOIN ${esq}.passage p ON p.id = g.intro_passage_id
+         WHERE p.locator GLOB '§[0-9]*' AND ${dosGrupos}`,
+      ].join(' UNION ALL '),
+    { $ids: ids(grupos) },
+  )
+  const pedidos = new Set(grupos)
+  const de = (id: string) => {
+    let e = saida.get(id)
+    if (!e) saida.set(id, (e = { proprios: new Set(), todos: new Set() }))
+    return e
+  }
+  for (const l of linhas) {
+    const numero = numeroDoParagrafo(s(l.locator))
+    if (numero === null) continue
+    const id = s(l.id)!
+    if (pedidos.has(id)) {
+      de(id).proprios.add(numero)
+      de(id).todos.add(numero)
+    }
+    const p = s(l.pai)
+    if (p && pedidos.has(p)) de(p).todos.add(numero)
+  }
+  return saida
+}
+
+/** O intervalo de um conjunto de §§; null vazio. */
+function intervaloDe(numeros: ReadonlySet<number> | undefined): IntervaloDeParagrafos | null {
+  if (!numeros || numeros.size === 0) return null
+  const lista = [...numeros]
+  return { primeiro: Math.min(...lista), ultimo: Math.max(...lista), total: lista.length }
 }
 
 /** Os grupos de cima da obra (todos, ou só os de uma publicação), na ordem do livro. Nunca uma subcoleção (Foco 5). */
@@ -797,8 +880,9 @@ export async function grupos(publicacao?: string): Promise<Grupo[]> {
   const sub = await temSubcolecoes()
   const onde = `($pub IS NULL OR g.publication = $pub)${sub ? ' AND g.parent_id IS NULL' : ''}`
   const linhas = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, onde, sub), { $pub: publicacao ?? null })
+  const doLivro = await paragrafosDosGrupos(linhas.map((l) => s(l.id)!))
   return linhas
-    .map(grupoDe)
+    .map((l) => ({ ...grupoDe(l), paragrafos: intervaloDe(doLivro.get(s(l.id)!)?.todos) }))
     .sort(
       (x, y) =>
         (ordemPub.get(x.publicacao) ?? 99) - (ordemPub.get(y.publicacao) ?? 99) ||
@@ -855,9 +939,17 @@ async function subcolecoesDe(pai: string): Promise<SubcolecaoResumo[]> {
               FROM ${esq}.author_group g WHERE g.parent_id = $pai`,
     { $pai: pai },
   )
+  const doLivro = await paragrafosDosGrupos(linhas.map((l) => s(l.id)!))
   return linhas
     .sort((x, y) => (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0))
-    .map((l) => ({ id: s(l.id)!, numero: s(l.numero) ?? '', titulo: s(l.title_pt) ?? s(l.title_de)!, tituloDe: s(l.title_de)!, objetos: n(l.objetos) ?? 0 }))
+    .map((l) => ({
+      id: s(l.id)!,
+      numero: s(l.numero) ?? '',
+      titulo: s(l.title_pt) ?? s(l.title_de)!,
+      tituloDe: s(l.title_de)!,
+      objetos: n(l.objetos) ?? 0,
+      paragrafos: intervaloDe(doLivro.get(s(l.id)!)?.todos),
+    }))
 }
 
 /** O grupo ou a subcoleção: a introdução (todos os trechos), os objetos e, numa subcoleção, o pai, a posição e as vizinhas. */
@@ -865,8 +957,11 @@ export async function grupo(id: string): Promise<GrupoDetalhe | null> {
   const sub = await temSubcolecoes()
   const [l] = await linhasPorPublicacao((esq) => SQL_GRUPO(esq, 'g.id = $id', sub), { $id: id })
   if (!l) return null
-  const g = grupoDe(l)
-  const [introducao, itens, subcolecoes, irmas, paiL] = await Promise.all([
+  const doLivro = (await paragrafosDosGrupos([id])).get(id)
+  const g = { ...grupoDe(l), paragrafos: intervaloDe(doLivro?.todos) }
+  const proprios = [...(doLivro?.proprios ?? [])].sort((x, y) => x - y)
+  const esquema = (await publicacoesAbertas()).find((p) => p.sigla === g.publicacao)?.esquema
+  const [introducao, itens, subcolecoes, irmas, paiL, frases] = await Promise.all([
     trechosDaIntroducao(id),
     itensDoGrupo(id).then((lista) => resumosDosItens(lista, 'dada')),
     g.subcolecoes > 0 ? subcolecoesDe(id) : Promise.resolve([]),
@@ -874,6 +969,7 @@ export async function grupo(id: string): Promise<GrupoDetalhe | null> {
     g.paiId
       ? linhasPorPublicacao((esq) => `SELECT id, title_pt, title_de, numero FROM ${esq}.author_group WHERE id = $pai`, { $pai: g.paiId })
       : Promise.resolve([]),
+    esquema && proprios.length > 0 ? primeirasFrases(esquema, proprios) : Promise.resolve(new Map<number, string>()),
   ])
   const p = paiL[0]
   const i = irmas.findIndex((x) => x.id === id)
@@ -886,6 +982,7 @@ export async function grupo(id: string): Promise<GrupoDetalhe | null> {
     posicao: i >= 0 ? { n: i + 1, total: irmas.length } : null,
     anterior: i > 0 ? irmas[i - 1]! : null,
     proxima: i >= 0 ? (irmas[i + 1] ?? null) : null,
+    paragrafosDaSecao: proprios.map((numero) => ({ numero, frase: frases.get(numero) ?? null })),
   }
 }
 
@@ -958,8 +1055,10 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     ),
     linhasPorPublicacao(
       (esq, sigla) => `SELECT a.subject_id AS item_id, a.id, a.field, a.value, a.certainty, a.is_primary, a.site_id,
+                  a.reason, a.passage_id, pa.locator AS trecho_locator,
                   '${sigla}' AS sigla, st.literal_name, st.name_entry_id, st.lat, st.lon, g.pt AS gl_pt
                 FROM ${esq}.assertion a LEFT JOIN ${esq}.site st ON st.id = a.site_id
+                LEFT JOIN ${esq}.passage pa ON pa.id = a.passage_id
                 LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
                 WHERE a.subject_type = 'item' AND a.subject_id IN ${EM_IDS}
                   AND a.field IN ('findspot', 'context', 'holding', 'dimensions')`,
@@ -1034,6 +1133,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     achado && n(achado.site_id) !== null
       ? {
           id: `${s(achado.sigla)}-${n(achado.site_id)}`,
+          itemId: s(achado.item_id)!,
           nome: s(achado.gl_pt) ?? s(achado.literal_name) ?? s(achado.value)!,
           literal: s(achado.literal_name) ?? s(achado.value)!,
           glId: s(achado.name_entry_id),
@@ -1041,6 +1141,10 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
           lon: n(achado.lon),
           certeza: s(achado.certainty) as Certeza,
           contexto: s(afirmacoes.find((a) => a.field === 'context' && a.item_id === achado.item_id)?.value),
+          // decisão 90.1: o achado «do texto»; o tirado do crédito não tem trecho (passage_id null)
+          doTexto: achado.reason === 'do_texto',
+          trechoId: achado.reason === 'do_texto' ? s(achado.passage_id) : null,
+          paragrafo: achado.reason === 'do_texto' ? numeroDoParagrafo(s(achado.trecho_locator)) : null,
         }
       : null
   campos.sort((x, y) => porItem(x, y) || (n(x.category) ?? 0) - (n(y.category) ?? 0))
@@ -1117,6 +1221,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
     .filter((l) => !vistosGrupos.has(s(l.id)!) && vistosGrupos.add(s(l.id)!))
     .map((l) => ({ id: s(l.id)!, titulo: s(l.titulo)! }))
   const ordemDaObra = new Map((await publicacoesAbertas()).map((x, i) => [x.sigla, i]))
+  const emParagrafos = await livrosEmParagrafos()
   const vistosNoLivro = new Set<string>()
   const noLivroComChave: { chave: ChaveDoNoLivro; lugar: NoLivro }[] = []
   for (const l of deCima) {
@@ -1134,6 +1239,7 @@ export async function item(numeroOuItem: string): Promise<ItemDetalhe | null> {
         periodo: s(l.period_pt),
         grupo: { id: s(l.id)!, titulo: s(l.titulo)!, tituloDe: s(l.title_de)!, numero: s(l.numero), subcolecoes: n(l.subcolecoes) ?? 0 },
         subcolecao: sc ? { id: s(sc.id)!, numero: s(sc.numero) ?? '', titulo: s(sc.titulo)!, tituloDe: s(sc.title_de)! } : null,
+        emParagrafos: emParagrafos.has(publicacao),
       },
     })
   }
@@ -1245,7 +1351,9 @@ export async function verbetes(): Promise<VerbeteDaLista[]> {
  * é um verbete do pacote (m7; o de um sítio quem confere é src/pacote/redirecionamentos.ts, pela lista dos sítios).
  * `obraExiste` (pacote 10, `tipo 'obra'`): o destino é uma obra do pacote (`bib_entry`).
  */
-export async function redirecionamentos(): Promise<{ de: string; para: string; tipo: string; verbeteExiste: boolean; obraExiste: boolean; criado: boolean }[]> {
+export async function redirecionamentos(): Promise<
+  { de: string; para: string; tipo: string; verbeteExiste: boolean; obraExiste: boolean; criado: boolean; origemNoGlossario: boolean }[]
+> {
   const [t] = await executar<L>("SELECT count(*) AS n FROM main.sqlite_master WHERE type = 'table' AND name = 'redirecionamento'")
   if (!n(t?.n)) return []
   // `criado` (decisão 50; revisão 2 da Tarefa 16): o destino foi criado do registro do usuário. Uma tabela sem a coluna
@@ -1254,7 +1362,8 @@ export async function redirecionamentos(): Promise<{ de: string; para: string; t
   const criado = n(c?.n) ? 'r.criado' : '0'
   const linhas = await executar<L>(
     `SELECT r.de, r.para, r.tipo, ${criado} AS criado, EXISTS (SELECT 1 FROM main.glossary_entry g WHERE g.id = r.para) AS existe,
-       EXISTS (SELECT 1 FROM main.bib_entry b WHERE b.id = r.para) AS obra
+       EXISTS (SELECT 1 FROM main.bib_entry b WHERE b.id = r.para) AS obra,
+       EXISTS (SELECT 1 FROM main.glossary_entry g WHERE g.id = r.de) AS origem
      FROM main.redirecionamento r ORDER BY r.de`,
   )
   return linhas.map((l) => ({
@@ -1264,6 +1373,8 @@ export async function redirecionamentos(): Promise<{ de: string; para: string; t
     verbeteExiste: !!n(l.existe),
     obraExiste: !!n(l.obra),
     criado: n(l.criado) === 1,
+    // Etapa 4 (revisão do branch, I2): o verbete unido a outro sai do glossário; uma origem que o pacote ainda tem não é unida.
+    origemNoGlossario: !!n(l.origem),
   }))
 }
 
@@ -1450,12 +1561,23 @@ export async function obra(bibId: string): Promise<Obra | null> {
 
 const SQL_SITIO = (esq: string, sigla: string, onde: string) => `
   SELECT '${sigla}' AS sigla, st.*, g.pt AS gl_pt, g.parent_id AS regiao_id, coalesce(pai.pt, pai.de) AS regiao_nome,
-    (SELECT count(DISTINCT coalesce(om.object_id, a.subject_id)) FROM ${esq}.assertion a
-       LEFT JOIN main.object_member om ON om.item_id = a.subject_id
-     WHERE a.site_id = st.id AND a.subject_type = 'item' AND a.field = 'findspot') AS objetos
+    coalesce(ac.objetos, 0) AS objetos, coalesce(ac.do_texto, 0) AS do_texto
   FROM ${esq}.site st LEFT JOIN main.glossary_entry g ON g.id = st.name_entry_id
   LEFT JOIN main.glossary_entry pai ON pai.id = g.parent_id
+  LEFT JOIN (${SQL_OBJETOS_POR_SITIO(esq)}) ac ON ac.sid = st.id
   WHERE ${onde}`
+
+/**
+ * Os objetos de cada sítio (o achado, `findspot`) e quantos deles vêm do texto, numa passada só pelas asserções, agrupada por
+ * sítio (Tarefa 27). As duas subconsultas correlacionadas de antes percorriam todas as asserções de item para cada sítio (o
+ * índice só servia ao tipo): com a segunda passada do IPIAO, 2 s no navegador para abrir Sítios e o mapa.
+ */
+const SQL_OBJETOS_POR_SITIO = (esq: string) => `
+  SELECT a.site_id AS sid, count(DISTINCT coalesce(om.object_id, a.subject_id)) AS objetos,
+    count(DISTINCT CASE WHEN a.reason = 'do_texto' THEN coalesce(om.object_id, a.subject_id) END) AS do_texto
+  FROM ${esq}.assertion a LEFT JOIN main.object_member om ON om.item_id = a.subject_id
+  WHERE a.subject_type = 'item' AND a.field = 'findspot' AND a.site_id IS NOT NULL
+  GROUP BY a.site_id`
 
 function sitioResumoDe(l: L): SitioResumo {
   return {
@@ -1467,6 +1589,7 @@ function sitioResumoDe(l: L): SitioResumo {
     lon: n(l.lon),
     regiao: s(l.regiao_id) ? { id: s(l.regiao_id)!, nome: s(l.regiao_nome) ?? s(l.regiao_id)! } : null,
     objetos: n(l.objetos) ?? 0,
+    doTexto: n(l.do_texto) ?? 0,
   }
 }
 
@@ -1762,7 +1885,7 @@ export async function objetosDasFontes(refs: readonly Pick<ReferenciaDeFonte, 'o
   const linhas = await linhasPorPublicacao(
     (esq) => `SELECT i.id, i.publication, i.kind, i.number, i.suffix, coalesce(i.volume, p.volume) AS volume
               FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
-              WHERE i.kind IN ('catalog', 'intro_figure') AND i.number IN (SELECT value FROM json_each($numeros))`,
+              WHERE i.kind IN ('catalog', 'intro_figure', 'figura') AND i.number IN (SELECT value FROM json_each($numeros))`,
     { $numeros: JSON.stringify([...new Set(refs.map((r) => r.numero))]) },
   )
   const doItem = new Map<string, string>()
@@ -1862,12 +1985,6 @@ export async function alvosDoPacote(refs: readonly string[]): Promise<Map<string
   return achados
 }
 
-/** Um trecho do texto da fonte, como impresso (o alemão do livro), e o id dele no pacote. */
-export interface TrechoDaFonte {
-  id: string
-  texto: string
-}
-
 /** Os trechos que descrevem o objeto (`passage_item.role = 'describes'`): o que uma nota sobre o objeto ancora. */
 export async function trechosDoObjeto(numero: string): Promise<TrechoDaFonte[]> {
   const m = await membros(numero)
@@ -1889,4 +2006,497 @@ export async function trechosDaFonte(trechos: readonly string[]): Promise<Trecho
   if ((await publicacoesAbertas()).length === 0) return null
   const linhas = await linhasPorPublicacao((esq) => `SELECT id, text FROM ${esq}.passage WHERE id IN ${EM_IDS}`, { $ids: ids([...new Set(trechos)]) })
   return linhas.map((l) => ({ id: s(l.id)!, texto: s(l.text) ?? '' }))
+}
+
+// ---------------------------------------------------------------------------
+// O livro em parágrafos (etapa 4: o GGG e a tradução inglesa, o GGIG; pacote 11)
+// ---------------------------------------------------------------------------
+
+/** O esquema tem a tabela? (`correcao_de_leitura` falta num pacote 5–10.) */
+async function temTabela(esq: string, nome: string): Promise<boolean> {
+  const [l] = await executar<L>(`SELECT count(*) AS n FROM ${esq}.sqlite_master WHERE type = 'table' AND name = $nome`, { $nome: nome })
+  return !!n(l?.n)
+}
+
+/** A tabela do esquema tem a coluna? */
+async function temColuna(esq: string, tabela: string, coluna: string): Promise<boolean> {
+  const [l] = await executar<L>('SELECT count(*) AS n FROM pragma_table_info($tabela, $esq) WHERE name = $coluna', { $tabela: tabela, $esq: esq, $coluna: coluna })
+  return !!n(l?.n)
+}
+
+/** As publicações abertas que são tradução de outra (`publication.translation_of`; o GGIG). */
+async function traducoesAbertas(pubs: readonly PublicacaoAberta[]): Promise<PublicacaoAberta[]> {
+  const saida: PublicacaoAberta[] = []
+  for (const p of pubs) {
+    if (!(await temColuna(p.esquema, 'publication', 'translation_of'))) continue
+    const [l] = await executar<L>(`SELECT translation_of FROM ${p.esquema}.publication WHERE sigla = $sigla`, { $sigla: p.sigla })
+    if (s(l?.translation_of)) saida.push(p)
+  }
+  return saida
+}
+
+const ORDEM_DO_TIPO_DE_TRECHO = (kind: unknown) => (kind === 'footnote' ? 1 : 0)
+const porOrdemNoParagrafo = (x: L, y: L) =>
+  ORDEM_DO_TIPO_DE_TRECHO(x.kind) - ORDEM_DO_TIPO_DE_TRECHO(y.kind) || (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0) || (s(x.id)! < s(y.id)! ? -1 : 1)
+
+/**
+ * O inglês alinhado a cada trecho (`passage.aligned_passage`, gravado no banco da TRADUÇÃO — o GGIG — e apontando para o trecho
+ * do GGG, noutro banco): procurado em todas as publicações abertas. Vários trechos ingleses no mesmo trecho alemão (o GGIG
+ * divide alguns parágrafos) vêm juntos, por espaço, na ordem da publicação e do `ordinal`. As correções de leitura de cada
+ * trecho inglês (Tarefa 25) vêm em UTF-16 do inglês juntado: deslocadas pelo que vem antes e pelo espaço do começo cortado.
+ */
+async function inglesAlinhado(pubs: readonly PublicacaoAberta[], trechos: readonly string[]): Promise<Map<string, { texto: string; correcoes: CorrecaoDeLeitura[]; pagina: number | null }>> {
+  const saida = new Map<string, { texto: string; correcoes: CorrecaoDeLeitura[]; pagina: number | null }>()
+  // só as traduções (`publication.translation_of`) têm `aligned_passage` preenchido: o catálogo e o livro em parágrafos ficam
+  // de fora (revisão do branch, M6: a coluna não tem índice, e o IPIAO era varrido a cada §)
+  const traducoes = await traducoesAbertas(pubs)
+  const comColuna = (await Promise.all(traducoes.map(async (p) => ((await temColuna(p.esquema, 'passage', 'aligned_passage')) ? p : null)))).filter((p) => p !== null)
+  if (comColuna.length === 0 || trechos.length === 0) return saida
+  const linhas = await executar<L>(
+    comColuna.map((p, i) => `SELECT ${i} AS o, aligned_passage AS alvo, text, page, ordinal, id FROM ${p.esquema}.passage WHERE aligned_passage IN ${EM_IDS}`).join(' UNION ALL '),
+    { $ids: ids(trechos) },
+  )
+  linhas.sort((x, y) => (n(x.o) ?? 0) - (n(y.o) ?? 0) || (n(x.ordinal) ?? 0) - (n(y.ordinal) ?? 0) || (s(x.id)! < s(y.id)! ? -1 : 1))
+  const correcoes = new Map<string, CorrecaoDeLeitura[]>()
+  for (const [i, p] of comColuna.entries()) {
+    const destes = linhas.filter((l) => n(l.o) === i).map((l) => s(l.id)!)
+    for (const [id, c] of await correcoesDosTrechos(p.esquema, destes)) correcoes.set(id, c)
+  }
+  for (const l of linhas) {
+    const bruto = s(l.text) ?? ''
+    const texto = bruto.trim()
+    if (!texto) continue
+    const alvo = s(l.alvo)!
+    const antes = saida.get(alvo)
+    const deslocamento = antes ? antes.texto.length + 1 : 0
+    const cortado = bruto.length - bruto.trimStart().length
+    const destas = correcoesEmUtf16(bruto, correcoes.get(s(l.id)!) ?? []).flatMap((c) => {
+      const inicio = Math.max(0, c.inicio - cortado)
+      const fim = Math.min(texto.length, c.fim - cortado)
+      return inicio < fim ? [{ ...c, inicio: inicio + deslocamento, fim: fim + deslocamento }] : []
+    })
+    // a página do inglês: a primeira dos trechos juntados
+    const pagina = antes?.pagina ?? n(l.page)
+    saida.set(alvo, antes ? { texto: `${antes.texto} ${texto}`, correcoes: [...antes.correcoes, ...destas], pagina } : { texto, correcoes: destas, pagina })
+  }
+  return saida
+}
+
+/** As correções de leitura dos trechos (`correcao_de_leitura`, `entidade 'passage'`), em code points, na ordem do texto. */
+async function correcoesDosTrechos(esq: string, trechos: readonly string[]): Promise<Map<string, CorrecaoDeLeitura[]>> {
+  const saida = new Map<string, CorrecaoDeLeitura[]>()
+  if (trechos.length === 0 || !(await temTabela(esq, 'correcao_de_leitura'))) return saida
+  const linhas = await executar<L>(
+    `SELECT entidade_id, inicio, fim, lido, regra FROM ${esq}.correcao_de_leitura
+     WHERE entidade = 'passage' AND entidade_id IN ${EM_IDS} ORDER BY entidade_id, inicio, fim, id`,
+    { $ids: ids(trechos) },
+  )
+  for (const l of linhas) {
+    const inicio = n(l.inicio)
+    const fim = n(l.fim)
+    if (inicio === null || fim === null) continue
+    const id = s(l.entidade_id)!
+    saida.set(id, [...(saida.get(id) ?? []), { inicio, fim, lido: s(l.lido) ?? '', regra: s(l.regra) ?? '' }])
+  }
+  return saida
+}
+
+/** O rótulo de um grupo no caminho do §, em português: o de cima por `tituloDoGrupo` («I. <título>», decisão 81); a
+ * subcoleção com o número antes («1. <título>»; um número composto, «1.2», sem o ponto). */
+function rotuloNoCaminho(l: L): string | null {
+  const titulo = s(l.title_pt) ?? s(l.title_de)
+  if (!titulo) return null
+  if (!s(l.parent_id)) return rotuloDoGrupoDaLinha(l)
+  const numero = s(l.numero)?.trim().replace(/\.$/, '')
+  if (!numero || titulo.startsWith(`${numero}.`) || titulo.startsWith(`${numero} `)) return titulo
+  return /^[\dIVXLC]+$/i.test(numero) ? `${numero}. ${titulo}` : `${numero} ${titulo}`
+}
+
+interface CaminhoDoTrecho {
+  caminho: string[]
+  grupos: { id: string; rotulo: string }[]
+  /** O grupo mais interno e se é subcoleção. */
+  interno: { id: string; subcolecao: boolean } | null
+}
+
+/**
+ * O caminho do § (o grupo da autora em que os trechos estão), em PORTUGUÊS (Tarefa 25): a obra, o grupo de cima e a
+ * subcoleção. A subcoleção ganha do grupo de cima e `author_group_passage` ganha do `intro_passage_id`, como em
+ * `gruposDosTrechos`; depois o menor id. Fora de grupo, vazio.
+ */
+async function caminhoDosTrechos(esq: string, trechos: readonly string[]): Promise<CaminhoDoTrecho> {
+  const vazio: CaminhoDoTrecho = { caminho: [], grupos: [], interno: null }
+  if (trechos.length === 0) return vazio
+  const sub = await temSubcolecoes()
+  const eSub = sub ? '(g.parent_id IS NOT NULL)' : '0'
+  const linhas = await executar<L>(
+    [
+      ...(sub
+        ? [`SELECT g.id, ${eSub} AS e_sub, 0 AS via FROM ${esq}.author_group_passage ap JOIN ${esq}.author_group g ON g.id = ap.group_id WHERE ap.passage_id IN ${EM_IDS}`]
+        : []),
+      `SELECT g.id, ${eSub} AS e_sub, 1 AS via FROM ${esq}.author_group g WHERE g.intro_passage_id IN ${EM_IDS}`,
+    ].join(' UNION ALL '),
+    { $ids: ids(trechos) },
+  )
+  linhas.sort((a, b) => (n(b.e_sub) ?? 0) - (n(a.e_sub) ?? 0) || (n(a.via) ?? 0) - (n(b.via) ?? 0) || (s(a.id)! < s(b.id)! ? -1 : 1))
+  const id = s(linhas[0]?.id)
+  if (!id) return vazio
+  const colunas = `g.id, g.publication, g.volume, g.title_pt, g.title_de, ${SQL_COLUNAS_DA_SUBCOLECAO(esq, sub)}`
+  const grupos = await executar<L>(
+    sub
+      ? `SELECT ${colunas}, 1 AS nivel FROM ${esq}.author_group g WHERE g.id = $id
+         UNION ALL SELECT ${colunas}, 0 AS nivel FROM ${esq}.author_group g WHERE g.id = (SELECT parent_id FROM ${esq}.author_group WHERE id = $id)`
+      : `SELECT ${colunas}, 1 AS nivel FROM ${esq}.author_group g WHERE g.id = $id`,
+    { $id: id },
+  )
+  grupos.sort((a, b) => (n(a.nivel) ?? 0) - (n(b.nivel) ?? 0))
+  const interno = grupos.at(-1)!
+  const passos = grupos.flatMap((g) => {
+    const rotulo = rotuloNoCaminho(g)
+    return rotulo ? [{ id: s(g.id)!, rotulo }] : []
+  })
+  const obra = `${s(interno.publication) ?? ''} ${s(interno.volume) ?? ''}`.trim()
+  return { caminho: [obra, ...passos.map((p) => p.rotulo)].filter(Boolean), grupos: passos, interno: { id, subcolecao: !!s(interno.parent_id) } }
+}
+
+/** Os §§ (`§N`) do grupo, em ordem: os trechos dele (`author_group_passage`, schema 9) e a introdução. */
+async function paragrafosDoGrupo(esq: string, grupo: string): Promise<number[]> {
+  const sub = await temSubcolecoes()
+  const linhas = await executar<L>(
+    [
+      ...(sub ? [`SELECT p.locator FROM ${esq}.author_group_passage ap JOIN ${esq}.passage p ON p.id = ap.passage_id WHERE ap.group_id = $g`] : []),
+      `SELECT p.locator FROM ${esq}.author_group g JOIN ${esq}.passage p ON p.id = g.intro_passage_id WHERE g.id = $g`,
+    ].join(' UNION '),
+    { $g: grupo },
+  )
+  return [...new Set(linhas.map((l) => numeroDoParagrafo(s(l.locator))).filter((x): x is number => x !== null))].sort((x, y) => x - y)
+}
+
+/** A primeira frase do primeiro trecho corrido de cada § (`§N`): a do português, ou a do original sem tradução. */
+async function primeirasFrases(esq: string, numeros: readonly number[]): Promise<Map<number, string>> {
+  const saida = new Map<number, string>()
+  if (numeros.length === 0) return saida
+  const linhas = await executar<L>(
+    `SELECT p.id, p.locator, p.kind, p.ordinal, p.text, r.texto FROM ${esq}.passage p LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id
+     WHERE p.kind != 'footnote' AND p.locator IN ${EM_IDS}`,
+    { $ids: ids(numeros.map((x) => `§${x}`)) },
+  )
+  linhas.sort(porOrdemNoParagrafo)
+  for (const l of linhas) {
+    const numero = numeroDoParagrafo(s(l.locator))
+    if (numero === null || saida.has(numero)) continue
+    const frase = dividirEmFrases(s(l.texto) ?? s(l.text) ?? '')[0]
+    if (frase) saida.set(numero, frase)
+  }
+  return saida
+}
+
+/** A publicação é uma tradução (`publication.translation_of`, o GGIG)? A tradução não tem página de § nem «Discutida em» própria. */
+async function eTraducao(esq: string, sigla: string): Promise<boolean> {
+  const [l] = await executar<L>(`SELECT translation_of FROM ${esq}.publication WHERE sigla = $sigla`, { $sigla: sigla })
+  return !!s(l?.translation_of)
+}
+
+/**
+ * Um § do livro em parágrafos (`passage.locator = '§<numero>'` na publicação `sigla`): o texto corrido e as notas, cada trecho
+ * com o português, o inglês alinhado (do GGIG, noutro banco) e as correções de leitura em UTF-16; as figuras que ele cita; o
+ * caminho do grupo; e o § anterior e o seguinte que a publicação tem. null: a publicação não está aberta, não tem esse §, ou é
+ * uma tradução (o inglês do GGIG aparece no § do GGG, revisão 1 da Tarefa 23).
+ */
+export async function paragrafo(sigla: string, numero: number): Promise<ParagrafoDetalhe | null> {
+  if (!Number.isSafeInteger(numero) || numero < 1) return null
+  const pubs = await publicacoesAbertas()
+  const pub = pubs.find((p) => p.sigla === sigla)
+  if (!pub || (await eTraducao(pub.esquema, pub.sigla))) return null
+  const esq = pub.esquema
+  const linhas = await executar<L>(
+    `SELECT p.id, p.kind, p.ordinal, p.text, p.page, p.translation_state, p.translation_stale, r.texto, r.termos
+     FROM ${esq}.passage p LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id WHERE p.locator = $locator`,
+    { $locator: `§${numero}` },
+  )
+  if (linhas.length === 0) return null
+  linhas.sort(porOrdemNoParagrafo)
+  const idsDosTrechos = linhas.map((l) => s(l.id)!)
+  const [ingles, correcoes, mencoes, caminho, locators, publicacao, traducao] = await Promise.all([
+    inglesAlinhado(pubs, idsDosTrechos),
+    correcoesDosTrechos(esq, idsDosTrechos),
+    executar<L>(
+      `SELECT DISTINCT pi.item_id, i.number, i.suffix FROM ${esq}.passage_item pi JOIN ${esq}.item i ON i.id = pi.item_id
+       WHERE pi.role = 'mentions' AND pi.passage_id IN ${EM_IDS}`,
+      { $ids: ids(idsDosTrechos) },
+    ),
+    caminhoDosTrechos(esq, idsDosTrechos),
+    executar<L>(`SELECT DISTINCT locator FROM ${esq}.passage WHERE locator GLOB '§[0-9]*'`),
+    executar<L>(`SELECT year FROM ${esq}.publication WHERE sigla = $sigla`, { $sigla: sigla }),
+    traducaoAberta(pubs, sigla),
+  ])
+  const trechoDe = (l: L): TrechoDoParagrafo => {
+    const id = s(l.id)!
+    const texto = s(l.text) ?? ''
+    const en = ingles.get(id)
+    return {
+      id,
+      texto,
+      ordinal: n(l.ordinal) ?? 0,
+      pagina: n(l.page),
+      portugues: s(l.texto),
+      termos: termos(l.termos),
+      estado: s(l.translation_state) as TrechoDoParagrafo['estado'],
+      desatualizada: b(l.translation_stale),
+      ingles: en?.texto ?? null,
+      correcoes: correcoesEmUtf16(texto, correcoes.get(id) ?? []),
+      correcoesDoIngles: en?.correcoes ?? [],
+      paginaDoIngles: en?.pagina ?? null,
+    }
+  }
+  const numeros = [...new Set(locators.map((l) => numeroDoParagrafo(s(l.locator))).filter((x): x is number => x !== null))].sort((x, y) => x - y)
+  const anterior = numeros.filter((x) => x < numero).at(-1) ?? null
+  const seguinte = numeros.find((x) => x > numero) ?? null
+  const [frases, paragrafosDaSecao, objetos] = await Promise.all([
+    primeirasFrases(esq, [anterior, seguinte].filter((x) => x !== null)),
+    caminho.interno ? paragrafosDoGrupo(esq, caminho.interno.id) : Promise.resolve([]),
+    numerosDosItens(mencoes.map((l) => s(l.item_id)!)),
+  ])
+  const vizinho = (x: number | null) => (x === null ? null : { numero: x, frase: frases.get(x) ?? null })
+  const figuras = await resumosDosItens(mencoes.map((l) => s(l.item_id)!), 'fonte')
+  // as referências na ordem das figuras (a das fontes), e cada item com o objeto dele
+  const ordem = new Map(figuras.map((f, i) => [f.numero, i]))
+  const referencias = mencoes
+    .map((l) => ({ itemId: s(l.item_id)!, objeto: objetos.get(s(l.item_id)!) ?? s(l.item_id)!, numero: n(l.number) ?? 0, sufixo: s(l.suffix) ?? '' }))
+    .sort((x, y) => (ordem.get(x.objeto) ?? 99) - (ordem.get(y.objeto) ?? 99) || x.numero - y.numero || (x.sufixo < y.sufixo ? -1 : x.sufixo > y.sufixo ? 1 : 0))
+  return {
+    sigla: pub.sigla,
+    numero,
+    ano: n(publicacao[0]?.year),
+    traducao,
+    caminho: caminho.caminho,
+    grupos: caminho.grupos,
+    secao: caminho.interno ? { id: caminho.interno.id, subcolecao: caminho.interno.subcolecao, paragrafos: paragrafosDaSecao } : null,
+    referencias,
+    trechos: linhas.filter((l) => l.kind !== 'footnote').map(trechoDe),
+    notas: linhas.filter((l) => l.kind === 'footnote').map(trechoDe),
+    figuras,
+    anterior: vizinho(anterior),
+    seguinte: vizinho(seguinte),
+  }
+}
+
+/** A tradução aberta de `sigla` (`publication.translation_of`): a sigla e o ano; null sem. */
+async function traducaoAberta(pubs: readonly PublicacaoAberta[], sigla: string): Promise<{ sigla: string; ano: number | null } | null> {
+  for (const p of pubs) {
+    if (p.sigla === sigla || !(await temColuna(p.esquema, 'publication', 'translation_of'))) continue
+    const [l] = await executar<L>(`SELECT sigla, year FROM ${p.esquema}.publication WHERE translation_of = $sigla`, { $sigla: sigla })
+    if (l) return { sigla: s(l.sigla)!, ano: n(l.year) }
+  }
+  return null
+}
+
+/**
+ * Os §§ que citam a figura (`passage_item 'mentions'` de um trecho `§N`), em todas as publicações abertas, um por §, na ordem
+ * das publicações e dos §§: «Discutida em». A `frase` é a frase do § que cita a figura (decisão 91, a3; `fraseDoTrechoQueCita`),
+ * do primeiro trecho do § que a cita (o texto corrido antes das notas). As menções de uma tradução (o GGIG grava as suas
+ * «illus.» aos itens do GGG) ficam de fora: o inglês não é outro § (revisão 1 da Tarefa 23).
+ */
+export async function paragrafosQueCitam(itemId: string): Promise<ParagrafoQueCita[]> {
+  const pubs = await publicacoesAbertas()
+  const [linhas, itens] = await Promise.all([
+    linhasPorPublicacao(
+      (esq, sigla) => `SELECT '${sigla}' AS sigla, p.id, p.locator, p.kind, p.ordinal, p.text, r.texto
+                       FROM ${esq}.passage_item pi JOIN ${esq}.passage p ON p.id = pi.passage_id
+                       LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id
+                       WHERE pi.role = 'mentions' AND pi.item_id = $item AND p.locator GLOB '§[0-9]*'
+                         AND (SELECT translation_of FROM ${esq}.publication WHERE sigla = '${sigla}') IS NULL`,
+      { $item: itemId },
+    ),
+    linhasPorPublicacao(SQL_ITEM, { $ids: ids([itemId]) }),
+  ])
+  if (linhas.length === 0) return []
+  const ordemPub = new Map(pubs.map((p, i) => [p.sigla, i]))
+  const numeroDe = (l: L) => numeroDoParagrafo(s(l.locator)) ?? 0
+  linhas.sort((x, y) => (ordemPub.get(s(x.sigla)!) ?? 99) - (ordemPub.get(s(y.sigla)!) ?? 99) || numeroDe(x) - numeroDe(y) || porOrdemNoParagrafo(x, y))
+  const figura = itens[0]
+  const vistos = new Set<string>()
+  const primeiros: L[] = []
+  for (const l of linhas) {
+    const chave = `${s(l.sigla)}|${numeroDe(l)}`
+    if (numeroDe(l) === 0 || vistos.has(chave)) continue
+    vistos.add(chave)
+    primeiros.push(l)
+  }
+  // o caminho de cada § numa consulta por publicação (revisão do branch, M6: antes, `caminhoDosTrechos` § a §), com o livro antes
+  const trilhas = await trilhasDosParagrafos(primeiros.map((l) => ({ sigla: s(l.sigla)!, numero: numeroDe(l) })))
+  return primeiros.map((l) => {
+    const { frase, lingua } = fraseDoTrechoQueCita(s(l.text) ?? '', s(l.texto), figura ? (n(figura.number) ?? 0) : 0, figura ? (s(figura.suffix) ?? '') : '')
+    const sigla = s(l.sigla)!
+    const trilha = trilhas.get(`${sigla}|${numeroDe(l)}`)
+    return { sigla, numero: numeroDe(l), trechoId: s(l.id)!, frase, lingua, caminho: trilha ? [sigla, ...trilha] : [] }
+  })
+}
+
+let livrosEmParagrafosGuardado: { motor: number; pedido: Promise<Set<string>> } | null = null
+aoReabrir(() => {
+  livrosEmParagrafosGuardado = null
+})
+
+/**
+ * As publicações abertas que são livros em parágrafos (o GGG; Tarefa 26): têm trechos `§N` e não são tradução
+ * (`publication.translation_of`; o GGIG é a tradução, não um livro com página própria). Uma vez por pacote.
+ */
+export async function livrosEmParagrafos(): Promise<Set<string>> {
+  const motor = geracaoDoBanco()
+  if (livrosEmParagrafosGuardado?.motor === motor) return livrosEmParagrafosGuardado.pedido
+  const pedido = (async () => {
+    const saida = new Set<string>()
+    for (const p of await publicacoesAbertas()) {
+      const traducao = (await temColuna(p.esquema, 'publication', 'translation_of'))
+        ? `(SELECT translation_of FROM ${p.esquema}.publication WHERE sigla = $sigla)`
+        : 'NULL'
+      const [l] = await executar<L>(
+        `SELECT EXISTS (SELECT 1 FROM ${p.esquema}.passage WHERE locator GLOB '§[0-9]*') AS tem, ${traducao} AS original`,
+        { $sigla: p.sigla },
+      )
+      if (n(l?.tem) && !s(l?.original)) saida.add(p.sigla)
+    }
+    return saida
+  })()
+  const entrada = { motor, pedido }
+  livrosEmParagrafosGuardado = entrada
+  pedido.catch(() => {
+    if (livrosEmParagrafosGuardado === entrada) livrosEmParagrafosGuardado = null
+  })
+  return pedido
+}
+
+/** «Autora – Autor 2010»: os sobrenomes do CSL, unidos como na Bibliografia comum, e o ano. */
+function curtaDoCsl(csl: Record<string, unknown> | null, ano: number | null, sigla: string): string {
+  const autores = Array.isArray(csl?.author) ? (csl.author as { family?: unknown; literal?: unknown }[]) : []
+  const nomes = autores.map((a) => (typeof a.family === 'string' ? a.family : typeof a.literal === 'string' ? a.literal : null)).filter((x): x is string => !!x)
+  const quem = nomes.length > 0 ? nomes.join(' – ') : sigla
+  return ano === null ? quem : `${quem} ${ano}`
+}
+
+/**
+ * O livro em parágrafos e a tradução dele como obras da Bibliografia (Tarefa 26; tela 5): uma entrada por publicação aberta que
+ * é livro em parágrafos ou tradução, na ordem das publicações. O id é o da obra igual da Bibliografia comum (o mesmo título e o
+ * mesmo ano no CSL; no real, o GGIG citado no GGG), ou `LIVRO-<sigla>`.
+ */
+export function livrosNaBibliografia(): Promise<LivroNaBibliografia[]> {
+  // uma vez por pacote, como `livrosEmParagrafos` (revisão do branch, M7: cada página de obra no computador a pedia de novo)
+  const motor = geracaoDoBanco()
+  if (livrosNaBibliografiaGuardado?.motor === motor) return livrosNaBibliografiaGuardado.pedido
+  const pedido = lerLivrosNaBibliografia()
+  const entrada = { motor, pedido }
+  livrosNaBibliografiaGuardado = entrada
+  pedido.catch(() => {
+    if (livrosNaBibliografiaGuardado === entrada) livrosNaBibliografiaGuardado = null
+  })
+  return pedido
+}
+
+let livrosNaBibliografiaGuardado: { motor: number; pedido: Promise<LivroNaBibliografia[]> } | null = null
+aoReabrir(() => {
+  livrosNaBibliografiaGuardado = null
+})
+
+async function lerLivrosNaBibliografia(): Promise<LivroNaBibliografia[]> {
+  const pubs = await publicacoesAbertas()
+  const livros = await livrosEmParagrafos()
+  const saida: LivroNaBibliografia[] = []
+  for (const p of pubs) {
+    const comTraducao = await temColuna(p.esquema, 'publication', 'translation_of')
+    const [l] = await executar<L>(
+      `SELECT title, year, csl_json, ${comTraducao ? 'translation_of' : 'NULL AS translation_of'} FROM ${p.esquema}.publication WHERE sigla = $sigla`,
+      { $sigla: p.sigla },
+    )
+    const traducaoDe = s(l?.translation_of)
+    if (!l || (!livros.has(p.sigla) && !traducaoDe)) continue
+    const esq = p.esquema
+    const sub = await temSubcolecoes()
+    const [contas] = await executar<L>(
+      `SELECT (SELECT count(*) FROM ${esq}.author_group g WHERE g.publication = $sigla${sub ? ' AND g.parent_id IS NULL' : ''}) AS capitulos,
+              (SELECT count(DISTINCT locator) FROM ${esq}.passage WHERE locator GLOB '§[0-9]*') AS paragrafos,
+              (SELECT count(*) FROM ${esq}.item WHERE kind = 'figura') AS figuras`,
+      { $sigla: p.sigla },
+    )
+    const locators = await executar<L>(`SELECT DISTINCT locator FROM ${esq}.passage WHERE locator GLOB '§[0-9]*'`)
+    const numeros = locators.map((x) => numeroDoParagrafo(s(x.locator))).filter((x): x is number => x !== null)
+    const csl = json<Record<string, unknown> | null>(l.csl_json, null)
+    const titulo = tituloDoCsl(csl) ?? s(l.title) ?? p.sigla
+    const ano = n(l.year)
+    const [igual] = await executar<L>(
+      `SELECT id FROM main.bib_entry
+       WHERE lower(trim(json_extract(csl_json, '$.title'))) = lower(trim($titulo))
+         AND json_extract(csl_json, '$.issued."date-parts"[0][0]') = $ano
+       ORDER BY id LIMIT 1`,
+      { $titulo: titulo, $ano: ano },
+    )
+    saida.push({
+      sigla: p.sigla,
+      obraId: s(igual?.id) ?? `LIVRO-${p.sigla}`,
+      curta: curtaDoCsl(csl, ano, p.sigla),
+      titulo,
+      csl,
+      traducaoDe,
+      traducao: null,
+      capitulos: n(contas?.capitulos) ?? 0,
+      paragrafos: n(contas?.paragrafos) ?? 0,
+      figuras: n(contas?.figuras) ?? 0,
+      primeiro: numeros.length > 0 ? Math.min(...numeros) : null,
+    })
+  }
+  for (const t of saida) {
+    const original = t.traducaoDe ? saida.find((o) => o.sigla === t.traducaoDe) : undefined
+    if (original) original.traducao = t.sigla
+  }
+  return saida
+}
+
+/**
+ * O caminho de cada § pedido, em português e sem o livro («I. …», «1. …»; Tarefa 26: o caminho dos resultados de § na Busca),
+ * numa consulta por publicação: o grupo mais interno dos trechos do § (a subcoleção ganha do grupo de cima, e
+ * `author_group_passage` do `intro_passage_id`, como em `caminhoDosTrechos`) e o de cima dele. A chave é «<sigla>|<número>».
+ */
+export async function trilhasDosParagrafos(pedidos: readonly { sigla: string; numero: number }[]): Promise<Map<string, string[]>> {
+  const saida = new Map<string, string[]>()
+  const pubs = await publicacoesAbertas()
+  const sub = await temSubcolecoes()
+  const eSub = sub ? '(g.parent_id IS NOT NULL)' : '0'
+  const pai = sub ? 'g.parent_id' : 'NULL'
+  for (const p of pubs) {
+    const numeros = [...new Set(pedidos.filter((x) => x.sigla === p.sigla).map((x) => x.numero))]
+    if (numeros.length === 0) continue
+    const esq = p.esquema
+    const linhas = await executar<L>(
+      [
+        ...(sub
+          ? [`SELECT p.locator, g.id, ${pai} AS pai, ${eSub} AS e_sub, 0 AS via FROM ${esq}.author_group_passage ap
+              JOIN ${esq}.passage p ON p.id = ap.passage_id JOIN ${esq}.author_group g ON g.id = ap.group_id WHERE p.locator IN ${EM_IDS}`]
+          : []),
+        `SELECT p.locator, g.id, ${pai} AS pai, ${eSub} AS e_sub, 1 AS via FROM ${esq}.author_group g
+         JOIN ${esq}.passage p ON p.id = g.intro_passage_id WHERE p.locator IN ${EM_IDS}`,
+      ].join(' UNION ALL '),
+      { $ids: ids(numeros.map((x) => `§${x}`)) },
+    )
+    linhas.sort((a, b) => (n(b.e_sub) ?? 0) - (n(a.e_sub) ?? 0) || (n(a.via) ?? 0) - (n(b.via) ?? 0) || (s(a.id)! < s(b.id)! ? -1 : 1))
+    const escolhido = new Map<string, L>()
+    for (const l of linhas) if (!escolhido.has(s(l.locator)!)) escolhido.set(s(l.locator)!, l)
+    const idsDosGrupos = [...new Set([...escolhido.values()].flatMap((l) => [s(l.id)!, s(l.pai)].filter((x): x is string => !!x)))]
+    if (idsDosGrupos.length === 0) continue
+    const grupos = await executar<L>(
+      `SELECT g.id, g.title_pt, g.title_de, ${SQL_COLUNAS_DA_SUBCOLECAO(esq, sub)} FROM ${esq}.author_group g WHERE g.id IN ${EM_IDS}`,
+      { $ids: ids(idsDosGrupos) },
+    )
+    const porId = new Map(grupos.map((g) => [s(g.id)!, g]))
+    for (const [locator, l] of escolhido) {
+      const numero = numeroDoParagrafo(locator)
+      if (numero === null) continue
+      const passos = [s(l.pai), s(l.id)].flatMap((id) => {
+        const g = id ? porId.get(id) : undefined
+        const rotulo = g ? rotuloNoCaminho(g) : null
+        return rotulo ? [rotulo] : []
+      })
+      saida.set(`${p.sigla}|${numero}`, passos)
+    }
+  }
+  return saida
 }

@@ -9,6 +9,7 @@ import { useObjetosSkc } from '../colecoes/objetosSkc'
 import { juntarImagens, useImagensDoUsuario } from '../imagens-usuario/exibicao'
 import { restaurarImagem } from '../imagens-usuario/operacoes'
 import { regioesDoUsuario } from '../imagens-usuario/regioes'
+import { campoDoCredito, CreditoDaFigura, figurasDe, VozDaFigura } from '../item/Figura'
 import { ImagemItem } from '../item/ImagemItem'
 import { Leitura } from '../item/Leitura'
 import { useResumoDasHipoteses } from '../item/resumoDasHipoteses'
@@ -39,6 +40,7 @@ import { desfazerLigacao, ErroDeLigacao, escolherPeriodo, excluirObjeto, ligarOb
 import { juncaoNoPlural, oQueVaiJunto, textoDaJuncao } from '../objetos-skc/oQueVaiJunto'
 import { useSitiosVivos } from '../sitios/doUsuario'
 import { Icon } from '../ui/Icon'
+import { useReferenciasComLigacoes } from '../revisao/referencias'
 import { IconButton } from '../ui/IconButton'
 import { TopoDoCelular } from '../ui/TopoDoCelular'
 import { useAoVoltarParaOrigem } from '../app/OrigemDosLinks'
@@ -807,8 +809,8 @@ export function LeiturasDosLivros({
   if (itens === null) return null
   return (
     <>
-      {itens.flatMap((d) =>
-        d.leituras.map((l) => (
+      {itens.flatMap((d) => [
+        ...d.leituras.map((l) => (
           <Leitura
             key={`${d.numero}-${l.passagemId}`}
             fonte={l.fonte}
@@ -825,9 +827,22 @@ export function LeiturasDosLivros({
             resumoDaHipotese={resumoDaHipotese}
           />
         )),
-      )}
+        // Etapa 4, Tarefa 27: a figura de um livro em parágrafos (o GGG) não tem leitura; a voz dela, com «Discutida em» e o
+        // crédito (a ficha à vista é a do principal), como na peça juntada (a2)
+        ...figurasDe(d.itens).map((f) => <VozDaFiguraLigada key={`${d.numero}-${f.id}`} d={d} figura={f} />),
+      ])}
     </>
   )
+}
+
+/**
+ * A voz da figura do objeto ligado, com o crédito pela bibliografia como o app a mostra (`useReferenciasComLigacoes`: as
+ * ligações que a pessoa fez e as obras unidas), como no principal (revisão do branch, M8).
+ */
+function VozDaFiguraLigada({ d, figura }: { d: ItemDetalhe; figura: ItemDetalhe['itens'][number] }) {
+  const bibliografia = useReferenciasComLigacoes(d.bibliografia)
+  const campo = campoDoCredito(d.catalogo, figura)
+  return <VozDaFigura item={figura} credito={campo && <CreditoDaFigura campo={campo} item={figura} bibliografia={bibliografia} comPrefixo />} />
 }
 
 /** "Este objeto aparece num livro? Ligar a um objeto existente", e as ligações que já existem (com "Desfazer a ligação"). */

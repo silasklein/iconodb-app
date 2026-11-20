@@ -25,8 +25,10 @@ describe('Coleções', () => {
     abrir()
     expect(screen.getByRole('heading', { level: 1, name: 'Coleções' })).toBeInTheDocument()
     const abas = screen.getByRole('navigation', { name: 'Obras' })
-    await waitFor(() => expect(within(abas).getAllByRole('link')).toHaveLength(2))
-    const [skc, obra] = within(abas).getAllByRole('link')
+    // pacote 11: o livro em parágrafos (TESTEG) é outra aba; a tradução (TESTEGEN) não tem grupos
+    await waitFor(() => expect(within(abas).getAllByRole('link')).toHaveLength(3))
+    const [skc, obra, livroG] = within(abas).getAllByRole('link')
+    expect(livroG).toHaveTextContent('TESTEG')
     expect(skc).toHaveTextContent('SKC')
     expect(skc).toHaveAttribute('aria-current', 'page')
     expect(obra).toHaveTextContent('TESTE I')

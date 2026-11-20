@@ -143,7 +143,10 @@ export async function reabrirBanco(): Promise<EstadoBanco> {
   return estado
 }
 
-/** As publicações abertas, na ordem do manifesto; lança ErroSemPacote sem pacote. */
+/**
+ * As publicações abertas: os catálogos, os livros em parágrafos e as traduções, cada grupo na ordem do manifesto (Etapa 4,
+ * regra (a): a ordem dos livros é decidida só aqui, `ordenarPorTipoDeLivro`); lança ErroSemPacote sem pacote.
+ */
 export async function publicacoesAbertas(): Promise<PublicacaoAberta[]> {
   const estado = await abrirBanco()
   if (estado.estado !== 'aberto') throw new ErroSemPacote()

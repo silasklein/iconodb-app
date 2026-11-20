@@ -7,12 +7,13 @@
  * Este e o `consultas.ts` são os únicos lugares com SQL; as telas só chamam funções.
  */
 import { consultarUsuario, executar, publicacoesAbertas, type PublicacaoAberta } from '../banco/cliente'
-import { obrasDoPacote, resumosDosItens, temNivelAutomatico, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
+import { obrasDoPacote, resumosDosItens, temNivelAutomatico, trilhasDosParagrafos, verbete, type Modalidade, type Nivel, type ObjetoResumo, type Verbete } from '../banco/consultas'
 import type { Tipo } from '../usuario/eventos'
 import { estadoAtual, type Estado } from '../usuario/estado'
 import type { Registro } from '../usuario/fusao'
 import { garantirIndiceDoUsuario, numeroDeObjeto, SIGLA_SKC } from '../usuario/indice'
 import { chaveDaFonte, lerReferenciaDigitada } from '../banco/referencias'
+import { caminhoDoParagrafo, numeroDoParagrafo } from '../banco/paragrafos'
 import { indiceDeNotas } from '../notas/indiceDeNotas'
 import { numeracaoDe, numeroDoObjeto, objetosComNumero } from '../objetos-skc/atual'
 import { garantirOsDonosDosTrechos } from '../hipoteses/garantirDonos'
@@ -28,18 +29,21 @@ import { destinosDosSitios, pacoteDeSitiosOuVazio, resolucaoDeSitios } from '../
 import { eSitioSkc } from '../sitios/modelo'
 import { destinoDe, redirecionamentosOuNenhum, type Redirecionamentos } from '../pacote/redirecionamentos'
 import { sitiosDoPacote, type SitiosDoPacote } from '../sitios/pacote'
+import type { Trecho } from './destaque'
 import { fold, tabelaDoPacote, textoIndexado, type FoldTabela } from './fold'
+import { recorteDoTrecho } from './recorte'
 
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
 
-export const ESCOPOS = ['tudo', 'termo', 'local', 'bibliografia', 'colecao'] as const
+export const ESCOPOS = ['tudo', 'texto', 'termo', 'local', 'bibliografia', 'colecao'] as const
 /**
  * O que cada escopo procura. Os do pacote (índice `busca`) e os do usuário (índice em memória, src/usuario/indice.ts,
  * com a marca SKC) valem juntos:
  * - tudo: o texto dos itens (campo 5, sítio, catálogo e trechos) e todos os outros escopos; do usuário, tudo o que
  *   ele escreveu (notas, objetos SKC com número, ficha e leitura, coleções, sítios, hipóteses);
+ * - texto (Tarefa 26, decisão 91 a6): só os §§ do livro em parágrafos (`paragrafos`), sem objetos; a contagem da aba é a dos §§;
  * - termo: verbetes do glossário que casam, e os objetos com hipótese nesse termo ou achados no sítio de mesmo nome;
  *   do usuário, as hipóteses SKC (termos e justificativa) e as notas sobre verbetes;
  * - local: sítios cujo nome casa, e os objetos achados neles; do usuário, os sítios SKC (nome e variantes), os
@@ -55,6 +59,7 @@ export type Escopo = (typeof ESCOPOS)[number]
 
 export const ROTULO_DO_ESCOPO: Record<Escopo, string> = {
   tudo: 'Tudo',
+  texto: 'Texto',
   termo: 'Termo',
   local: 'Local',
   bibliografia: 'Bibliografia',
@@ -104,6 +109,31 @@ export interface AcertoDoUsuario {
   objeto: string | null
 }
 
+/**
+ * Um § do livro em parágrafos achado pela busca (decisão 91, a6: o bloco «Nos §§» e a aba «Texto», Tarefa 26): o texto
+ * corrido, as notas ou a tradução inglesa dele casam. Um § não é objeto: não entra em `objetos`, nas contagens nem nas facetas.
+ */
+export interface ParagrafoAchado {
+  /** A publicação da página do §: o livro; um trecho da tradução (o GGIG, `publication.translation_of`) abre o § do original. */
+  sigla: string
+  numero: number
+  /** «GGG § 29». */
+  rotulo: string
+  /** A rota da página do § (`/paragrafo/:sigla/:numero`). */
+  caminho: string
+  /** Os trechos que casaram (texto, notas e inglês), na ordem do índice. */
+  trechos: string[]
+  /** As publicações cujo texto casou («GGG», «GGIG»), na ordem do índice. */
+  publicacoes: string[]
+  /**
+   * O trecho que a tela mostra (Tarefa 26): o primeiro que casou, na língua em que casou (o português, senão o original, ou o
+   * inglês da tradução); `nota` é o número da nota quando é uma nota.
+   */
+  trecho: { id: string; nota: number | null; texto: string; lingua: 'pt-BR' | 'de' | 'en'; recorte: Trecho[] }
+  /** O caminho do § em português, sem o livro («I. …», «1. …»). */
+  trilha: string[]
+}
+
 export interface OpcoesDaBusca {
   escopo: Escopo
   filtros: Filtros
@@ -139,6 +169,11 @@ export interface ResultadoDaBusca {
   usuario: AcertoDoUsuario[]
   /** Quantos `usuario` cada escopo teria (com os filtros), ao lado de `contagens`. */
   contagensDoUsuario: Record<Escopo, number>
+  /**
+   * Os §§ achados (`ParagrafoAchado`), na ordem das publicações e dos §§: só no «Tudo»; um filtro de objeto (período, sítio…)
+   * os esconde, e o de publicação os deixa quando é a do § ou a de um texto que casou.
+   */
+  paragrafos: ParagrafoAchado[]
 }
 
 const LIMITE_PADRAO = 120
@@ -383,6 +418,9 @@ async function objetosCitados(digitado: string): Promise<string[]> {
  *   excluído; senão, nenhum.
  * - "IPIAO I: 60", "IPIAO I, Nr. 60", "IPIAO 60", "IPIAO I: 95a", "IPIAO I: Abb. 1": se a sigla é de uma obra aberta,
  *   o objeto de cada item com esse número (e volume, se dado; sem volume, todos os volumes da sigla); senão, null.
+ *   A figura do livro em parágrafos («GGG: 3b», pacote 11) se acha sem «Abb.», como um número do catálogo (decisão 39), e
+ *   também com ele («GGG: Abb. 3b», como o livro a cita). O número sem a letra («GGG 36») acha todas as partes da figura (36a–d),
+ *   como o livro, que cita «Abb. 36» por todas (revisão do branch, M1); no catálogo, o número continua exato.
  * O "skc" sozinho NÃO é uma referência: é uma palavra comum, e acha os objetos SKC com Nr. pelo termo indexado
  * `skcnr<n>` (como "TESTE" acha os objetos do livro; veja src/usuario/indice.ts).
  */
@@ -401,7 +439,8 @@ export async function objetosDaReferencia(digitado: string, pubs: readonly Publi
     daSigla,
     (esq) => `
       SELECT i.id FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
-      WHERE upper(i.publication) = $sigla AND i.kind = $tipo AND i.number = CAST($numero AS INTEGER) AND lower(i.suffix) = $sufixo
+      WHERE upper(i.publication) = $sigla AND (i.kind = $tipo OR i.kind = 'figura') AND i.number = CAST($numero AS INTEGER)
+        AND (lower(i.suffix) = $sufixo OR ($sufixo = '' AND i.kind = 'figura'))
         AND ($volume = '' OR upper(coalesce(i.volume, p.volume, '')) = $volume)`,
     { $sigla: ref.sigla, $tipo: ref.abb ? 'intro_figure' : 'catalog', $numero: String(ref.numero), $sufixo: ref.sufixo, $volume: ref.volume ?? '' },
   )
@@ -461,7 +500,9 @@ const ROTULO_DA_MODALIDADE: Record<Modalidade, string> = {
   possible: 'possível',
   questioned: 'questionada',
 }
-const ROTULO_DA_CERTEZA: Record<string, string> = { certain: 'certo', doubtful: 'duvidoso', unknown: 'desconhecido' }
+/** «do texto» (Tarefa 26): o achado tirado do § ou do crédito (decisão 90.1) é um valor à parte da certeza. */
+export const CERTEZA_DO_TEXTO = 'do_texto'
+const ROTULO_DA_CERTEZA: Record<string, string> = { certain: 'certo', doubtful: 'duvidoso', unknown: 'desconhecido', [CERTEZA_DO_TEXTO]: 'do texto' }
 
 interface Candidato {
   numero: string
@@ -518,7 +559,7 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
       pubs,
       (esq, sigla) => `
         SELECT i.id AS item_id, '${sigla}' AS sigla, trim(coalesce(i.publication, '${sigla}') || ' ' || coalesce(p.volume, '')) AS publicacao,
-          fa.site_id, fa.certainty, coalesce(g.pt, st.literal_name) AS sitio_nome
+          fa.site_id, fa.certainty, fa.reason, coalesce(g.pt, st.literal_name) AS sitio_nome
         FROM ${esq}.item i LEFT JOIN ${esq}.publication p ON p.sigla = i.publication
         LEFT JOIN ${esq}.assertion fa ON fa.id = (
           SELECT a.id FROM ${esq}.assertion a WHERE a.subject_type = 'item' AND a.subject_id = i.id AND a.field = 'findspot' AND a.site_id IS NOT NULL
@@ -556,7 +597,7 @@ async function candidatos(pubs: readonly PublicacaoAberta[], numeros: readonly s
     c.publicacoes.set(s(l.sigla)!, s(l.publicacao) ?? s(l.sigla)!)
     if (!c.sitio && l.site_id != null) {
       c.sitio = { id: `${s(l.sigla)}-${n(l.site_id)}`, nome: s(l.sitio_nome) ?? '—' }
-      c.certeza = s(l.certainty)
+      c.certeza = s(l.reason) === CERTEZA_DO_TEXTO ? CERTEZA_DO_TEXTO : s(l.certainty)
     }
   }
   for (const l of hipoteses) {
@@ -765,11 +806,91 @@ function vazio(curta = false): ResultadoDaBusca {
     numeros: [],
     total: 0,
     totalSemFiltros: 0,
-    contagens: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+    contagens: { tudo: 0, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
     facetas: [],
     usuario: [],
-    contagensDoUsuario: { tudo: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+    contagensDoUsuario: { tudo: 0, texto: 0, termo: 0, local: 0, bibliografia: 0, colecao: 0 },
+    paragrafos: [],
   }
+}
+
+/**
+ * Os §§ dos trechos achados (`busca.doc` `trecho` cujo `passage.locator` é «§N»), um por (publicação da página, número). O
+ * trecho de uma tradução (`publication.translation_of`, o GGIG) vale para o § do original, se ele está aberto.
+ */
+async function paragrafosDosTrechos(
+  pubs: readonly PublicacaoAberta[],
+  trechos: readonly string[],
+  digitado: string,
+  palavras: readonly string[],
+  tabela: FoldTabela,
+): Promise<ParagrafoAchado[]> {
+  if (trechos.length === 0) return []
+  const linhas = await porPublicacao(
+    pubs,
+    (esq, sigla) => `SELECT '${sigla}' AS sigla, p.id, p.locator, p.kind, p.ordinal, p.language, p.text, r.texto,
+                       (SELECT translation_of FROM ${esq}.publication WHERE sigla = '${sigla}') AS original
+                     FROM ${esq}.passage p LEFT JOIN ${esq}.unit_pt_render r ON r.unit_id = p.id
+                     WHERE p.id IN ${EM_IDS} AND p.locator GLOB '§[0-9]*'`,
+    { $ids: lista(trechos) },
+  )
+  const abertas = new Map(pubs.map((p, i) => [p.sigla, i]))
+  const daLinha = new Map(linhas.map((l) => [s(l.id)!, l]))
+  const porChave = new Map<string, ParagrafoAchado>()
+  // O trecho que se mostra: o primeiro que casou, na língua em que casou; sem casamento visível (uma variante do glossário), o
+  // primeiro trecho, no português.
+  const casou = new Set<string>()
+  const trechoDe = (l: L, exigir: boolean): ParagrafoAchado['trecho'] | null => {
+    const pt = s(l.texto)
+    const original = s(l.text) ?? ''
+    const nota = l.kind === 'footnote' ? (n(l.ordinal) ?? null) : null
+    const linguaDoOriginal = s(l.language) === 'en' ? 'en' : 'de'
+    const com = (texto: string, lingua: ParagrafoAchado['trecho']['lingua']) => ({ id: s(l.id)!, nota, texto, lingua, recorte: recorteDoTrecho(texto, digitado, tabela) })
+    if (pt && casa(palavras, pt, tabela)) return com(pt, 'pt-BR')
+    if (casa(palavras, original, tabela)) return com(original, linguaDoOriginal)
+    if (exigir) return null
+    return pt ? com(pt, 'pt-BR') : com(original, linguaDoOriginal)
+  }
+  for (const id of trechos) {
+    const l = daLinha.get(id)
+    const numero = l ? numeroDoParagrafo(s(l.locator)) : null
+    if (!l || numero === null) continue
+    const daTraducao = s(l.sigla)!
+    const original = s(l.original)
+    const sigla = original && abertas.has(original) ? original : daTraducao
+    const chave = `${sigla}|${numero}`
+    const p = porChave.get(chave) ?? {
+      sigla,
+      numero,
+      rotulo: `${sigla} § ${numero}`,
+      caminho: caminhoDoParagrafo(sigla, numero),
+      trechos: [],
+      publicacoes: [],
+      trecho: trechoDe(l, false)!,
+      trilha: [],
+    }
+    if (!casou.has(chave)) {
+      const visivel = trechoDe(l, true)
+      if (visivel) {
+        p.trecho = visivel
+        casou.add(chave)
+      }
+    }
+    p.trechos.push(id)
+    if (!p.publicacoes.includes(daTraducao)) p.publicacoes.push(daTraducao)
+    porChave.set(chave, p)
+  }
+  const achados = [...porChave.values()].sort((x, y) => (abertas.get(x.sigla) ?? 99) - (abertas.get(y.sigla) ?? 99) || x.numero - y.numero)
+  const trilhas = await trilhasDosParagrafos(achados)
+  for (const p of achados) p.trilha = trilhas.get(`${p.sigla}|${p.numero}`) ?? []
+  return achados
+}
+
+/** Os §§ passam pelos filtros? Nenhum filtro, ou só o de publicação com a do § ou a de um texto que casou. */
+function filtrosDeixamOsParagrafos(p: ParagrafoAchado, filtros: Filtros): boolean {
+  const ativos = CHAVES_DE_FILTRO.filter((c) => (filtros[c]?.length ?? 0) > 0)
+  if (ativos.length === 0) return true
+  return ativos.length === 1 && ativos[0] === 'publicacao' && [p.sigla, ...p.publicacoes].some((x) => filtros.publicacao!.includes(x))
 }
 
 export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<ResultadoDaBusca> {
@@ -830,6 +951,7 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
   if (!exatos) for (const nr of numerosNoTexto(digitado)) if (skc.has(nr)) citados.push(nr)
   const doTexto = new Set([...itensDeTexto, ...doTipo('trecho', 'catalogo').flatMap((d) => (d.objeto ? [d.objeto] : []))])
   const porEscopo: Record<Escopo, Set<string>> = {
+    texto: new Set(),
     termo: new Set(itensDeTermos),
     local: new Set(itensDeSitios),
     bibliografia: new Set(itensDeObras),
@@ -871,8 +993,18 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     if (typeof h.campos.modalidade === 'string') c.modalidades.add(h.campos.modalidade)
   }
   const doEscopo = (escopo: Escopo) => [...porEscopo[escopo]].flatMap((nr) => todos.get(nr) ?? [])
+  // Os §§ achados (Tarefa 26): a aba «Texto» conta os §§, em toda aba; a lista vem no «Tudo» (o bloco «Nos §§») e no «Texto».
+  const todosOsParagrafos = (
+    await paragrafosDosTrechos(
+      pubs,
+      doTipo('trecho').filter((d) => !d.objeto).map((d) => d.ref),
+      digitado,
+      palavras,
+      tabela,
+    )
+  ).filter((p) => filtrosDeixamOsParagrafos(p, opcoes.filtros))
   const contagens = Object.fromEntries(
-    ESCOPOS.map((e) => [e, doEscopo(e).filter((c) => passa(c, opcoes.filtros)).length]),
+    ESCOPOS.map((e) => [e, e === 'texto' ? todosOsParagrafos.length : doEscopo(e).filter((c) => passa(c, opcoes.filtros)).length]),
   ) as Record<Escopo, number>
 
   // O que não é de um objeto que existe vai para o grupo à parte.
@@ -905,6 +1037,8 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     relacionados = []
   }
 
+  const paragrafos = opcoes.escopo === 'tudo' || opcoes.escopo === 'texto' ? todosOsParagrafos : []
+
   const porNumero = new Map(filtrados.map((c) => [c.numero, c.resumo]))
   return {
     vazia: false,
@@ -919,5 +1053,6 @@ export async function buscar(digitado: string, opcoes: OpcoesDaBusca): Promise<R
     facetas: facetas(noEscopo, opcoes.filtros),
     usuario,
     contagensDoUsuario,
+    paragrafos,
   }
 }

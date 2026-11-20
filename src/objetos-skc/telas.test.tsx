@@ -445,7 +445,8 @@ describe('revisão 2 (decisão 38)', () => {
     await waitFor(() => expect(document.querySelector('[data-trecho-fonte="PA-TESTE-0004-cat-1"] [data-hipoteses~="HY-testeaaa-72"]')).toHaveTextContent('selo de teste'))
   })
 
-  it('objeto SKC criado antes do livro que o publicou: o SKC é o principal, mostra "TESTE I: 4 · SKC: 1", e o número do livro redireciona a ele', async () => {
+  // pacote 11: o CA00004 é também a figura TESTEG-0001b (a mesma peça noutro livro): os dois livros, depois o SKC
+  it('objeto SKC criado antes do livro que o publicou: o SKC é o principal, mostra "TESTE I: 4 · TESTEG: 1b · SKC: 1", e o número do livro redireciona a ele', async () => {
     const id = await objeto({ periodo: 'CA', titulo: 'visto primeiro', leitura: 'leitura skc plugh' })
     await unirConfirmadosGuardados({ [id]: 'CA00005', [`SKC:${id}`]: '1' })
     await reserva('CA00004') // um volume processado depois (Tarefa 16) deu CA00004 a este mesmo objeto
@@ -454,7 +455,7 @@ describe('revisão 2 (decisão 38)', () => {
     await waitFor(() => expect(local()).toBe('/item/CA00005'))
     expect(await screen.findByText(/CA00004 está ligado a CA00005/)).toBeInTheDocument()
     const fontes = await within(screen.getByTestId('objeto-cabeca')).findByTestId('numeros-nas-fontes')
-    await waitFor(() => expect(fontes).toHaveTextContent(/^TESTE I: 4 · SKC: 1$/))
+    await waitFor(() => expect(fontes).toHaveTextContent(/^TESTE I: 4 · TESTEG: 1b · SKC: 1$/))
     // As leituras se juntam na tela do SKC.
     await waitFor(() => expect(screen.getByRole('region', { name: 'Leituras' })).toHaveTextContent('leitura skc plugh'))
     expect(screen.getByText(/Fica o número dado primeiro/)).toBeInTheDocument()
@@ -471,7 +472,7 @@ describe('revisão 2 (decisão 38)', () => {
     await registrar('ligacao', `CA00004|${id}`, 'criar', { a: 'CA00004', b: id, ativa: true })
     abrir('/item/NE00001')
     await waitFor(() => expect(local()).toBe('/item/CA00004'))
-    await waitFor(() => expect(within(screen.getByTestId('item-cabeca')).getByTestId('numeros-nas-fontes')).toHaveTextContent(/^TESTE I: 4 · SKC: 1$/))
+    await waitFor(() => expect(within(screen.getByTestId('item-cabeca')).getByTestId('numeros-nas-fontes')).toHaveTextContent(/^TESTE I: 4 · TESTEG: 1b · SKC: 1$/))
   })
 })
 

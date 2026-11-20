@@ -274,6 +274,15 @@ const ROTULO_DA_CATEGORIA: Record<number, string> = {
   8: 'Paralelos',
 }
 
+/**
+ * Os campos do catálogo que a seção Catálogo mostra: os dos itens de catálogo. A figura de um livro em parágrafos
+ * (`tipo === 'figura'`, o GGG; Tarefa 24) não tem ficha de catálogo: o crédito dela (o campo 7) vai à ficha ou à voz dela.
+ */
+export function camposDoCatalogo(d: Pick<ItemDetalhe, 'catalogo' | 'itens'>): CampoDoCatalogo[] {
+  const figuras = new Set(d.itens.filter((i) => i.tipo === 'figura').map((i) => i.id))
+  return figuras.size === 0 ? d.catalogo : d.catalogo.filter((c) => !figuras.has(c.itemId))
+}
+
 /** Os campos 3–8 (e 0) do catálogo, cada um em português quando há, senão como impresso. */
 export function Catalogo({ campos, idioma }: { campos: readonly CampoDoCatalogo[]; idioma: Idioma }) {
   if (campos.length === 0) return <p className="secao-vazia">Sem campos de catálogo.</p>

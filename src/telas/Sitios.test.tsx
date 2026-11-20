@@ -23,9 +23,9 @@ describe('Sítios sem região no pacote (R18: uma lista alfabética com letras)'
     expect(screen.getByRole('heading', { level: 1, name: 'Sítios' })).toBeInTheDocument()
     await screen.findAllByRole('link', { name: /^Tell Probe Teste/ })
     // TESTE-3: o sítio do usuário publicado pelo pipeline (Tarefa 16)
-    // Pacote 8: TESTE-5 a TESTE-8 a mais; TESTE-4, mesclado em TESTE-2, não aparece.
+    // Pacote 8: TESTE-5 a TESTE-8 a mais; TESTE-4, mesclado em TESTE-2, não aparece. Pacote 11: TESTEG-9 «Tell Achado Teste».
     await waitFor(() =>
-      expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/sitio/TESTE-5', '/sitio/TESTE-8', '/sitio/TESTE-1', '/sitio/TESTE-7', '/sitio/TESTE-2', '/sitio/TESTE-3', '/sitio/TESTE-6']),
+      expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/sitio/TESTE-5', '/sitio/TESTE-8', '/sitio/TESTE-1', '/sitio/TESTE-7', '/sitio/TESTEG-9', '/sitio/TESTE-2', '/sitio/TESTE-3', '/sitio/TESTE-6']),
     )
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['A', 'H', 'M', 'T'])
     const tell = screen.getByRole('link', { name: /^Tell Probe Teste/ })
@@ -33,7 +33,7 @@ describe('Sítios sem região no pacote (R18: uma lista alfabética com letras)'
     // o número leva a unidade em texto escondido, para o leitor de tela ("3 objetos")
     expect(tell.closest('.sitio-linha')).toHaveTextContent('3 objetos')
     expect(within(screen.getByRole('link', { name: /^Maḥteṣ Teste/ })).getByText(/^\d+,\d{3} N · \d+,\d{3} E · Levante Sul$/)).toBeInTheDocument()
-    expect(screen.getByText('7 sítios · 5 com coordenada')).toBeInTheDocument()
+    expect(screen.getByText('8 sítios · 6 com coordenada')).toBeInTheDocument()
     // «Mostrar no mapa» é um botão (o mapa é do app, sem link externo): leva ao ponto do sítio
     expect(screen.getByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /no mapa$/ })).not.toBeInTheDocument()
@@ -164,7 +164,7 @@ describe('Sítios: coordenada 0', () => {
     renderizarRota('/sitios')
     await screen.findByRole('button', { name: 'Mostrar Tell Probe Teste no mapa' })
     expect(screen.getByText('0,000 N · 0,000 E')).toBeInTheDocument()
-    expect(screen.getByText(/5 com coordenada/)).toBeInTheDocument() // pacote 8: 7 sítios na lista, TESTE-5 e TESTE-6 sem coordenada
+    expect(screen.getByText(/6 com coordenada/)).toBeInTheDocument() // pacote 8: 7 sítios na lista, TESTE-5 e TESTE-6 sem coordenada; pacote 11: mais TESTEG-9
   })
 
   it('só uma das duas em 0 e a outra ausente: sem mapa', async () => {

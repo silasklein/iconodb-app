@@ -26,6 +26,7 @@ import { NotasDoAlvo } from '../notas/NotasDoAlvo'
 import { origensDe, useRedirecionamentos } from '../pacote/redirecionamentos'
 import { estadoAtual } from '../usuario/estado'
 import { coordenadaAte5, coordenadaEmGraus, enderecoDoMapa } from './coordenada'
+import { EXPLICACAO_DO_TEXTO, MarcaDoTextoNoCartao } from '../item/Figura'
 import { CabecalhoDoDetalhe, ErroNoDetalhe, Linha, MolduraDoDetalhe, NaoEncontrado, SecaoDeObjetos } from './detalhe'
 import { VeioDeVoce } from './VeioDeVoce'
 import '../imagens-usuario/MarcaSkc.css'
@@ -611,6 +612,8 @@ function Pagina({ id, livro, ehNovo, pagina, voltar, voltarPara, computador }: P
         objetos={objetosEmOrdem}
         computador={computador}
         em={(o) => (o.parte !== undefined && sobre ? sobre.nome(o.parte) : null)}
+        apoio={objetosEmOrdem.some((o) => o.achadoDoTexto) ? EXPLICACAO_DO_TEXTO : undefined}
+        rodape={(o) => (o.achadoDoTexto ? <MarcaDoTextoNoCartao achado={o.achadoDoTexto} /> : null)}
       />
 
       {ehNovo && !excluido && (

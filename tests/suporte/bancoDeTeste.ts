@@ -12,10 +12,15 @@ import { validarManifesto } from '../../src/pacote/manifesto'
 import { Banco } from '../../src/banco/nucleo'
 import { RAIZ_DO_PACOTE_SINTETICO } from './fonteDeTeste'
 
-/** Um armazém com o núcleo do pacote sintético completo (blobs + estado.json); `raiz`: outro pacote (o do schema 6, F11). */
-export async function armazemComPacote(raiz: string = RAIZ_DO_PACOTE_SINTETICO): Promise<Armazem> {
+/**
+ * Um armazém com o núcleo do pacote sintético completo (blobs + estado.json); `raiz`: outro pacote (o do schema 6, F11).
+ * `ordem`: as siglas das publicações na ordem em que o manifesto as lista (Etapa 4, regra (a): um manifesto com o livro em
+ * parágrafos antes do catálogo, como o do pacote real, que o pipeline ordena pelo nome).
+ */
+export async function armazemComPacote(raiz: string = RAIZ_DO_PACOTE_SINTETICO, ordem?: readonly string[]): Promise<Armazem> {
   const armazem = armazemMemoria()
-  const manifesto = validarManifesto(JSON.parse(readFileSync(join(raiz, 'nucleo/manifest.json'), 'utf8')))
+  const lido = validarManifesto(JSON.parse(readFileSync(join(raiz, 'nucleo/manifest.json'), 'utf8')))
+  const manifesto = ordem ? { ...lido, publicacoes: ordem.map((sigla) => lido.publicacoes.find((p) => p.sigla === sigla)!) } : lido
   for (const [caminho, { sha256 }] of Object.entries(manifesto.arquivos)) {
     if (!caminho.startsWith('nucleo/')) continue
     await armazem.gravar(caminhoDoBlob(sha256), new Uint8Array(readFileSync(join(raiz, caminho))))

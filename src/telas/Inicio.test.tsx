@@ -40,7 +40,7 @@ describe('Início', () => {
     expect(logo).toHaveAttribute('height', '22')
     expect(screen.getByRole('heading', { level: 1, name: 'Iconografia do Levante antigo' })).toBeInTheDocument()
     const contagens = screen.getByRole('group', { name: 'O que há no banco' })
-    await waitFor(() => expect(within(contagens).getByText('Objetos').nextElementSibling).toHaveTextContent('6'))
+    await waitFor(() => expect(within(contagens).getByText('Objetos').nextElementSibling).toHaveTextContent('8')) // pacote 11: com as figuras F200001 e F200002
     expect(within(contagens).getByText('Hipóteses').nextElementSibling).toHaveTextContent('9')
     expect(within(contagens).getByText('Verbetes').nextElementSibling).toHaveTextContent('10') // com o GL-900010 (Tarefa 16)
   })

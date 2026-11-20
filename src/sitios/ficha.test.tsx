@@ -187,10 +187,10 @@ describe('"Sítio deste objeto": trocar o sítio na ficha', () => {
     expect(within(d).queryByRole('button', { name: /^Novo sítio «/ })).toBeNull()
   })
 
-  it('Tarefa 14: a lista em árvore («Sítios 7»), a busca «túmulo» («Resultado 1», com o caminho) e a troca para a parte', async () => {
+  it('Tarefa 14: a lista em árvore («Sítios 8»), a busca «túmulo» («Resultado 1», com o caminho) e a troca para a parte', async () => {
     // O pacote sintético traz Tell Probe Teste (TESTE-2, o sítio de CA00003 no livro) › Área Probe Teste (TESTE-5) › Túmulo Probe
-    // Teste (TESTE-6), e Tel Probe Teste (TESTE-4) mesclado em TESTE-2; com Tell Inventado (o SKC deste teste), 8 sítios valem
-    // como opção. O atual sai: 7 linhas. CA00001 ligado ao túmulo conta nele e na área (as contagens somam as partes de baixo;
+    // Teste (TESTE-6), e Tel Probe Teste (TESTE-4) mesclado em TESTE-2; com Tell Inventado (o SKC deste teste) e, no pacote 11,
+    // Tell Achado Teste (TESTEG-9), 9 sítios valem como opção. O atual sai: 8 linhas. CA00001 ligado ao túmulo conta nele e na área (as contagens somam as partes de baixo;
     // Maḥteṣ Teste continua com os 3 do livro, `contagemDoSitio` como está). Os sítios que outros testes criaram saem antes.
     for (const s of estadoAtual().registros.get('sitio')?.values() ?? []) if (/^SI-/.test(s.id) && s.id !== 'SI-aaaaaaaa-1' && !s.excluido) await registrar('sitio', s.id, 'excluir')
     await registrar('item-sitio', 'CA00001', 'alterar', { sitio: 'TESTE-6', sitioNome: 'Túmulo Probe Teste' })
@@ -200,7 +200,7 @@ describe('"Sítio deste objeto": trocar o sítio na ficha', () => {
       within(grupo)
         .getAllByRole('radio')
         .map((b) => [b.querySelector('.trocar-sitio-opcao-nome')!.textContent, b.getAttribute('data-nivel'), b.querySelector('.trocar-sitio-opcao-apoio')!.textContent])
-    await waitFor(() => expect(grupo.querySelector('.trocar-sitio-lista-topo')).toHaveTextContent(/^Sítios7$/))
+    await waitFor(() => expect(grupo.querySelector('.trocar-sitio-lista-topo')).toHaveTextContent(/^Sítios8$/))
     await waitFor(() =>
       // as partes do atual primeiro (fix round 1), depois a árvore dos outros
       expect(linhas()).toEqual([
@@ -209,6 +209,7 @@ describe('"Sítio deste objeto": trocar o sítio na ficha', () => {
         ['Ḫirbet Vizinha Teste', '0', '0 objetos'],
         ['Maḥteṣ Teste', '0', '3 objetos'],
         ['Maḥtiṣ Teste', '0', '0 objetos'],
+        ['Tell Achado Teste', '0', '1 objeto'],
         ['Tell InventadoSKC', '0', 'Negev · 0 objetos'],
         ['Tell Usuário Teste', '0', '0 objetos'],
       ]),

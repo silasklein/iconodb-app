@@ -82,6 +82,9 @@ function camposDoPacote(v: VerbeteCompleto): CamposCompletos {
 
 function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
   const carga = useCarregar(() => verbete(id), id, { manter: !pagina })
+  // Etapa 4 (revisão do branch, I2): o número de um verbete fundido a outro no processamento leva ao que ficou
+  const redirecionamentos = useRedirecionamentos()
+  const { search, state } = useLocation()
   const nomeRef = useRef<HTMLHeadingElement>(null)
   const { aviso, copiar } = useCopiar(nomeRef)
   const voltar = { href: `#${voltarPara}`, rotulo: 'Voltar ao glossário' }
@@ -104,6 +107,9 @@ function VerbeteDoPacote({ id, pagina, voltarPara, computador }: Props) {
   if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
   const v = carga.dados
   if (v === null) {
+    if (redirecionamentos === null) return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
+    const para = redirecionamentos.get(id)
+    if (para) return <Navigate replace to={`/verbete/${encodeURIComponent(para)}${search}`} state={state} />
     return <NaoEncontrado pagina={pagina} voltar={voltar} titulo="Verbete não encontrado" destino="/glossario" rotuloDoDestino="Ver o glossário" />
   }
 

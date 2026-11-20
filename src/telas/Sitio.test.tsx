@@ -283,7 +283,8 @@ describe('mesclar e desfazer na página do sítio', () => {
       expect(within(dados).getByText('Mesclado aqui')).toBeInTheDocument()
       const linhas = [...dados.querySelectorAll('.sitio-mesclado')].map((l) => l.textContent)
       // um por absorvido, em ordem de id (TESTE-1, TESTE-4)
-      expect(linhas).toEqual(['Maḥteṣ Teste(dos livros)desfazer', 'Tel Probe Teste(dos livros)desfazer'])
+      // com o livro e o número de cada um (Tarefa 27, fix round 2)
+      expect(linhas).toEqual(['Maḥteṣ Teste(dos livros)· TESTE-1desfazer', 'Tel Probe Teste(dos livros)· TESTE-4desfazer'])
     } finally {
       await act(() => desfazerMescla('TESTE-1', []))
     }

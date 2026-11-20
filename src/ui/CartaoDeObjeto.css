@@ -62,3 +62,16 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* O cartão com algo embaixo, fora do link (Tarefa 26: a marca «do texto» com o link ao §). */
+.cartao-objeto-com-rodape {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cartao-objeto-rodape {
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--secundario);
+}

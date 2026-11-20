@@ -17,8 +17,8 @@ import sqlite3InitModule, { type BindingSpec, type Database, type SAHPoolUtil, t
 import type { Armazem } from '../pacote/armazem'
 import { caminhoDoBlob, lerEstado } from '../pacote/local'
 import type { Manifesto } from '../pacote/manifesto'
-import { arquivosDoBanco, type ArquivoDoBanco } from './arquivos'
-import { ErroSemPacote, type EstadoBanco, type Instrucao, type Linha, type Motor, type Parametros } from './protocolo'
+import { arquivosDoBanco, ordenarPorTipoDeLivro, type ArquivoDoBanco, type TipoDoLivro } from './arquivos'
+import { ErroSemPacote, type EstadoBanco, type Instrucao, type Linha, type Motor, type Parametros, type PublicacaoAberta } from './protocolo'
 
 export { arquivosDoBanco, ESQUEMA_DA_BUSCA, esquemaDaPublicacao, type ArquivoDoBanco } from './arquivos'
 
@@ -93,6 +93,21 @@ const ESQUEMA_DO_USUARIO = `
   );
   CREATE VIRTUAL TABLE fts USING fts5(texto, tokenize='unicode61 remove_diacritics 2');
 `
+
+/**
+ * O tipo do livro aberto (`ordenarPorTipoDeLivro`): a tradução tem `publication.translation_of`; o livro em parágrafos tem
+ * trechos `§N`; o resto é catálogo (também um pacote antigo sem as colunas ou tabelas).
+ */
+function tipoDoLivro(db: Database, { sigla, esquema }: PublicacaoAberta): TipoDoLivro {
+  try {
+    const comTraducao = db.selectValue(`SELECT count(*) FROM pragma_table_info('publication', '${esquema}') WHERE name = 'translation_of'`)
+    if (comTraducao && db.selectValue(`SELECT translation_of FROM ${esquema}.publication WHERE sigla = ?`, [sigla])) return 'traducao'
+    if (db.selectValue(`SELECT EXISTS (SELECT 1 FROM ${esquema}.passage WHERE locator GLOB '§[0-9]*')`)) return 'paragrafos'
+  } catch {
+    // sem a tabela: catálogo
+  }
+  return 'catalogo'
+}
 
 /** O estado mudou enquanto o banco abria (outra janela trocou o pacote): vale tentar de novo. */
 class PacoteMudou extends Error {}
@@ -207,7 +222,8 @@ export class Banco implements Motor {
     }
     this.db ??= await this.abrirEmMemoria(sqlite3, arquivos)
     if (!this.opcoes.escrita) this.db.exec('PRAGMA query_only = 1')
-    return { estado: 'aberto', publicacoes, geradoEm: manifesto.gerado_em, modo }
+    const db = this.db
+    return { estado: 'aberto', publicacoes: ordenarPorTipoDeLivro(publicacoes, (p) => tipoDoLivro(db, p)), geradoEm: manifesto.gerado_em, modo }
   }
 
   private obterPool(sqlite3: Sqlite3Static): Promise<PoolDoBanco | null> {

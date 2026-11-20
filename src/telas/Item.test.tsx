@@ -631,7 +631,7 @@ describe('Item', () => {
       }
       const relacoes = screen.getByRole('region', { name: 'Paralelos e relações' })
       expect(within(relacoes).getByRole('link', { name: 'CA00002' })).toHaveAttribute('href', '/item/CA00002')
-      expect(relacoes).toHaveTextContent('Autor 1999: 14 Nr. 5')
+      expect(relacoes).toHaveTextContent('Autor 1999: 914 Nr. 95')
       // Decisão 39: o locator do paralelo (dado do pacote, "TESTE I, Nr. 1") aparece com dois pontos; a citação externa fica como veio.
       expect(relacoes).toHaveTextContent('TESTE I: 1')
       expect(relacoes).not.toHaveTextContent('TESTE I, Nr. 1')

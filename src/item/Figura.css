@@ -1,0 +1,96 @@
+/*
+ * A página da figura (Etapa 4, Tarefa 24; tela 1 aprovada): «Discutida em» na voz da figura, o crédito e a marca «do texto»
+ * do sítio na ficha. As cores são as do item (tema escuro): nenhuma cor nova.
+ */
+.figura-voz .discutida-titulo,
+.figura-voz .discutida-vazia {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--secundario);
+}
+.discutida {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.discutida a {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  column-gap: 10px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--filete);
+  color: inherit;
+  text-decoration: none;
+}
+.discutida li:first-child a {
+  border-top: 0;
+  padding-top: 2px;
+}
+.discutida-paragrafo {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.discutida a:hover .discutida-paragrafo,
+.discutida a:focus-visible .discutida-paragrafo {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.discutida-frase {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  overflow-wrap: break-word;
+}
+/* A referência à figura na frase («(fig. 3b)», tela 1) e o caminho do § embaixo. */
+.discutida-texto {
+  min-width: 0;
+}
+.discutida-fig {
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: #6b6b6b;
+  text-underline-offset: 3px;
+}
+.discutida-onde {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+.figura-voz-credito {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+  overflow-wrap: anywhere;
+}
+/* A marca «do texto» no sítio da ficha, na linha de baixo do nome, como «no livro: …». */
+.item-ficha-do-texto {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secundario-item);
+}
+.item-ficha-do-texto .marca-skc {
+  margin-right: 4px;
+}
+@media (min-width: 768px) {
+  .discutida a {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+}
+
+/* A marca «do texto» sob o cartão de um objeto (a página do sítio; Tarefa 26). */
+.cartao-do-texto .marca-skc {
+  margin-right: 2px;
+  font-size: 11px;
+}
+.cartao-do-texto-onde {
+  white-space: nowrap;
+}

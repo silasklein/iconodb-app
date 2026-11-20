@@ -22,6 +22,7 @@ const CAMINHOS = [
   '/colecoes',
   '/grupo/:id',
   '/item/:numero',
+  '/paragrafo/:sigla/:numero',
   '/objeto/novo',
   '/imagem/:id',
   '/glossario',
@@ -62,7 +63,12 @@ describe('rotas', () => {
   })
 
   it.each(CAMINHOS)('%s mostra uma tela com título', async (caminho) => {
-    abrir(caminho.replace(':id', caminho === '/grupo/:id' ? 'GR-TESTE-I-01' : 'x1').replace(':numero', 'CA00001'))
+    abrir(
+      caminho
+        .replace(':id', caminho === '/grupo/:id' ? 'GR-TESTE-I-01' : 'x1')
+        .replace(':sigla', 'TESTEG')
+        .replace(':numero', caminho.startsWith('/paragrafo/') ? '2' : 'CA00001'),
+    )
     expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 

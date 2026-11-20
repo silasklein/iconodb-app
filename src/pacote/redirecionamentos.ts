@@ -9,8 +9,9 @@
  * (Glossário, Sítios, campo Termo, Revisão, busca) e tudo o que aponta para ele (as hipóteses, os `[[…]]`, o sítio de um
  * objeto, o endereço antigo `/verbete/GL-…` e `/sitio/SI-…`) leva ao destino. Lidos uma vez por pacote aberto; sem pacote,
  * com a consulta falhando ou com um pacote do schema 5 (sem a tabela), nenhum redirecionamento.
- * Só valem as linhas de um id do usuário para um id do livro (o pacote nunca redireciona um id do livro), e para um destino
- * que existe no pacote (revisão 1, m7).
+ * Só valem as linhas de um id do usuário para um id do livro, e para um destino que existe no pacote (revisão 1, m7). A
+ * exceção é a obra unida (Etapa 4, decisão 92, c6): `BIB-<dígitos>` → `BIB-<dígitos>`, a repetida que o fechamento apagou do
+ * `bib_entry`; o endereço antigo, a citação ligada ao número antigo e as notas dele vão à obra que ficou.
  * A coluna `criado` (decisão 50; revisão 2) diz se o destino foi CRIADO do registro do usuário (o verbete ou sítio novo que
  * ele publicou) ou se já era do livro (o do usuário só leva a ele). Só no primeiro caso a página do livro mostra «Este
  * verbete veio de você» (`useOrigensQueCriaram`). Uma linha sem a coluna conta como não criada.
@@ -49,10 +50,17 @@ const RE_ID_SEQUENCIAL = /^(?:GL|EL|HY|BIB)-[0-9]+$/
 
 const eSitioDoLivro = (id: string) => RE_SITIO_DO_LIVRO.test(id) && !RE_ID_SEQUENCIAL.test(id)
 
+/**
+ * Etapa 4, Tarefa 27 (decisão 92, c6): a obra também vai de um número do livro para outro, a repetida unida no fechamento
+ * (`BIB-<dígitos>` → `BIB-<dígitos>`, `criado 0`): o número antigo continua valendo e leva à obra que ficou. O verbete também
+ * (revisão do branch, I2): os verbetes que o processamento fundiu (`GL-<dígitos>` → `GL-<dígitos>`, `criado 0`); o endereço
+ * antigo, as notas, as hipóteses SKC com o termo antigo e os `[[GL-…]]` vão ao que ficou. Só vale se a origem saiu do
+ * glossário (`origemNoGlossario`, conferido na leitura): um redirecionamento não esconde um verbete vivo.
+ */
 const valida = (de: string, para: string, tipo: string) =>
-  (tipo === 'verbete' && RE_VERBETE_DO_USUARIO.test(de) && RE_VERBETE_DO_LIVRO.test(para)) ||
+  (tipo === 'verbete' && (RE_VERBETE_DO_USUARIO.test(de) || RE_VERBETE_DO_LIVRO.test(de)) && RE_VERBETE_DO_LIVRO.test(para) && de !== para) ||
   (tipo === 'sitio' && RE_SITIO_DO_USUARIO.test(de) && eSitioDoLivro(para)) ||
-  (tipo === 'obra' && RE_OBRA_SKC.test(de) && RE_OBRA_DO_LIVRO.test(para))
+  (tipo === 'obra' && (RE_OBRA_SKC.test(de) || RE_OBRA_DO_LIVRO.test(de)) && RE_OBRA_DO_LIVRO.test(para) && de !== para)
 
 /** Uma mescla do processamento: de um sítio do livro para outro (a lista dos sítios confere que os dois existem). */
 const eMescla = (de: string, para: string, tipo: string) => tipo === 'sitio' && de !== para && eSitioDoLivro(de) && eSitioDoLivro(para)
@@ -84,7 +92,9 @@ function lerDoPacote(): NonNullable<typeof guardado> {
       const validas = linhas.filter((l) => valida(l.de, l.para, l.tipo))
       const mesclas = linhas.filter((l) => eMescla(l.de, l.para, l.tipo))
       const sitios = validas.some((l) => l.tipo === 'sitio') || mesclas.length > 0 ? await sitiosDoPacote() : null
-      const vivas = validas.filter((l) => (l.tipo === 'verbete' ? l.verbeteExiste : l.tipo === 'obra' ? l.obraExiste : !!sitios?.has(l.para)))
+      const vivas = validas.filter((l) =>
+        l.tipo === 'verbete' ? l.verbeteExiste && !(RE_VERBETE_DO_LIVRO.test(l.de) && l.origemNoGlossario) : l.tipo === 'obra' ? l.obraExiste : !!sitios?.has(l.para),
+      )
       const leitura: Leitura = {
         mapa: new Map(vivas.map((l) => [l.de, l.para] as const)),
         criados: new Set(vivas.filter((l) => l.criado).map((l) => l.de)),

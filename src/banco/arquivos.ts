@@ -24,6 +24,26 @@ export interface ArquivoDoBanco {
   esquema: string
 }
 
+/**
+ * O tipo de um livro para a ordem dos livros (Etapa 4, Tarefa 27, regra (a) do controlador): o catálogo (o IPIAO), o livro em
+ * parágrafos (o GGG: trechos `§N`, sem `translation_of`) e a tradução (o GGIG: `publication.translation_of`).
+ */
+export type TipoDoLivro = 'catalogo' | 'paragrafos' | 'traducao'
+const ORDEM_DO_TIPO: Record<TipoDoLivro, number> = { catalogo: 0, paragrafos: 1, traducao: 2 }
+
+/**
+ * A ordem dos livros em todo o app (um só lugar: `publicacoesAbertas()` a devolve assim): os catálogos, depois os livros em
+ * parágrafos, depois as traduções; dentro de cada grupo, a ordem do manifesto (que o pipeline grava pelo nome). Ela faz as
+ * abas das Coleções, o «No livro», a linha das fontes («IPIAO II: 454 · GGG: 3b»), os itens do objeto (e com eles o lugar da
+ * ficha do objeto unido), as Leituras e o «Discutida em».
+ */
+export function ordenarPorTipoDeLivro<T>(pubs: readonly T[], tipo: (p: T) => TipoDoLivro): T[] {
+  return pubs
+    .map((p, i) => ({ p, i, o: ORDEM_DO_TIPO[tipo(p)] }))
+    .sort((a, b) => a.o - b.o || a.i - b.i)
+    .map((x) => x.p)
+}
+
 /** Os arquivos do banco no manifesto: comum (main), um por publicação e a busca. */
 export function arquivosDoBanco(manifesto: Manifesto): { arquivos: ArquivoDoBanco[]; publicacoes: PublicacaoAberta[] } {
   const arquivo = (caminho: string, esquema: string): ArquivoDoBanco | null => {

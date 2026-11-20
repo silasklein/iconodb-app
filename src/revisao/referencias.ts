@@ -12,7 +12,7 @@ import { useCarregar } from '../ui/useCarregar'
 import { estadoAtual, useEstado } from '../usuario/estado'
 import type { Estado } from '../usuario/fusao'
 import { citacaoDoLivro } from './citacoes'
-import { useDestinosCriados } from '../pacote/redirecionamentos'
+import { destinoDe, useDestinosCriados, useRedirecionamentos, type Redirecionamentos } from '../pacote/redirecionamentos'
 import { idDaOcorrencia, ligacaoDe, obraDaCitacao, type ObrasCriadas } from './ligacoes'
 
 export interface ReferenciaNoObjeto extends ReferenciaBibliografica {
@@ -31,13 +31,24 @@ export interface ReferenciaNoObjeto extends ReferenciaBibliografica {
 
 type Chicagos = ReadonlyMap<string, { chicago: string | null; chicagoHtml: string | null }>
 
-/** As referências como o app as mostra agora. `chicagos`: a forma Chicago das obras dos livros que a pessoa ligou no app. */
-export function referenciasComLigacoes(estado: Estado, refs: readonly ReferenciaBibliografica[], chicagos: Chicagos = new Map(), criadas?: ObrasCriadas): ReferenciaNoObjeto[] {
+/**
+ * As referências como o app as mostra agora. `chicagos`: a forma Chicago das obras dos livros que a pessoa ligou no app.
+ * `redirecionamentos` (Etapa 4, Tarefa 27; decisão 92, c6): a ligação a uma obra dos livros que o fechamento uniu a outra abre a
+ * que ficou.
+ */
+export function referenciasComLigacoes(
+  estado: Estado,
+  refs: readonly ReferenciaBibliografica[],
+  chicagos: Chicagos = new Map(),
+  criadas?: ObrasCriadas,
+  redirecionamentos?: Redirecionamentos | null,
+): ReferenciaNoObjeto[] {
   return refs.map((r) => {
     const doLivro = citacaoDoLivro(r)
     const l = ligacaoDe(estado, doLivro, criadas)
-    const obra = obraDaCitacao(estado, doLivro, { obraId: r.obraId, resolvidaPor: r.resolvidaPor }, criadas)
-    const ligadaPorVoce = obra !== null && (l?.obra === obra || (l === null && r.resolvidaPor === 'user'))
+    const ligada = obraDaCitacao(estado, doLivro, { obraId: r.obraId, resolvidaPor: r.resolvidaPor }, criadas)
+    const ligadaPorVoce = ligada !== null && (l?.obra === ligada || (l === null && r.resolvidaPor === 'user'))
+    const obra = ligada !== null && eObraDoLivro(ligada) ? destinoDe(redirecionamentos, ligada) : ligada
     const viva = l && l.por === 'ocorrencia' && l.obra === null && !estado.registro('citacao', l.registro)?.excluido ? l.registro : null
     let chicago = r.chicago
     let chicagoHtml = r.chicagoHtml
@@ -75,12 +86,16 @@ export function useReferenciasComLigacoes(refs: readonly ReferenciaBibliografica
   const obras = useEstado((e) => e.registros.get('obra'))
   // Tarefa 14 (fix round 1): a ligação a uma obra publicada cujas origens estão todas excluídas não vale
   const criadas = useDestinosCriados()
+  const redirecionamentos = useRedirecionamentos()
   const semChicago = useMemo(
-    () => referenciasComLigacoes(estadoAtual(), refs, undefined, criadas),
-    [refs, ligacoes, obras, criadas], // eslint-disable-line react-hooks/exhaustive-deps
+    () => referenciasComLigacoes(estadoAtual(), refs, undefined, criadas, redirecionamentos),
+    [refs, ligacoes, obras, criadas, redirecionamentos], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const faltam = useMemo(() => [...new Set(semChicago.filter((r, i) => r.obraId !== refs[i]!.obraId && eObraDoLivro(r.obraId)).map((r) => r.obraId!))].sort(), [semChicago, refs])
   const carga = useCarregar(() => chicagoDasObras(faltam), faltam.join('|'), { manter: true })
   const chicagos = carga.fase === 'ok' ? carga.dados : null
-  return useMemo(() => (chicagos && faltam.length > 0 ? referenciasComLigacoes(estadoAtual(), refs, chicagos, criadas) : semChicago), [semChicago, chicagos, faltam, refs, criadas])
+  return useMemo(
+    () => (chicagos && faltam.length > 0 ? referenciasComLigacoes(estadoAtual(), refs, chicagos, criadas, redirecionamentos) : semChicago),
+    [semChicago, chicagos, faltam, refs, criadas, redirecionamentos],
+  )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { LinkComOrigem, OrigemDosLinks } from '../app/OrigemDosLinks'
 import type { Verbete } from '../banco/tipos'
@@ -12,6 +12,7 @@ import {
   type AcertoDoUsuario,
   type Escopo,
   type Filtros,
+  type ParagrafoAchado,
   type ResultadoDaBusca,
 } from '../busca/consulta'
 import { ROTULO_DO_TIPO_DO_USUARIO, rotaDoAcertoDoUsuario } from '../busca/rotasDoUsuario'
@@ -44,6 +45,11 @@ const acertosSKC = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? 'ace
 /** "3 objetos", "1 acerto na sua camada" ou "3 objetos e 1 acerto na sua camada". */
 const quantos = (objs: number, usuario: number) =>
   [objs > 0 || usuario === 0 ? objetos(objs) : null, usuario > 0 ? acertosSKC(usuario) : null].filter(Boolean).join(' e ')
+
+/** «2 §§», «1 §»: a contagem da aba «Texto» (Tarefa 26), que conta §§ e não objetos. */
+const paragrafos = (n: number) => `${n.toLocaleString('pt-BR')} ${n === 1 ? '§' : '§§'}`
+/** Quantos §§ o bloco «Nos §§» do «Tudo» mostra (decisão 91, a6). */
+export const PARAGRAFOS_NO_TUDO = 3
 
 const TIPO_DO_VERBETE: Record<Verbete['tipo'], string> = { concept: 'conceito', name: 'nome', technical: 'técnico' }
 
@@ -197,7 +203,11 @@ export function Busca() {
           key={e}
           type="button"
           aria-pressed={e === escopo}
-          aria-label={resultado ? `${ROTULO_DO_ESCOPO[e]}, ${quantos(resultado.contagens[e], resultado.contagensDoUsuario[e])}` : undefined}
+          aria-label={
+            resultado
+              ? `${ROTULO_DO_ESCOPO[e]}, ${e === 'texto' ? paragrafos(resultado.contagens.texto) : quantos(resultado.contagens[e], resultado.contagensDoUsuario[e])}`
+              : undefined
+          }
           onClick={() => ir({ escopo: e })}
         >
           {ROTULO_DO_ESCOPO[e]}
@@ -323,6 +333,27 @@ export function Busca() {
                 {filtrosAtivos}
 
                 <section className="busca-resultados" aria-label="Resultados">
+                  {escopo === 'texto' ? (
+                    resultado.paragrafos.length > 0 ? (
+                      <ParagrafosAchados titulo="§§ achados" paragrafos={resultado.paragrafos} />
+                    ) : (
+                      <div className="busca-aviso" role="status">
+                        <p className="busca-nada">Nada encontrado nos §§ para «{q.trim()}»</p>
+                        {resultado.contagens.tudo + resultado.contagensDoUsuario.tudo > 0 && (
+                          <>
+                            <p>Em «{ROTULO_DO_ESCOPO.tudo}» há {quantos(resultado.contagens.tudo, resultado.contagensDoUsuario.tudo)}.</p>
+                            <button type="button" className="busca-link" onClick={() => ir({ escopo: 'tudo' })}>
+                              Buscar em Tudo
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )
+                  ) : (
+                    <>
+                  {escopo === 'tudo' && resultado.paragrafos.length > 0 && (
+                    <ParagrafosAchados titulo="Nos §§" paragrafos={resultado.paragrafos} limite={PARAGRAFOS_NO_TUDO} aoVerTodos={() => ir({ escopo: 'texto' }, false)} />
+                  )}
                   {resultado.total > 0 && (
                     <div className="busca-contagem">
                       <h2>{objetos(resultado.total)}</h2>
@@ -337,7 +368,7 @@ export function Busca() {
                   )}
 
                   {resultado.total === 0 && resultado.usuario.length === 0 ? (
-                    <SemResultado q={q} escopo={escopo} resultado={resultado} aoTudo={() => ir({ escopo: 'tudo' })} aoLimpar={limparFiltros} />
+                    resultado.paragrafos.length === 0 && <SemResultado q={q} escopo={escopo} resultado={resultado} aoTudo={() => ir({ escopo: 'tudo' })} aoLimpar={limparFiltros} />
                   ) : (
                     <>
                       {resultado.total > 0 && (
@@ -365,6 +396,8 @@ export function Busca() {
                       {resultado.usuario.length > 0 && <AcertosDoUsuario acertos={resultado.usuario} />}
                     </>
                   )}
+                    </>
+                  )}
                 </section>
               </>
             )}
@@ -376,6 +409,55 @@ export function Busca() {
         <FolhaDeFiltros resultado={resultado} aoAlternar={alternar} aoLimpar={limparFiltros} aoFechar={() => setFolha(false)} />
       )}
     </OrigemDosLinks>
+  )
+}
+
+/**
+ * Os §§ achados (Tarefa 26, tela 4): no «Tudo», o bloco «Nos §§» com os `limite` primeiros e «Ver os N §§» (a aba «Texto»); na
+ * aba, todos. Cada linha é um link à página do §: o livro, o § e a nota à esquerda; o recorte com o termo em destaque, na língua
+ * em que casou, e o caminho em português.
+ */
+function ParagrafosAchados({ titulo, paragrafos: lista, limite, aoVerTodos }: { titulo: string; paragrafos: ParagrafoAchado[]; limite?: number; aoVerTodos?: () => void }) {
+  const id = useId()
+  const mostrados = limite ? lista.slice(0, limite) : lista
+  return (
+    <section className="busca-paragrafos" aria-labelledby={id}>
+      <div className="busca-contagem">
+        <h2 id={id}>{titulo}</h2>
+        <span className="codigo">{lista.length.toLocaleString('pt-BR')}</span>
+      </div>
+      <ul className="busca-paragrafos-lista">
+        {mostrados.map((p) => {
+          const recorte = p.trecho.recorte.map((r) => r.texto).join('')
+          return (
+            <li key={`${p.sigla}|${p.numero}`}>
+              <LinkComOrigem
+                className="busca-paragrafo"
+                to={p.caminho}
+                aria-label={`${p.rotulo}${p.trecho.nota !== null ? `, nota ${p.trecho.nota}` : ''}: ${recorte}`}
+              >
+                <span className="busca-paragrafo-fonte">
+                  <span className="busca-paragrafo-livro">{p.sigla}</span>
+                  <span className="busca-paragrafo-numero">§ {p.numero}</span>
+                  {p.trecho.nota !== null && <span className="busca-paragrafo-numero">nota {p.trecho.nota}</span>}
+                </span>
+                <span className="busca-paragrafo-corpo">
+                  <span className="busca-paragrafo-recorte" lang={p.trecho.lingua}>
+                    {p.trecho.recorte.map((r, i) => (r.forte ? <strong key={i}>{r.texto}</strong> : <span key={i}>{r.texto}</span>))}
+                  </span>
+                  {p.trilha.length > 0 && <span className="busca-paragrafo-trilha">{p.trilha.join(' › ')}</span>}
+                </span>
+              </LinkComOrigem>
+            </li>
+          )
+        })}
+      </ul>
+      {limite !== undefined && lista.length > limite && aoVerTodos && (
+        <button type="button" className="busca-link busca-paragrafos-todos" onClick={aoVerTodos}>
+          Ver os {paragrafos(lista.length)}
+        </button>
+      )}
+    </section>
   )
 }
 

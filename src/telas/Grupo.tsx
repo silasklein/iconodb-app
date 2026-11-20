@@ -16,6 +16,7 @@ import { GrupoDividido } from './GrupoDividido'
 import { Subcolecao } from './Subcolecao'
 import { TrechoDaIntroducao, TrechosDaIntroducao } from './TrechosDaIntroducao'
 import { caminhoNoGrupo, chaveDaObra, rotuloDaObra, rotuloDaSubcolecao, tituloDoGrupo } from './obras'
+import { LerOsParagrafos, numeroDaSecao, rotuloDaSecaoNaLista, rotuloDoCapitulo, textoDeFiguras, textoDoIntervalo } from './LivroEmParagrafos'
 import './Grupo.css'
 
 /**
@@ -85,6 +86,8 @@ function GrupoDoPacote({ id }: { id: string }) {
   const estado = estadoDoGrupo(g.id, tituloDoGrupo(g).texto, `${pathname}${search}`)
   const descer = () => grade.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   const comSubcolecoes = g.subcolecoes.length > 0
+  // O capítulo do livro em parágrafos (Tarefa 26): figuras, §§ e seções, e «Ler o capítulo» no lugar da introdução.
+  const livro = g.paragrafos
 
   return (
     <div className="grupo">
@@ -105,43 +108,64 @@ function GrupoDoPacote({ id }: { id: string }) {
         )}
 
         <main className="grupo-apresentacao">
-          <span className="grupo-etiqueta">{[g.periodo, `Grupo ${g.ordinal}`, rotuloObra].filter(Boolean).join(' · ')}</span>
+          <span className="grupo-etiqueta">{livro ? rotuloDoCapitulo(rotuloObra, g.numero) : [g.periodo, `Grupo ${g.ordinal}`, rotuloObra].filter(Boolean).join(' · ')}</span>
           <div className="grupo-titulo">
             <h1>{tituloDoGrupo(g).texto}</h1>
             <span className="grupo-filete" aria-hidden="true" />
           </div>
 
-          <dl className="grupo-contagens" role="group" aria-label="O que há no grupo">
-            <div>
-              <dt>Objetos</dt>
-              <dd>{numeroPtBr(g.objetos)}</dd>
-            </div>
-            <div>
-              <dt>Imagens</dt>
-              <dd>{numeroPtBr(g.imagens)}</dd>
-            </div>
-            <div>
-              <dt>Hipóteses</dt>
-              <dd>{numeroPtBr(g.hipoteses)}</dd>
-            </div>
-          </dl>
+          {livro ? (
+            <dl className="grupo-contagens" role="group" aria-label="O que há no capítulo">
+              <div>
+                <dt>Figuras</dt>
+                <dd>{numeroPtBr(g.objetos)}</dd>
+              </div>
+              <div>
+                <dt>§§</dt>
+                <dd>{numeroPtBr(livro.total)}</dd>
+              </div>
+              <div>
+                <dt>Seções</dt>
+                <dd>{numeroPtBr(g.subcolecoes.length)}</dd>
+              </div>
+            </dl>
+          ) : (
+            <dl className="grupo-contagens" role="group" aria-label="O que há no grupo">
+              <div>
+                <dt>Objetos</dt>
+                <dd>{numeroPtBr(g.objetos)}</dd>
+              </div>
+              <div>
+                <dt>Imagens</dt>
+                <dd>{numeroPtBr(g.imagens)}</dd>
+              </div>
+              <div>
+                <dt>Hipóteses</dt>
+                <dd>{numeroPtBr(g.hipoteses)}</dd>
+              </div>
+            </dl>
+          )}
 
-          <Introducao g={g} lendo={lendo} aoAlternar={() => setLendo((v) => !v)} />
+          {livro ? (
+            <LerOsParagrafos sigla={g.publicacao} intervalo={livro} rotulo="Ler o capítulo" />
+          ) : (
+            <Introducao g={g} lendo={lendo} aoAlternar={() => setLendo((v) => !v)} />
+          )}
 
           <button type="button" className="grupo-descer" onClick={descer}>
             <Icon name="descer" size={18} />
-            {objetos(g.objetos)}
+            {livro ? textoDeFiguras(g.objetos) : objetos(g.objetos)}
           </button>
         </main>
       </div>
 
-      {comSubcolecoes && <ListaDeSubcolecoes pai={g.id} subcolecoes={g.subcolecoes} />}
+      {comSubcolecoes && <ListaDeSubcolecoes pai={g.id} subcolecoes={g.subcolecoes} livro={!!livro} />}
 
-      <section className="grupo-objetos" id="objetos-do-grupo" aria-label="Objetos do grupo" ref={grade}>
+      <section className="grupo-objetos" id="objetos-do-grupo" aria-label={livro ? 'Figuras do capítulo' : 'Objetos do grupo'} ref={grade}>
         {(computador || comSubcolecoes) && (
           <div className="grupo-objetos-topo">
             <h2>
-              {comSubcolecoes ? 'Todos os objetos' : 'Objetos'} <span className="codigo">{numeroPtBr(g.objetos)}</span>
+              {livro ? 'Todas as figuras' : comSubcolecoes ? 'Todos os objetos' : 'Objetos'} <span className="codigo">{numeroPtBr(g.objetos)}</span>
             </h2>
           </div>
         )}
@@ -186,11 +210,11 @@ function Introducao({ g, lendo, aoAlternar }: { g: GrupoDetalhe; lendo: boolean;
  * As subcoleções do grupo (schema 9), na ordem do sumário: o número, o título em português e os objetos; cada linha abre
  * a sua página, com a marca de que veio do grupo (o «‹ grupo» da subcoleção volta no histórico, sem laço).
  */
-function ListaDeSubcolecoes({ pai, subcolecoes }: { pai: string; subcolecoes: SubcolecaoResumo[] }) {
+function ListaDeSubcolecoes({ pai, subcolecoes, livro }: { pai: string; subcolecoes: SubcolecaoResumo[]; livro: boolean }) {
   return (
     <section className="grupo-subcolecoes" aria-labelledby="grupo-subcolecoes-titulo">
       <div className="grupo-objetos-topo">
-        <h2 id="grupo-subcolecoes-titulo">Subcoleções</h2>
+        <h2 id="grupo-subcolecoes-titulo">{livro ? 'Seções' : 'Subcoleções'}</h2>
       </div>
       <ul className="grupo-subcolecoes-lista">
         {subcolecoes.map((s) => (
@@ -199,10 +223,13 @@ function ListaDeSubcolecoes({ pai, subcolecoes }: { pai: string; subcolecoes: Su
               className="grupo-subcolecao"
               to={`/grupo/${encodeURIComponent(s.id)}`}
               state={estadoVindoDoPai(pai)}
-              aria-label={rotuloDaSubcolecao(s)}
+              aria-label={livro ? rotuloDaSecaoNaLista(s) : rotuloDaSubcolecao(s)}
             >
-              <span className="grupo-subcolecao-numero codigo">{s.numero}</span>
-              <span className="grupo-subcolecao-titulo">{s.titulo}</span>
+              <span className="grupo-subcolecao-numero codigo">{livro && s.numero ? numeroDaSecao(s.numero) : s.numero}</span>
+              <span className="grupo-subcolecao-titulo">
+                {s.titulo}
+                {livro && s.paragrafos && <span className="secao-intervalo">{textoDoIntervalo(s.paragrafos)}</span>}
+              </span>
               <span className="grupo-subcolecao-n">{numeroPtBr(s.objetos)}</span>
             </Link>
           </li>

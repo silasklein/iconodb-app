@@ -20,6 +20,8 @@ import {
 } from './novidade'
 
 const MANIFESTO = 'nucleo/manifest.json'
+/** Os rótulos dos livros do pacote sintético (pacote 11: o TESTE, o livro em parágrafos e a tradução dele). */
+const ROTULOS = ['TESTE I', 'TESTEG', 'TESTEGEN']
 const codificar = (texto: string) => Uint8Array.from(new TextEncoder().encode(texto))
 
 /** A Fonte de teste com o manifesto alterado (e, se dado, um arquivo trocado e anunciado nele). */
@@ -80,7 +82,7 @@ describe('compararComODropbox: o pacote do Dropbox é outro que o do aparelho?',
 
   it('um arquivo mudou de sha256: nova, com os rótulos dos livros', async () => {
     await comPacoteSintetico()
-    expect(await compararComODropbox(await pacoteMaisNovo(), armazem)).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(await compararComODropbox(await pacoteMaisNovo(), armazem)).toEqual({ tipo: 'nova', rotulos: ROTULOS })
   })
 
   it('um arquivo a mais (ou a menos) também é outro pacote', async () => {
@@ -96,7 +98,7 @@ describe('compararComODropbox: o pacote do Dropbox é outro que o do aparelho?',
   })
 
   it('sem pacote no aparelho: nova (o download também trata a falta de estado como mudança)', async () => {
-    expect(await compararComODropbox(fonteDeTeste(), armazem)).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(await compararComODropbox(fonteDeTeste(), armazem)).toEqual({ tipo: 'nova', rotulos: ROTULOS })
   })
 
   it('schema que o app não abre: incompatível (não é novidade nem erro)', async () => {
@@ -179,7 +181,7 @@ describe('procurarNovidade: nunca lança', () => {
   it('com a Fonte e o pacote: a resposta da comparação', async () => {
     await comPacoteSintetico()
     expect(await procurarNovidade({ obterFonte: async () => fonteDeTeste(), armazem })).toEqual({ tipo: 'em-dia' })
-    expect(await procurarNovidade({ obterFonte: async () => pacoteMaisNovo(), armazem })).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(await procurarNovidade({ obterFonte: async () => pacoteMaisNovo(), armazem })).toEqual({ tipo: 'nova', rotulos: ROTULOS })
   })
 })
 
@@ -239,7 +241,7 @@ describe('a procura da abertura e a de pedido', () => {
     expect(novidadeAtual()).toBeNull()
     const [a, b] = await Promise.all([procurarNaAbertura(), procurarNaAbertura()])
     await procurarNaAbertura()
-    expect(a).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(a).toEqual({ tipo: 'nova', rotulos: ROTULOS })
     expect(b).toBe(a)
     expect(f.manifestos).toBe(1)
     expect(novidadeAtual()).toEqual(a)
@@ -252,8 +254,8 @@ describe('a procura da abertura e a de pedido', () => {
     await procurarNaAbertura()
     expect(novidadeAtual()).toEqual({ tipo: 'em-dia' })
     usarProcura({ obterFonte: async () => f, armazem })
-    expect(await procurarAgora()).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
-    expect(novidadeAtual()).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(await procurarAgora()).toEqual({ tipo: 'nova', rotulos: ROTULOS })
+    expect(novidadeAtual()).toEqual({ tipo: 'nova', rotulos: ROTULOS })
     // A da abertura não roda de novo.
     await procurarNaAbertura()
     expect(f.manifestos).toBe(1)
@@ -277,7 +279,7 @@ describe('a procura da abertura e a de pedido', () => {
     marcarEmDia()
     expect(ouvinte).toHaveBeenCalledTimes(1)
     soltar()
-    expect(await procura).toEqual({ tipo: 'nova', rotulos: ['TESTE I'] })
+    expect(await procura).toEqual({ tipo: 'nova', rotulos: ROTULOS })
     expect(novidadeAtual()).toEqual({ tipo: 'em-dia' })
     expect(ouvinte).toHaveBeenCalledTimes(1)
     parar()

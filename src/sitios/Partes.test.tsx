@@ -366,7 +366,8 @@ describe('Partes na página do sítio', () => {
       await userEvent.click(await screen.findByRole('option', { name: /^Túmulo Probe Teste/ }))
       await userEvent.click(marcar)
       await waitFor(() => expect(estadoAtual().registro('sitio', 'TESTE-1')?.campos.parteDe).toBe('TESTE-6'))
-      expect(screen.queryByRole('group', { name: /é parte de qual sítio/ })).not.toBeInTheDocument()
+      // a caixa fecha quando a gravação volta, que pode vir depois de o registro já estar no estado
+      await waitFor(() => expect(screen.queryByRole('group', { name: /é parte de qual sítio/ })).not.toBeInTheDocument())
       await waitFor(() => expect(gatilho).toHaveFocus())
       expect(await screen.findByRole('navigation', { name: 'Caminho' })).toHaveTextContent('Tell Probe Teste›Área Probe Teste›Túmulo Probe Teste›Maḥteṣ Teste')
     } finally {

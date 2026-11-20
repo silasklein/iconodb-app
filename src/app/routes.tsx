@@ -14,6 +14,8 @@ import { Imagem } from '../telas/Imagem'
 import { Item } from '../telas/Item'
 import { Inicio } from '../telas/Inicio'
 import { MinhasNotas } from '../telas/MinhasNotas'
+import { Paragrafo } from '../telas/Paragrafo'
+import { ROTA_DO_PARAGRAFO } from '../banco/paragrafos'
 import { NovoObjeto } from '../telas/NovoObjeto'
 import { Preparando } from '../telas/Preparando'
 import { Revisao } from '../telas/Revisao'
@@ -48,6 +50,8 @@ export const ROTAS: Rota[] = [
   { path: '/colecoes', elemento: <Colecoes /> },
   { path: '/grupo/:id', elemento: <Grupo /> },
   { path: '/item/:numero', elemento: <Item /> },
+  // A página do § do livro em parágrafos (o GGG; Etapa 4, Tarefa 25): o português com o alemão e o inglês ao lado.
+  { path: ROTA_DO_PARAGRAFO, elemento: <Paragrafo /> },
   // Criar um objeto SKC (Tarefa 9). O objeto aberto é /item/<número> ou /item/<OB-…> (o Item resolve os dois).
   { path: '/objeto/novo', elemento: <NovoObjeto /> },
   { path: '/imagem/:id', elemento: <Imagem /> },

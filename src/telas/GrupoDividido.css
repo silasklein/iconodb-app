@@ -222,3 +222,22 @@
     padding: 20px 24px 48px;
   }
 }
+
+/* A seção do livro em parágrafos (Tarefa 26): o rótulo, o título grande, os números e «Ler a seção»; depois os §§ e as figuras. */
+.grupo-dividido-secao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 28px;
+}
+.grupo-dividido-secao-titulo {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.grupo-dividido-principal > .paragrafos-da-secao {
+  margin-bottom: 32px;
+}

@@ -19,7 +19,7 @@ export type EstadoBanco =
   | { estado: 'sem-pacote' }
   | {
       estado: 'aberto'
-      /** Na ordem do manifesto. */
+      /** Catálogos, livros em parágrafos e traduções; em cada grupo, na ordem do manifesto (`ordenarPorTipoDeLivro`). */
       publicacoes: PublicacaoAberta[]
       geradoEm: string
       /** 'memoria' no Node e quando o pool do OPFS está ocupado (outra janela do app). */

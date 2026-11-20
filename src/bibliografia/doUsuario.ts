@@ -22,6 +22,8 @@ import { eCslValido, eObraSkc, lerObra, RE_OBRA_DO_LIVRO, type Csl, type ObraSkc
 /** Uma obra da lista: a do pacote (`skc: false`) ou a do usuário ainda não publicada (`skc: true`, `origem` null). */
 export interface ObraDaLista extends ObraResumo {
   skc: boolean
+  /** A sigla do livro em parágrafos (ou da tradução dele) que é esta obra (Tarefa 26): a etiqueta na lista. */
+  livro?: string
 }
 
 const porCriacao = (a: ObraSkc, b: ObraSkc) => (a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0)

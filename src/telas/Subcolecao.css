@@ -193,3 +193,8 @@
     min-height: var(--alvo-mouse);
   }
 }
+
+/* A seção do livro em parágrafos (Tarefa 26): os §§ entre o cabeçalho e as figuras. */
+.subcolecao-paragrafos {
+  margin: 0 24px 28px;
+}

@@ -9,6 +9,7 @@ import { comModificador, temEntradaAnterior } from '../ui/useVoltar'
 import { numeroPtBr, textoDeObjetos as objetos } from '../ui/numero'
 import { caminhoNoGrupo, rotuloDaObra, tituloDoGrupo } from './obras'
 import { TrechoDaIntroducao, TrechosDaIntroducao } from './TrechosDaIntroducao'
+import { LerOsParagrafos, ParagrafosDaSecao, rotuloDaSecao, textoDeFiguras, textoDoIntervalo, tituloDaSecao } from './LivroEmParagrafos'
 import './Grupo.css'
 import './Subcolecao.css'
 
@@ -45,6 +46,10 @@ export function Subcolecao({ g, pai }: Props) {
   // No computador a subcoleção abre dentro do grupo, escolhida na lista (GrupoDividido).
   if (computador) return <Navigate replace to={caminhoNoGrupo(pai.id, g.id)} />
 
+  // A seção do livro em parágrafos (Tarefa 26, tela 3): «Ler a seção», «§§ desta seção» e as figuras, no lugar da introdução.
+  const livro = g.paragrafos
+  const obra = rotuloDaObra(g.publicacao, g.volume)
+
   return (
     <div className="subcolecao">
       <main className="subcolecao-corpo">
@@ -53,21 +58,28 @@ export function Subcolecao({ g, pai }: Props) {
             <span aria-hidden="true">‹</span>
             {tituloDoGrupo(pai).texto}
           </Link>
-          <span className="subcolecao-etiqueta">{[rotuloDaObra(g.publicacao, g.volume), g.periodo, g.numero].filter(Boolean).join(' · ')}</span>
-          <h1>{g.titulo}</h1>
+          <span className="subcolecao-etiqueta">{livro ? rotuloDaSecao(obra, g.numero) : [obra, g.periodo, g.numero].filter(Boolean).join(' · ')}</span>
+          <h1>{livro ? tituloDaSecao(g) : g.titulo}</h1>
           <span className="subcolecao-contagem">
-            {[objetos(g.objetos), g.posicao ? `subcoleção ${numeroPtBr(g.posicao.n)} de ${numeroPtBr(g.posicao.total)}` : null]
-              .filter(Boolean)
-              .join(' · ')}
+            {livro
+              ? [textoDeFiguras(g.objetos), textoDoIntervalo(livro)].join(' · ')
+              : [objetos(g.objetos), g.posicao ? `subcoleção ${numeroPtBr(g.posicao.n)} de ${numeroPtBr(g.posicao.total)}` : null].filter(Boolean).join(' · ')}
           </span>
+          {livro && <LerOsParagrafos sigla={g.publicacao} intervalo={livro} rotulo="Ler a seção" botao />}
         </div>
 
-        <Introducao numero={g.numero} trechos={g.introducao} />
+        {livro ? (
+          <div className="subcolecao-paragrafos">
+            <ParagrafosDaSecao sigla={g.publicacao} paragrafos={g.paragrafosDaSecao} />
+          </div>
+        ) : (
+          <Introducao numero={g.numero} trechos={g.introducao} />
+        )}
 
-        <section className="grupo-objetos subcolecao-objetos" aria-label="Objetos da subcoleção">
+        <section className="grupo-objetos subcolecao-objetos" aria-label={livro ? 'Figuras da seção' : 'Objetos da subcoleção'}>
           <div className="grupo-objetos-topo">
             <h2>
-              Objetos <span className="codigo">{numeroPtBr(g.objetos)}</span>
+              {livro ? 'Figuras da seção' : 'Objetos'} <span className="codigo">{numeroPtBr(g.objetos)}</span>
             </h2>
           </div>
           <div className="grupo-grade">

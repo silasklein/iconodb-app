@@ -51,13 +51,16 @@ export function paraUtf16(mapa: readonly number[], cp: number): number | null {
   return mapa[i]!
 }
 
-/** Trechos em code points → UTF-16, numa passada; somem os vazios, invertidos ou com posição inválida. */
-export function trechosEmUtf16(texto: string, trechos: readonly { inicio: number; fim: number }[], mapa: readonly number[] = mapaDeCodepoints(texto)): { inicio: number; fim: number }[] {
-  const saida: { inicio: number; fim: number }[] = []
+/**
+ * Trechos em code points → UTF-16, numa passada; somem os vazios, invertidos ou com posição inválida. Os outros campos de cada
+ * trecho vêm junto (as correções de leitura levam `lido` e `regra`, src/banco/paragrafos.ts).
+ */
+export function trechosEmUtf16<T extends { inicio: number; fim: number }>(texto: string, trechos: readonly T[], mapa: readonly number[] = mapaDeCodepoints(texto)): T[] {
+  const saida: T[] = []
   for (const t of trechos) {
     const inicio = paraUtf16(mapa, t.inicio)
     const fim = paraUtf16(mapa, t.fim)
-    if (inicio !== null && fim !== null && inicio < fim) saida.push({ inicio, fim })
+    if (inicio !== null && fim !== null && inicio < fim) saida.push({ ...t, inicio, fim })
   }
   return saida
 }

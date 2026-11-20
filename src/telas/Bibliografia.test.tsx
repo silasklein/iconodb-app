@@ -34,12 +34,13 @@ describe('Bibliografia (celular)', () => {
     renderizarRota('/bibliografia')
     expect(screen.getByRole('heading', { level: 1, name: 'Bibliografia' })).toBeInTheDocument()
     await screen.findByRole('link', { name: /Autor 1999/ })
-    // pacote 10: a obra do usuário publicada (BIB-900090, «Imaginária 2010») vem por último, pelo autor
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/BIB-900090'])
+    // pacote 10: a obra do usuário publicada (BIB-900090, «Imaginária 2010») vem por último, pelo autor; pacote 11 (Tarefa 26):
+    // o livro em parágrafos e a tradução dele (`LIVRO-…`), pela citação curta do CSL
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/LIVRO-TESTEG', '/obra/LIVRO-TESTEGEN', '/obra/BIB-900090'])
     const primeira = screen.getByRole('link', { name: /Autor 1999/ })
     expect(within(primeira).getByText('Achados de teste no vale de prova')).toBeInTheDocument()
     expect(within(primeira).getByText('4')).toBeInTheDocument()
-    expect(screen.getByText('3 obras · Chicago autor-data')).toBeInTheDocument()
+    expect(screen.getByText('5 obras · Chicago autor-data')).toBeInTheDocument()
   })
 
   it('busca por autor, ano ou título, com a dobra do pacote', async () => {
@@ -63,8 +64,14 @@ describe('Bibliografia (celular)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ordenar por ano' }))
     expect(screen.getByRole('button', { name: 'Ordenar por autor' })).toBeInTheDocument()
     // a ordem escolhida segue nos links, para a lista continuar assim ao voltar da obra
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001?ordem=ano', '/obra/BIB-900002?ordem=ano', '/obra/BIB-900090?ordem=ano'])
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['1999', '2004', '2010'])
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual([
+      '/obra/BIB-900001?ordem=ano',
+      '/obra/BIB-900002?ordem=ano',
+      '/obra/BIB-900090?ordem=ano',
+      '/obra/LIVRO-TESTEG?ordem=ano',
+      '/obra/LIVRO-TESTEGEN?ordem=ano',
+    ])
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['1999', '2004', '2010', '2021', '2022'])
   })
 
   it('por ano a ordem segue o ano da citação, não o autor', async () => {
@@ -72,10 +79,18 @@ describe('Bibliografia (celular)', () => {
     await executar(`UPDATE main.bib_entry SET short_cites = '{"TESTE": ["Autor 2010"]}' WHERE id = 'BIB-900001'`)
     renderizarRota('/bibliografia?ordem=ano')
     await screen.findByRole('link', { name: /Autor 2010/ })
-    expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900002?ordem=ano', '/obra/BIB-900001?ordem=ano', '/obra/BIB-900090?ordem=ano'])
-    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['2004', '2010'])
+    expect(linhas().map((a) => a.getAttribute('href'))).toEqual([
+      '/obra/BIB-900002?ordem=ano',
+      '/obra/BIB-900001?ordem=ano',
+      '/obra/BIB-900090?ordem=ano',
+      '/obra/LIVRO-TESTEG?ordem=ano',
+      '/obra/LIVRO-TESTEGEN?ordem=ano',
+    ])
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['2004', '2010', '2021', '2022'])
     await userEvent.click(screen.getByRole('button', { name: 'Ordenar por autor' }))
-    await waitFor(() => expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/BIB-900090']))
+    await waitFor(() =>
+      expect(linhas().map((a) => a.getAttribute('href'))).toEqual(['/obra/BIB-900001', '/obra/BIB-900002', '/obra/LIVRO-TESTEG', '/obra/LIVRO-TESTEGEN', '/obra/BIB-900090']),
+    )
     usarMotor(await bancoDeTeste())
   })
 

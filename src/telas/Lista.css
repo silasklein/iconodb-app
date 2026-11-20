@@ -561,6 +561,44 @@
   max-width: 640px;
   overflow-wrap: anywhere;
 }
+.obra-linha .obra-linha-livro {
+  font-family: var(--fonte-codigo);
+  font-size: 11px;
+}
+/* A linha de apoio sob o título de uma seção de objetos (Tarefa 26: o que é a marca «do texto»). */
+.detalhe-secao-apoio {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--secundario);
+}
+/* «Este livro no IconoDB» (Tarefa 26, tela 5) */
+.este-livro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.este-livro p {
+  margin: 0;
+}
+.este-livro-texto {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.este-livro-numeros {
+  font-size: 12px;
+  color: var(--secundario);
+}
+.este-livro-apoio {
+  font-size: 13px;
+  color: var(--secundario);
+}
+.este-livro .detalhe-fila {
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .obra-citada {
   margin: 8px 24px 0;
   font-size: 13px;

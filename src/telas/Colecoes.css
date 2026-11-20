@@ -119,7 +119,31 @@
   font-family: var(--fonte-texto);
 }
 
+/* O livro em parágrafos (Tarefa 26): os capítulos em grade, sem períodos; no celular, o título e, embaixo, os números. */
+.colecoes-capitulos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 2px solid var(--texto);
+}
+.colecoes-capitulo {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 0;
+}
+.colecoes-capitulo .colecoes-grupo-n {
+  flex-shrink: 1;
+}
+.colecoes-sem-figura {
+  font-size: 22px;
+  color: var(--secundario);
+}
+
 @media (min-width: 768px) {
+  .colecoes-capitulos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
   .colecoes {
     min-height: calc(100dvh - var(--barra-superior));
   }
@@ -198,6 +222,9 @@
 @media (min-width: 1100px) {
   .colecoes-periodos {
     column-count: 3;
+  }
+  .colecoes-capitulos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (min-width: 1400px) {

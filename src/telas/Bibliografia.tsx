@@ -1,6 +1,7 @@
 import { memo, useDeferredValue, useEffect, useMemo, useRef } from 'react'
 import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router'
-import { obra } from '../banco/consultas'
+import { livrosNaBibliografia, obra, type LivroNaBibliografia } from '../banco/consultas'
+import { caminhoDoParagrafo } from '../banco/paragrafos'
 import { tabelaDoPacote } from '../busca/fold'
 import { edicaoSobreOPacote, useObraPublicada, useObrasDaBibliografia, type ObraDaLista } from '../bibliografia/doUsuario'
 import { anoDoCsl, chicagoDaObra } from '../bibliografia/formulario'
@@ -44,6 +45,7 @@ const LinhaDaObra = memo(function LinhaDaObra({ o, atual, busca }: { o: ObraDaLi
       <span className="lista-nome">
         {o.curta ?? o.titulo ?? o.id}
         {o.skc && <span className="marca-skc obra-linha-skc">SKC</span>}
+        {o.livro && <span className="marca-skc obra-linha-skc obra-linha-livro">{o.livro}</span>}
       </span>
       <Contagem n={o.objetos} um="objeto" varios="objetos" />
       {o.titulo && o.curta && <span className="lista-sub">{o.titulo}</span>}
@@ -74,7 +76,13 @@ export function Bibliografia() {
 
   // M3 (revisão final): a contagem soma os objetos cujas citações você ligou à obra no app (a página da obra os lista)
   const ligados = useObjetosLigadosNoApp()
-  const lista_ = useMemo(() => (cargaDasObras.fase === 'ok' ? comObjetosLigados(cargaDasObras.dados, ligados) : null), [cargaDasObras, ligados])
+  // Tarefa 26: o livro em parágrafos e a tradução dele entram como obras, com a etiqueta (se falham, a lista vem sem eles)
+  const cargaDosLivros = useCarregar(livrosNaBibliografia, 'livros')
+  const livros = cargaDosLivros.fase === 'ok' ? cargaDosLivros.dados : cargaDosLivros.fase === 'erro' ? SEM_LIVROS : null
+  const lista_ = useMemo(
+    () => (cargaDasObras.fase === 'ok' && livros ? comLivros(comObjetosLigados(cargaDasObras.dados, ligados), livros) : null),
+    [cargaDasObras, ligados, livros],
+  )
   const tabela = cargaDaTabela.fase === 'ok' ? cargaDaTabela.dados : null
   const dados = useMemo(() => {
     if (!lista_ || !tabela) return null
@@ -186,6 +194,23 @@ export function Bibliografia() {
   )
 }
 
+const SEM_LIVROS: readonly LivroNaBibliografia[] = []
+
+/**
+ * As obras da lista com os livros em parágrafos (Tarefa 26): a obra igual a um livro leva a etiqueta dele; o livro sem obra igual
+ * entra como `LIVRO-<sigla>`, com a citação curta do CSL da publicação e nenhum objeto que a cite.
+ */
+export function comLivros(lista: readonly ObraDaLista[], livros: readonly LivroNaBibliografia[]): ObraDaLista[] {
+  if (livros.length === 0) return [...lista]
+  const porObra = new Map(livros.map((l) => [l.obraId, l]))
+  const marcadas = lista.map((o) => (porObra.has(o.id) ? { ...o, livro: porObra.get(o.id)!.sigla } : o))
+  const ids = new Set(lista.map((o) => o.id))
+  const novas = livros
+    .filter((l) => !ids.has(l.obraId))
+    .map((l): ObraDaLista => ({ id: l.obraId, curta: l.curta, titulo: l.titulo, origem: l.sigla, objetos: 0, curtas: [l.curta], csl: l.csl, skc: false, livro: l.sigla }))
+  return [...marcadas, ...novas]
+}
+
 /** O texto da referência para copiar: o Chicago em texto puro (sem a marcação do itálico). */
 /** A referência em texto puro (o que "Copiar referência" copia): sem marcação e com as entidades decodificadas. */
 export function chicagoEmTexto(o: { chicago: string | null; chicagoHtml: string | null; titulo: string | null; curta: string | null }): string {
@@ -203,7 +228,107 @@ interface Props {
 
 /** A obra do pacote (`ObraDetalhe`) ou a do usuário (`BIB-<aparelho>-<n>`, `ObraSkcDetalhe`). */
 function DetalheDaObra(props: Props) {
-  return eObraSkc(props.id) ? <ObraDoUsuario {...props} /> : <ObraDetalhe {...props} />
+  const id: string = props.id
+  if (id.startsWith(PREFIXO_DO_LIVRO)) return <ObraDoLivro {...props} />
+  return eObraSkc(id) ? <ObraDoUsuario {...props} /> : <ObraDetalhe {...props} />
+}
+
+const PREFIXO_DO_LIVRO = 'LIVRO-'
+
+/** Os livros em parágrafos da Bibliografia (Tarefa 26), uma vez por tela. */
+const useLivros = () => useCarregar(livrosNaBibliografia, 'livros')
+
+/**
+ * A obra do livro em parágrafos sem obra igual na Bibliografia comum (`LIVRO-<sigla>`, Tarefa 26, tela 5): a citação curta, a
+ * referência montada do CSL da publicação e «Este livro no IconoDB».
+ */
+function ObraDoLivro({ id, pagina, voltarPara }: Props) {
+  const carga = useLivros()
+  const { voltar, deOnde } = useVoltarDoDetalhe({ href: `#${voltarPara}`, rotulo: 'Voltar à bibliografia' })
+  if (carga.fase === 'carregando') return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
+  if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
+  const livro = carga.dados.find((l) => l.obraId === id)
+  if (!livro) return <NaoEncontrado pagina={pagina} voltar={voltar} titulo="Obra não encontrada" destino="/bibliografia" rotuloDoDestino="Ver a bibliografia" />
+  return (
+    <MolduraDoDetalhe pagina={pagina} voltar={voltar} deOnde={deOnde} origem={`Obra: ${livro.curta}`}>
+      <CabecalhoDoDetalhe pagina={pagina} etiqueta="Obra" titulo={livro.curta} codigo={livro.sigla} acoes={null} />
+      <p className="obra-chicago">
+        <ReferenciaChicago csl={livro.csl} semChicago={livro.titulo} />
+      </p>
+      <EsteLivro livro={livro} livros={carga.dados} />
+    </MolduraDoDetalhe>
+  )
+}
+
+/** «Este livro no IconoDB» na obra que é um livro em parágrafos (`obraId`), ou nada. */
+function EsteLivroDaObra({ obraId }: { obraId: string }) {
+  const carga = useLivros()
+  if (carga.fase !== 'ok') return null
+  const livro = carga.dados.find((l) => l.obraId === obraId)
+  return livro ? <EsteLivro livro={livro} livros={carga.dados} /> : null
+}
+
+/**
+ * «Este livro no IconoDB» (Tarefa 26, tela 5): no livro, o que ele tem no app, os números, «Abrir nas Coleções», «Ler o § 1» e
+ * a tradução inglesa ao lado de cada §; na tradução, o original e o § 1 dele (a tradução não tem página própria).
+ */
+function EsteLivro({ livro, livros }: { livro: LivroNaBibliografia; livros: readonly LivroNaBibliografia[] }) {
+  const original = livro.traducaoDe ? livros.find((l) => l.sigla === livro.traducaoDe) : undefined
+  const traducao = livro.traducao ? livros.find((l) => l.sigla === livro.traducao) : undefined
+  const plural = (n: number, um: string, varios: string) => `${numeroPtBr(n)} ${n === 1 ? um : varios}`
+  return (
+    <section className="detalhe-secao este-livro" aria-labelledby="este-livro-titulo">
+      <div className="detalhe-secao-topo">
+        <h2 id="este-livro-titulo">Este livro no IconoDB</h2>
+        <span className="codigo">{livro.sigla}</span>
+      </div>
+      {original ? (
+        <>
+          <p className="este-livro-texto">
+            A tradução inglesa de <Link to={`/obra/${encodeURIComponent(original.obraId)}`}>{original.curta}</Link> ({original.sigla}): o inglês aparece ao
+            lado do alemão em cada § do {original.sigla}.
+          </p>
+          <p className="este-livro-numeros codigo">{plural(livro.paragrafos, '§', '§§')}</p>
+          {original.primeiro !== null && (
+            <div className="detalhe-fila">
+              <Link className="detalhe-botao" to={caminhoDoParagrafo(original.sigla, original.primeiro)}>
+                <Icon name="glossario" size={18} />
+                Ler o § {original.primeiro}
+              </Link>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="este-livro-texto">
+            {traducao
+              ? 'Os §§, as notas e as figuras do livro, com o alemão, o português e o inglês lado a lado.'
+              : 'Os §§, as notas e as figuras do livro, com o alemão e o português lado a lado.'}
+          </p>
+          <p className="este-livro-numeros codigo">
+            {plural(livro.capitulos, 'capítulo', 'capítulos')} · {plural(livro.paragrafos, '§', '§§')} · {plural(livro.figuras, 'figura', 'figuras')}
+          </p>
+          <div className="detalhe-fila">
+            <Link className="detalhe-botao" to={`/colecoes?obra=${encodeURIComponent(livro.sigla)}`}>
+              <Icon name="colecoes" size={18} />
+              Abrir nas Coleções
+            </Link>
+            {livro.primeiro !== null && (
+              <Link className="detalhe-botao" to={caminhoDoParagrafo(livro.sigla, livro.primeiro)}>
+                <Icon name="glossario" size={18} />
+                Ler o § {livro.primeiro}
+              </Link>
+            )}
+          </div>
+          {traducao && (
+            <p className="este-livro-apoio">
+              Em inglês: <Link to={`/obra/${encodeURIComponent(traducao.obraId)}`}>{traducao.curta}</Link> ({traducao.sigla}), ao lado do alemão em cada §.
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  )
 }
 
 /**
@@ -233,11 +358,17 @@ export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
   const publicada = useObraPublicada(id)
   // M3 (revisão final): com os objetos cujas citações você ligou a ela no app (null: só os do pacote)
   const comLigados = useObjetosDaObraComLigados(id)
+  // Etapa 4, Tarefa 27 (decisão 92, c6): o número de uma obra unida a outra no fechamento leva à que ficou
+  const redirecionamentos = useRedirecionamentos()
+  const { search, state } = useLocation()
 
   if (carga.fase === 'carregando') return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
   if (carga.fase === 'erro') return <ErroNoDetalhe pagina={pagina} voltar={voltar} erro={carga.erro} aoTentar={carga.tentarDeNovo} />
   const o = carga.dados
   if (o === null) {
+    if (redirecionamentos === null) return <div className={pagina ? 'detalhe-pagina' : 'detalhe'} aria-busy="true" />
+    const para = redirecionamentos.get(id)
+    if (para) return <Navigate replace to={`/obra/${encodeURIComponent(para)}${search}`} state={state} />
     return <NaoEncontrado pagina={pagina} voltar={voltar} titulo="Obra não encontrada" destino="/bibliografia" rotuloDoDestino="Ver a bibliografia" />
   }
 
@@ -261,6 +392,7 @@ export function ObraDetalhe({ id, pagina, voltarPara, computador }: Props) {
       {citadas.length > 0 && (
         <p className="obra-citada">{citadas.map(([sigla, curtas]) => `Citada como ${curtas.map((c) => `«${c}»`).join(', ')} no ${sigla}`).join(' · ')}</p>
       )}
+      <EsteLivroDaObra obraId={o.id} />
       {(cslDaCamada || curtaDaCamada) && (
         <p className="obra-citada">
           <span className="marca-skc">SKC</span> As suas mudanças valem aqui e entram nos livros na próxima importação

@@ -71,11 +71,12 @@ function NotasDeUmAlvo({ tipo, ref_, variante, ancorar, pedido = 0, rotuloDoAlvo
   // Um objeto também é citado pelas referências dele nas fontes ("TESTE I: 1-3", decisão 40).
   const fontes = useFontesDoObjeto(tipo, ref_)
   // Um verbete ou sítio do livro que é o destino de um do usuário publicado (Tarefa 16, revisão 1): as notas feitas no id do
-  // usuário, ou que o citam, também são dele.
+  // usuário, ou que o citam, também são dele. A obra também (Etapa 4, Tarefa 27): a sua publicada e a repetida unida a ela no
+  // fechamento (decisão 92, c6).
   const redirecionamentos = useRedirecionamentos()
   const chaveDosOutros = (outros ?? []).join('\u0000')
   const origens = useMemo(() => {
-    if (tipo === 'verbete') return origensDe(redirecionamentos, ref_)
+    if (tipo === 'verbete' || tipo === 'obra') return origensDe(redirecionamentos, ref_)
     if (tipo !== 'sitio') return []
     return [...origensDe(redirecionamentos, ref_), ...(outros ?? []).flatMap((o) => [o, ...origensDe(redirecionamentos, o)])]
   }, [tipo, ref_, redirecionamentos, chaveDosOutros]) // eslint-disable-line react-hooks/exhaustive-deps

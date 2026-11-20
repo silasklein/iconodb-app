@@ -48,6 +48,7 @@ describe('a lista de sítios com os sítios do usuário', () => {
         '/sitio/TESTE-1',
         '/sitio/TESTE-7',
         '/sitio/SI-aaaaaaaa-2',
+        '/sitio/TESTEG-9', // pacote 11: Tell Achado Teste, o achado «do texto» do livro em parágrafos
         '/sitio/SI-aaaaaaaa-1',
         '/sitio/TESTE-2',
         '/sitio/TESTE-3',
@@ -62,7 +63,7 @@ describe('a lista de sítios com os sítios do usuário', () => {
     expect(within(inventado).getByText('31,77 N · 35,21 E · Levante Sul')).toHaveClass('sitio-coord')
     expect(within(screen.getByRole('link', { name: /^Sítio só com nome/ })).getByText('sem coordenada')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Novo sítio' })).toHaveAttribute('href', '/sitios/novo')
-    expect(screen.getByText('9 sítios · 6 com coordenada')).toBeInTheDocument() // pacote 8: TESTE-5 e TESTE-6 sem coordenada
+    expect(screen.getByText('10 sítios · 7 com coordenada')).toBeInTheDocument() // pacote 8: TESTE-5 e TESTE-6 sem coordenada
   })
 
   it('E-5: a região da linha sai da coordenada (a do filtro); sem coordenada ou fora das regiões, a linha não a mostra', async () => {
@@ -699,7 +700,8 @@ describe('corrigir um sítio do livro: a correção fica na camada do usuário e
       expect(within(sua).getByText('SKC')).toHaveClass('marca-skc')
       expect(within(sua).getByRole('button', { name: 'Tirar a grafia Khirbet Probe' })).toBeInTheDocument()
       expect(opcoes(within(sua).getByRole('combobox', { name: 'Tradição de Khirbet Probe' }))).toEqual(TRADICOES)
-      expect(opcoes(within(sua).getByRole('combobox', { name: 'Livro de Khirbet Probe' }))).toEqual(['nenhum', 'TESTE'])
+      // pacote 11: os livros abertos, com o livro em parágrafos e a tradução dele
+      expect(opcoes(within(sua).getByRole('combobox', { name: 'Livro de Khirbet Probe' }))).toEqual(['nenhum', 'TESTE', 'TESTEG', 'TESTEGEN'])
       // o nome de agora não é «outra grafia»
       expect(within(screen.getByRole('list', { name: 'Outras grafias do sítio' })).queryByText('Tell Probe Teste')).toBeNull()
       expect(screen.getByText('Formas antigas, modernas, árabes, hebraicas ou de outros livros. Entram na busca. Diga de que tradição vem cada uma e, se quiser, de que livro.')).toBeInTheDocument()

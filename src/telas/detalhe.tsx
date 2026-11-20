@@ -31,12 +31,18 @@ export function SecaoDeObjetos<T extends ObjetoResumo>({
   objetos,
   computador,
   em,
+  apoio,
+  rodape,
 }: {
   rotulo: string
   titulo: string
   objetos: T[]
   computador: boolean
   em?: (o: T) => string | null
+  /** Sob o título da seção: uma linha de apoio (a que explica a marca «do texto», Tarefa 26). */
+  apoio?: ReactNode
+  /** Embaixo de cada cartão, fora do link dele (a marca «do texto» com o link ao §). */
+  rodape?: (o: T) => ReactNode
 }) {
   return (
     <section className="detalhe-secao" aria-label={rotulo}>
@@ -44,12 +50,13 @@ export function SecaoDeObjetos<T extends ObjetoResumo>({
         <h2>{titulo}</h2>
         <Contagem n={objetos.length} um="objeto" varios="objetos" className="codigo" />
       </div>
+      {apoio && <p className="detalhe-secao-apoio">{apoio}</p>}
       {objetos.length === 0 ? (
         <p className="detalhe-vazio">Nenhum objeto.</p>
       ) : (
         <div className="detalhe-grade">
           {objetos.map((o) => (
-            <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} em={em?.(o) ?? undefined} />
+            <CartaoDeObjeto key={o.numero} objeto={o} grande={computador} em={em?.(o) ?? undefined} rodape={rodape?.(o) ?? undefined} />
           ))}
         </div>
       )}
